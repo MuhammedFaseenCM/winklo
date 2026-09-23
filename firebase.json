@@ -1,1 +1,25 @@
-{"firestore":{"rules":"firestore/firestore.rules"},"flutter":{"platforms":{"android":{"default":{"projectId":"brain-zip-app","appId":"1:43073222004:android:ef6288c5b95ca6f306a821","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"brain-zip-app","configurations":{"android":"1:43073222004:android:ef6288c5b95ca6f306a821"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore/firestore.rules",
+    "indexes": "firestore/firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "brain-zip-app",
+          "appId": "1:43073222004:android:ef6288c5b95ca6f306a821",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "brain-zip-app",
+          "configurations": {
+            "android": "1:43073222004:android:ef6288c5b95ca6f306a821"
+          }
+        }
+      }
+    }
+  }
+}
