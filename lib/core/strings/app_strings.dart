@@ -86,4 +86,20 @@ abstract final class AppStrings {
   static String updateVersionRow(String current, String requiredLabel) {
     return '$current → $requiredLabel';
   }
+
+  // Auth / leaderboard
+  static const signInTitle = 'Sign in to play';
+  static const signInBody =
+      'Use your Google account to play Zip and Path Words and join the live leaderboard.';
+  static const signInWithGoogle = 'Continue with Google';
+  static const signInCancel = 'Not now';
+  static const signInRequired = 'Sign in to play';
+  static const signOut = 'Sign out';
+  static const leaderboardTitle = 'Leaderboard';
+  static const leaderboardDaily = 'Daily';
+  static const leaderboardAllTime = 'All-time';
+  static const leaderboardEmpty = 'No scores yet. Be the first!';
+  static const leaderboardFailed = 'Could not load the leaderboard.';
+  static const leaderboardSignInHint = 'Sign in to view live rankings.';
+  static const youLabel = 'You';
 }

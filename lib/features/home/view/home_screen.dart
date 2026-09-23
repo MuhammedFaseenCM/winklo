@@ -18,6 +18,9 @@ import '../../../domain/usecases/check_app_update.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
+import '../../auth/cubit/auth_cubit.dart';
+import '../../auth/cubit/auth_state.dart';
+import '../../auth/view/sign_in_sheet.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
 import 'widgets/home_force_update_overlay.dart';
@@ -115,7 +118,16 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
         final isSoftUpdate = state.updateStatus == AppUpdateStatus.soft;
         final isForcedUpdate = state.updateStatus == AppUpdateStatus.forced;
 
+        Future<bool> ensureSignedInForPlay() async {
+          final auth = context.read<AuthCubit>();
+          if (auth.isSignedIn) return true;
+          final ok = await showSignInSheet(context);
+          return ok && context.mounted && context.read<AuthCubit>().isSignedIn;
+        }
+
         Future<void> openZip() async {
+          if (!await ensureSignedInForPlay()) return;
+          if (!context.mounted) return;
           final cubit = context.read<HomeCubit>();
           await cubit.openGame(GameIds.zip);
           if (!context.mounted) return;
@@ -124,6 +136,8 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
         }
 
         Future<void> openPathWords() async {
+          if (!await ensureSignedInForPlay()) return;
+          if (!context.mounted) return;
           final cubit = context.read<HomeCubit>();
           await cubit.openGame(GameIds.pathWords);
           if (!context.mounted) return;
@@ -286,7 +300,66 @@ class _HomeHeader extends StatelessWidget {
             ],
           ),
         ),
+        IconButton(
+          tooltip: AppStrings.leaderboardTitle,
+          onPressed: () => context.push('/leaderboard'),
+          icon: const Icon(Icons.emoji_events_outlined, color: ZipColors.onInk),
+        ),
+        const _AuthAvatarButton(),
       ],
+    );
+  }
+}
+
+class _AuthAvatarButton extends StatelessWidget {
+  const _AuthAvatarButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthCubit, AuthState>(
+      builder: (context, state) {
+        final user = state.user;
+        if (user == null) {
+          return IconButton(
+            tooltip: AppStrings.signInWithGoogle,
+            onPressed: () => showSignInSheet(context),
+            icon: const Icon(Icons.login, color: ZipColors.onInk),
+          );
+        }
+        final photoUrl = user.photoUrl;
+        return PopupMenuButton<String>(
+          tooltip: user.displayName,
+          onSelected: (value) {
+            if (value == 'sign_out') {
+              unawaited(context.read<AuthCubit>().signOut());
+            }
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem(value: 'sign_out', child: Text(AppStrings.signOut)),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: CircleAvatar(
+              radius: 16,
+              backgroundColor: ZipColors.mistDeep,
+              backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                  ? NetworkImage(photoUrl)
+                  : null,
+              child: photoUrl == null || photoUrl.isEmpty
+                  ? Text(
+                      user.displayName.isNotEmpty
+                          ? user.displayName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        color: ZipColors.onInk,
+                        fontSize: 14,
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+        );
+      },
     );
   }
 }

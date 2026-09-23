@@ -6,6 +6,10 @@ import 'app.dart';
 import 'core/bloc/app_bloc_observer.dart';
 import 'core/di/app_repositories.dart';
 import 'core/firebase/firebase_bootstrap.dart';
+import 'domain/repositories/auth_repository.dart';
+import 'domain/usecases/sign_in_with_google.dart';
+import 'domain/usecases/sign_out.dart';
+import 'features/auth/cubit/auth_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +21,14 @@ Future<void> main() async {
   runApp(
     MultiRepositoryProvider(
       providers: buildRepositoryProviders(prefs: prefs),
-      child: const WinkloApp(),
+      child: BlocProvider(
+        create: (context) => AuthCubit(
+          authRepository: context.read<AuthRepository>(),
+          signInWithGoogle: context.read<SignInWithGoogle>(),
+          signOut: context.read<SignOut>(),
+        ),
+        child: const WinkloApp(),
+      ),
     ),
   );
 }

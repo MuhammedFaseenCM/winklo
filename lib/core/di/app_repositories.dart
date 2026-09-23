@@ -4,8 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:winklo/core/dev_flags.dart';
 import 'package:winklo/data/repositories/app_update_repository_impl.dart';
+import 'package:winklo/data/repositories/auth_repository_impl.dart';
 import 'package:winklo/data/repositories/category_repository_impl.dart';
 import 'package:winklo/data/repositories/firebase_analytics_repository_impl.dart';
+import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
 import 'package:winklo/data/repositories/tutorial_repository_impl.dart';
@@ -14,7 +16,9 @@ import 'package:winklo/data/repositories/word_match_repository_impl.dart';
 import 'package:winklo/data/repositories/zip_level_repository_impl.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
+import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/category_repository.dart';
+import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
 import 'package:winklo/domain/repositories/tutorial_repository.dart';
@@ -22,6 +26,7 @@ import 'package:winklo/domain/repositories/word_list_repository.dart';
 import 'package:winklo/domain/repositories/word_match_repository.dart';
 import 'package:winklo/domain/repositories/zip_level_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
+import 'package:winklo/domain/usecases/ensure_signed_in.dart';
 import 'package:winklo/domain/usecases/fetch_categories.dart';
 import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_deck_by_id.dart';
@@ -31,7 +36,11 @@ import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
+import 'package:winklo/domain/usecases/sign_in_with_google.dart';
+import 'package:winklo/domain/usecases/sign_out.dart';
+import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
+import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 
 List<SingleChildWidget> buildRepositoryProviders({
   required SharedPreferences prefs,
@@ -40,6 +49,27 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<SharedPreferences>.value(value: prefs),
     RepositoryProvider<AnalyticsRepository>(
       create: (_) => FirebaseAnalyticsRepositoryImpl(),
+    ),
+    RepositoryProvider<AuthRepository>(create: (_) => AuthRepositoryImpl()),
+    RepositoryProvider<LeaderboardRepository>(
+      create: (_) => LeaderboardRepositoryImpl(),
+    ),
+    RepositoryProvider<SignInWithGoogle>(
+      create: (context) => SignInWithGoogle(context.read<AuthRepository>()),
+    ),
+    RepositoryProvider<SignOut>(
+      create: (context) => SignOut(context.read<AuthRepository>()),
+    ),
+    RepositoryProvider<EnsureSignedIn>(
+      create: (context) => EnsureSignedIn(context.read<AuthRepository>()),
+    ),
+    RepositoryProvider<WatchLeaderboard>(
+      create: (context) =>
+          WatchLeaderboard(context.read<LeaderboardRepository>()),
+    ),
+    RepositoryProvider<SubmitLeaderboardTime>(
+      create: (context) =>
+          SubmitLeaderboardTime(context.read<LeaderboardRepository>()),
     ),
     RepositoryProvider<AppUpdateRepository>(
       create: (_) => AppUpdateRepositoryImpl(),
