@@ -42,9 +42,10 @@ List<LeaderboardEntry> mapLeaderboardRows(
 }
 
 class LeaderboardRepositoryImpl implements LeaderboardRepository {
-  LeaderboardRepositoryImpl({FirebaseFirestore? firestore, FirebaseAuth? auth})
-    : _firestore = firestore,
-      _auth = auth;
+  LeaderboardRepositoryImpl({
+    FirebaseFirestore? this._firestore,
+    FirebaseAuth? this._auth,
+  });
 
   final FirebaseFirestore? _firestore;
   final FirebaseAuth? _auth;

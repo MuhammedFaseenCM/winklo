@@ -1,6 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function validGame(gameId) {
+      return gameId in ['zip', 'path_words'];
+    }
+
+    function validTimeSeconds() {
+      return request.resource.data.timeSeconds is int
+        && request.resource.data.timeSeconds > 0;
+    }
+
+    function improvingTime() {
+      return validTimeSeconds()
+        && request.resource.data.timeSeconds < resource.data.timeSeconds;
+    }
+
     match /zip_levels/{id} {
       allow read: if true;
       allow write: if false;
@@ -12,6 +34,26 @@ service cloud.firestore {
     match /categories/{id} {
       allow read: if true;
       allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(uid);
+      allow delete: if false;
+    }
+
+    match /leaderboards/{gameId}/all_time/{uid} {
+      allow read: if isSignedIn() && validGame(gameId);
+      allow create: if isOwner(uid) && validGame(gameId) && validTimeSeconds();
+      allow update: if isOwner(uid) && validGame(gameId) && improvingTime();
+      allow delete: if false;
+    }
+
+    match /leaderboards/{gameId}/daily/{dayId}/entries/{uid} {
+      allow read: if isSignedIn() && validGame(gameId);
+      allow create: if isOwner(uid) && validGame(gameId) && validTimeSeconds();
+      allow update: if isOwner(uid) && validGame(gameId) && improvingTime();
+      allow delete: if false;
     }
   }
 }

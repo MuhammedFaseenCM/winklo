@@ -1,7 +1,7 @@
-# Firebase setup (Brain Zip)
+# Firebase setup (Winklo)
 
 The app works **without** Firebase using local seed JSON under `assets/`.  
-Connect Firebase when you want to edit words/levels remotely, and for Analytics / Crashlytics.
+Connect Firebase when you want to edit words/levels remotely, and for Analytics / Crashlytics / Auth / leaderboards.
 
 ## 1. Create project
 
@@ -32,8 +32,18 @@ Or manually:
 ## 3. Firestore
 
 1. Create a Firestore database
-2. Deploy rules from `firestore/firestore.rules` (public read, no client writes)
-3. Seed collections (same shape as assets):
+2. Deploy rules and indexes (see Auth / leaderboard section below for write paths):
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+Rules file: `firestore/firestore.rules`  
+Indexes file: `firestore/firestore.indexes.json`
+
+Content collections remain **public read / no client writes**. Leaderboard and user profile paths require Auth (see §7).
+
+3. Seed content collections (same shape as assets):
 
 ### `zip_levels/{id}`
 ```json
@@ -167,3 +177,43 @@ Always keep a valid `playStoreUrl` when you intentionally prompt or force update
 Remote Config uses the same Firebase project as Analytics and Crashlytics. Parameters are **operator-defined minimums and store URLs** — the app does not send user PII to Remote Config for this feature. **No new personal data collection** beyond existing Firebase SDK disclosures.
 
 Before each store release, confirm [Google Play Data Safety](https://play.google.com/console) still matches `play/data_safety.csv` and project docs; update the CSV or console only if Google requires an explicit Remote Config disclosure beyond your current Firebase entries.
+
+## 7. Authentication + realtime leaderboard
+
+Packages: `firebase_auth`, `google_sign_in`.
+
+Players must **sign in with Google** before playing Zip or Path Words. Personal-best times sync to Firestore; the leaderboard screen listens with live snapshots.
+
+### Enable Google Sign-In
+
+1. Firebase Console → **Authentication** → Sign-in method → enable **Google**.
+2. Android: add your debug/release **SHA-1** (and SHA-256) fingerprints under Project settings → Your apps → Android app `com.winklo.faseencm`.
+3. Download an updated `google-services.json` if the console asks you to.
+4. Optional but recommended for reliable ID tokens: use the Web client ID from the Firebase Google provider as `serverClientId` when initializing Google Sign-In if sign-in fails to return an ID token on device.
+
+### Data paths
+
+```
+users/{uid}
+  displayName, photoUrl, updatedAt
+
+leaderboards/{gameId}/all_time/{uid}
+  timeSeconds, updatedAt, displayName, photoUrl
+
+leaderboards/{gameId}/daily/{yyyy-MM-dd}/entries/{uid}
+  timeSeconds, updatedAt, displayName, photoUrl
+```
+
+`gameId` is only `zip` or `path_words`. Daily day keys are **UTC** `yyyy-MM-dd`. Ranking: ascending `timeSeconds`, then ascending `updatedAt` (earlier submit wins ties). Client shows top 50.
+
+### Rules checklist (manual)
+
+After deploy:
+
+1. Signed-out client cannot read/write leaderboard or `users`.
+2. Signed-in user can create/update **only** their own score docs; worsening a time is rejected.
+3. Content collections (`zip_levels`, etc.) still refuse client writes.
+
+### Data Safety / privacy (Auth)
+
+Leaderboards store **uid, displayName, photoUrl, timeSeconds, updatedAt**. Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
