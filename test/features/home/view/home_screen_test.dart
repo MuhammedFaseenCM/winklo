@@ -1,19 +1,62 @@
-import 'package:winklo/core/di/app_repositories.dart';
-import 'package:winklo/core/strings/app_strings.dart';
-import 'package:winklo/core/theme/app_theme.dart';
-import 'package:winklo/domain/play_period.dart';
-import 'package:winklo/features/home/view/home_screen.dart';
-import 'package:winklo/features/zip/logic/daily_puzzle_generator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:winklo/core/di/app_repositories.dart';
+import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_theme.dart';
+import 'package:winklo/domain/entities/app_user.dart';
+import 'package:winklo/domain/play_period.dart';
+import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/usecases/sign_in_with_google.dart';
+import 'package:winklo/domain/usecases/sign_out.dart';
+import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+import 'package:winklo/features/home/view/home_screen.dart';
+import 'package:winklo/features/zip/logic/daily_puzzle_generator.dart';
+
+class _MockAuthRepository extends Mock implements AuthRepository {}
+
+class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
+
+class _MockSignOut extends Mock implements SignOut {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
+
+  const user = AppUser(uid: 'test', displayName: 'Tester');
+
+  Future<void> pumpHome(
+    WidgetTester tester, {
+    required SharedPreferences prefs,
+    required GoRouter router,
+  }) async {
+    final auth = _MockAuthRepository();
+    when(() => auth.currentUser).thenReturn(user);
+    when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(user));
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: buildRepositoryProviders(prefs: prefs),
+        child: BlocProvider(
+          create: (_) => AuthCubit(
+            authRepository: auth,
+            signInWithGoogle: _MockSignInWithGoogle(),
+            signOut: _MockSignOut(),
+          ),
+          child: MaterialApp.router(
+            theme: buildAppTheme(),
+            routerConfig: router,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+  }
 
   testWidgets('reloads cleared state after returning from a daily game', (
     tester,
@@ -49,20 +92,14 @@ void main() {
           path: '/path-words',
           builder: (_, _) => const Scaffold(body: Text('path-words')),
         ),
+        GoRoute(
+          path: '/leaderboard',
+          builder: (_, _) => const Scaffold(body: Text('leaderboard')),
+        ),
       ],
     );
 
-    await tester.pumpWidget(
-      MultiRepositoryProvider(
-        providers: buildRepositoryProviders(prefs: prefs),
-        child: MaterialApp.router(
-          theme: buildAppTheme(),
-          routerConfig: router,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 800));
+    await pumpHome(tester, prefs: prefs, router: router);
 
     expect(find.text(AppStrings.playTodaysZip), findsOneWidget);
     expect(find.text(AppStrings.result), findsNothing);
@@ -125,20 +162,14 @@ void main() {
             );
           },
         ),
+        GoRoute(
+          path: '/leaderboard',
+          builder: (_, _) => const Scaffold(body: Text('leaderboard')),
+        ),
       ],
     );
 
-    await tester.pumpWidget(
-      MultiRepositoryProvider(
-        providers: buildRepositoryProviders(prefs: prefs),
-        child: MaterialApp.router(
-          theme: buildAppTheme(),
-          routerConfig: router,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 800));
+    await pumpHome(tester, prefs: prefs, router: router);
 
     await tester.tap(find.text(AppStrings.playTodaysZip));
     await tester.pump();

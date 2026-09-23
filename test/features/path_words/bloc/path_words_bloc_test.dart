@@ -354,10 +354,7 @@ void main() {
         ),
       ).called(1);
       verify(
-        () => submitLeaderboardTime(
-          gameId: GameIds.pathWords,
-          timeSeconds: 12,
-        ),
+        () => submitLeaderboardTime(gameId: GameIds.pathWords, timeSeconds: 12),
       ).called(1);
       verify(
         () => recordDailyClear(gameId: GameIds.pathWords, dateId: '20260917'),
