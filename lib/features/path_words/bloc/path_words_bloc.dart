@@ -11,6 +11,7 @@ import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
+import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
 import 'path_words_event.dart';
@@ -20,6 +21,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   PathWordsBloc({
     required this.generateDailyPathWords,
     required this.submitScore,
+    required this.submitLeaderboardTime,
     required this.recordDailyClear,
     required this.getBestPoints,
     required this.getBestTimeSeconds,
@@ -42,6 +44,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
 
   final GenerateDailyPathWords generateDailyPathWords;
   final SubmitScore submitScore;
+  final SubmitLeaderboardTime submitLeaderboardTime;
   final RecordDailyClear recordDailyClear;
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
@@ -521,6 +524,17 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       points: points,
       timeSeconds: elapsed,
     );
+
+    if (improved) {
+      try {
+        await submitLeaderboardTime(
+          gameId: GameIds.pathWords,
+          timeSeconds: elapsed,
+        );
+      } catch (_) {
+        // Best-effort remote sync; local score already saved.
+      }
+    }
 
     final streak = await recordDailyClear(
       gameId: GameIds.pathWords,

@@ -9,6 +9,7 @@ import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
+import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/features/path_words/bloc/path_words_bloc.dart';
 import 'package:winklo/features/path_words/bloc/path_words_event.dart';
@@ -20,6 +21,9 @@ class _MockGenerateDailyPathWords extends Mock
     implements GenerateDailyPathWords {}
 
 class _MockSubmitScore extends Mock implements SubmitScore {}
+
+class _MockSubmitLeaderboardTime extends Mock
+    implements SubmitLeaderboardTime {}
 
 class _MockRecordDailyClear extends Mock implements RecordDailyClear {}
 
@@ -89,6 +93,7 @@ PathWordsPuzzle _linePuzzle3({required DateTime day}) {
 void main() {
   late _MockGenerateDailyPathWords generateDaily;
   late _MockSubmitScore submitScore;
+  late _MockSubmitLeaderboardTime submitLeaderboardTime;
   late _MockRecordDailyClear recordDailyClear;
   late _MockGetBestPoints getBestPoints;
   late _MockGetBestTimeSeconds getBestTimeSeconds;
@@ -98,6 +103,7 @@ void main() {
   setUp(() {
     generateDaily = _MockGenerateDailyPathWords();
     submitScore = _MockSubmitScore();
+    submitLeaderboardTime = _MockSubmitLeaderboardTime();
     recordDailyClear = _MockRecordDailyClear();
     getBestPoints = _MockGetBestPoints();
     getBestTimeSeconds = _MockGetBestTimeSeconds();
@@ -105,6 +111,12 @@ void main() {
     waited = <Duration>[];
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
+    when(
+      () => submitLeaderboardTime(
+        gameId: any(named: 'gameId'),
+        timeSeconds: any(named: 'timeSeconds'),
+      ),
+    ).thenAnswer((_) async {});
     when(
       () => analytics.logGameStarted(gameId: any(named: 'gameId')),
     ).thenAnswer((_) async {});
@@ -137,6 +149,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -172,6 +185,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -231,6 +245,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -339,6 +354,12 @@ void main() {
         ),
       ).called(1);
       verify(
+        () => submitLeaderboardTime(
+          gameId: GameIds.pathWords,
+          timeSeconds: 12,
+        ),
+      ).called(1);
+      verify(
         () => recordDailyClear(gameId: GameIds.pathWords, dateId: '20260917'),
       ).called(1);
     },
@@ -353,6 +374,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -416,6 +438,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -466,6 +489,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -516,6 +540,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -575,6 +600,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -625,6 +651,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -663,6 +690,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -718,6 +746,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -790,6 +819,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -851,6 +881,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -923,6 +954,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -975,6 +1007,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -1034,6 +1067,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -1073,6 +1107,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -1118,6 +1153,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -1171,6 +1207,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -1261,6 +1298,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -1362,6 +1400,7 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,

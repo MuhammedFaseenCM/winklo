@@ -13,6 +13,7 @@ import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
+import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../bloc/zip_bloc.dart';
 import '../bloc/zip_event.dart';
@@ -88,6 +89,7 @@ class _ZipScreenState extends State<ZipScreen> {
     super.initState();
     _bloc = ZipBloc(
       submitScore: context.read<SubmitScore>(),
+      submitLeaderboardTime: context.read<SubmitLeaderboardTime>(),
       recordDailyClear: context.read<RecordDailyClear>(),
       getBestPoints: context.read<GetBestPoints>(),
       getBestTimeSeconds: context.read<GetBestTimeSeconds>(),

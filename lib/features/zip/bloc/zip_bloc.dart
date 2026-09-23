@@ -8,6 +8,7 @@ import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
+import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
 import '../logic/daily_puzzle_generator.dart';
@@ -17,6 +18,7 @@ import 'zip_state.dart';
 class ZipBloc extends Bloc<ZipEvent, ZipState> {
   ZipBloc({
     required this.submitScore,
+    required this.submitLeaderboardTime,
     required this.recordDailyClear,
     required this.getBestPoints,
     required this.getBestTimeSeconds,
@@ -43,6 +45,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   }
 
   final SubmitScore submitScore;
+  final SubmitLeaderboardTime submitLeaderboardTime;
   final RecordDailyClear recordDailyClear;
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
@@ -130,6 +133,17 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       points: event.points,
       timeSeconds: event.timeSeconds,
     );
+
+    if (improved) {
+      try {
+        await submitLeaderboardTime(
+          gameId: GameIds.zip,
+          timeSeconds: event.timeSeconds,
+        );
+      } catch (_) {
+        // Best-effort remote sync; local score already saved.
+      }
+    }
 
     final streak = await recordDailyClear(
       gameId: GameIds.zip,
