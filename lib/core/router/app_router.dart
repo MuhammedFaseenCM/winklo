@@ -3,12 +3,14 @@ import 'package:go_router/go_router.dart';
 import '../../domain/repositories/analytics_repository.dart';
 import '../../features/category_race/view/category_race_screen.dart';
 import '../../features/home/view/home_screen.dart';
+import '../../features/leaderboard/view/leaderboard_screen.dart';
 import '../../features/path_words/view/path_words_screen.dart';
 import '../../features/results/results_args.dart';
 import '../../features/results/results_screen.dart';
 import '../../features/word_match/view/word_match_screen.dart';
 import '../../features/word_match/view/word_match_select_screen.dart';
 import '../../features/zip/view/zip_screen.dart';
+import '../../domain/game_ids.dart';
 import '../firebase/analytics_route_observer.dart';
 
 GoRouter buildRouter({required AnalyticsRepository analytics}) {
@@ -30,6 +32,18 @@ GoRouter buildRouter({required AnalyticsRepository analytics}) {
         path: '/path-words',
         name: 'path_words',
         builder: (context, state) => const PathWordsScreen(),
+      ),
+      GoRoute(
+        path: '/leaderboard',
+        name: 'leaderboard',
+        builder: (context, state) {
+          final game = state.uri.queryParameters['game'];
+          return LeaderboardScreen(
+            initialGameId: game == GameIds.pathWords
+                ? GameIds.pathWords
+                : GameIds.zip,
+          );
+        },
       ),
       GoRoute(
         path: '/word-match',

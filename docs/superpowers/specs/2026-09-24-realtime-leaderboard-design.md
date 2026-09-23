@@ -46,7 +46,7 @@ users/{uid}: displayName, photoUrl, updatedAt
 leaderboards/{gameId}/all_time/{uid}:
   timeSeconds, updatedAt, displayName, photoUrl
 
-leaderboards/{gameId}/daily/{yyyy-MM-dd}/{uid}:
+leaderboards/{gameId}/daily/{yyyy-MM-dd}/entries/{uid}:
   timeSeconds, updatedAt, displayName, photoUrl
 
 gameId ∈ { zip, path_words }
