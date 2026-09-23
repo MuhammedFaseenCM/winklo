@@ -102,4 +102,12 @@ abstract final class AppStrings {
   static const leaderboardFailed = 'Could not load the leaderboard.';
   static const leaderboardSignInHint = 'Sign in to view live rankings.';
   static const youLabel = 'You';
+
+  // Notifications
+  static const notifDailyReadyTitle = 'Today’s puzzles are ready';
+  static const notifDailyReadyBody =
+      'Play Zip and Path Words to keep your streak going.';
+  static const notifStreakAtRiskTitle = 'Streak at risk';
+  static const notifStreakAtRiskBody =
+      'You haven’t finished today’s puzzles yet. Play before midnight.';
 }

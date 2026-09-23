@@ -195,7 +195,7 @@ Players must **sign in with Google** before playing Zip or Path Words. Personal-
 
 ```
 users/{uid}
-  displayName, photoUrl, updatedAt
+  displayName, photoUrl, updatedAt, fcmToken, fcmUpdatedAt
 
 leaderboards/{gameId}/all_time/{uid}
   timeSeconds, updatedAt, displayName, photoUrl
@@ -217,3 +217,29 @@ After deploy:
 ### Data Safety / privacy (Auth)
 
 Leaderboards store **uid, displayName, photoUrl, timeSeconds, updatedAt**. Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
+
+## 8. Push + local notifications
+
+Packages: `firebase_messaging`, `flutter_local_notifications`, `timezone`, `flutter_timezone`.
+
+### Local schedules (device local calendar)
+
+| Type | Time | Condition |
+|------|------|-----------|
+| `daily_ready` | 08:00 | Every day |
+| `streak_at_risk` | 20:00 | Scheduled while Zip **or** Path Words still uncleared today; cancelled when both are cleared |
+
+Rescheduled on Home load / resume (and after returning from a game).
+
+### FCM topics (until admin panel)
+
+| Topic | `data.type` |
+|-------|-------------|
+| `announcements` | `announcement` |
+| `app_updates` | `app_update` |
+
+Signed-in devices subscribe after permission. Token is stored on `users/{uid}.fcmToken`.
+
+**Console test:** Messaging → New campaign → Topic → `announcements` with custom data `type=announcement`. Optional `route=/`.
+
+**Enable Cloud Messaging** in the Firebase project if not already. Android uses the existing `google-services.json`.

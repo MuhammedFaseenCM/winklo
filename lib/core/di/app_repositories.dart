@@ -3,11 +3,14 @@ import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:winklo/core/dev_flags.dart';
+import 'package:winklo/data/clients/notification/firebase_notification_client.dart';
+import 'package:winklo/data/clients/notification/notification_client.dart';
 import 'package:winklo/data/repositories/app_update_repository_impl.dart';
 import 'package:winklo/data/repositories/auth_repository_impl.dart';
 import 'package:winklo/data/repositories/category_repository_impl.dart';
 import 'package:winklo/data/repositories/firebase_analytics_repository_impl.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
+import 'package:winklo/data/repositories/notification_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
 import 'package:winklo/data/repositories/tutorial_repository_impl.dart';
@@ -19,6 +22,7 @@ import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/category_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
+import 'package:winklo/domain/repositories/notification_repository.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
 import 'package:winklo/domain/repositories/tutorial_repository.dart';
@@ -26,6 +30,7 @@ import 'package:winklo/domain/repositories/word_list_repository.dart';
 import 'package:winklo/domain/repositories/word_match_repository.dart';
 import 'package:winklo/domain/repositories/zip_level_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
+import 'package:winklo/domain/usecases/clear_notification_token.dart';
 import 'package:winklo/domain/usecases/ensure_signed_in.dart';
 import 'package:winklo/domain/usecases/fetch_categories.dart';
 import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
@@ -35,11 +40,15 @@ import 'package:winklo/domain/usecases/fetch_zip_levels.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
+import 'package:winklo/domain/usecases/handle_notification_tap.dart';
+import 'package:winklo/domain/usecases/initialize_notifications.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
+import 'package:winklo/domain/usecases/schedule_engagement_notifications.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
+import 'package:winklo/domain/usecases/sync_fcm_token.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 
 List<SingleChildWidget> buildRepositoryProviders({
@@ -49,6 +58,33 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<SharedPreferences>.value(value: prefs),
     RepositoryProvider<AnalyticsRepository>(
       create: (_) => FirebaseAnalyticsRepositoryImpl(),
+    ),
+    RepositoryProvider<NotificationClient>(
+      create: (_) => FirebaseNotificationClient(),
+    ),
+    RepositoryProvider<NotificationRepository>(
+      create: (context) => NotificationRepositoryImpl(
+        notificationClient: context.read<NotificationClient>(),
+      ),
+    ),
+    RepositoryProvider<InitializeNotifications>(
+      create: (context) =>
+          InitializeNotifications(context.read<NotificationRepository>()),
+    ),
+    RepositoryProvider<SyncFcmToken>(
+      create: (context) => SyncFcmToken(context.read<NotificationRepository>()),
+    ),
+    RepositoryProvider<ClearNotificationToken>(
+      create: (context) =>
+          ClearNotificationToken(context.read<NotificationRepository>()),
+    ),
+    RepositoryProvider<ScheduleEngagementNotifications>(
+      create: (context) => ScheduleEngagementNotifications(
+        context.read<NotificationRepository>(),
+      ),
+    ),
+    RepositoryProvider<HandleNotificationTap>(
+      create: (_) => HandleNotificationTap(),
     ),
     RepositoryProvider<AuthRepository>(create: (_) => AuthRepositoryImpl()),
     RepositoryProvider<LeaderboardRepository>(

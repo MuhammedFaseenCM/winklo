@@ -18,12 +18,16 @@ class FirebaseNotificationClient implements NotificationClient {
   FirebaseNotificationClient({
     FirebaseMessaging? messaging,
     FlutterLocalNotificationsPlugin? localNotifications,
-  }) : _messaging = messaging ?? FirebaseMessaging.instance,
+  }) : _messagingOverride = messaging,
        _localNotifications =
            localNotifications ?? FlutterLocalNotificationsPlugin();
 
-  final FirebaseMessaging _messaging;
+  final FirebaseMessaging? _messagingOverride;
   final FlutterLocalNotificationsPlugin _localNotifications;
+
+  /// Lazy so widget tests that never init Firebase can still construct DI.
+  FirebaseMessaging get _messaging =>
+      _messagingOverride ?? FirebaseMessaging.instance;
 
   final _foregroundMessageController =
       StreamController<NotificationMessage>.broadcast();
@@ -54,16 +58,26 @@ class FirebaseNotificationClient implements NotificationClient {
   @override
   Stream<String> get onTokenRefresh => _tokenRefreshController.stream;
 
+  bool _localReady = false;
+
+  Future<void> _ensureLocalReady() async {
+    if (_localReady) return;
+    await _configureLocalTimezone();
+    await _initializeLocalNotifications();
+    _localReady = true;
+  }
+
   @override
   Future<void> initialize() async {
     if (_initialized) return;
+
+    await _ensureLocalReady();
+
     if (!FirebaseBootstrap.isReady) {
-      debugPrint('FirebaseNotificationClient: Firebase not ready — skip');
+      debugPrint('FirebaseNotificationClient: Firebase not ready — local only');
+      _initialized = true;
       return;
     }
-
-    await _configureLocalTimezone();
-    await _initializeLocalNotifications();
 
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -71,9 +85,7 @@ class FirebaseNotificationClient implements NotificationClient {
     if (initialMessage != null) {
       Future<void>.delayed(const Duration(milliseconds: 800), () {
         if (!_notificationTappedController.isClosed) {
-          _notificationTappedController.add(
-            _fromRemoteMessage(initialMessage),
-          );
+          _notificationTappedController.add(_fromRemoteMessage(initialMessage));
         }
       });
     }
@@ -249,6 +261,7 @@ class FirebaseNotificationClient implements NotificationClient {
 
   @override
   Future<void> clearAllNotifications() async {
+    await _ensureLocalReady();
     await _localNotifications.cancelAll();
   }
 
@@ -275,6 +288,7 @@ class FirebaseNotificationClient implements NotificationClient {
     Map<String, dynamic>? data,
     String type = 'local',
   }) async {
+    await _ensureLocalReady();
     final id = DateTime.now().millisecondsSinceEpoch.remainder(100000);
     await _localNotifications.show(
       id: id,
@@ -295,6 +309,7 @@ class FirebaseNotificationClient implements NotificationClient {
     required String type,
     bool repeatsDaily = false,
   }) async {
+    await _ensureLocalReady();
     final scheduled = tz.TZDateTime.from(when, tz.local);
     await _localNotifications.zonedSchedule(
       id: id,
@@ -310,6 +325,7 @@ class FirebaseNotificationClient implements NotificationClient {
 
   @override
   Future<void> cancelNotification(int id) async {
+    await _ensureLocalReady();
     await _localNotifications.cancel(id: id);
   }
 

@@ -12,12 +12,10 @@ import '../clients/notification/notification_client.dart';
 class NotificationRepositoryImpl implements NotificationRepository {
   NotificationRepositoryImpl({
     required NotificationClient notificationClient,
-    FirebaseFirestore? firestore,
-    FirebaseMessaging? messaging,
+    this._firestore,
+    this._messaging,
     FlutterLocalNotificationsPlugin? localNotifications,
   }) : _client = notificationClient,
-       _firestore = firestore,
-       _messaging = messaging,
        _localNotifications =
            localNotifications ?? FlutterLocalNotificationsPlugin();
 

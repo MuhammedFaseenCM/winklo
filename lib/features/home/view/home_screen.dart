@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/dev_flags.dart';
 import '../../../core/strings/app_strings.dart';
@@ -18,6 +19,8 @@ import '../../../domain/usecases/check_app_update.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
+import '../../../domain/usecases/schedule_engagement_notifications.dart';
+import '../../../domain/repositories/notification_repository.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/cubit/auth_state.dart';
 import '../../auth/view/sign_in_sheet.dart';
@@ -29,6 +32,8 @@ import 'widgets/home_update_banner.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  static const permissionPromptedKey = 'notif_permission_prompted';
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -39,6 +44,8 @@ class HomeScreen extends StatelessWidget {
         analytics: context.read<AnalyticsRepository>(),
         checkAppUpdate: context.read<CheckAppUpdate>(),
         appUpdateRepository: context.read<AppUpdateRepository>(),
+        scheduleEngagementNotifications: context
+            .read<ScheduleEngagementNotifications>(),
         playPeriod: DevFlags.playPeriod,
       )..load(),
       child: const _HomeView(),
@@ -61,6 +68,18 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_maybeRequestNotificationPermission());
+    });
+  }
+
+  Future<void> _maybeRequestNotificationPermission() async {
+    if (!mounted) return;
+    final prefs = context.read<SharedPreferences>();
+    if (prefs.getBool(HomeScreen.permissionPromptedKey) ?? false) return;
+    await prefs.setBool(HomeScreen.permissionPromptedKey, true);
+    if (!mounted) return;
+    await context.read<NotificationRepository>().requestPermission();
   }
 
   @override
@@ -96,6 +115,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
     context.read<HomeCubit>().recheckUpdate();
+    context.read<HomeCubit>().load();
   }
 
   String _formatBestTime(int seconds) {

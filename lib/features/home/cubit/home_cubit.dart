@@ -10,6 +10,8 @@ import '../../../domain/usecases/check_app_update.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
+import '../../../domain/usecases/schedule_engagement_notifications.dart';
+import '../../../core/strings/app_strings.dart';
 import '../../zip/logic/daily_puzzle_generator.dart';
 import 'home_state.dart';
 
@@ -21,6 +23,7 @@ class HomeCubit extends Cubit<HomeState> {
     required this.analytics,
     required this.checkAppUpdate,
     required this.appUpdateRepository,
+    this.scheduleEngagementNotifications,
     DateTime? now,
     this.playPeriod = PlayPeriod.daily,
   }) : _now = now,
@@ -34,6 +37,7 @@ class HomeCubit extends Cubit<HomeState> {
   final AnalyticsRepository analytics;
   final CheckAppUpdate checkAppUpdate;
   final AppUpdateRepository appUpdateRepository;
+  final ScheduleEngagementNotifications? scheduleEngagementNotifications;
   final DateTime? _now;
   final Duration playPeriod;
   Timer? _refreshTimer;
@@ -61,20 +65,24 @@ class HomeCubit extends Cubit<HomeState> {
       gameId: GameIds.pathWords,
       now: now,
     );
+    final zipPts = getBestPoints(zipKey);
+    final zipTime = getBestTimeSeconds(zipKey);
+    final pathPts = getBestPoints(pathWordsKey);
+    final pathTime = getBestTimeSeconds(pathWordsKey);
     final decision = await checkAppUpdate();
     if (isClosed) return;
     emit(
       state.copyWith(
         dailyLevel: level,
         dateId: level.id,
-        bestPoints: getBestPoints(zipKey),
-        bestTimeSeconds: getBestTimeSeconds(zipKey),
+        bestPoints: zipPts,
+        bestTimeSeconds: zipTime,
         currentStreak: zipStreak.current,
         longestStreak: zipStreak.longest,
         isOnFreeze: zipStreak.isOnFreeze,
         freezeAvailable: zipStreak.freezeAvailable,
-        pathWordsBestPoints: getBestPoints(pathWordsKey),
-        pathWordsBestTimeSeconds: getBestTimeSeconds(pathWordsKey),
+        pathWordsBestPoints: pathPts,
+        pathWordsBestTimeSeconds: pathTime,
         pathWordsCurrentStreak: pathWordsStreak.current,
         pathWordsLongestStreak: pathWordsStreak.longest,
         pathWordsIsOnFreeze: pathWordsStreak.isOnFreeze,
@@ -83,6 +91,17 @@ class HomeCubit extends Cubit<HomeState> {
         updateStoreUrl: decision.storeUrl,
         updateCurrentLabel: decision.currentLabel,
         updateRequiredLabel: decision.requiredLabel,
+      ),
+    );
+
+    unawaited(
+      scheduleEngagementNotifications?.call(
+        zipClearedToday: zipPts > 0 || zipTime != null,
+        pathWordsClearedToday: pathPts > 0 || pathTime != null,
+        dailyReadyTitle: AppStrings.notifDailyReadyTitle,
+        dailyReadyBody: AppStrings.notifDailyReadyBody,
+        streakAtRiskTitle: AppStrings.notifStreakAtRiskTitle,
+        streakAtRiskBody: AppStrings.notifStreakAtRiskBody,
       ),
     );
   }
