@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/strings/app_strings.dart';
-import '../../../core/theme/app_theme.dart';
+import 'widgets/floating_nav_dock.dart';
 
 class DashboardShell extends StatelessWidget {
   const DashboardShell({super.key, required this.navigationShell});
@@ -12,10 +11,9 @@ class DashboardShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: ZipColors.wall,
-        indicatorColor: ZipColors.emberSoft,
+      bottomNavigationBar: FloatingNavDock(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) {
           navigationShell.goBranch(
@@ -23,23 +21,6 @@ class DashboardShell extends StatelessWidget {
             initialLocation: index == navigationShell.currentIndex,
           );
         },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: AppStrings.navHome,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined),
-            selectedIcon: Icon(Icons.emoji_events),
-            label: AppStrings.navLeaderboard,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: AppStrings.navProfile,
-          ),
-        ],
       ),
     );
   }

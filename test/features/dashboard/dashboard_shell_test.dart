@@ -45,6 +45,8 @@ void main() {
     expect(find.text(AppStrings.navLeaderboard), findsOneWidget);
     expect(find.text(AppStrings.navProfile), findsOneWidget);
     expect(find.text('home-body'), findsOneWidget);
+    expect(find.byKey(const Key('floating_nav_dock')), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
 
     await tester.tap(find.text(AppStrings.navProfile));
     await tester.pumpAndSettle();
