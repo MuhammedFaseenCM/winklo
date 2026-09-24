@@ -56,7 +56,7 @@ ProfileRepositoryImpl → Firestore users/{uid} + Storage avatars/{uid}
 | Leaderboard | `features/leaderboard/` — reuse screen/cubit |
 | Profile | `features/profile/view/`, `features/profile/cubit/` |
 | Auth | `features/auth/` — unchanged `AuthCubit` + `showSignInSheet` |
-| Domain | `ProfileRepository`, `UpdateDisplayName`, `UpdateAvatar`; extend `AppUser` |
+| Domain | `ProfileRepository`, `UpdateDisplayName`, `UpdateAvatar`; extend `AppUser` and `LeaderboardEntry` with optional `avatarId` |
 | Data | `ProfileRepositoryImpl` (Firestore + Firebase Storage) |
 | Router | `core/router/app_router.dart` |
 | Copy | `AppStrings` only |
