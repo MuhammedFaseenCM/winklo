@@ -101,6 +101,8 @@ abstract final class AppStrings {
   static const leaderboardEmpty = 'No scores yet. Be the first!';
   static const leaderboardFailed = 'Could not load the leaderboard.';
   static const leaderboardSignInHint = 'Sign in to view live rankings.';
+  static const seeFullLeaderboard = 'See full leaderboard';
+  static const leaderboardGapEllipsis = '…';
   static const youLabel = 'You';
 
   // Notifications
@@ -110,4 +112,27 @@ abstract final class AppStrings {
   static const notifStreakAtRiskTitle = 'Streak at risk';
   static const notifStreakAtRiskBody =
       'You haven’t finished today’s puzzles yet. Play before midnight.';
+
+  // Dashboard nav
+  static const navHome = 'Home';
+  static const navLeaderboard = 'Leaderboard';
+  static const navProfile = 'Profile';
+
+  // Profile
+  static const profileTitle = 'Profile';
+  static const profileSignedOutTitle = 'Your profile';
+  static const profileSignedOutBody =
+      'Sign in to set your name and avatar for the leaderboard.';
+  static const profileEditName = 'Display name';
+  static const profileNameHint = 'Enter a display name';
+  static const profileNameEmpty = 'Name can’t be empty.';
+  static const profileNameTooLong = 'Name must be 24 characters or fewer.';
+  static const profileSave = 'Save';
+  static const profileEditAvatar = 'Edit avatar';
+  static const profileChoosePhoto = 'Choose from photos';
+  static const profilePresets = 'Presets';
+  static const profileSaveFailed = 'Could not save profile. Try again.';
+  static const profileUploadFailed = 'Could not upload photo. Try again.';
+  static const profilePermissionDenied =
+      'Photo access was denied. Enable it in Settings to upload an avatar.';
 }

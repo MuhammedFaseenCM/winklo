@@ -35,10 +35,10 @@ Or manually:
 2. Deploy rules and indexes (see Auth / leaderboard section below for write paths):
 
 ```bash
-firebase deploy --only firestore:rules,firestore:indexes
+firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 
-Rules file: `firestore/firestore.rules`  
+Rules files: `firestore/firestore.rules`, `storage.rules`  
 Indexes file: `firestore/firestore.indexes.json`
 
 Content collections remain **public read / no client writes**. Leaderboard and user profile paths require Auth (see §7).
@@ -195,30 +195,77 @@ Players must **sign in with Google** before playing Zip or Path Words. Personal-
 
 ```
 users/{uid}
-  displayName, photoUrl, updatedAt, fcmToken, fcmUpdatedAt
+  displayName, photoUrl, avatarId, updatedAt, fcmToken, fcmUpdatedAt
 
 leaderboards/{gameId}/all_time/{uid}
-  timeSeconds, updatedAt, displayName, photoUrl
+  timeSeconds, updatedAt, displayName, photoUrl, avatarId
 
 leaderboards/{gameId}/daily/{yyyy-MM-dd}/entries/{uid}
-  timeSeconds, updatedAt, displayName, photoUrl
+  timeSeconds, updatedAt, displayName, photoUrl, avatarId
 ```
 
 `gameId` is only `zip` or `path_words`. Daily day keys are **UTC** `yyyy-MM-dd`. Ranking: ascending `timeSeconds`, then ascending `updatedAt` (earlier submit wins ties). Client shows top 50.
+
+`avatarId` is an optional preset id (`preset_01` … `preset_06`) or null when the player uses a photo. `photoUrl` is the Google photo or a Storage download URL. Display priority: preset asset, then `photoUrl`, then the first letter of `displayName`.
+
+Profile edits patch the signed-in user’s Zip and Path Words **all-time** docs and **today’s** daily entry (when those docs already exist) with `displayName`, `photoUrl`, and `avatarId` only. That update must keep `timeSeconds` unchanged.
+
+### Demo seed (local testing)
+
+With an empty board, seed 28 fake players (`demo_001` …) for **Zip** and **Path Words**, Daily (today UTC) + All-time:
+
+```bash
+# requires `firebase login` (project brain-zip-app)
+node tools/seed_leaderboard_demo.mjs
+```
+
+Uses your Firebase CLI access token (Cloud IAM; bypasses client rules). Re-run anytime to refresh times/names. Your real Google user only appears after you clear a puzzle.
 
 ### Rules checklist (manual)
 
 After deploy:
 
-1. Signed-out client cannot read/write leaderboard or `users`.
-2. Signed-in user can create/update **only** their own score docs; worsening a time is rejected.
+1. Anyone can **read** Zip / Path Words leaderboard docs; signed-out clients still cannot write.
+2. Signed-in user can create/update **only** their own score docs; worsening a time is rejected. A profile-only update (same `timeSeconds`, only `displayName` / `photoUrl` / `avatarId` / `updatedAt`) is allowed.
 3. Content collections (`zip_levels`, etc.) still refuse client writes.
+4. `users/{uid}` remains signed-in read / owner write. `avatarId` must be a string or null when present.
+5. Storage object `avatars/{uid}.jpg`: any signed-in user can read; only that uid can write; image content type; under 5 MB.
 
 ### Data Safety / privacy (Auth)
 
-Leaderboards store **uid, displayName, photoUrl, timeSeconds, updatedAt**. Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
+Leaderboards store **uid, displayName, photoUrl, avatarId, timeSeconds, updatedAt**. Custom photos live in Cloud Storage. Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
 
-## 8. Push + local notifications
+## 8. Cloud Storage (profile photos)
+
+Packages: `firebase_storage`, `image_picker`.
+
+1. Firebase Console → **Storage** → get started (default bucket).
+2. Deploy rules with Firestore:
+
+```bash
+firebase deploy --only firestore:rules,storage
+```
+
+Rules file: `storage.rules` (also listed in `firebase.json`).
+
+Upload path: `avatars/{uid}.jpg` (overwrite). The client stores the download URL on `users/{uid}.photoUrl` and sets `avatarId` to null. Choosing a bundled preset sets `avatarId` and clears `photoUrl` (no Storage upload).
+
+### Gallery pick (Android)
+
+`image_picker` 1.2.x needs **no extra Android permission**. On Android 13+ it uses the system Photo Picker; on older versions the photo picker backport is optional and `READ_MEDIA_IMAGES` / `READ_EXTERNAL_STORAGE` are not required. Do not add those permissions (Play photo/video policy). This app’s gallery flow is picker-only (no camera).
+
+iOS is not a shipping target. If you add it later, `Info.plist` needs `NSPhotoLibraryUsageDescription` even when `requestFullMetadata` is false.
+
+### Manual checklist
+
+1. Signed-in user can update `users/{uid}` `displayName` and `avatarId`.
+2. Preset select clears `photoUrl` and does not upload.
+3. Gallery upload writes `avatars/{uid}.jpg`, sets `photoUrl`, clears `avatarId`.
+4. Another uid cannot write that object; a file over 5 MB or a non-image is rejected.
+5. Zip and Path Words leaderboard rows for that user show the new name and avatar without a new best time.
+6. Sign-in again does not erase an existing `avatarId`.
+
+## 9. Push + local notifications
 
 Packages: `firebase_messaging`, `flutter_local_notifications`, `timezone`, `flutter_timezone`.
 
@@ -243,3 +290,5 @@ Signed-in devices subscribe after permission. Token is stored on `users/{uid}.fc
 **Console test:** Messaging → New campaign → Topic → `announcements` with custom data `type=announcement`. Optional `route=/`.
 
 **Enable Cloud Messaging** in the Firebase project if not already. Android uses the existing `google-services.json`.
+
+Android: `POST_NOTIFICATIONS`, status-bar icon `ic_stat_winklo`, and **core library desugaring** (`desugar_jdk_libs`) required by `flutter_local_notifications`.

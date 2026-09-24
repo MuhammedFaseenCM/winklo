@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/strings/app_strings.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/zip_ui.dart';
+import '../../domain/game_ids.dart';
 import '../../domain/repositories/analytics_repository.dart';
 import 'results_args.dart';
+import 'view/mini_leaderboard_panel.dart';
 
 class ResultsScreen extends StatelessWidget {
   const ResultsScreen({super.key, required this.args});
@@ -25,6 +27,15 @@ class ResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    switch (args.gameId) {
+      case GameIds.zip:
+        return _miniLeaderboardScaffold(gameId: GameIds.zip);
+      case GameIds.pathWords:
+        return _miniLeaderboardScaffold(gameId: GameIds.pathWords);
+      default:
+        break;
+    }
+
     final title = args.title;
     final subtitle = args.subtitle;
     final time = args.timeSeconds;
@@ -220,6 +231,19 @@ class ResultsScreen extends StatelessWidget {
                 ],
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _miniLeaderboardScaffold({required String gameId}) {
+    return Scaffold(
+      body: ZipAtmosphere(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: MiniLeaderboardPanel(gameId: gameId),
           ),
         ),
       ),

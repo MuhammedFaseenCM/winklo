@@ -11,6 +11,7 @@ import 'package:winklo/data/repositories/category_repository_impl.dart';
 import 'package:winklo/data/repositories/firebase_analytics_repository_impl.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
+import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
 import 'package:winklo/data/repositories/tutorial_repository_impl.dart';
@@ -23,6 +24,7 @@ import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/category_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
+import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
 import 'package:winklo/domain/repositories/tutorial_repository.dart';
@@ -49,6 +51,8 @@ import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/domain/usecases/sync_fcm_token.dart';
+import 'package:winklo/domain/usecases/update_avatar.dart';
+import 'package:winklo/domain/usecases/update_display_name.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 
 List<SingleChildWidget> buildRepositoryProviders({
@@ -87,6 +91,15 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (_) => HandleNotificationTap(),
     ),
     RepositoryProvider<AuthRepository>(create: (_) => AuthRepositoryImpl()),
+    RepositoryProvider<ProfileRepository>(
+      create: (_) => ProfileRepositoryImpl(),
+    ),
+    RepositoryProvider<UpdateDisplayName>(
+      create: (context) => UpdateDisplayName(context.read<ProfileRepository>()),
+    ),
+    RepositoryProvider<UpdateAvatar>(
+      create: (context) => UpdateAvatar(context.read<ProfileRepository>()),
+    ),
     RepositoryProvider<LeaderboardRepository>(
       create: (_) => LeaderboardRepositoryImpl(),
     ),

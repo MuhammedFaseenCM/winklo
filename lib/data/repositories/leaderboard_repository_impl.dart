@@ -25,13 +25,16 @@ List<LeaderboardEntry> mapLeaderboardRows(
         ? updatedAtRaw.toDate()
         : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
     final name = data['displayName'];
+    final photo = data['photoUrl'];
+    final avatar = data['avatarId'];
     entries.add(
       LeaderboardEntry(
         uid: row.id,
         displayName: name is String && name.trim().isNotEmpty
             ? name.trim()
             : 'Player',
-        photoUrl: data['photoUrl'] as String?,
+        photoUrl: photo is String && photo.isNotEmpty ? photo : null,
+        avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
         timeSeconds: timeSeconds,
         updatedAt: updatedAt,
         rank: entries.length + 1,
@@ -39,6 +42,46 @@ List<LeaderboardEntry> mapLeaderboardRows(
     );
   }
   return entries;
+}
+
+/// Identity written onto leaderboard docs. Firestore profile wins when present.
+({String displayName, String? photoUrl, String? avatarId})
+resolveLeaderboardIdentity({
+  required String? authDisplayName,
+  String? authPhotoUrl,
+  Map<String, dynamic>? profile,
+}) {
+  final profileName = profile?['displayName'];
+  final authName = authDisplayName?.trim();
+  final displayName = profileName is String && profileName.trim().isNotEmpty
+      ? profileName.trim()
+      : (authName != null && authName.isNotEmpty ? authName : 'Player');
+  final photoUrl = profile != null && profile.containsKey('photoUrl')
+      ? (profile['photoUrl'] is String &&
+                (profile['photoUrl'] as String).isNotEmpty
+            ? profile['photoUrl'] as String
+            : null)
+      : authPhotoUrl;
+  final avatar = profile?['avatarId'];
+  final avatarId = avatar is String && avatar.isNotEmpty ? avatar : null;
+  return (displayName: displayName, photoUrl: photoUrl, avatarId: avatarId);
+}
+
+/// Identity to merge on leaderboard improve writes, or null when [profileDocumentRead]
+/// is false so existing displayName/photoUrl/avatarId are not overwritten.
+({String displayName, String? photoUrl, String? avatarId})?
+leaderboardSubmitIdentity({
+  required bool profileDocumentRead,
+  required String? authDisplayName,
+  String? authPhotoUrl,
+  Map<String, dynamic>? profile,
+}) {
+  if (!profileDocumentRead) return null;
+  return resolveLeaderboardIdentity(
+    authDisplayName: authDisplayName,
+    authPhotoUrl: authPhotoUrl,
+    profile: profile,
+  );
 }
 
 class LeaderboardRepositoryImpl implements LeaderboardRepository {
@@ -131,12 +174,21 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       throw const Failure('Sign in required to join the leaderboard.');
     }
 
-    final displayName = () {
-      final name = user.displayName?.trim();
-      if (name == null || name.isEmpty) return 'Player';
-      return name;
-    }();
-    final photoUrl = user.photoURL;
+    Map<String, dynamic>? profile;
+    var profileDocumentRead = false;
+    try {
+      profile = (await db.collection('users').doc(user.uid).get()).data();
+      profileDocumentRead = true;
+    } catch (e, st) {
+      debugPrint('Leaderboard profile read failed: $e');
+      debugPrint('$st');
+    }
+    final identity = leaderboardSubmitIdentity(
+      profileDocumentRead: profileDocumentRead,
+      authDisplayName: user.displayName,
+      authPhotoUrl: user.photoURL,
+      profile: profile,
+    );
     final dayId = utcLeaderboardDayId();
 
     final allTimeRef = db
@@ -156,14 +208,12 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       await _writeImproveOnly(
         allTimeRef,
         timeSeconds: timeSeconds,
-        displayName: displayName,
-        photoUrl: photoUrl,
+        identity: identity,
       );
       await _writeImproveOnly(
         dailyRef,
         timeSeconds: timeSeconds,
-        displayName: displayName,
-        photoUrl: photoUrl,
+        identity: identity,
       );
     } catch (e, st) {
       debugPrint('Leaderboard submit failed: $e');
@@ -175,8 +225,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
   Future<void> _writeImproveOnly(
     DocumentReference<Map<String, dynamic>> ref, {
     required int timeSeconds,
-    required String displayName,
-    required String? photoUrl,
+    ({String displayName, String? photoUrl, String? avatarId})? identity,
   }) async {
     await ref.firestore.runTransaction((tx) async {
       final snap = await tx.get(ref);
@@ -186,12 +235,16 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
           return;
         }
       }
-      tx.set(ref, {
+      final payload = <String, dynamic>{
         'timeSeconds': timeSeconds,
-        'displayName': displayName,
-        'photoUrl': photoUrl,
         'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      };
+      if (identity != null) {
+        payload['displayName'] = identity.displayName;
+        payload['photoUrl'] = identity.photoUrl;
+        payload['avatarId'] = identity.avatarId;
+      }
+      tx.set(ref, payload, SetOptions(merge: true));
     });
   }
 }

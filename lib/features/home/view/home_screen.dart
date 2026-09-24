@@ -22,7 +22,6 @@ import '../../../domain/usecases/get_streak.dart';
 import '../../../domain/usecases/schedule_engagement_notifications.dart';
 import '../../../domain/repositories/notification_repository.dart';
 import '../../auth/cubit/auth_cubit.dart';
-import '../../auth/cubit/auth_state.dart';
 import '../../auth/view/sign_in_sheet.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
@@ -320,66 +319,7 @@ class _HomeHeader extends StatelessWidget {
             ],
           ),
         ),
-        IconButton(
-          tooltip: AppStrings.leaderboardTitle,
-          onPressed: () => context.push('/leaderboard'),
-          icon: const Icon(Icons.emoji_events_outlined, color: ZipColors.onInk),
-        ),
-        const _AuthAvatarButton(),
       ],
-    );
-  }
-}
-
-class _AuthAvatarButton extends StatelessWidget {
-  const _AuthAvatarButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<AuthCubit, AuthState>(
-      builder: (context, state) {
-        final user = state.user;
-        if (user == null) {
-          return IconButton(
-            tooltip: AppStrings.signInWithGoogle,
-            onPressed: () => showSignInSheet(context),
-            icon: const Icon(Icons.login, color: ZipColors.onInk),
-          );
-        }
-        final photoUrl = user.photoUrl;
-        return PopupMenuButton<String>(
-          tooltip: user.displayName,
-          onSelected: (value) {
-            if (value == 'sign_out') {
-              unawaited(context.read<AuthCubit>().signOut());
-            }
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(value: 'sign_out', child: Text(AppStrings.signOut)),
-          ],
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: ZipColors.mistDeep,
-              backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                  ? NetworkImage(photoUrl)
-                  : null,
-              child: photoUrl == null || photoUrl.isEmpty
-                  ? Text(
-                      user.displayName.isNotEmpty
-                          ? user.displayName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        color: ZipColors.onInk,
-                        fontSize: 14,
-                      ),
-                    )
-                  : null,
-            ),
-          ),
-        );
-      },
     );
   }
 }

@@ -8,6 +8,57 @@ import '../../domain/entities/app_user.dart';
 import '../../domain/failures.dart';
 import '../../domain/repositories/auth_repository.dart';
 
+/// Firestore fields to merge on sign-in. Omits `avatarId` so an existing
+/// preset is left intact, and skips name/photo when the profile already has them.
+Map<String, Object?> authProfileUpsertFields({
+  required String authDisplayName,
+  String? authPhotoUrl,
+  Map<String, dynamic>? existing,
+}) {
+  final fields = <String, Object?>{};
+  final existingName = existing?['displayName'];
+  if (existingName is! String || existingName.trim().isEmpty) {
+    fields['displayName'] = authDisplayName;
+  }
+  final hasPhotoKey = existing != null && existing.containsKey('photoUrl');
+  if (!hasPhotoKey) {
+    fields['photoUrl'] = authPhotoUrl;
+  }
+  return fields;
+}
+
+/// Prefers `users/{uid}` identity fields when that document is present.
+AppUser mergeAuthWithProfile({
+  required String uid,
+  required String? authDisplayName,
+  String? authPhotoUrl,
+  Map<String, dynamic>? profile,
+}) {
+  final fallbackName = () {
+    final name = authDisplayName?.trim();
+    if (name == null || name.isEmpty) return 'Player';
+    return name;
+  }();
+  if (profile == null) {
+    return AppUser(uid: uid, displayName: fallbackName, photoUrl: authPhotoUrl);
+  }
+  final name = profile['displayName'];
+  final hasName = name is String && name.trim().isNotEmpty;
+  final photoUrl = profile.containsKey('photoUrl')
+      ? (profile['photoUrl'] is String &&
+                (profile['photoUrl'] as String).isNotEmpty
+            ? profile['photoUrl'] as String
+            : null)
+      : authPhotoUrl;
+  final avatar = profile['avatarId'];
+  return AppUser(
+    uid: uid,
+    displayName: hasName ? (name).trim() : fallbackName,
+    photoUrl: photoUrl,
+    avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
+  );
+}
+
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
     FirebaseAuth? this._auth,
@@ -19,6 +70,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final FirebaseFirestore? _firestore;
   final GoogleSignIn _googleSignIn;
   bool _googleInitialized = false;
+  AppUser? _cachedUser;
 
   FirebaseAuth? get _firebaseAuth {
     if (!FirebaseBootstrap.isReady) return null;
@@ -44,11 +96,38 @@ class AuthRepositoryImpl implements AuthRepository {
   Stream<AppUser?> authStateChanges() {
     final auth = _firebaseAuth;
     if (auth == null) return Stream.value(null);
-    return auth.authStateChanges().map(_mapUser);
+    return auth.authStateChanges().asyncExpand((user) {
+      if (user == null) {
+        _cachedUser = null;
+        return Stream<AppUser?>.value(null);
+      }
+      final db = _db;
+      if (db == null) {
+        final mapped = _mapUser(user);
+        _cachedUser = mapped;
+        return Stream<AppUser?>.value(mapped);
+      }
+      return db.collection('users').doc(user.uid).snapshots().map((snap) {
+        final merged = mergeAuthWithProfile(
+          uid: user.uid,
+          authDisplayName: user.displayName,
+          authPhotoUrl: user.photoURL,
+          profile: snap.exists ? snap.data() : null,
+        );
+        _cachedUser = merged;
+        return merged;
+      });
+    });
   }
 
   @override
-  AppUser? get currentUser => _mapUser(_firebaseAuth?.currentUser);
+  AppUser? get currentUser {
+    final authUser = _firebaseAuth?.currentUser;
+    if (authUser == null) return null;
+    final cached = _cachedUser;
+    if (cached != null && cached.uid == authUser.uid) return cached;
+    return _mapUser(authUser);
+  }
 
   Future<void> _ensureGoogleInitialized() async {
     if (_googleInitialized) return;
@@ -73,12 +152,14 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final credential = GoogleAuthProvider.credential(idToken: idToken);
       final result = await auth.signInWithCredential(credential);
-      final appUser = _mapUser(result.user);
-      if (appUser == null) {
+      final signedIn = result.user;
+      final appUser = _mapUser(signedIn);
+      if (signedIn == null || appUser == null) {
         throw const Failure('Sign-in failed.');
       }
       await _upsertProfile(appUser);
-      return appUser;
+      final merged = await _readMerged(signedIn);
+      return merged ?? appUser;
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw const Failure('sign_in_cancelled');
@@ -95,14 +176,39 @@ class AuthRepositoryImpl implements AuthRepository {
     final db = _db;
     if (db == null) return;
     try {
-      await db.collection('users').doc(user.uid).set({
-        'displayName': user.displayName,
-        'photoUrl': user.photoUrl,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      final ref = db.collection('users').doc(user.uid);
+      final existing = await ref.get();
+      final fields = authProfileUpsertFields(
+        authDisplayName: user.displayName,
+        authPhotoUrl: user.photoUrl,
+        existing: existing.data(),
+      );
+      fields['updatedAt'] = FieldValue.serverTimestamp();
+      await ref.set(fields, SetOptions(merge: true));
     } catch (e, st) {
       debugPrint('Auth profile upsert failed: $e');
       debugPrint('$st');
+    }
+  }
+
+  Future<AppUser?> _readMerged(User user) async {
+    final db = _db;
+    final fallback = _mapUser(user);
+    if (db == null) return fallback;
+    try {
+      final snap = await db.collection('users').doc(user.uid).get();
+      final merged = mergeAuthWithProfile(
+        uid: user.uid,
+        authDisplayName: user.displayName,
+        authPhotoUrl: user.photoURL,
+        profile: snap.data(),
+      );
+      _cachedUser = merged;
+      return merged;
+    } catch (e, st) {
+      debugPrint('Auth profile read failed: $e');
+      debugPrint('$st');
+      return fallback;
     }
   }
 

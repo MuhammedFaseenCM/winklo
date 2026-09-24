@@ -20,11 +20,65 @@ void main() {
       expect(entries[1].rank, 2);
     });
 
+    test('parses avatarId', () {
+      final entries = mapLeaderboardRows([
+        (
+          id: 'a',
+          data: {
+            'timeSeconds': 12,
+            'displayName': 'Ada',
+            'avatarId': 'preset_03',
+          },
+        ),
+      ]);
+      expect(entries.single.avatarId, 'preset_03');
+    });
+
     test('falls back to Player when displayName missing', () {
       final entries = mapLeaderboardRows([
         (id: 'x', data: {'timeSeconds': 9}),
       ]);
       expect(entries.single.displayName, 'Player');
+    });
+  });
+
+  test('resolveLeaderboardIdentity prefers the Firestore profile', () {
+    final identity = resolveLeaderboardIdentity(
+      authDisplayName: 'Google',
+      authPhotoUrl: 'https://example.com/g.jpg',
+      profile: {
+        'displayName': 'Ada',
+        'photoUrl': null,
+        'avatarId': 'preset_01',
+      },
+    );
+    expect(identity.displayName, 'Ada');
+    expect(identity.photoUrl, isNull);
+    expect(identity.avatarId, 'preset_01');
+  });
+
+  group('leaderboardSubmitIdentity', () {
+    test('returns null when profile document was not read', () {
+      expect(
+        leaderboardSubmitIdentity(
+          profileDocumentRead: false,
+          authDisplayName: 'Google',
+          authPhotoUrl: 'https://example.com/g.jpg',
+          profile: null,
+        ),
+        isNull,
+      );
+    });
+
+    test('resolves identity when profile document was read', () {
+      final identity = leaderboardSubmitIdentity(
+        profileDocumentRead: true,
+        authDisplayName: 'Google',
+        authPhotoUrl: 'https://example.com/g.jpg',
+        profile: {'avatarId': 'preset_03'},
+      );
+      expect(identity, isNotNull);
+      expect(identity!.avatarId, 'preset_03');
     });
   });
 

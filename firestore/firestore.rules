@@ -23,6 +23,31 @@ service cloud.firestore {
         && request.resource.data.timeSeconds < resource.data.timeSeconds;
     }
 
+    // Allow only expected score fields on leaderboard docs.
+    function validLeaderboardKeys() {
+      return request.resource.data.keys().hasOnly([
+        'timeSeconds',
+        'updatedAt',
+        'displayName',
+        'photoUrl',
+        'avatarId',
+      ]);
+    }
+
+    // Identity refresh that does not change the recorded time.
+    function profileOnlyLeaderboardUpdate() {
+      return request.resource.data.timeSeconds == resource.data.timeSeconds
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'photoUrl', 'avatarId', 'updatedAt']);
+    }
+
+    // users/{uid}.avatarId is an optional string (null clears a preset).
+    function validUserAvatarId() {
+      return !request.resource.data.keys().hasAny(['avatarId'])
+        || request.resource.data.avatarId == null
+        || request.resource.data.avatarId is string;
+    }
+
     match /zip_levels/{id} {
       allow read: if true;
       allow write: if false;
@@ -38,21 +63,39 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isSignedIn();
-      allow create, update: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validUserAvatarId();
       allow delete: if false;
     }
 
+    // Public read so the board loads even if the Auth ID token is still
+    // refreshing; writes stay owner-only + improve-only.
     match /leaderboards/{gameId}/all_time/{uid} {
-      allow read: if isSignedIn() && validGame(gameId);
-      allow create: if isOwner(uid) && validGame(gameId) && validTimeSeconds();
-      allow update: if isOwner(uid) && validGame(gameId) && improvingTime();
+      allow read: if validGame(gameId);
+      allow create: if isOwner(uid)
+        && validGame(gameId)
+        && validTimeSeconds()
+        && validLeaderboardKeys();
+      allow update: if isOwner(uid)
+        && validGame(gameId)
+        && (
+          (improvingTime() && validLeaderboardKeys())
+          || profileOnlyLeaderboardUpdate()
+        );
       allow delete: if false;
     }
 
     match /leaderboards/{gameId}/daily/{dayId}/entries/{uid} {
-      allow read: if isSignedIn() && validGame(gameId);
-      allow create: if isOwner(uid) && validGame(gameId) && validTimeSeconds();
-      allow update: if isOwner(uid) && validGame(gameId) && improvingTime();
+      allow read: if validGame(gameId);
+      allow create: if isOwner(uid)
+        && validGame(gameId)
+        && validTimeSeconds()
+        && validLeaderboardKeys();
+      allow update: if isOwner(uid)
+        && validGame(gameId)
+        && (
+          (improvingTime() && validLeaderboardKeys())
+          || profileOnlyLeaderboardUpdate()
+        );
       allow delete: if false;
     }
   }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/zip_ui.dart';
-import '../../../domain/entities/leaderboard_entry.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/auth_repository.dart';
@@ -14,6 +14,7 @@ import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/view/sign_in_sheet.dart';
 import '../cubit/leaderboard_cubit.dart';
 import '../cubit/leaderboard_state.dart';
+import 'widgets/leaderboard_row.dart';
 
 class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({super.key, this.initialGameId = GameIds.zip});
@@ -30,9 +31,66 @@ class LeaderboardScreen extends StatelessWidget {
             ? GameIds.pathWords
             : GameIds.zip,
       ),
-      child: const _LeaderboardView(),
+      child: const _RouteGameSync(child: _LeaderboardView()),
     );
   }
+}
+
+/// IndexedStack keeps [LeaderboardCubit] alive, so a later
+/// `go('/leaderboard?game=...')` must call [LeaderboardCubit.selectGame].
+class _RouteGameSync extends StatefulWidget {
+  const _RouteGameSync({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_RouteGameSync> createState() => _RouteGameSyncState();
+}
+
+class _RouteGameSyncState extends State<_RouteGameSync> {
+  GoRouter? _router;
+  String? _appliedLocation;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final router = GoRouter.of(context);
+    if (!identical(_router, router)) {
+      _router?.routerDelegate.removeListener(_applyRouteGame);
+      _router = router;
+      router.routerDelegate.addListener(_applyRouteGame);
+    }
+    _applyRouteGame();
+  }
+
+  @override
+  void dispose() {
+    _router?.routerDelegate.removeListener(_applyRouteGame);
+    super.dispose();
+  }
+
+  void _applyRouteGame() {
+    if (!mounted) return;
+    final uri = _router?.routerDelegate.currentConfiguration.uri;
+    if (uri == null) return;
+    final location = uri.toString();
+    final previous = _appliedLocation;
+    _appliedLocation = location;
+    if (uri.path != '/leaderboard') return;
+    final previousUri = previous == null ? null : Uri.tryParse(previous);
+    final sameLeaderboard =
+        previousUri?.path == '/leaderboard' && previous == location;
+    if (sameLeaderboard) return;
+    final game = uri.queryParameters['game'];
+    final gameId = game == GameIds.pathWords ? GameIds.pathWords : GameIds.zip;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<LeaderboardCubit>().selectGame(gameId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _LeaderboardView extends StatelessWidget {
@@ -57,13 +115,14 @@ class _LeaderboardView extends StatelessWidget {
                 padding: layout.pagePadding.copyWith(bottom: 0),
                 child: Row(
                   children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: ZipColors.onInk,
+                    if (GoRouter.of(context).canPop())
+                      IconButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: ZipColors.onInk,
+                        ),
                       ),
-                    ),
                     Expanded(
                       child: Text(
                         AppStrings.leaderboardTitle,
@@ -163,7 +222,7 @@ class _LeaderboardView extends StatelessWidget {
                               SizedBox(height: layout.space(8)),
                           itemBuilder: (context, index) {
                             final entry = state.entries[index];
-                            return _LeaderboardRow(
+                            return LeaderboardRow(
                               entry: entry,
                               timeLabel: _formatTime(entry.timeSeconds),
                               isYou: entry.uid == state.currentUid,
@@ -210,92 +269,6 @@ class _MessageBody extends StatelessWidget {
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _LeaderboardRow extends StatelessWidget {
-  const _LeaderboardRow({
-    required this.entry,
-    required this.timeLabel,
-    required this.isYou,
-  });
-
-  final LeaderboardEntry entry;
-  final String timeLabel;
-  final bool isYou;
-
-  @override
-  Widget build(BuildContext context) {
-    final photoUrl = entry.photoUrl;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: isYou ? ZipColors.emberSoft : ZipColors.wall,
-        borderRadius: BorderRadius.circular(14),
-        border: isYou
-            ? Border.all(color: ZipColors.ember.withValues(alpha: 0.5))
-            : null,
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 28,
-            child: Text(
-              '${entry.rank}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: ZipColors.onInk,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: ZipColors.mistDeep,
-            backgroundImage: photoUrl != null && photoUrl.isNotEmpty
-                ? NetworkImage(photoUrl)
-                : null,
-            child: photoUrl == null || photoUrl.isEmpty
-                ? Text(
-                    entry.displayName.isNotEmpty
-                        ? entry.displayName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(color: ZipColors.onInk),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  entry.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(color: ZipColors.onInk),
-                ),
-                if (isYou)
-                  Text(
-                    AppStrings.youLabel,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.labelSmall?.copyWith(color: ZipColors.ember),
-                  ),
-              ],
-            ),
-          ),
-          Text(
-            timeLabel,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: ZipColors.onInk,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
       ),
     );
   }

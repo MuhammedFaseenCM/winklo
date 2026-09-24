@@ -58,3 +58,7 @@ fastlane/.env.*
 # Git worktrees
 .worktrees/
 .superpowers/
+
+# Local tooling (firebase-admin for seed scripts)
+tools/node_modules/
+tools/package-lock.json
