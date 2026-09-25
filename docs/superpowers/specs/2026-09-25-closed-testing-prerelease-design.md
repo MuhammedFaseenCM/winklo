@@ -136,7 +136,8 @@ Do **not** publish these values before `+4` is available to testers (or old buil
 
 1. Upload updated Data Safety (and listing text/graphics if changed) via `play/` scripts / `fastlane android listing`.
 2. Upload AAB with `fastlane android closed` (or `testing` if internal + closed assignment is desired).
-3. Publish updated `docs/privacy/index.html` to GitHub Pages before relying on the in-app Privacy WebView.
+
+Privacy Pages publish happens earlier in the execution order (right after the HTML rewrite), not after the AAB upload.
 
 ### Smoke checklist (closed track)
 
@@ -150,12 +151,12 @@ Do **not** publish these values before `+4` is available to testers (or old buil
 ### Execution order
 
 1. Compliance docs (privacy, `app_content_answers`, `data_safety.csv`)
-2. Firebase SHA + rules/indexes deploy
-3. Workers deploy + health checks
-4. Version bump + signed AAB
-5. Play Data Safety / listing upload as needed
-6. Fastlane closed upload
-7. Publish privacy to GitHub Pages
+2. Publish privacy HTML to GitHub Pages (so the live URL matches Auth before any tester opens it)
+3. Firebase SHA + rules/indexes deploy
+4. Workers deploy + health checks
+5. Version bump + signed AAB
+6. Play Data Safety / listing upload as needed
+7. Fastlane closed upload
 8. Remote Config force-update publish
 9. Smoke on closed track (+ force-update on old build)
 
