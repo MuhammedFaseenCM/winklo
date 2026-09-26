@@ -6,7 +6,7 @@ import '../theme/app_theme.dart';
 typedef TutorialDemoBuilder =
     Widget Function(BuildContext context, int beat, double beatT);
 
-/// Dimmed card overlay that loops caption beats over a canned demo widget.
+/// Dimmed card overlay that steps through caption beats over a canned demo.
 class GameTutorialOverlay extends StatefulWidget {
   const GameTutorialOverlay({
     super.key,
@@ -16,6 +16,8 @@ class GameTutorialOverlay extends StatefulWidget {
     required this.onGotIt,
     this.beatDuration = const Duration(milliseconds: 2200),
     this.gotItLabel = AppStrings.tutorialGotIt,
+    this.skipLabel = AppStrings.tutorialSkip,
+    this.nextLabel = AppStrings.tutorialNext,
   });
 
   final String title;
@@ -24,6 +26,8 @@ class GameTutorialOverlay extends StatefulWidget {
   final VoidCallback onGotIt;
   final Duration beatDuration;
   final String gotItLabel;
+  final String skipLabel;
+  final String nextLabel;
 
   static Future<void> show({
     required BuildContext context,
@@ -33,6 +37,8 @@ class GameTutorialOverlay extends StatefulWidget {
     required Future<void> Function() onDismissed,
     Duration beatDuration = const Duration(milliseconds: 2200),
     String gotItLabel = AppStrings.tutorialGotIt,
+    String skipLabel = AppStrings.tutorialSkip,
+    String nextLabel = AppStrings.tutorialNext,
   }) {
     var completed = false;
     Future<void> completeOnce() async {
@@ -54,6 +60,8 @@ class GameTutorialOverlay extends StatefulWidget {
           demoBuilder: demoBuilder,
           beatDuration: beatDuration,
           gotItLabel: gotItLabel,
+          skipLabel: skipLabel,
+          nextLabel: nextLabel,
           onGotIt: () => Navigator.of(dialogContext).pop(),
         );
       },
@@ -73,25 +81,30 @@ class GameTutorialOverlay extends StatefulWidget {
 class _GameTutorialOverlayState extends State<GameTutorialOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  int _step = 0;
 
-  int get _beatCount => widget.captions.isEmpty ? 1 : widget.captions.length;
+  int get _stepCount => widget.captions.isEmpty ? 1 : widget.captions.length;
+
+  bool get _isLastStep => _step >= _stepCount - 1;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: widget.beatDuration * _beatCount,
+      duration: widget.beatDuration,
     )..repeat();
   }
 
   @override
   void didUpdateWidget(covariant GameTutorialOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.beatDuration != widget.beatDuration ||
-        oldWidget.captions.length != widget.captions.length) {
-      _controller.duration = widget.beatDuration * _beatCount;
+    if (oldWidget.beatDuration != widget.beatDuration) {
+      _controller.duration = widget.beatDuration;
       if (!_controller.isAnimating) _controller.repeat();
+    }
+    if (oldWidget.captions.length != widget.captions.length) {
+      _step = _step.clamp(0, _stepCount - 1);
     }
   }
 
@@ -99,6 +112,15 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _goNext() {
+    if (_isLastStep) return;
+    setState(() => _step++);
+    _controller
+      ..stop()
+      ..value = 0
+      ..repeat();
   }
 
   @override
@@ -118,9 +140,8 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                 child: AnimatedBuilder(
                   animation: _controller,
                   builder: (context, _) {
-                    final total = _controller.value * _beatCount;
-                    final beat = total.floor().clamp(0, _beatCount - 1);
-                    final beatT = total - beat;
+                    final beat = _step;
+                    final beatT = _controller.value;
                     final caption = widget.captions.isEmpty
                         ? ''
                         : widget.captions[beat];
@@ -137,7 +158,10 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                               ),
                         ),
                         const SizedBox(height: 16),
-                        widget.demoBuilder(context, beat, beatT),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 200),
+                          child: widget.demoBuilder(context, beat, beatT),
+                        ),
                         const SizedBox(height: 16),
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 200),
@@ -152,14 +176,52 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                                 ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: widget.onGotIt,
-                            child: Text(widget.gotItLabel),
+                        if (_stepCount > 1) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              for (var i = 0; i < _stepCount; i++) ...[
+                                if (i > 0) const SizedBox(width: 6),
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: i == _step
+                                        ? ZipColors.sky
+                                        : ZipColors.outlineQuiet,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                        ),
+                        ],
+                        const SizedBox(height: 16),
+                        if (_isLastStep)
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: widget.onGotIt,
+                              child: Text(widget.gotItLabel),
+                            ),
+                          )
+                        else
+                          Row(
+                            children: [
+                              TextButton(
+                                onPressed: widget.onGotIt,
+                                child: Text(widget.skipLabel),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed: _goNext,
+                                  child: Text(widget.nextLabel),
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     );
                   },

@@ -20,7 +20,7 @@ class AvatarEditSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
         child: BlocBuilder<ProfileCubit, ProfileState>(
           builder: (context, state) {
@@ -38,28 +38,31 @@ class AvatarEditSheet extends StatelessWidget {
               children: [
                 Center(
                   child: Container(
-                    width: 40,
+                    width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: ZipColors.mistDeep,
+                      color: const Color(0x33FFFFFF),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 Text(
                   AppStrings.profileEditAvatar,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(color: ZipColors.onInk),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: ZipColors.onInk,
+                    fontWeight: FontWeight.w800,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   AppStrings.profilePresets,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(color: ZipColors.inkSoft),
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: ZipColors.inkSoft,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 GridView.count(
@@ -68,6 +71,7 @@ class AvatarEditSheet extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
+                  childAspectRatio: 1,
                   children: [
                     for (final avatarId in AvatarCatalog.presetIds)
                       _PresetTile(
@@ -95,12 +99,13 @@ class AvatarEditSheet extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 20),
-                FilledButton(
+                const SizedBox(height: 16),
+                FilledButton.icon(
                   onPressed: isSaving
                       ? null
                       : () => unawaited(_pickPhoto(context)),
-                  child: const Text(AppStrings.profileChoosePhoto),
+                  icon: const Icon(Icons.photo_library_outlined, size: 18),
+                  label: const Text(AppStrings.profileChoosePhoto),
                 ),
               ],
             );
@@ -154,23 +159,58 @@ class _PresetTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: ZipColors.wall,
-      shape: CircleBorder(
-        side: BorderSide(
-          color: isSelected ? ZipColors.ember : ZipColors.outlineQuiet,
-          width: isSelected ? 3 : 1,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSelected ? ZipColors.ember : const Color(0x22FFFFFF),
+          width: isSelected ? 2.5 : 1,
         ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: ZipColors.emberGlow.withValues(alpha: 0.4),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Center(
-          child: UserAvatar(
-            displayName: displayName,
-            avatarId: avatarId,
-            radius: 28,
+      padding: const EdgeInsets.all(2),
+      child: Material(
+        color: ZipColors.wall,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              UserAvatar(
+                displayName: displayName,
+                avatarId: avatarId,
+                radius: 28,
+              ),
+              if (isSelected)
+                Positioned(
+                  right: 2,
+                  bottom: 2,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: ZipColors.ember,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(3),
+                    child: const Icon(
+                      Icons.check,
+                      size: 11,
+                      color: ZipColors.onInk,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),

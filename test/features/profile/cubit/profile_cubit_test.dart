@@ -126,6 +126,43 @@ void main() {
   );
 
   blocTest<ProfileCubit, ProfileState>(
+    'refresh emits refreshing then idle with profile',
+    build: buildCubit,
+    seed: () => const ProfileState(profile: original),
+    setUp: () {
+      when(() => repo.getProfile('u1')).thenAnswer((_) async => updated);
+    },
+    act: (cubit) => cubit.refresh(),
+    expect: () => [
+      const ProfileState(status: ProfileStatus.refreshing, profile: original),
+      const ProfileState(
+        status: ProfileStatus.idle,
+        profile: updated,
+        nameDraft: 'Grace',
+      ),
+    ],
+  );
+
+  blocTest<ProfileCubit, ProfileState>(
+    'refresh failure emits failure and keeps prior profile',
+    build: buildCubit,
+    seed: () => const ProfileState(profile: original),
+    setUp: () {
+      when(() => repo.getProfile('u1')).thenThrow(const Failure('offline'));
+    },
+    act: (cubit) => cubit.refresh(),
+    expect: () => [
+      const ProfileState(status: ProfileStatus.refreshing, profile: original),
+      const ProfileState(
+        status: ProfileStatus.failure,
+        profile: original,
+        error: 'offline',
+        failureKind: ProfileFailureKind.watchProfile,
+      ),
+    ],
+  );
+
+  blocTest<ProfileCubit, ProfileState>(
     'profile snapshot preserves cleared name draft',
     build: buildCubit,
     act: (cubit) async {

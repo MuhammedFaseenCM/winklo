@@ -98,5 +98,63 @@ service cloud.firestore {
         );
       allow delete: if false;
     }
+
+    // Twin used by debug builds (`kDebugMode`) so demo seeds / local
+    // submits never touch production `leaderboards`.
+    match /leaderboards_debug/{gameId}/all_time/{uid} {
+      allow read: if validGame(gameId);
+      allow create: if isOwner(uid)
+        && validGame(gameId)
+        && validTimeSeconds()
+        && validLeaderboardKeys();
+      allow update: if isOwner(uid)
+        && validGame(gameId)
+        && (
+          (improvingTime() && validLeaderboardKeys())
+          || profileOnlyLeaderboardUpdate()
+        );
+      allow delete: if false;
+    }
+
+    match /leaderboards_debug/{gameId}/daily/{dayId}/entries/{uid} {
+      allow read: if validGame(gameId);
+      allow create: if isOwner(uid)
+        && validGame(gameId)
+        && validTimeSeconds()
+        && validLeaderboardKeys();
+      allow update: if isOwner(uid)
+        && validGame(gameId)
+        && (
+          (improvingTime() && validLeaderboardKeys())
+          || profileOnlyLeaderboardUpdate()
+        );
+      allow delete: if false;
+    }
+
+    match /issue_reports/{reportId} {
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.uid
+        && request.resource.data.keys().hasOnly([
+          'title', 'description', 'uid', 'displayName', 'photoUrl',
+          'avatarId', 'appVersion', 'buildNumber', 'platform', 'createdAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.uid is string
+        && request.resource.data.displayName is string
+        && (request.resource.data.photoUrl == null
+            || request.resource.data.photoUrl is string)
+        && (request.resource.data.avatarId == null
+            || request.resource.data.avatarId is string)
+        && request.resource.data.appVersion is string
+        && request.resource.data.buildNumber is string
+        && request.resource.data.platform is string
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
+    }
   }
 }

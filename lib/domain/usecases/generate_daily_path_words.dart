@@ -9,7 +9,10 @@ class GenerateDailyPathWords {
   final Duration period;
 
   Future<PathWordsPuzzle> call({required DateTime day}) async {
-    final list = await _words.loadEnglishWords(minLen: 3, maxLen: 5);
+    final local = day.toLocal();
+    final bucket = PlayPeriod.bucket(local, period);
+    final dateId = PlayPeriod.id(bucket, period);
+    final list = await _words.loadDailyNouns(dateId: dateId);
     return PathWordsGenerator.generate(day: day, words: list, period: period);
   }
 }

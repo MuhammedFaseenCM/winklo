@@ -130,4 +130,29 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
       ),
     );
   }
+
+  @override
+  Future<void> logProfilePrivacyOpened() {
+    return _safe((a) => a.logEvent(name: 'profile_privacy_opened'));
+  }
+
+  @override
+  Future<void> logProfileAboutOpened() {
+    return _safe((a) => a.logEvent(name: 'profile_about_opened'));
+  }
+
+  @override
+  Future<void> logProfileReportOpened() {
+    return _safe((a) => a.logEvent(name: 'profile_report_opened'));
+  }
+
+  @override
+  Future<void> logProfileReportSubmitted() {
+    return _safe((a) => a.logEvent(name: 'profile_report_submitted'));
+  }
+
+  @override
+  Future<void> logProfileSignOut() {
+    return _safe((a) => a.logEvent(name: 'profile_sign_out'));
+  }
 }

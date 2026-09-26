@@ -2,6 +2,9 @@
 /**
  * Seed demo Zip / Path Words leaderboard entries for UI testing.
  *
+ * Writes only to `leaderboards_debug` (the twin used by Flutter debug builds).
+ * Never touches production `leaderboards`.
+ *
  * Prefers the logged-in Firebase CLI access token (bypasses security rules via
  * Cloud IAM). Falls back to GOOGLE_APPLICATION_CREDENTIALS / play SA if set
  * and the CLI token is missing/expired.
@@ -11,7 +14,7 @@
  *
  * Optional:
  *   COUNT=30   number of fake players per board (default 28)
- *   CLEAR=1    delete existing demo_* docs before writing (Admin SDK only)
+ *   CLEAR=1    delete demo_* docs under leaderboards_debug and exit (no re-seed)
  *
  * Doc IDs are demo_001 … demo_NNN so they never collide with real Auth uids.
  * Your Google account appears only after you clear a puzzle (submitBestTime).
@@ -29,6 +32,9 @@ const require = createRequire(import.meta.url);
 
 const count = Math.max(3, Number(process.env.COUNT || 28));
 const games = ['zip', 'path_words'];
+
+/** Debug twin only — never write demo_* into production `leaderboards`. */
+const ROOT = 'leaderboards_debug';
 
 const firstNames = [
   'Ava',
@@ -95,33 +101,7 @@ function readCliAccessToken() {
   return t.access_token;
 }
 
-async function seedViaRest(accessToken, players, dayId) {
-  const projectId = 'brain-zip-app';
-  const base = `projects/${projectId}/databases/(default)/documents`;
-  const writes = [];
-
-  for (const gameId of games) {
-    for (let i = 0; i < players.length; i++) {
-      const p = players[i];
-      const timeSeconds =
-        p.timeSeconds + (gameId === 'path_words' ? 5 : 0) + (i % 3);
-      const fields = {
-        timeSeconds: { integerValue: String(timeSeconds) },
-        displayName: { stringValue: p.displayName },
-        photoUrl: { nullValue: null },
-        updatedAt: { timestampValue: new Date(p.updatedAtMs).toISOString() },
-      };
-      for (const path of [
-        `leaderboards/${gameId}/all_time/${p.uid}`,
-        `leaderboards/${gameId}/daily/${dayId}/entries/${p.uid}`,
-      ]) {
-        writes.push({ update: { name: `${base}/${path}`, fields } });
-      }
-    }
-  }
-
-  console.log(`REST writes: ${writes.length}`);
-
+async function commitWrites(accessToken, projectId, writes) {
   async function commitChunk(chunk) {
     const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit`;
     const res = await fetch(url, {
@@ -144,7 +124,57 @@ async function seedViaRest(accessToken, players, dayId) {
   }
 }
 
-async function seedViaAdmin(players, dayId) {
+async function clearViaRest(accessToken, dayId) {
+  const projectId = 'brain-zip-app';
+  const base = `projects/${projectId}/databases/(default)/documents`;
+  const deletes = [];
+
+  for (const gameId of games) {
+    for (let i = 1; i <= count; i++) {
+      const uid = `demo_${String(i).padStart(3, '0')}`;
+      deletes.push({
+        delete: `${base}/${ROOT}/${gameId}/all_time/${uid}`,
+      });
+      deletes.push({
+        delete: `${base}/${ROOT}/${gameId}/daily/${dayId}/entries/${uid}`,
+      });
+    }
+  }
+
+  console.log(`REST deletes: ${deletes.length}`);
+  await commitWrites(accessToken, projectId, deletes);
+}
+
+async function seedViaRest(accessToken, players, dayId) {
+  const projectId = 'brain-zip-app';
+  const base = `projects/${projectId}/databases/(default)/documents`;
+  const writes = [];
+
+  for (const gameId of games) {
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      const timeSeconds =
+        p.timeSeconds + (gameId === 'path_words' ? 5 : 0) + (i % 3);
+      const fields = {
+        timeSeconds: { integerValue: String(timeSeconds) },
+        displayName: { stringValue: p.displayName },
+        photoUrl: { nullValue: null },
+        updatedAt: { timestampValue: new Date(p.updatedAtMs).toISOString() },
+      };
+      for (const path of [
+        `${ROOT}/${gameId}/all_time/${p.uid}`,
+        `${ROOT}/${gameId}/daily/${dayId}/entries/${p.uid}`,
+      ]) {
+        writes.push({ update: { name: `${base}/${path}`, fields } });
+      }
+    }
+  }
+
+  console.log(`REST writes: ${writes.length}`);
+  await commitWrites(accessToken, projectId, writes);
+}
+
+async function seedViaAdmin(players, dayId, { clearOnly = false } = {}) {
   const admin = (await import('firebase-admin')).default;
   const credPath =
     process.env.GOOGLE_APPLICATION_CREDENTIALS ||
@@ -157,7 +187,6 @@ async function seedViaAdmin(players, dayId) {
     });
   }
   const db = admin.firestore();
-  const clear = process.env.CLEAR === '1';
 
   async function clearDemoFromCollection(col) {
     const snap = await col.get();
@@ -204,17 +233,18 @@ async function seedViaAdmin(players, dayId) {
   }
 
   for (const gameId of games) {
-    const allTime = db.collection('leaderboards').doc(gameId).collection('all_time');
+    const allTime = db.collection(ROOT).doc(gameId).collection('all_time');
     const daily = db
-      .collection('leaderboards')
+      .collection(ROOT)
       .doc(gameId)
       .collection('daily')
       .doc(dayId)
       .collection('entries');
-    if (clear) {
+    if (clearOnly) {
       console.log(
         `[${gameId}] cleared demo: all_time=${await clearDemoFromCollection(allTime)} daily=${await clearDemoFromCollection(daily)}`,
       );
+      continue;
     }
     const gamePlayers = players.map((p, i) => ({
       ...p,
@@ -229,24 +259,43 @@ async function seedViaAdmin(players, dayId) {
 async function main() {
   const dayId = utcDayId();
   const players = demoPlayers(count);
+  const clearOnly = process.env.CLEAR === '1';
+
+  console.log(`Root: ${ROOT}`);
   console.log(`Day (UTC): ${dayId}`);
-  console.log(
-    `Players: ${players.length} (uids demo_001…demo_${String(count).padStart(3, '0')})`,
-  );
+  if (clearOnly) {
+    console.log(
+      `CLEAR=1 — deleting demo_001…demo_${String(count).padStart(3, '0')} (no re-seed)`,
+    );
+  } else {
+    console.log(
+      `Players: ${players.length} (uids demo_001…demo_${String(count).padStart(3, '0')})`,
+    );
+  }
 
   const cliToken = readCliAccessToken();
   if (cliToken) {
     console.log('Auth: Firebase CLI access token');
-    await seedViaRest(cliToken, players, dayId);
+    if (clearOnly) {
+      await clearViaRest(cliToken, dayId);
+    } else {
+      await seedViaRest(cliToken, players, dayId);
+    }
   } else {
     console.log('Auth: service account (Admin SDK)');
-    await seedViaAdmin(players, dayId);
+    await seedViaAdmin(players, dayId, { clearOnly });
   }
 
-  console.log('Done. Open Leaderboard (Daily / All-time) for Zip and Path Words.');
-  console.log(
-    'Your real account joins after you clear a puzzle (or improve your time).',
-  );
+  if (clearOnly) {
+    console.log(`Done — demo_* removed from ${ROOT}.`);
+  } else {
+    console.log(
+      'Done. Open Leaderboard (Daily / All-time) for Zip and Path Words in a debug build.',
+    );
+    console.log(
+      'Your real account joins after you clear a puzzle (or improve your time).',
+    );
+  }
 }
 
 main().catch((err) => {

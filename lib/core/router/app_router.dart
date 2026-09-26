@@ -6,7 +6,9 @@ import '../../features/dashboard/view/dashboard_shell.dart';
 import '../../features/home/view/home_screen.dart';
 import '../../features/leaderboard/view/leaderboard_screen.dart';
 import '../../features/path_words/view/path_words_screen.dart';
+import '../../features/profile/view/privacy_webview_screen.dart';
 import '../../features/profile/view/profile_screen.dart';
+import '../../features/profile/view/report_issue_screen.dart';
 import '../../features/results/results_args.dart';
 import '../../features/results/results_screen.dart';
 import '../../features/word_match/view/word_match_screen.dart';
@@ -56,6 +58,18 @@ GoRouter buildRouter({required AnalyticsRepository analytics}) {
                 path: '/profile',
                 name: 'profile',
                 builder: (context, state) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'privacy',
+                    name: 'profile_privacy',
+                    builder: (context, state) => const PrivacyWebViewScreen(),
+                  ),
+                  GoRoute(
+                    path: 'report',
+                    name: 'profile_report',
+                    builder: (context, state) => const ReportIssueScreen(),
+                  ),
+                ],
               ),
             ],
           ),

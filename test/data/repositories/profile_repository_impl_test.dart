@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/firebase/firebase_bootstrap.dart';
 import 'package:winklo/data/repositories/profile_repository_impl.dart';
@@ -32,6 +33,17 @@ void main() {
     );
     expect(patch.keys, ['displayName', 'photoUrl', 'avatarId']);
     expect(patch.containsKey('updatedAt'), isFalse);
+    expect(patch['photoUrl'], 'https://example.com/a.jpg');
+    expect(patch['avatarId'], 'preset_01');
+  });
+
+  test('leaderboardIdentityPatch clears null photo and avatar', () {
+    final patch = leaderboardIdentityPatch(
+      const AppUser(uid: 'u1', displayName: 'Ada'),
+    );
+    expect(patch['displayName'], 'Ada');
+    expect(patch['photoUrl'], isA<FieldValue>());
+    expect(patch['avatarId'], isA<FieldValue>());
   });
 
   test('mapUserProfile treats blank photo and avatar as null', () {

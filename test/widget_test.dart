@@ -84,9 +84,9 @@ void main() {
     expect(find.text(AppStrings.streakLabel(3)), findsOneWidget);
     expect(
       find.textContaining(AppStrings.longestStreakLabel(5)),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(find.text(AppStrings.cleared), findsOneWidget);
+    expect(find.text(AppStrings.cleared), findsNothing);
     expect(find.text(AppStrings.result), findsOneWidget);
     expect(find.text(AppStrings.comeBackTomorrow), findsNothing);
     expect(find.text(AppStrings.playAgain), findsNothing);

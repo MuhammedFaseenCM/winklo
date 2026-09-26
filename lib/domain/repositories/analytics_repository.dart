@@ -29,4 +29,14 @@ abstract class AnalyticsRepository {
     required String gameId,
     required String action,
   });
+
+  Future<void> logProfilePrivacyOpened();
+
+  Future<void> logProfileAboutOpened();
+
+  Future<void> logProfileReportOpened();
+
+  Future<void> logProfileReportSubmitted();
+
+  Future<void> logProfileSignOut();
 }

@@ -80,6 +80,21 @@ You can copy fields from files in:
 - `assets/word_match/decks/`
 - `assets/words/categories/`
 
+### `issue_reports/{reportId}`
+
+Create-only while signed in. The client cannot read, update, or delete. `uid` must match `request.auth.uid`. `photoUrl` and `avatarId` are written as null when absent so every key is present.
+
+```
+title, description, uid, displayName, photoUrl, avatarId,
+appVersion, buildNumber, platform, createdAt
+```
+
+Deploy rules before relying on production writes:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
 ## 4. Analytics + Crashlytics
 
 Packages: `firebase_analytics`, `firebase_crashlytics`.
@@ -197,29 +212,37 @@ Players must **sign in with Google** before playing Zip or Path Words. Personal-
 users/{uid}
   displayName, photoUrl, avatarId, updatedAt, fcmToken, fcmUpdatedAt
 
-leaderboards/{gameId}/all_time/{uid}
-  timeSeconds, updatedAt, displayName, photoUrl, avatarId
-
+leaderboards/{gameId}/all_time/{uid}          # release / profile builds
 leaderboards/{gameId}/daily/{yyyy-MM-dd}/entries/{uid}
-  timeSeconds, updatedAt, displayName, photoUrl, avatarId
+
+leaderboards_debug/{gameId}/all_time/{uid}    # debug builds (`kDebugMode`)
+leaderboards_debug/{gameId}/daily/{yyyy-MM-dd}/entries/{uid}
 ```
 
-`gameId` is only `zip` or `path_words`. Daily day keys are **UTC** `yyyy-MM-dd`. Ranking: ascending `timeSeconds`, then ascending `updatedAt` (earlier submit wins ties). Client shows top 50.
+`gameId` is only `zip` or `path_words`. Daily day keys are **UTC** `yyyy-MM-dd`. Ranking: ascending `timeSeconds`, then ascending `updatedAt` (earlier submit wins ties). Client shows top 50. Debug builds (`flutter run`) read and write **only** `leaderboards_debug`; release and profile builds use `leaderboards`.
 
-`avatarId` is an optional preset id (`preset_01` … `preset_06`) or null when the player uses a photo. `photoUrl` is the Google photo or a Storage download URL. Display priority: preset asset, then `photoUrl`, then the first letter of `displayName`.
+`avatarId` is an optional preset id (`preset_01` … `preset_06`) or null when the player uses a photo. `photoUrl` is the Google photo or a public R2 URL (`*.r2.dev`) after gallery upload. Display priority: preset asset, then `photoUrl`, then the first letter of `displayName`.
 
-Profile edits patch the signed-in user’s Zip and Path Words **all-time** docs and **today’s** daily entry (when those docs already exist) with `displayName`, `photoUrl`, and `avatarId` only. That update must keep `timeSeconds` unchanged.
+Profile edits patch the signed-in user’s Zip and Path Words **all-time** docs and **today’s** daily entry under the **active** root (when those docs already exist) with `displayName`, `photoUrl`, and `avatarId` only. That update must keep `timeSeconds` unchanged.
 
-### Demo seed (local testing)
+### Demo seed (debug boards only)
 
-With an empty board, seed 28 fake players (`demo_001` …) for **Zip** and **Path Words**, Daily (today UTC) + All-time:
+Debug / `flutter run` builds use Firestore root `leaderboards_debug` (same shape as `leaderboards`). Release and profile builds use `leaderboards`.
+
+Seed 28 fake players (`demo_001` …) into **debug** Zip + Path Words boards (Daily today UTC + All-time):
 
 ```bash
 # requires `firebase login` (project brain-zip-app)
 node tools/seed_leaderboard_demo.mjs
 ```
 
-Uses your Firebase CLI access token (Cloud IAM; bypasses client rules). Re-run anytime to refresh times/names. Your real Google user only appears after you clear a puzzle.
+Clear demo docs without re-seeding:
+
+```bash
+CLEAR=1 node tools/seed_leaderboard_demo.mjs
+```
+
+Uses your Firebase CLI access token (Cloud IAM; bypasses client rules). Never writes to production `leaderboards`. Your real Google user only appears after you clear a puzzle.
 
 ### Rules checklist (manual)
 
@@ -229,26 +252,50 @@ After deploy:
 2. Signed-in user can create/update **only** their own score docs; worsening a time is rejected. A profile-only update (same `timeSeconds`, only `displayName` / `photoUrl` / `avatarId` / `updatedAt`) is allowed.
 3. Content collections (`zip_levels`, etc.) still refuse client writes.
 4. `users/{uid}` remains signed-in read / owner write. `avatarId` must be a string or null when present.
-5. Storage object `avatars/{uid}.jpg`: any signed-in user can read; only that uid can write; image content type; under 5 MB.
+5. Custom gallery photos: Worker accepts `PUT /v1/avatar` only with a valid Firebase ID token for that uid; object key `avatars/{uid}.jpg` on R2; JPEG, max 2 MiB. Public read via R2 `r2.dev` (no Firebase Storage rules).
 
 ### Data Safety / privacy (Auth)
 
-Leaderboards store **uid, displayName, photoUrl, avatarId, timeSeconds, updatedAt**. Custom photos live in Cloud Storage. Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
+Leaderboards store **uid, displayName, photoUrl, avatarId, timeSeconds, updatedAt**. Custom photos live on **Cloudflare R2** (public `r2.dev` URLs). Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
 
-## 8. Cloud Storage (profile photos)
+## 8. Profile photos (Cloudflare R2 + Worker)
 
-Packages: `firebase_storage`, `image_picker`.
+Custom gallery avatars do **not** use Firebase Storage. You can stay on the **Spark** plan for Auth/Firestore; no Blaze upgrade is required for profile photos.
 
-1. Firebase Console → **Storage** → get started (default bucket).
-2. Deploy rules with Firestore:
+Packages: `image_picker` (gallery). Uploads go through the **`winklo-avatar-upload`** Worker in `workers/avatar-upload/`.
+
+### One-time ops (R2 + Worker)
+
+1. **R2 bucket** `winklo-avatars` — create and bind in Wrangler (see `workers/avatar-upload/README.md`):
+
+   ```bash
+   cd workers/avatar-upload
+   npm install
+   npx wrangler r2 bucket create winklo-avatars
+   ```
+
+2. **Public access** — Cloudflare dashboard → R2 → `winklo-avatars` → enable public access / `r2.dev` subdomain. Set `PUBLIC_BASE_URL` in `workers/avatar-upload/wrangler.toml` (e.g. `https://pub-xxxxx.r2.dev`).
+
+3. **Deploy Worker**:
+
+   ```bash
+   cd workers/avatar-upload
+   npm run deploy
+   ```
+
+   Note the Worker URL (e.g. `https://winklo-avatar-upload.<account>.workers.dev`). `FIREBASE_PROJECT_ID` in `wrangler.toml` must match your Firebase project for ID token verification.
+
+### Flutter run / release
+
+Pass the Worker **base URL** (no trailing slash):
 
 ```bash
-firebase deploy --only firestore:rules,storage
+flutter run --dart-define=AVATAR_UPLOAD_BASE_URL=https://winklo-avatar-upload.<account>.workers.dev
 ```
 
-Rules file: `storage.rules` (also listed in `firebase.json`).
+Use the same `--dart-define` for release builds (CI / Gradle / Xcode as applicable). If `AVATAR_UPLOAD_BASE_URL` is empty, gallery upload is unavailable; presets and Google sign-in photo still work.
 
-Upload path: `avatars/{uid}.jpg` (overwrite). The client stores the download URL on `users/{uid}.photoUrl` and sets `avatarId` to null. Choosing a bundled preset sets `avatarId` and clears `photoUrl` (no Storage upload).
+Upload flow: signed-in client `PUT`s JPEG to `/v1/avatar` with `Authorization: Bearer <Firebase ID token>`. Worker writes **`avatars/{uid}.jpg`** (overwrite) to R2 and returns JSON `{ "photoUrl": "..." }`. The app stores that URL on `users/{uid}.photoUrl` and sets `avatarId` to null. Choosing a bundled preset sets `avatarId` and clears `photoUrl` (no R2 upload).
 
 ### Gallery pick (Android)
 
@@ -260,8 +307,8 @@ iOS is not a shipping target. If you add it later, `Info.plist` needs `NSPhotoLi
 
 1. Signed-in user can update `users/{uid}` `displayName` and `avatarId`.
 2. Preset select clears `photoUrl` and does not upload.
-3. Gallery upload writes `avatars/{uid}.jpg`, sets `photoUrl`, clears `avatarId`.
-4. Another uid cannot write that object; a file over 5 MB or a non-image is rejected.
+3. Gallery upload (with `AVATAR_UPLOAD_BASE_URL` set) returns a public `photoUrl`; Profile and Zip / Path Words **Leaderboard** show the image; `avatarId` is null.
+4. Worker rejects missing/invalid token, wrong content type, or body over 2 MiB.
 5. Zip and Path Words leaderboard rows for that user show the new name and avatar without a new best time.
 6. Sign-in again does not erase an existing `avatarId`.
 

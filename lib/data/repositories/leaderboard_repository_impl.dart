@@ -8,6 +8,7 @@ import '../../domain/entities/leaderboard_period.dart';
 import '../../domain/failures.dart';
 import '../../domain/game_ids.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
+import '../leaderboard_root.dart';
 
 const _allowedGameIds = {GameIds.zip, GameIds.pathWords};
 
@@ -115,7 +116,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     required LeaderboardPeriod period,
     required String? dayId,
   }) {
-    final gameRef = db.collection('leaderboards').doc(gameId);
+    final gameRef = db.collection(leaderboardRootCollection()).doc(gameId);
     switch (period) {
       case LeaderboardPeriod.allTime:
         return gameRef.collection('all_time');
@@ -191,13 +192,14 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     );
     final dayId = utcLeaderboardDayId();
 
+    final root = leaderboardRootCollection();
     final allTimeRef = db
-        .collection('leaderboards')
+        .collection(root)
         .doc(gameId)
         .collection('all_time')
         .doc(user.uid);
     final dailyRef = db
-        .collection('leaderboards')
+        .collection(root)
         .doc(gameId)
         .collection('daily')
         .doc(dayId)

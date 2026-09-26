@@ -134,7 +134,7 @@ Common params: `fit`, `width`, `height`, `placeholder`, `errorWidget`, `borderRa
 
 - Auth hung on `unknown`: shimmer remains until `signedOut` or `signedIn` (no timeout in v1).
 - Image load failure: `errorWidget` or initials.
-- Refresh failure: existing failure snackbar path; leave `refreshing`.
+- Refresh failure: emit `ProfileStatus.failure` with snackbar via existing listener; return to signed-in content (do not leave `refreshing`).
 - Saving name/avatar (`ProfileStatus.saving`) does **not** swap the whole body to shimmer.
 
 ## Testing

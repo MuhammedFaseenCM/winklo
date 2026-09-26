@@ -27,8 +27,14 @@ class _WinkloAppState extends State<WinkloApp> {
       themeMode: ThemeMode.dark,
       routerConfig: _router,
       debugShowCheckedModeBanner: false,
-      builder: (context, child) =>
-          AppTextScale(child: child ?? const SizedBox.shrink()),
+      // Global tap-outside-to-dismiss: wraps every routed screen so a tap on
+      // empty space drops keyboard focus app-wide. `translucent` lets taps on
+      // real controls (buttons, list rows) still pass through underneath.
+      builder: (context, child) => GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: AppTextScale(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

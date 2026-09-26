@@ -1,14 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
+import '../clients/avatar/avatar_upload_client.dart';
 import '../../domain/entities/app_user.dart';
 import '../../domain/entities/leaderboard_period.dart';
 import '../../domain/failures.dart';
 import '../../domain/game_ids.dart';
 import '../../domain/repositories/profile_repository.dart';
+import '../leaderboard_root.dart';
 
 const _profileUnavailable = Failure(
   'Firebase is unavailable. Try again later.',
@@ -16,10 +17,11 @@ const _profileUnavailable = Failure(
 
 /// Identity fields copied onto existing leaderboard docs.
 /// Omits `updatedAt` so tie-break order stays on the score submit time.
+/// Null photo/avatar become deletes so presets clear a custom photo cleanly.
 Map<String, dynamic> leaderboardIdentityPatch(AppUser user) => {
   'displayName': user.displayName,
-  'photoUrl': user.photoUrl,
-  'avatarId': user.avatarId,
+  'photoUrl': user.photoUrl ?? FieldValue.delete(),
+  'avatarId': user.avatarId ?? FieldValue.delete(),
 };
 
 /// Maps a `users/{uid}` document. Returns null when [data] is null.
@@ -39,11 +41,15 @@ AppUser? mapUserProfile(String uid, Map<String, dynamic>? data) {
 }
 
 class ProfileRepositoryImpl implements ProfileRepository {
-  ProfileRepositoryImpl({this._firestore, this._auth, this._storage});
+  ProfileRepositoryImpl({
+    this._firestore,
+    this._auth,
+    this._avatarUploadClient,
+  });
 
   final FirebaseFirestore? _firestore;
   final FirebaseAuth? _auth;
-  final FirebaseStorage? _storage;
+  final AvatarUploadClient? _avatarUploadClient;
 
   FirebaseFirestore? get _db {
     if (!FirebaseBootstrap.isReady) return null;
@@ -53,11 +59,6 @@ class ProfileRepositoryImpl implements ProfileRepository {
   FirebaseAuth? get _firebaseAuth {
     if (!FirebaseBootstrap.isReady) return null;
     return _auth ?? FirebaseAuth.instance;
-  }
-
-  FirebaseStorage? get _bucket {
-    if (!FirebaseBootstrap.isReady) return null;
-    return _storage ?? FirebaseStorage.instance;
   }
 
   FirebaseFirestore _requireDb() {
@@ -113,7 +114,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
       return profile;
     } on Failure {
       rethrow;
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('updateDisplayName failed: $e');
+      debugPrint('$st');
       throw Failure('Could not update profile.', cause: e);
     }
   }
@@ -125,7 +128,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try {
       await db.collection('users').doc(authUser.uid).set({
         'avatarId': avatarId,
-        'photoUrl': null,
+        'photoUrl': FieldValue.delete(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       await _clearAuthPhoto(authUser);
@@ -134,7 +137,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
       return profile;
     } on Failure {
       rethrow;
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('updateAvatarPreset failed: $e');
+      debugPrint('$st');
       throw Failure('Could not update profile.', cause: e);
     }
   }
@@ -146,27 +151,38 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }) async {
     final db = _requireDb();
     final authUser = _requireAuthUser();
-    final storage = _bucket;
-    if (storage == null) throw _profileUnavailable;
+    final uploader = _avatarUploadClient;
+    if (uploader == null) {
+      throw const Failure('Avatar upload is not configured.');
+    }
     try {
-      final ref = storage.ref().child('avatars/${authUser.uid}.jpg');
-      await ref.putData(
-        Uint8List.fromList(bytes),
-        SettableMetadata(contentType: contentType),
+      // v1: only JPEG path is supported by Worker.
+      if (contentType != 'image/jpeg' && contentType != 'image/jpg') {
+        throw const Failure('Could not update profile.');
+      }
+      final idToken = await authUser.getIdToken();
+      if (idToken == null || idToken.isEmpty) {
+        throw const Failure('Sign in required.');
+      }
+      final photoUri = await uploader.uploadJpeg(
+        idToken: idToken,
+        bytes: bytes,
       );
-      final url = await ref.getDownloadURL();
+      final photoUrl = photoUri.toString();
       await db.collection('users').doc(authUser.uid).set({
-        'photoUrl': url,
-        'avatarId': null,
+        'photoUrl': photoUrl,
+        'avatarId': FieldValue.delete(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      await authUser.updatePhotoURL(url);
+      await authUser.updatePhotoURL(photoUrl);
       final profile = await _loadProfile(db, authUser.uid);
       await _denormalizeLeaderboards(db, profile);
       return profile;
     } on Failure {
       rethrow;
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('updateAvatarPhoto failed: $e');
+      debugPrint('$st');
       throw Failure('Could not update profile.', cause: e);
     }
   }
@@ -189,30 +205,41 @@ class ProfileRepositoryImpl implements ProfileRepository {
     return profile;
   }
 
+  /// Best-effort: profile save must not fail if a leaderboard row can't patch.
   Future<void> _denormalizeLeaderboards(
     FirebaseFirestore db,
     AppUser user,
   ) async {
-    final dayId = utcLeaderboardDayId();
-    final refs = <DocumentReference<Map<String, dynamic>>>[];
-    for (final gameId in [GameIds.zip, GameIds.pathWords]) {
-      final game = db.collection('leaderboards').doc(gameId);
-      refs.add(game.collection('all_time').doc(user.uid));
-      refs.add(
-        game.collection('daily').doc(dayId).collection('entries').doc(user.uid),
-      );
+    try {
+      final dayId = utcLeaderboardDayId();
+      final refs = <DocumentReference<Map<String, dynamic>>>[];
+      final root = leaderboardRootCollection();
+      for (final gameId in [GameIds.zip, GameIds.pathWords]) {
+        final game = db.collection(root).doc(gameId);
+        refs.add(game.collection('all_time').doc(user.uid));
+        refs.add(
+          game
+              .collection('daily')
+              .doc(dayId)
+              .collection('entries')
+              .doc(user.uid),
+        );
+      }
+      // Omit updatedAt so a name/avatar refresh does not reorder ties.
+      final patch = leaderboardIdentityPatch(user);
+      await db.runTransaction((tx) async {
+        final snaps = <DocumentSnapshot<Map<String, dynamic>>>[];
+        for (final ref in refs) {
+          snaps.add(await tx.get(ref));
+        }
+        for (var i = 0; i < refs.length; i++) {
+          if (!snaps[i].exists) continue;
+          tx.update(refs[i], patch);
+        }
+      });
+    } catch (e, st) {
+      debugPrint('Leaderboard identity denormalize failed: $e');
+      debugPrint('$st');
     }
-    // Omit updatedAt so a name/avatar refresh does not reorder ties.
-    final patch = leaderboardIdentityPatch(user);
-    await db.runTransaction((tx) async {
-      final snaps = <DocumentSnapshot<Map<String, dynamic>>>[];
-      for (final ref in refs) {
-        snaps.add(await tx.get(ref));
-      }
-      for (var i = 0; i < refs.length; i++) {
-        if (!snaps[i].exists) continue;
-        tx.update(refs[i], patch);
-      }
-    });
   }
 }

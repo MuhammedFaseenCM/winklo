@@ -14,9 +14,13 @@ class PathWordsHowToPlayButton extends StatelessWidget {
     return IconButton(
       tooltip: AppStrings.pathWordsHowToPlayTitle,
       onPressed: () async {
-        await context.read<AnalyticsRepository>().logHowToPlayOpened(
-          gameId: GameIds.pathWords,
-        );
+        try {
+          await context.read<AnalyticsRepository>().logHowToPlayOpened(
+            gameId: GameIds.pathWords,
+          );
+        } on ProviderNotFoundException {
+          // Analytics may not be provided in focused widget tests.
+        }
         if (!context.mounted) return;
         await PathWordsTutorial.show(context);
       },

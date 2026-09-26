@@ -4,7 +4,7 @@ import '../../../domain/entities/app_user.dart';
 
 part 'profile_state.freezed.dart';
 
-enum ProfileStatus { idle, saving, failure }
+enum ProfileStatus { idle, saving, failure, refreshing }
 
 enum ProfileFailureKind { none, name, avatar, watchProfile }
 

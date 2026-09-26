@@ -17,13 +17,26 @@ class AuthCubit extends Cubit<AuthState> {
     required this._signOut,
     this._syncFcmToken,
     this._clearNotificationToken,
-  }) : super(const AuthState()) {
+  }) : super(
+         _authRepository.currentUser != null
+             ? AuthState(
+                 status: AuthStatus.signedIn,
+                 user: _authRepository.currentUser,
+               )
+             : const AuthState(),
+       ) {
     _subscription = _authRepository.authStateChanges().listen((user) {
       if (isClosed) return;
       if (user == null) {
         emit(const AuthState(status: AuthStatus.signedOut));
-      } else {
-        emit(AuthState(status: AuthStatus.signedIn, user: user));
+        return;
+      }
+      // authStateChanges also re-emits on users/{uid} profile snapshots.
+      // Only sync FCM when the signed-in uid changes — otherwise writing
+      // fcmUpdatedAt retriggers snapshots and loops forever.
+      final previousUid = state.user?.uid;
+      emit(AuthState(status: AuthStatus.signedIn, user: user));
+      if (previousUid != user.uid) {
         unawaited(_syncFcmToken?.call(user.uid));
       }
     });
@@ -82,10 +95,12 @@ class AuthCubit extends Cubit<AuthState> {
 
   Future<void> signOut() async {
     final uid = state.user?.uid;
-    await _clearNotificationToken?.call(uid: uid);
+    // Firebase/Google sign-out first so UI can flip to signed-out immediately.
+    // FCM cleanup can hang on some devices — never block sign-out on it.
     await _signOut();
     if (isClosed) return;
     emit(const AuthState(status: AuthStatus.signedOut));
+    unawaited(_clearNotificationToken?.call(uid: uid));
   }
 
   @override

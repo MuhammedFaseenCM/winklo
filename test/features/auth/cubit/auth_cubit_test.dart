@@ -8,6 +8,7 @@ import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
+import 'package:winklo/domain/usecases/sync_fcm_token.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/auth/cubit/auth_state.dart';
 
@@ -17,30 +18,36 @@ class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
 
 class _MockSignOut extends Mock implements SignOut {}
 
+class _MockSyncFcmToken extends Mock implements SyncFcmToken {}
+
 void main() {
   const user = AppUser(uid: 'u1', displayName: 'Ada');
 
   late _MockAuthRepository auth;
   late _MockSignInWithGoogle signIn;
   late _MockSignOut signOut;
+  late _MockSyncFcmToken syncFcmToken;
   late StreamController<AppUser?> controller;
 
   setUp(() {
     auth = _MockAuthRepository();
     signIn = _MockSignInWithGoogle();
     signOut = _MockSignOut();
+    syncFcmToken = _MockSyncFcmToken();
     controller = StreamController<AppUser?>.broadcast();
     when(() => auth.authStateChanges()).thenAnswer((_) => controller.stream);
+    when(() => syncFcmToken(any())).thenAnswer((_) async {});
   });
 
   tearDown(() async {
     await controller.close();
   });
 
-  AuthCubit buildCubit() => AuthCubit(
+  AuthCubit buildCubit({bool withSync = false}) => AuthCubit(
     authRepository: auth,
     signInWithGoogle: signIn,
     signOut: signOut,
+    syncFcmToken: withSync ? syncFcmToken : null,
   );
 
   blocTest<AuthCubit, AuthState>(
@@ -48,6 +55,44 @@ void main() {
     build: buildCubit,
     act: (cubit) => controller.add(user),
     expect: () => [const AuthState(status: AuthStatus.signedIn, user: user)],
+  );
+
+  blocTest<AuthCubit, AuthState>(
+    'does not re-emit when auth stream sends an equivalent user',
+    build: buildCubit,
+    act: (cubit) {
+      controller.add(AppUser(uid: 'u1', displayName: 'Ada'));
+      controller.add(AppUser(uid: 'u1', displayName: 'Ada'));
+    },
+    expect: () => [
+      AuthState(
+        status: AuthStatus.signedIn,
+        user: AppUser(uid: 'u1', displayName: 'Ada'),
+      ),
+    ],
+  );
+
+  blocTest<AuthCubit, AuthState>(
+    'syncs FCM token only once for the same uid across profile snapshots',
+    build: () => buildCubit(withSync: true),
+    act: (cubit) async {
+      controller.add(const AppUser(uid: 'u1', displayName: 'Ada'));
+      controller.add(const AppUser(uid: 'u1', displayName: 'Ada'));
+      controller.add(
+        const AppUser(uid: 'u1', displayName: 'Ada', avatarId: 'preset_01'),
+      );
+      await pumpEventQueue();
+    },
+    expect: () => [
+      const AuthState(status: AuthStatus.signedIn, user: user),
+      const AuthState(
+        status: AuthStatus.signedIn,
+        user: AppUser(uid: 'u1', displayName: 'Ada', avatarId: 'preset_01'),
+      ),
+    ],
+    verify: (_) {
+      verify(() => syncFcmToken('u1')).called(1);
+    },
   );
 
   blocTest<AuthCubit, AuthState>(

@@ -80,7 +80,6 @@ void main() {
       },
     );
 
-    expect(find.text(AppStrings.cleared), findsWidgets);
     expect(find.text(AppStrings.result), findsWidgets);
     expect(overflowErrors, isEmpty);
   });

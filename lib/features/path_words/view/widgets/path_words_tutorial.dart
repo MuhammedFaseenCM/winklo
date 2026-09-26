@@ -12,7 +12,7 @@ import '../../../../domain/game_ids.dart';
 import '../../../../domain/repositories/analytics_repository.dart';
 import '../../../../domain/repositories/tutorial_repository.dart';
 
-/// Canned Path Words tutorial: drag → lift/continue → list checkoff.
+/// Canned Path Words tutorial: match list → every word → fill every cell.
 abstract final class PathWordsTutorial {
   static const size = 3;
 
@@ -20,9 +20,9 @@ abstract final class PathWordsTutorial {
     const Cell(0, 0): 'C',
     const Cell(0, 1): 'A',
     const Cell(0, 2): 'T',
-    const Cell(1, 0): 'O',
-    const Cell(1, 1): 'G',
-    const Cell(1, 2): 'S',
+    const Cell(1, 0): 'D',
+    const Cell(1, 1): 'O',
+    const Cell(1, 2): 'G',
     const Cell(2, 0): 'R',
     const Cell(2, 1): 'U',
     const Cell(2, 2): 'N',
@@ -30,76 +30,120 @@ abstract final class PathWordsTutorial {
 
   static const wordPath = <Cell>[Cell(0, 0), Cell(0, 1), Cell(0, 2)];
 
+  static const secondWordPath = <Cell>[Cell(1, 0), Cell(1, 1), Cell(1, 2)];
+
+  static const thirdWordPath = <Cell>[Cell(2, 0), Cell(2, 1), Cell(2, 2)];
+
   static const word = 'CAT';
 
+  static const secondWord = 'DOG';
+
+  static const thirdWord = 'RUN';
+
   static const captions = <String>[
-    AppStrings.pathWordsTutorialDrag,
-    AppStrings.pathWordsTutorialLift,
     AppStrings.pathWordsTutorialMatchList,
+    AppStrings.pathWordsTutorialFindEveryWord,
+    AppStrings.pathWordsTutorialFillEveryCell,
   ];
 
   static Future<void> show(BuildContext context, {bool isFirstRun = false}) {
     final repo = context.read<TutorialRepository>();
-    final analytics = context.read<AnalyticsRepository>();
+    AnalyticsRepository? analytics;
+    try {
+      analytics = context.read<AnalyticsRepository>();
+    } on ProviderNotFoundException {
+      analytics = null;
+    }
     return GameTutorialOverlay.show(
       context: context,
       title: AppStrings.pathWordsHowToPlayTitle,
       captions: captions,
       onDismissed: () async {
         if (isFirstRun) {
-          await analytics.logTutorialDismissed(gameId: GameIds.pathWords);
+          await analytics?.logTutorialDismissed(gameId: GameIds.pathWords);
         }
         await repo.markSeen(GameIds.pathWords);
       },
       demoBuilder: (context, beat, beatT) {
+        late final List<Cell> path;
         late final double pathProgress;
-        late final bool fingerLifted;
-        late final bool wordComplete;
+        late final bool showFinger;
+        late final bool catComplete;
+        late final bool dogComplete;
+        late final bool runComplete;
+        late final Set<Cell> lockedCells;
+        late final List<TutorialCompletedPath> completedPaths;
+        late final Set<Cell> highlightCells;
+
+        final pulse = 0.55 + 0.45 * math.sin(beatT * math.pi * 2);
 
         switch (beat) {
           case 0:
+            // Match a word on the list — draw CAT.
+            path = wordPath;
             pathProgress = Curves.easeInOut.transform(beatT);
-            fingerLifted = false;
-            wordComplete = false;
+            showFinger = pathProgress < 0.98;
+            catComplete = pathProgress >= 0.98;
+            dogComplete = false;
+            runComplete = false;
+            lockedCells = const {};
+            completedPaths = const [];
+            highlightCells = catComplete ? wordPath.toSet() : const {};
           case 1:
-            // Draw first half, lift mid-way, then finish.
-            if (beatT < 0.35) {
-              pathProgress = (beatT / 0.35) * 0.45;
-              fingerLifted = false;
-            } else if (beatT < 0.55) {
-              pathProgress = 0.45;
-              fingerLifted = true;
-            } else {
-              pathProgress =
-                  0.45 + ((beatT - 0.55) / 0.45).clamp(0.0, 1.0) * 0.55;
-              fingerLifted = false;
-            }
-            wordComplete = pathProgress >= 0.98;
+            // Find every word — finish DOG with CAT done.
+            path = secondWordPath;
+            pathProgress = Curves.easeInOut.transform(beatT);
+            showFinger = pathProgress < 0.98;
+            catComplete = true;
+            dogComplete = pathProgress >= 0.98;
+            runComplete = false;
+            lockedCells = wordPath.toSet();
+            completedPaths = const [(cells: wordPath, color: ZipColors.sky)];
+            highlightCells = dogComplete ? secondWordPath.toSet() : const {};
           default:
-            pathProgress = 1;
-            fingerLifted = false;
-            wordComplete = true;
+            // Every cell should fill — all three words complete.
+            path = const [];
+            pathProgress = 0;
+            showFinger = false;
+            catComplete = true;
+            dogComplete = true;
+            runComplete = true;
+            lockedCells = {...wordPath, ...secondWordPath, ...thirdWordPath};
+            completedPaths = const [
+              (cells: wordPath, color: ZipColors.sky),
+              (cells: secondWordPath, color: ZipColors.ember),
+              (cells: thirdWordPath, color: ZipColors.success),
+            ];
+            highlightCells = {...wordPath, ...secondWordPath, ...thirdWordPath};
         }
-
-        final pulse = 0.55 + 0.45 * math.sin(beatT * math.pi * 2);
 
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TutorialMiniBoard(
-              size: size,
-              labels: labels,
-              path: wordPath,
-              pathProgress: pathProgress,
-              drawnFill: true,
-              pathColor: ZipColors.sky,
-              showFinger: beat < 2 || !wordComplete,
-              fingerLifted: fingerLifted,
-              highlightCells: wordComplete ? wordPath.toSet() : const {},
-              highlightPulse: wordComplete ? pulse : 0,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180),
+              child: TutorialMiniBoard(
+                size: size,
+                labels: labels,
+                path: path,
+                pathProgress: pathProgress,
+                drawnFill: path.isNotEmpty,
+                pathColor: ZipColors.sky,
+                showFinger: showFinger,
+                fingerLifted: false,
+                highlightCells: highlightCells,
+                highlightPulse: highlightCells.isEmpty ? 0 : pulse,
+                lockedCells: lockedCells,
+                completedPaths: completedPaths,
+              ),
             ),
             const SizedBox(height: 12),
-            _MiniWordListRow(complete: wordComplete, pulse: pulse),
+            _MiniWordList(
+              catComplete: catComplete,
+              dogComplete: dogComplete,
+              runComplete: runComplete,
+              pulse: pulse,
+            ),
           ],
         );
       },
@@ -117,9 +161,54 @@ abstract final class PathWordsTutorial {
   }
 }
 
-class _MiniWordListRow extends StatelessWidget {
-  const _MiniWordListRow({required this.complete, required this.pulse});
+class _MiniWordList extends StatelessWidget {
+  const _MiniWordList({
+    required this.catComplete,
+    required this.dogComplete,
+    required this.runComplete,
+    required this.pulse,
+  });
 
+  final bool catComplete;
+  final bool dogComplete;
+  final bool runComplete;
+  final double pulse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _MiniWordListRow(
+          label: catComplete ? PathWordsTutorial.word : '• • •',
+          complete: catComplete,
+          pulse: pulse,
+        ),
+        const SizedBox(height: 8),
+        _MiniWordListRow(
+          label: dogComplete ? PathWordsTutorial.secondWord : '• • •',
+          complete: dogComplete,
+          pulse: pulse,
+        ),
+        const SizedBox(height: 8),
+        _MiniWordListRow(
+          label: runComplete ? PathWordsTutorial.thirdWord : '• • •',
+          complete: runComplete,
+          pulse: pulse,
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniWordListRow extends StatelessWidget {
+  const _MiniWordListRow({
+    required this.label,
+    required this.complete,
+    required this.pulse,
+  });
+
+  final String label;
   final bool complete;
   final double pulse;
 
@@ -127,7 +216,7 @@ class _MiniWordListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: complete ? ZipColors.skySoft : ZipColors.paper,
         borderRadius: BorderRadius.circular(12),
@@ -146,7 +235,7 @@ class _MiniWordListRow extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Text(
-            complete ? PathWordsTutorial.word : '• • •',
+            label,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: ZipColors.onInk,
               fontWeight: FontWeight.w700,

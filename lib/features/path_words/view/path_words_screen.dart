@@ -26,6 +26,7 @@ import '../bloc/path_words_state.dart';
 import '../game/path_words_board_view.dart';
 import '../game/path_words_game.dart';
 import 'widgets/path_words_how_to_play.dart';
+import 'widgets/path_words_shimmer.dart';
 import 'widgets/path_words_tutorial.dart';
 import 'widgets/path_words_word_list.dart';
 
@@ -482,25 +483,9 @@ class _BoardPane extends StatelessWidget {
       );
     }
 
-    return Container(
-      color: ZipColors.wall,
-      padding: const EdgeInsets.all(18),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 12),
-            Text(
-              AppStrings.pathWordsLoading,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: ZipColors.inkSoft),
-            ),
-          ],
-        ),
-      ),
+    return Semantics(
+      label: AppStrings.pathWordsLoading,
+      child: const PathWordsShimmer(),
     );
   }
 }

@@ -49,6 +49,8 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
 
     await tester.tap(find.text(AppStrings.navProfile));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle();
     expect(find.text('profile-body'), findsOneWidget);
   });

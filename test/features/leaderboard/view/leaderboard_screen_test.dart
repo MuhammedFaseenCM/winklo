@@ -5,7 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
+import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/game_ids.dart';
@@ -15,6 +17,7 @@ import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/leaderboard/view/leaderboard_screen.dart';
+import 'package:winklo/features/leaderboard/view/widgets/leaderboard_shimmer.dart';
 
 class _MockWatchLeaderboard extends Mock implements WatchLeaderboard {}
 
@@ -120,4 +123,331 @@ void main() {
     );
     expect(button.selected, {GameIds.pathWords});
   });
+
+  Future<void> pumpLeaderboard(
+    WidgetTester tester, {
+    required AuthCubit authCubit,
+    required _MockAuthRepository auth,
+    required _MockWatchLeaderboard watch,
+  }) async {
+    addTearDown(authCubit.close);
+    final router = GoRouter(
+      initialLocation: '/leaderboard',
+      routes: [
+        GoRoute(
+          path: '/leaderboard',
+          builder: (_, _) => const LeaderboardScreen(),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<WatchLeaderboard>.value(value: watch),
+          RepositoryProvider<AuthRepository>.value(value: auth),
+        ],
+        child: BlocProvider.value(
+          value: authCubit,
+          child: MaterialApp.router(
+            theme: buildAppTheme(),
+            routerConfig: router,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+  }
+
+  testWidgets('auth unknown shows LeaderboardShimmer not sign-in CTA', (
+    tester,
+  ) async {
+    final auth = _MockAuthRepository();
+    final watch = _MockWatchLeaderboard();
+    final authController = StreamController<AppUser?>.broadcast();
+    addTearDown(authController.close);
+
+    when(() => auth.currentUser).thenReturn(null);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => authController.stream);
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => const Stream.empty());
+
+    final authCubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: _MockSignInWithGoogle(),
+      signOut: _MockSignOut(),
+    );
+    await pumpLeaderboard(
+      tester,
+      authCubit: authCubit,
+      auth: auth,
+      watch: watch,
+    );
+
+    expect(find.byType(LeaderboardShimmer), findsOneWidget);
+    expect(find.text(AppStrings.signInWithGoogle), findsNothing);
+  });
+
+  testWidgets('signed-in loading shows LeaderboardShimmer', (tester) async {
+    const user = AppUser(uid: 'u1', displayName: 'Ada');
+    final auth = _MockAuthRepository();
+    final watch = _MockWatchLeaderboard();
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+
+    when(() => auth.currentUser).thenReturn(user);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream<AppUser?>.value(user));
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => boardController.stream);
+
+    final authCubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: _MockSignInWithGoogle(),
+      signOut: _MockSignOut(),
+    );
+    await pumpLeaderboard(
+      tester,
+      authCubit: authCubit,
+      auth: auth,
+      watch: watch,
+    );
+
+    expect(find.byType(LeaderboardShimmer), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('signed-in empty leaderboard shows message and play button', (
+    tester,
+  ) async {
+    const user = AppUser(uid: 'u1', displayName: 'Ada');
+    final auth = _MockAuthRepository();
+    final watch = _MockWatchLeaderboard();
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+
+    when(() => auth.currentUser).thenReturn(user);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream<AppUser?>.value(user));
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => boardController.stream);
+
+    final authCubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: _MockSignInWithGoogle(),
+      signOut: _MockSignOut(),
+    );
+    await pumpLeaderboard(
+      tester,
+      authCubit: authCubit,
+      auth: auth,
+      watch: watch,
+    );
+
+    // Emit empty leaderboard
+    boardController.add([]);
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.leaderboardEmpty), findsOneWidget);
+    expect(find.text('Play ${AppStrings.zipTitle}'), findsOneWidget);
+    expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+
+    // Switch game to Path Words
+    await tester.tap(find.text(AppStrings.pathWordsTitle));
+    await tester.pump();
+
+    boardController.add([]);
+    await tester.pump();
+
+    expect(find.text('Play ${AppStrings.pathWordsTitle}'), findsOneWidget);
+  });
+
+  testWidgets('user at rank 20 shows pinned user tile at bottom', (
+    tester,
+  ) async {
+    const user = AppUser(uid: 'u20', displayName: 'Player 20');
+    final auth = _MockAuthRepository();
+    final watch = _MockWatchLeaderboard();
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+
+    when(() => auth.currentUser).thenReturn(user);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream<AppUser?>.value(user));
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => boardController.stream);
+
+    final authCubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: _MockSignInWithGoogle(),
+      signOut: _MockSignOut(),
+    );
+    await pumpLeaderboard(
+      tester,
+      authCubit: authCubit,
+      auth: auth,
+      watch: watch,
+    );
+
+    // Create 25 entries where user is rank 20
+    final entries = List.generate(
+      25,
+      (i) => LeaderboardEntry(
+        uid: 'u${i + 1}',
+        displayName: 'Player ${i + 1}',
+        timeSeconds: 20 + i,
+        updatedAt: DateTime.utc(2026, 9, 25),
+        rank: i + 1,
+      ),
+    );
+
+    boardController.add(entries);
+    await tester.pumpAndSettle();
+
+    // The pinned row displays 'Your Rank' and user's name
+    expect(find.text('Your Rank'), findsOneWidget);
+    expect(find.text('Player 20'), findsOneWidget);
+  });
+
+  testWidgets('user at rank 2 does not show pinned user tile', (
+    tester,
+  ) async {
+    const user = AppUser(uid: 'u2', displayName: 'Player 2');
+    final auth = _MockAuthRepository();
+    final watch = _MockWatchLeaderboard();
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+
+    when(() => auth.currentUser).thenReturn(user);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream<AppUser?>.value(user));
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => boardController.stream);
+
+    final authCubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: _MockSignInWithGoogle(),
+      signOut: _MockSignOut(),
+    );
+    await pumpLeaderboard(
+      tester,
+      authCubit: authCubit,
+      auth: auth,
+      watch: watch,
+    );
+
+    final entries = List.generate(
+      25,
+      (i) => LeaderboardEntry(
+        uid: 'u${i + 1}',
+        displayName: 'Player ${i + 1}',
+        timeSeconds: 20 + i,
+        updatedAt: DateTime.utc(2026, 9, 25),
+        rank: i + 1,
+      ),
+    );
+
+    boardController.add(entries);
+    await tester.pumpAndSettle();
+
+    // Since user is rank 2 (in initial loaded list), pinned tile should not be shown
+    expect(find.text('Your Rank'), findsNothing);
+  });
+
+  testWidgets('scrolling down to user rank 20 hides pinned tile', (
+    tester,
+  ) async {
+    const user = AppUser(uid: 'u20', displayName: 'Player 20');
+    final auth = _MockAuthRepository();
+    final watch = _MockWatchLeaderboard();
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+
+    when(() => auth.currentUser).thenReturn(user);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream<AppUser?>.value(user));
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => boardController.stream);
+
+    final authCubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: _MockSignInWithGoogle(),
+      signOut: _MockSignOut(),
+    );
+    await pumpLeaderboard(
+      tester,
+      authCubit: authCubit,
+      auth: auth,
+      watch: watch,
+    );
+
+    final entries = List.generate(
+      25,
+      (i) => LeaderboardEntry(
+        uid: 'u${i + 1}',
+        displayName: 'Player ${i + 1}',
+        timeSeconds: 20 + i,
+        updatedAt: DateTime.utc(2026, 9, 25),
+        rank: i + 1,
+      ),
+    );
+
+    boardController.add(entries);
+    await tester.pumpAndSettle();
+
+    // Pinned row is visible initially
+    expect(find.text('Your Rank'), findsOneWidget);
+
+    // Scroll down 1200 pixels towards rank 20
+    await tester.drag(find.byType(ListView), const Offset(0, -1200));
+    await tester.pumpAndSettle();
+
+    // Now user has scrolled and reached rank 20; pinned tile hides
+    expect(find.text('Your Rank'), findsNothing);
+  });
 }
+
+

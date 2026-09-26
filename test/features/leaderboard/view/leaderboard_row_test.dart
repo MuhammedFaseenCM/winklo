@@ -41,4 +41,26 @@ void main() {
     );
     expect(find.text('4'), findsOneWidget);
   });
+
+  testWidgets('ranks 1, 2, 3 have thicker borders than standard rows', (tester) async {
+    for (final rank in [1, 2, 3]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: LeaderboardRow(
+              entry: entry(rank),
+              timeLabel: '0:30',
+              isYou: false,
+            ),
+          ),
+        ),
+      );
+      final container = tester.widget<Container>(find.byType(Container).first);
+      final decoration = container.decoration as BoxDecoration;
+      final border = decoration.border as Border;
+      expect(border.top.width, greaterThanOrEqualTo(2.0));
+    }
+  });
 }
+

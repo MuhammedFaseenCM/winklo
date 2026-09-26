@@ -19,6 +19,7 @@ class ProfileCubit extends Cubit<ProfileState> {
   }) : _profileRepository = profileRepository,
        _updateDisplayName = updateDisplayName,
        _updateAvatar = updateAvatar,
+       _uid = uid,
        super(const ProfileState()) {
     if (uid == null) return;
     _subscription = _profileRepository
@@ -44,7 +45,52 @@ class ProfileCubit extends Cubit<ProfileState> {
   final ProfileRepository _profileRepository;
   final UpdateDisplayName _updateDisplayName;
   final UpdateAvatar _updateAvatar;
+  final String? _uid;
   StreamSubscription<AppUser?>? _subscription;
+
+  Future<void> refresh() async {
+    final uid = _uid;
+    if (uid == null || isClosed) return;
+    emit(
+      state.copyWith(
+        status: ProfileStatus.refreshing,
+        error: null,
+        failureKind: ProfileFailureKind.none,
+      ),
+    );
+    try {
+      final user = await _profileRepository.getProfile(uid);
+      if (isClosed) return;
+      final seedName = !state.nameDraftTouched && user != null;
+      emit(
+        state.copyWith(
+          status: ProfileStatus.idle,
+          profile: user,
+          nameDraft: seedName ? user.displayName : state.nameDraft,
+          error: null,
+          failureKind: ProfileFailureKind.none,
+        ),
+      );
+    } on Failure catch (error) {
+      if (isClosed) return;
+      emit(
+        state.copyWith(
+          status: ProfileStatus.failure,
+          error: error.message,
+          failureKind: ProfileFailureKind.watchProfile,
+        ),
+      );
+    } catch (_) {
+      if (isClosed) return;
+      emit(
+        state.copyWith(
+          status: ProfileStatus.failure,
+          error: AppStrings.profileSaveFailed,
+          failureKind: ProfileFailureKind.watchProfile,
+        ),
+      );
+    }
+  }
 
   void setNameDraft(String value) {
     emit(state.copyWith(nameDraft: value, nameDraftTouched: true));

@@ -24,6 +24,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
   final FirebaseMessaging? _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications;
 
+  String? _lastSyncedUid;
+  String? _lastSyncedToken;
+
   FirebaseFirestore? get _db {
     if (!FirebaseBootstrap.isReady) return null;
     return _firestore ?? FirebaseFirestore.instance;
@@ -89,10 +92,16 @@ class NotificationRepositoryImpl implements NotificationRepository {
       final token = await _client.getDeviceToken();
       final db = _db;
       if (token != null && db != null) {
-        await db.collection('users').doc(uid).set({
-          'fcmToken': token,
-          'fcmUpdatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        // Avoid rewrite storms: fcmUpdatedAt is a server timestamp, so every
+        // write would otherwise retrigger users/{uid} listeners forever.
+        if (_lastSyncedUid != uid || _lastSyncedToken != token) {
+          await db.collection('users').doc(uid).set({
+            'fcmToken': token,
+            'fcmUpdatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          _lastSyncedUid = uid;
+          _lastSyncedToken = token;
+        }
       }
       await _client.subscribeToTopic(NotificationTypes.topicAnnouncements);
       await _client.subscribeToTopic(NotificationTypes.topicAppUpdates);
@@ -113,6 +122,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
           'fcmUpdatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       }
+      _lastSyncedUid = null;
+      _lastSyncedToken = null;
       await _client.regenerateFcmToken();
     } catch (e) {
       debugPrint('clearTokenOnSignOut failed: $e');

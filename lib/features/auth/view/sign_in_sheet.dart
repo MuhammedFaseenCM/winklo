@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/zip_ui.dart';
 import '../cubit/auth_cubit.dart';
 import '../cubit/auth_state.dart';
 
@@ -12,7 +13,8 @@ Future<bool> showSignInSheet(BuildContext context) async {
     context: context,
     backgroundColor: ZipColors.wall,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      side: BorderSide(color: ZipColors.glassBorder),
     ),
     builder: (sheetContext) {
       return BlocProvider.value(
@@ -30,15 +32,19 @@ class _SignInSheetBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
         child: BlocConsumer<AuthCubit, AuthState>(
+          // Only close on the transition into signed-in. Follow-up profile
+          // merges emit signedIn again and must not pop the shell page.
           listenWhen: (prev, next) =>
-              prev.status != next.status || prev.user != next.user,
+              next.status == AuthStatus.signedIn &&
+              next.user != null &&
+              prev.status != AuthStatus.signedIn,
           listener: (context, state) {
-            if (state.status == AuthStatus.signedIn && state.user != null) {
-              Navigator.of(context).pop(true);
-            }
+            final navigator = Navigator.of(context);
+            if (!navigator.canPop()) return;
+            navigator.pop(true);
           },
           builder: (context, state) {
             final isBusy = state.status == AuthStatus.signingIn;
@@ -48,28 +54,31 @@ class _SignInSheetBody extends StatelessWidget {
               children: [
                 Center(
                   child: Container(
-                    width: 40,
+                    width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: ZipColors.mistDeep,
+                      color: const Color(0x33FFFFFF),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                const Center(child: ZipMark(size: 40)),
+                const SizedBox(height: 12),
                 Text(
                   AppStrings.signInTitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(color: ZipColors.onInk),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: ZipColors.onInk,
+                    fontWeight: FontWeight.w800,
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   AppStrings.signInBody,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: ZipColors.inkSoft),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: ZipColors.inkSoft,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 if (state.status == AuthStatus.failure &&
@@ -83,7 +92,7 @@ class _SignInSheetBody extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 FilledButton(
                   onPressed: isBusy
                       ? null
@@ -96,7 +105,7 @@ class _SignInSheetBody extends StatelessWidget {
                         )
                       : Text(AppStrings.signInWithGoogle),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 TextButton(
                   onPressed: isBusy
                       ? null

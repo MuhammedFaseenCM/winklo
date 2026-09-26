@@ -50,6 +50,37 @@ void main() {
     expect(dock.right, lessThan(screen.right - 8));
   });
 
+  testWidgets('dock clears bottom view padding / home indicator', (
+    tester,
+  ) async {
+    const bottomInset = 34.0;
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: Size(390, 844),
+          padding: EdgeInsets.zero,
+          viewPadding: EdgeInsets.only(bottom: bottomInset),
+        ),
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            extendBody: true,
+            body: const SizedBox.expand(),
+            bottomNavigationBar: FloatingNavDock(
+              selectedIndex: 0,
+              onDestinationSelected: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final dock = tester.getRect(find.byKey(const Key('floating_nav_dock')));
+    final screen = tester.getRect(find.byType(Scaffold));
+    // Dock bottom edge stays above the home-indicator inset (+ 12px gap).
+    expect(dock.bottom, lessThanOrEqualTo(screen.bottom - bottomInset - 11));
+  });
+
   testWidgets('leaderboard uses trophy icons', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -63,6 +94,41 @@ void main() {
       ),
     );
     expect(find.byIcon(Icons.emoji_events), findsWidgets);
+  });
+
+  testWidgets('selection pill slides when index changes', (tester) async {
+    Future<void> pumpIndex(int index) {
+      return tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            bottomNavigationBar: FloatingNavDock(
+              selectedIndex: index,
+              onDestinationSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+    }
+
+    await pumpIndex(0);
+    final start = tester.getTopLeft(
+      find.byKey(const Key('floating_nav_dock_pill')),
+    );
+
+    await pumpIndex(2);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 110));
+    final mid = tester.getTopLeft(
+      find.byKey(const Key('floating_nav_dock_pill')),
+    );
+    expect(mid.dx, greaterThan(start.dx));
+
+    await tester.pumpAndSettle();
+    final end = tester.getTopLeft(
+      find.byKey(const Key('floating_nav_dock_pill')),
+    );
+    expect(end.dx, greaterThan(mid.dx));
   });
 
   testWidgets('selected destination announces selected semantics', (

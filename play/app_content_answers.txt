@@ -2,25 +2,29 @@ Winklo Play Console App content answers
 Privacy policy URL:
 https://muhammedfaseencm.github.io/winklo/privacy/
 
-Sign in details:
-No. The app is not restricted. No reviewer login.
+Sign in / App access:
+All features available with any Google account. Zip and Path Words require
+Google Sign-In. Reviewers and closed testers should use their own Google
+account. No special login credentials are required.
 
 Ads:
 No, the app does not contain ads.
 
 Content rating:
-Puzzle / word games. No violence, sex, drugs, UGC, location sharing, or chat.
+Puzzle / word games. No violence, sex, drugs, location sharing, or chat.
+Leaderboard shows display name and avatar/photo among players.
 Expected: Everyone / PEGI 3. Confirm the IARC email Google sends.
 
 Target audience:
 13-15, 16-17, and 18+. Not designed for children. Appeal to kids: No.
 
-Data safety: already uploaded via Play API (play/data_safety.csv)
-- Collects device IDs and approximate location (IP) for Firebase/Fonts
-- Not shared, not sold, not used for ads
+Data safety: upload via Play API (play/data_safety.csv + upload_data_safety.py)
+- Google Sign-In (OAuth)
+- Name, user IDs, optional photos; name/photo may appear on in-app leaderboard
+- Device IDs / approximate location (IP) / crash / diagnostics / app interactions
+  for Firebase
 - Encrypted in transit: Yes
-- Account creation: none
-- Users cannot request cloud deletion (no account)
+- Account deletion: request via GitHub issues (see privacy policy); no in-app delete yet
 
 Government apps: No
 Financial features: No

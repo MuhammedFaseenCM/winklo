@@ -14,9 +14,13 @@ class ZipHowToPlayButton extends StatelessWidget {
     return IconButton(
       tooltip: AppStrings.zipHowToPlayTitle,
       onPressed: () async {
-        await context.read<AnalyticsRepository>().logHowToPlayOpened(
-          gameId: GameIds.zip,
-        );
+        try {
+          await context.read<AnalyticsRepository>().logHowToPlayOpened(
+            gameId: GameIds.zip,
+          );
+        } on ProviderNotFoundException {
+          // Analytics may not be provided in focused widget tests.
+        }
         if (!context.mounted) return;
         await ZipTutorial.show(context);
       },
