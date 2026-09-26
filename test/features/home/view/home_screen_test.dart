@@ -33,10 +33,13 @@ void main() {
     WidgetTester tester, {
     required SharedPreferences prefs,
     required GoRouter router,
+    AppUser? authUser = user,
   }) async {
     final auth = _MockAuthRepository();
-    when(() => auth.currentUser).thenReturn(user);
-    when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(user));
+    when(() => auth.currentUser).thenReturn(authUser);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream.value(authUser));
 
     await tester.pumpWidget(
       MultiRepositoryProvider(
@@ -186,5 +189,75 @@ void main() {
 
     expect(find.text(AppStrings.result), findsOneWidget);
     expect(find.text(AppStrings.playTodaysZip), findsNothing);
+  });
+
+  testWidgets('signed-out user can open Zip without sign-in sheet', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
+        GoRoute(
+          path: '/zip',
+          builder: (_, _) => const Scaffold(body: Text('zip-screen')),
+        ),
+        GoRoute(
+          path: '/path-words',
+          builder: (_, _) => const Scaffold(body: Text('path-words')),
+        ),
+        GoRoute(
+          path: '/leaderboard',
+          builder: (_, _) => const Scaffold(body: Text('leaderboard')),
+        ),
+      ],
+    );
+
+    await pumpHome(tester, prefs: prefs, router: router, authUser: null);
+
+    await tester.tap(find.text(AppStrings.playTodaysZip));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text(AppStrings.signInWithGoogle), findsNothing);
+    expect(find.text('zip-screen'), findsOneWidget);
+  });
+
+  testWidgets('signed-out user can open Path Words without sign-in sheet', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
+        GoRoute(
+          path: '/zip',
+          builder: (_, _) => const Scaffold(body: Text('zip-screen')),
+        ),
+        GoRoute(
+          path: '/path-words',
+          builder: (_, _) => const Scaffold(body: Text('path-words')),
+        ),
+        GoRoute(
+          path: '/leaderboard',
+          builder: (_, _) => const Scaffold(body: Text('leaderboard')),
+        ),
+      ],
+    );
+
+    await pumpHome(tester, prefs: prefs, router: router, authUser: null);
+
+    await tester.tap(find.text(AppStrings.playTodaysPathWords));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text(AppStrings.signInWithGoogle), findsNothing);
+    expect(find.text('path-words'), findsOneWidget);
   });
 }

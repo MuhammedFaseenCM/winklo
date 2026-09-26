@@ -18,6 +18,8 @@ abstract final class AppStrings {
   static const zipTutorialWalls = 'Walls block the path';
   static const zipHowToPlayGotIt = 'Got it';
   static const tutorialGotIt = 'Got it';
+  static const tutorialSkip = 'Skip';
+  static const tutorialNext = 'Next';
   static const zipTipStartAtOne = 'Start at 1';
   static const zipTipFillEveryCell = 'Fill every cell before you finish';
   static const zipTipFinishOnLast = 'Finish on the last number';
@@ -41,9 +43,9 @@ abstract final class AppStrings {
   static const pathWordsHint = 'Hint';
   static String pathWordsHintWithCount(int n) => 'Hint ($n)';
   static const pathWordsHowToPlayTitle = 'How to play';
-  static const pathWordsTutorialDrag = 'Drag letter to letter';
-  static const pathWordsTutorialLift = 'Lift anytime — keep going';
   static const pathWordsTutorialMatchList = 'Match a word on the list';
+  static const pathWordsTutorialFindEveryWord = 'Find every word';
+  static const pathWordsTutorialFillEveryCell = 'Every cell should fill';
   static const pathWordsHowToPlayGotIt = 'Got it';
   static const pathWordsTipMatchList =
       'That path isn’t on the list — match a listed word';
@@ -88,13 +90,17 @@ abstract final class AppStrings {
   }
 
   // Auth / leaderboard
-  static const signInTitle = 'Sign in to play';
+  static const signInTitle = 'Sign in to view rankings';
   static const signInBody =
-      'Use your Google account to play Zip and Path Words and join the live leaderboard.';
+      'Play Zip and Path Words anytime. Sign in with Google to join the live leaderboard.';
   static const signInWithGoogle = 'Continue with Google';
   static const signInCancel = 'Not now';
-  static const signInRequired = 'Sign in to play';
+  static const signInRequired = 'Sign in to view rankings';
   static const signOut = 'Sign out';
+  static const signOutConfirmTitle = 'Sign out?';
+  static const signOutConfirmBody =
+      'You’ll need to sign in again to view the live leaderboard.';
+  static const signOutConfirmCancel = 'Cancel';
   static const leaderboardTitle = 'Leaderboard';
   static const leaderboardDaily = 'Daily';
   static const leaderboardAllTime = 'All-time';
@@ -135,4 +141,28 @@ abstract final class AppStrings {
   static const profileUploadFailed = 'Could not upload photo. Try again.';
   static const profilePermissionDenied =
       'Photo access was denied. Enable it in Settings to upload an avatar.';
+  static const profileEditDisplayName = 'Edit display name';
+  static const profilePrivacyPolicy = 'Privacy policy';
+  static const profileAboutGame = 'About the game';
+  static const profileReportIssue = 'Report an issue';
+  static const profileAboutBody =
+      'Winklo is a daily puzzle app with solo mini-games like Zip and Path Words. '
+      'Clear today’s puzzles, climb the leaderboard, and keep your streak going.';
+  static String profileAboutVersion(String version) => 'Version $version';
+  static const profileReportTitleLabel = 'Title';
+  static const profileReportTitleHint = 'Short summary';
+  static const profileReportDescriptionLabel = 'Description';
+  static const profileReportDescriptionHint =
+      'What went wrong or what you’d like to see?';
+  static const profileReportTitleEmpty = 'Title can’t be empty.';
+  static const profileReportTitleTooLong =
+      'Title must be 80 characters or fewer.';
+  static const profileReportDescriptionEmpty = 'Description can’t be empty.';
+  static const profileReportDescriptionTooLong =
+      'Description must be 2000 characters or fewer.';
+  static const profileReportSend = 'Send';
+  static const profileReportSent = 'Thanks — your report was sent.';
+  static const profileReportFailed = 'Could not send report. Try again.';
+  static const profilePrivacyFailed = 'Could not load the privacy policy.';
+  static const profilePrivacyRetry = 'Retry';
 }
