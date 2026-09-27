@@ -58,10 +58,43 @@ abstract final class AppStrings {
   static const pathWordsFailed = 'Could not load today’s puzzle.';
   static const retry = 'Retry';
 
+  // Sudoku
+  static const sudokuTitle = 'Sudoku';
+  static const sudokuTagline = 'Fill every cell with 1–6.';
+  static const playTodaysSudoku = "Play today's Sudoku";
+  static const sudokuHint = 'Hint';
+  static const sudokuErase = 'Erase';
+  static const sudokuReset = 'Reset';
+  static const sudokuNotes = 'Notes';
+  static const sudokuHowToPlayTitle = 'How to play';
+  static const sudokuHowToPlayBody =
+      'Fill every empty cell with 1–6 so each row, column, and 2×3 box has every digit once. Wrong entries are rejected. Notes and hints are unlimited.';
+  static const sudokuHowToPlayGotIt = 'Got it';
+  static const sudokuClearedTitle = 'Puzzle cleared!';
+  static const sudokuDifficultyEasy = 'Easy';
+  static const sudokuDifficultyMedium = 'Medium';
+  static const sudokuDifficultyHard = 'Hard';
+
   // Results
   static const newPersonalBest = 'New personal best';
   static const newPuzzleUnlocksTomorrow = 'A new puzzle unlocks tomorrow.';
   static const backHome = 'Back home';
+  static const resultsTimeLabel = 'time';
+
+  static String formatPlayTime(int totalSeconds) {
+    final m = totalSeconds ~/ 60;
+    final s = totalSeconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  static String saveTimeToBoard(String timeLabel) =>
+      'Save $timeLabel to today’s board';
+
+  static const saveTimeSignInTitle = 'Save your time';
+  static const saveTimeSignInBody =
+      'Sign in with Google to put this run on the live daily leaderboard.';
+  static const resultsBoardTeaseHint =
+      'Today’s board is live — tap to save your time and join.';
 
   // Zip game branding (feature, not app title)
   static const zipBrand = 'ZIP';
@@ -90,16 +123,19 @@ abstract final class AppStrings {
   }
 
   // Auth / leaderboard
-  static const signInTitle = 'Sign in to view rankings';
+  static const playSignInTitle = 'Sign in to play';
+  static const playSignInBody =
+      'Sign in with Google to play today’s puzzles and save your time on the board.';
+  static const signInTitle = 'Sign in to join the board';
   static const signInBody =
-      'Play Zip and Path Words anytime. Sign in with Google to join the live leaderboard.';
+      'Browse live rankings anytime. Sign in with Google to play and save your scores.';
   static const signInWithGoogle = 'Continue with Google';
   static const signInCancel = 'Not now';
-  static const signInRequired = 'Sign in to view rankings';
+  static const signInRequired = 'Sign in to join the board';
   static const signOut = 'Sign out';
   static const signOutConfirmTitle = 'Sign out?';
   static const signOutConfirmBody =
-      'You’ll need to sign in again to view the live leaderboard.';
+      'You’ll need to sign in again to play. You can still view the live leaderboard signed out.';
   static const signOutConfirmCancel = 'Cancel';
   static const leaderboardTitle = 'Leaderboard';
   static const leaderboardDaily = 'Daily';
