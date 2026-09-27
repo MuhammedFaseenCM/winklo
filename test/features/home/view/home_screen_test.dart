@@ -191,7 +191,7 @@ void main() {
     expect(find.text(AppStrings.playTodaysZip), findsNothing);
   });
 
-  testWidgets('signed-out user can open Zip without sign-in sheet', (
+  testWidgets('signed-out user sees play sign-in sheet and stays on Home', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -222,11 +222,19 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text(AppStrings.signInWithGoogle), findsNothing);
-    expect(find.text('zip-screen'), findsOneWidget);
+    expect(find.text(AppStrings.playSignInTitle), findsOneWidget);
+    expect(find.text(AppStrings.signInWithGoogle), findsOneWidget);
+    expect(find.text('zip-screen'), findsNothing);
+
+    await tester.tap(find.text(AppStrings.signInCancel));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text(AppStrings.playTodaysZip), findsOneWidget);
+    expect(find.text('zip-screen'), findsNothing);
   });
 
-  testWidgets('signed-out user can open Path Words without sign-in sheet', (
+  testWidgets('signed-out Path Words tap shows play sign-in sheet', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -257,7 +265,40 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text(AppStrings.signInWithGoogle), findsNothing);
-    expect(find.text('path-words'), findsOneWidget);
+    expect(find.text(AppStrings.playSignInTitle), findsOneWidget);
+    expect(find.text('path-words'), findsNothing);
+  });
+
+  testWidgets('signed-in user opens Zip without sign-in sheet', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
+        GoRoute(
+          path: '/zip',
+          builder: (_, _) => const Scaffold(body: Text('zip-screen')),
+        ),
+        GoRoute(
+          path: '/path-words',
+          builder: (_, _) => const Scaffold(body: Text('path-words')),
+        ),
+        GoRoute(
+          path: '/leaderboard',
+          builder: (_, _) => const Scaffold(body: Text('leaderboard')),
+        ),
+      ],
+    );
+
+    await pumpHome(tester, prefs: prefs, router: router);
+
+    await tester.tap(find.text(AppStrings.playTodaysZip));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text(AppStrings.playSignInTitle), findsNothing);
+    expect(find.text('zip-screen'), findsOneWidget);
   });
 }

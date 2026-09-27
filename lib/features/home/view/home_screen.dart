@@ -6,10 +6,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/config/static_assets_config.dart';
 import '../../../core/dev_flags.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/app_update_decision.dart';
 import '../../../domain/game_ids.dart';
@@ -21,9 +23,9 @@ import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
 import '../../../domain/usecases/schedule_engagement_notifications.dart';
 import '../../../domain/repositories/notification_repository.dart';
+import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
-import 'widgets/home_force_update_overlay.dart';
 import 'widgets/home_update_banner.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -130,9 +132,10 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             state.pathWordsBestPoints > 0 ||
             state.pathWordsBestTimeSeconds != null;
         final isSoftUpdate = state.updateStatus == AppUpdateStatus.soft;
-        final isForcedUpdate = state.updateStatus == AppUpdateStatus.forced;
 
         Future<void> openZip() async {
+          final ok = await ensureSignedInForPlay(context);
+          if (!ok || !context.mounted) return;
           final cubit = context.read<HomeCubit>();
           await cubit.openGame(GameIds.zip);
           if (!context.mounted) return;
@@ -141,6 +144,8 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
         }
 
         Future<void> openPathWords() async {
+          final ok = await ensureSignedInForPlay(context);
+          if (!ok || !context.mounted) return;
           final cubit = context.read<HomeCubit>();
           await cubit.openGame(GameIds.pathWords);
           if (!context.mounted) return;
@@ -148,6 +153,18 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
           if (!cubit.isClosed) await cubit.load();
         }
 
+        Future<void> openSudoku() async {
+          final ok = await ensureSignedInForPlay(context);
+          if (!ok || !context.mounted) return;
+          final cubit = context.read<HomeCubit>();
+          await cubit.openGame(GameIds.sudoku);
+          if (!context.mounted) return;
+          await context.push('/sudoku');
+          if (!cubit.isClosed) await cubit.load();
+        }
+
+        final sudokuCleared =
+            state.sudokuBestPoints > 0 || state.sudokuBestTimeSeconds != null;
         return Scaffold(
           body: ZipAtmosphere(
             child: Stack(
@@ -181,7 +198,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                           _DailyGameTile(
                                 accent: ZipColors.ember,
                                 accentSoft: ZipColors.emberSoft,
-                                iconAsset: _GameTileAssets.zip,
+                                imageUrl: _GameTileAssets.zip,
                                 title: AppStrings.zipTitle,
                                 tagline: AppStrings.zipTagline,
                                 playLabel: AppStrings.playTodaysZip,
@@ -207,7 +224,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                             _DailyGameTile(
                                   accent: ZipColors.sky,
                                   accentSoft: ZipColors.skySoft,
-                                  iconAsset: _GameTileAssets.pathWords,
+                                  imageUrl: _GameTileAssets.pathWords,
                                   title: AppStrings.pathWordsTitle,
                                   tagline: AppStrings.pathWordsTagline,
                                   playLabel: AppStrings.playTodaysPathWords,
@@ -229,18 +246,38 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                                 .animate()
                                 .fadeIn(delay: 160.ms, duration: 450.ms)
                                 .slideY(begin: 0.1, curve: Curves.easeOutCubic),
+                            SizedBox(height: layout.tileGap),
+                            _DailyGameTile(
+                                  accent: ZipColors.success,
+                                  accentSoft: ZipColors.successSoft,
+                                  imageUrl: _GameTileAssets.sudoku,
+                                  title: AppStrings.sudokuTitle,
+                                  tagline: AppStrings.sudokuTagline,
+                                  playLabel: AppStrings.playTodaysSudoku,
+                                  playBackground: const Color(0xFF059669),
+                                  onPlay: sudokuCleared
+                                      ? null
+                                      : () {
+                                          openSudoku();
+                                        },
+                                  onViewResult: sudokuCleared
+                                      ? () {
+                                          openSudoku();
+                                        }
+                                      : null,
+                                  streak: state.sudokuCurrentStreak,
+                                  isOnFreeze: state.sudokuIsOnFreeze,
+                                  cleared: sudokuCleared,
+                                )
+                                .animate()
+                                .fadeIn(delay: 240.ms, duration: 450.ms)
+                                .slideY(begin: 0.1, curve: Curves.easeOutCubic),
                           ],
                         ],
                       );
                     },
                   ),
                 ),
-                if (isForcedUpdate)
-                  HomeForceUpdateOverlay(
-                    currentLabel: state.updateCurrentLabel,
-                    requiredLabel: state.updateRequiredLabel,
-                    onUpdate: () => context.read<HomeCubit>().openStore(),
-                  ),
               ],
             ),
           ),
@@ -337,7 +374,7 @@ class _DailyGameTile extends StatelessWidget {
   const _DailyGameTile({
     required this.accent,
     required this.accentSoft,
-    required this.iconAsset,
+    required this.imageUrl,
     required this.title,
     required this.tagline,
     required this.playLabel,
@@ -351,7 +388,7 @@ class _DailyGameTile extends StatelessWidget {
 
   final Color accent;
   final Color accentSoft;
-  final String iconAsset;
+  final String imageUrl;
   final String title;
   final String tagline;
   final String playLabel;
@@ -417,180 +454,173 @@ class _DailyGameTile extends StatelessWidget {
                 ),
               ),
             ),
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: layout.space(6),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [accent, accent.withValues(alpha: 0.6)],
-                      ),
-                    ),
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: layout.space(6),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [accent, accent.withValues(alpha: 0.6)],
                   ),
-                  Expanded(
-                    child: Padding(
-                      padding: layout.tilePadding,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: layout.space(6)),
+              child: Padding(
+                padding: layout.tilePadding,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: layout.space(10),
+                            vertical: layout.space(5),
+                          ),
+                          decoration: BoxDecoration(
+                            color: accentSoft,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.35),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: layout.space(10),
-                                  vertical: layout.space(5),
-                                ),
+                                width: 6,
+                                height: 6,
                                 decoration: BoxDecoration(
-                                  color: accentSoft,
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: accent.withValues(alpha: 0.35),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: accent,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: accent.withValues(
-                                              alpha: 0.6,
-                                            ),
-                                            blurRadius: 4,
-                                            spreadRadius: 1,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(width: layout.space(6)),
-                                    Text(
-                                      AppStrings.today,
-                                      style: textTheme.labelMedium?.copyWith(
-                                        color: accent,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.3,
-                                        fontSize: 11,
-                                      ),
+                                  shape: BoxShape.circle,
+                                  color: accent,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: accent.withValues(alpha: 0.6),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
                                     ),
                                   ],
                                 ),
                               ),
-                              SizedBox(width: layout.space(8)),
-                              Expanded(
-                                child: Wrap(
-                                  alignment: WrapAlignment.end,
-                                  spacing: layout.space(8),
-                                  runSpacing: layout.space(8),
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    if (streak > 0)
-                                      ZipHudPill(
-                                        icon:
-                                            Icons.local_fire_department_rounded,
-                                        label: AppStrings.streakLabel(streak),
-                                        emphasize: true,
-                                        compact: true,
-                                      ),
-                                  ],
+                              SizedBox(width: layout.space(6)),
+                              Text(
+                                AppStrings.today,
+                                style: textTheme.labelMedium?.copyWith(
+                                  color: accent,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                  fontSize: 11,
                                 ),
                               ),
                             ],
                           ),
-                          if (isOnFreeze) ...[
-                            SizedBox(height: layout.space(10)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: ZipColors.skySoft,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: ZipColors.sky.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: Text(
-                                AppStrings.streakProtectedLabel,
-                                style: textTheme.labelSmall?.copyWith(
-                                  color: ZipColors.sky,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                          SizedBox(
-                            height: layout.space(layout.isCompact ? 12 : 16),
-                          ),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                        ),
+                        SizedBox(width: layout.space(8)),
+                        Expanded(
+                          child: Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: layout.space(8),
+                            runSpacing: layout.space(8),
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              _GameTileArt(
-                                assetPath: iconAsset,
-                                semanticLabel: title,
-                                size: layout.tileArtSize,
-                                accentColor: accent,
-                              ),
-                              SizedBox(width: layout.space(14)),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      style: titleStyle,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    SizedBox(height: layout.space(4)),
-                                    Text(
-                                      tagline,
-                                      style: textTheme.bodyMedium?.copyWith(
-                                        color: ZipColors.inkSoft,
-                                        height: 1.3,
-                                      ),
-                                      maxLines: layout.isCompact ? 2 : 3,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
+                              if (streak > 0)
+                                ZipHudPill(
+                                  icon: Icons.local_fire_department_rounded,
+                                  label: AppStrings.streakLabel(streak),
+                                  emphasize: true,
+                                  compact: true,
                                 ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (isOnFreeze) ...[
+                      SizedBox(height: layout.space(10)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ZipColors.skySoft,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: ZipColors.sky.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          AppStrings.streakProtectedLabel,
+                          style: textTheme.labelSmall?.copyWith(
+                            color: ZipColors.sky,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: layout.space(layout.isCompact ? 12 : 16)),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _GameTileArt(
+                          imageUrl: imageUrl,
+                          semanticLabel: title,
+                          size: layout.tileArtSize,
+                          accentColor: accent,
+                        ),
+                        SizedBox(width: layout.space(14)),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: titleStyle,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: layout.space(4)),
+                              Text(
+                                tagline,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: ZipColors.inkSoft,
+                                  height: 1.3,
+                                ),
+                                maxLines: layout.isCompact ? 2 : 3,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-                          // Best time / longest-streak chip hidden for now.
-                          SizedBox(
-                            height: layout.space(layout.isCompact ? 14 : 18),
-                          ),
-                          if (cleared)
-                            ZipPrimaryButton(
-                              label: AppStrings.result,
-                              icon: Icons.emoji_events_rounded,
-                              backgroundColor: playBackground,
-                              onPressed: onViewResult,
-                            )
-                          else
-                            ZipPrimaryButton(
-                              label: playLabel,
-                              icon: Icons.play_arrow_rounded,
-                              backgroundColor: playBackground,
-                              onPressed: onPlay,
-                            ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    // Best time / longest-streak chip hidden for now.
+                    SizedBox(height: layout.space(layout.isCompact ? 14 : 18)),
+                    if (cleared)
+                      ZipPrimaryButton(
+                        label: AppStrings.result,
+                        icon: Icons.emoji_events_rounded,
+                        backgroundColor: playBackground,
+                        onPressed: onViewResult,
+                      )
+                    else
+                      ZipPrimaryButton(
+                        label: playLabel,
+                        icon: Icons.play_arrow_rounded,
+                        backgroundColor: playBackground,
+                        onPressed: onPlay,
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -601,19 +631,22 @@ class _DailyGameTile extends StatelessWidget {
 }
 
 abstract final class _GameTileAssets {
-  static const zip = 'assets/games/zip_tile.png';
-  static const pathWords = 'assets/games/path_words_tile.png';
+  static final zip = StaticAssetsConfig.url('games/zip_tile_v3.png');
+  static final pathWords = StaticAssetsConfig.url(
+    'games/path_words_tile_v2.png',
+  );
+  static final sudoku = StaticAssetsConfig.url('games/sudoku_tile_v2.png');
 }
 
 class _GameTileArt extends StatelessWidget {
   const _GameTileArt({
-    required this.assetPath,
+    required this.imageUrl,
     required this.semanticLabel,
     required this.size,
     this.accentColor,
   });
 
-  final String assetPath;
+  final String imageUrl;
   final String semanticLabel;
   final double size;
   final Color? accentColor;
@@ -644,14 +677,16 @@ class _GameTileArt extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Image.asset(
-        assetPath,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.high,
-        gaplessPlayback: true,
-        semanticLabel: semanticLabel,
+      child: Semantics(
+        label: semanticLabel,
+        child: AppImage.network(
+          imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: const ColoredBox(color: ZipColors.mistDeep),
+          placeholder: const ColoredBox(color: ZipColors.mistDeep),
+        ),
       ),
     );
   }
