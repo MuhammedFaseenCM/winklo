@@ -7,6 +7,7 @@ import 'core/strings/app_strings.dart';
 import 'core/theme/app_text_scale.dart';
 import 'core/theme/app_theme.dart';
 import 'domain/repositories/analytics_repository.dart';
+import 'features/auth/cubit/auth_cubit.dart';
 
 class WinkloApp extends StatefulWidget {
   const WinkloApp({super.key});
@@ -20,7 +21,10 @@ class _WinkloAppState extends State<WinkloApp> {
 
   @override
   Widget build(BuildContext context) {
-    _router ??= buildRouter(analytics: context.read<AnalyticsRepository>());
+    _router ??= buildRouter(
+      analytics: context.read<AnalyticsRepository>(),
+      authCubit: context.read<AuthCubit>(),
+    );
     return MaterialApp.router(
       title: AppStrings.appTitle,
       theme: buildAppTheme(),
