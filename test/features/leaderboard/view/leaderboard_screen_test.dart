@@ -338,9 +338,7 @@ void main() {
     expect(find.text('Player 20'), findsOneWidget);
   });
 
-  testWidgets('user at rank 2 does not show pinned user tile', (
-    tester,
-  ) async {
+  testWidgets('user at rank 2 does not show pinned user tile', (tester) async {
     const user = AppUser(uid: 'u2', displayName: 'Player 2');
     final auth = _MockAuthRepository();
     final watch = _MockWatchLeaderboard();
@@ -448,6 +446,100 @@ void main() {
     // Now user has scrolled and reached rank 20; pinned tile hides
     expect(find.text('Your Rank'), findsNothing);
   });
+
+  testWidgets('signed-out shows live entries and floating sign-in CTA', (
+    tester,
+  ) async {
+    final auth = _MockAuthRepository();
+    final watch = _MockWatchLeaderboard();
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+
+    when(() => auth.currentUser).thenReturn(null);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream<AppUser?>.value(null));
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => boardController.stream);
+
+    final authCubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: _MockSignInWithGoogle(),
+      signOut: _MockSignOut(),
+    );
+    await pumpLeaderboard(
+      tester,
+      authCubit: authCubit,
+      auth: auth,
+      watch: watch,
+    );
+
+    boardController.add([
+      LeaderboardEntry(
+        uid: 'a',
+        displayName: 'Alex',
+        timeSeconds: 42,
+        updatedAt: DateTime.utc(2026, 9, 27),
+        rank: 1,
+      ),
+    ]);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alex'), findsOneWidget);
+    expect(find.text(AppStrings.leaderboardSignInHint), findsNothing);
+    expect(find.byKey(const Key('leaderboard_sign_in_fab')), findsOneWidget);
+    expect(find.text(AppStrings.signInWithGoogle), findsOneWidget);
+  });
+
+  testWidgets('signed-in does not show floating sign-in CTA', (tester) async {
+    const user = AppUser(uid: 'u1', displayName: 'Ada');
+    final auth = _MockAuthRepository();
+    final watch = _MockWatchLeaderboard();
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+
+    when(() => auth.currentUser).thenReturn(user);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream<AppUser?>.value(user));
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => boardController.stream);
+
+    final authCubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: _MockSignInWithGoogle(),
+      signOut: _MockSignOut(),
+    );
+    await pumpLeaderboard(
+      tester,
+      authCubit: authCubit,
+      auth: auth,
+      watch: watch,
+    );
+
+    boardController.add([
+      LeaderboardEntry(
+        uid: 'u1',
+        displayName: 'Ada',
+        timeSeconds: 40,
+        updatedAt: DateTime.utc(2026, 9, 27),
+        rank: 1,
+      ),
+    ]);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('leaderboard_sign_in_fab')), findsNothing);
+  });
 }
-
-
