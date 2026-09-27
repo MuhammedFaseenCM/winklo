@@ -46,6 +46,14 @@
           }
         },
         {
+          "client_id": "43073222004-v3u4q4uvp29ciae5oi2tjcjuoc4che76.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.winklo.faseencm",
+            "certificate_hash": "1138e5ef031fd68bc63daa6b86b493cb722f1d58"
+          }
+        },
+        {
           "client_id": "43073222004-8urlsjf12lie435qjsk8t1tk9br7onp9.apps.googleusercontent.com",
           "client_type": 3
         }

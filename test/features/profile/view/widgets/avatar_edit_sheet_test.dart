@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
+import 'package:winklo/core/widgets/user_avatar.dart';
+import 'package:winklo/domain/avatars/avatar_catalog.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/usecases/update_avatar.dart';
@@ -12,6 +14,13 @@ import 'package:winklo/features/profile/cubit/profile_cubit.dart';
 import 'package:winklo/features/profile/view/widgets/avatar_edit_sheet.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+/// Network presets use CachedNetworkImage + progress placeholders, so
+/// [WidgetTester.pumpAndSettle] never completes. Advance a fixed duration.
+Future<void> _pumpSheet(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -78,7 +87,7 @@ void main() {
     );
 
     await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
+    await _pumpSheet(tester);
 
     expect(find.text(AppStrings.profileEditAvatar), findsOneWidget);
     expect(find.text(AppStrings.profileChoosePhoto), findsOneWidget);
@@ -89,15 +98,7 @@ void main() {
     );
   });
 
-  testWidgets('loads all preset assets without image errors', (tester) async {
-    final imageErrors = <String>[];
-    final previous = FlutterError.onError;
-    FlutterError.onError = (details) {
-      imageErrors.add(details.exceptionAsString());
-      previous?.call(details);
-    };
-    addTearDown(() => FlutterError.onError = previous);
-
+  testWidgets('shows a tile for each preset id', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildAppTheme(),
@@ -112,13 +113,11 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await _pumpSheet(tester);
 
     expect(
-      imageErrors.where((e) => e.contains('Could not decompress image')),
-      isEmpty,
-      reason: imageErrors.join('\n'),
+      find.byType(UserAvatar),
+      findsNWidgets(AvatarCatalog.presetIds.length),
     );
-    expect(find.byType(Image), findsNWidgets(6));
   });
 }

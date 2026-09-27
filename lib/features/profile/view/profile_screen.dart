@@ -93,6 +93,7 @@ class _SignedInBody extends StatelessWidget {
     final cubit = context.read<ProfileCubit>();
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: ZipColors.wall,
       shape: const RoundedRectangleBorder(
@@ -108,6 +109,7 @@ class _SignedInBody extends StatelessWidget {
     final cubit = context.read<ProfileCubit>();
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: ZipColors.wall,
       shape: const RoundedRectangleBorder(

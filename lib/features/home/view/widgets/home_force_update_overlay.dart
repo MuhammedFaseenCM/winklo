@@ -8,21 +8,13 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/zip_ui.dart';
 
 class HomeForceUpdateOverlay extends StatelessWidget {
-  const HomeForceUpdateOverlay({
-    super.key,
-    required this.currentLabel,
-    required this.requiredLabel,
-    required this.onUpdate,
-  });
+  const HomeForceUpdateOverlay({super.key, required this.onUpdate});
 
-  final String currentLabel;
-  final String requiredLabel;
   final Future<void> Function() onUpdate;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final hasVersions = currentLabel.isNotEmpty || requiredLabel.isNotEmpty;
 
     return Positioned.fill(
       child: BlockSemantics(
@@ -76,18 +68,6 @@ class HomeForceUpdateOverlay extends StatelessWidget {
                               color: ZipColors.onInk,
                             ),
                           ),
-                          if (hasVersions) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              AppStrings.updateVersionRow(
-                                currentLabel,
-                                requiredLabel,
-                              ),
-                              style: textTheme.labelMedium?.copyWith(
-                                color: ZipColors.inkSoft,
-                              ),
-                            ),
-                          ],
                           const SizedBox(height: 10),
                           Text(
                             AppStrings.updateCantSkip,

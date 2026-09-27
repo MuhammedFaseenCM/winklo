@@ -749,7 +749,7 @@ Add to `test/features/leaderboard/view/leaderboard_screen_test.dart`:
   });
 ```
 
-Match `LeaderboardEntry` constructor fields to the real entity (add `photoUrl` / `avatarId` / `updatedAt` if required by the type).
+Match `LeaderboardEntry` to the entity (`uid`, `displayName`, `timeSeconds`, `updatedAt`, `rank`; optional `photoUrl` / `avatarId`).
 
 Update the existing `auth unknown shows LeaderboardShimmer not sign-in CTA` test so it still expects shimmer and **no** floating FAB while unknown.
 

@@ -15,7 +15,8 @@ abstract final class EngagementNotificationSchedule {
   static bool shouldScheduleStreakAtRisk({
     required bool zipClearedToday,
     required bool pathWordsClearedToday,
+    required bool sudokuClearedToday,
   }) {
-    return !(zipClearedToday && pathWordsClearedToday);
+    return !(zipClearedToday && pathWordsClearedToday && sudokuClearedToday);
   }
 }

@@ -62,5 +62,7 @@ fastlane/.env.*
 # Local tooling (firebase-admin for seed scripts)
 tools/node_modules/
 workers/**/node_modules/
+.wrangler/
+**/.wrangler/
 
 tools/package-lock.json

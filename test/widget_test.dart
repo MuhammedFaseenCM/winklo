@@ -1,4 +1,5 @@
 import 'package:flame/game.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,6 +12,56 @@ import 'package:winklo/core/di/app_repositories.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/streak_calculator.dart';
+
+import 'package:mocktail/mocktail.dart';
+import 'package:winklo/domain/entities/app_user.dart';
+import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/usecases/sign_in_with_google.dart';
+import 'package:winklo/domain/usecases/sign_out.dart';
+import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+
+class _MockAuthRepository extends Mock implements AuthRepository {}
+
+class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
+
+class _MockSignOut extends Mock implements SignOut {}
+
+Widget _buildTestApp(SharedPreferences prefs, {AppUser? authUser}) {
+  final baseProviders = buildRepositoryProviders(prefs: prefs);
+  if (authUser != null) {
+    final mockAuth = _MockAuthRepository();
+    when(() => mockAuth.currentUser).thenReturn(authUser);
+    when(() => mockAuth.authStateChanges()).thenAnswer(
+      (_) => Stream.value(authUser),
+    );
+    return MultiRepositoryProvider(
+      providers: [
+        ...baseProviders,
+        RepositoryProvider<AuthRepository>.value(value: mockAuth),
+      ],
+      child: BlocProvider(
+        create: (context) => AuthCubit(
+          authRepository: mockAuth,
+          signInWithGoogle: _MockSignInWithGoogle(),
+          signOut: _MockSignOut(),
+        ),
+        child: const WinkloApp(),
+      ),
+    );
+  }
+
+  return MultiRepositoryProvider(
+    providers: baseProviders,
+    child: BlocProvider(
+      create: (context) => AuthCubit(
+        authRepository: context.read<AuthRepository>(),
+        signInWithGoogle: context.read<SignInWithGoogle>(),
+        signOut: context.read<SignOut>(),
+      ),
+      child: const WinkloApp(),
+    ),
+  );
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -30,12 +81,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 
-    await tester.pumpWidget(
-      MultiRepositoryProvider(
-        providers: buildRepositoryProviders(prefs: prefs),
-        child: const WinkloApp(),
-      ),
-    );
+    await tester.pumpWidget(_buildTestApp(prefs));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 800));
 
@@ -50,7 +96,7 @@ void main() {
     } else {
       expect(find.text(AppStrings.pathWordsTitle), findsOneWidget);
       expect(find.text(AppStrings.playTodaysPathWords), findsOneWidget);
-      expect(find.text(AppStrings.today), findsNWidgets(2));
+      expect(find.text(AppStrings.today), findsNWidgets(3));
     }
     expect(find.text('Choose a puzzle'), findsNothing);
     expect(find.text('Parked for later'), findsNothing);
@@ -73,9 +119,9 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
-      MultiRepositoryProvider(
-        providers: buildRepositoryProviders(prefs: prefs),
-        child: const WinkloApp(),
+      _buildTestApp(
+        prefs,
+        authUser: const AppUser(uid: 'u1', displayName: 'Tester'),
       ),
     );
     await tester.pump();

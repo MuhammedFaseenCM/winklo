@@ -25,18 +25,25 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final assetPath = AvatarCatalog.assetPathFor(avatarId);
-    if (assetPath != null) {
+    final presetUrl = AvatarCatalog.imageUrlFor(avatarId);
+    if (presetUrl != null) {
       return CircleAvatar(
         radius: radius,
         backgroundColor: ZipColors.mistDeep,
         child: ClipOval(
-          child: AppImage.asset(
-            assetPath,
+          child: AppImage.network(
+            presetUrl,
             width: radius * 2,
             height: radius * 2,
             fit: BoxFit.cover,
             errorWidget: Center(child: _initials),
+            placeholder: Center(
+              child: SizedBox(
+                width: radius,
+                height: radius,
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
           ),
         ),
       );

@@ -134,6 +134,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Future<void> refreshEngagementSchedules({
     required bool zipClearedToday,
     required bool pathWordsClearedToday,
+    required bool sudokuClearedToday,
     required String dailyReadyTitle,
     required String dailyReadyBody,
     required String streakAtRiskTitle,
@@ -161,6 +162,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
           EngagementNotificationSchedule.shouldScheduleStreakAtRisk(
             zipClearedToday: zipClearedToday,
             pathWordsClearedToday: pathWordsClearedToday,
+            sudokuClearedToday: sudokuClearedToday,
           );
       if (scheduleStreak) {
         final streakWhen = EngagementNotificationSchedule.nextDailyAtHour(

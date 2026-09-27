@@ -10,7 +10,7 @@ import '../../domain/game_ids.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
 import '../leaderboard_root.dart';
 
-const _allowedGameIds = {GameIds.zip, GameIds.pathWords};
+const _allowedGameIds = {GameIds.zip, GameIds.pathWords, GameIds.sudoku};
 
 /// Maps ordered leaderboard rows to ranked [LeaderboardEntry] values.
 List<LeaderboardEntry> mapLeaderboardRows(

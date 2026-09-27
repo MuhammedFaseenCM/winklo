@@ -129,9 +129,28 @@ class FirebaseNotificationClient implements NotificationClient {
   }
 
   Future<void> _initializeLocalNotifications() async {
-    const android = AndroidInitializationSettings(_androidNotificationIcon);
-    const ios = DarwinInitializationSettings();
-    const settings = InitializationSettings(android: android, iOS: ios);
+    // Prefer the white status-bar silhouette. Fall back to a drawable that is
+    // always referenced from Android resources if release shrinking drops ours.
+    const icons = <String>[_androidNotificationIcon, 'ic_launcher_foreground'];
+    Object? lastError;
+    for (final icon in icons) {
+      try {
+        await _initializeLocalNotificationsWithIcon(icon);
+        return;
+      } catch (e, st) {
+        lastError = e;
+        debugPrint('Local notifications init failed for icon=$icon: $e\n$st');
+      }
+    }
+    // Never crash app start over notification setup.
+    debugPrint('Local notifications unavailable: $lastError');
+  }
+
+  Future<void> _initializeLocalNotificationsWithIcon(String icon) async {
+    final settings = InitializationSettings(
+      android: AndroidInitializationSettings(icon),
+      iOS: const DarwinInitializationSettings(),
+    );
 
     await _localNotifications.initialize(
       settings: settings,

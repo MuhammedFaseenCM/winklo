@@ -32,11 +32,7 @@ void main() {
                 onPressed: () => tapped = true,
                 child: const Text('Play'),
               ),
-              HomeForceUpdateOverlay(
-                currentLabel: '1.0.0+1',
-                requiredLabel: '2.0.0+0',
-                onUpdate: () async {},
-              ),
+              HomeForceUpdateOverlay(onUpdate: () async {}),
             ],
           ),
         ),

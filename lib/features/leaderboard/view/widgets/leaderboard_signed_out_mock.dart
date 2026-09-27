@@ -6,7 +6,10 @@ import 'leaderboard_row.dart';
 
 /// Decorative fake rows for signed-out leaderboard tease.
 class LeaderboardSignedOutMock extends StatelessWidget {
-  const LeaderboardSignedOutMock({super.key});
+  const LeaderboardSignedOutMock({super.key, this.rowCount = 5});
+
+  /// How many mock rows to show (clamped to available entries).
+  final int rowCount;
 
   static final List<LeaderboardEntry> _entries = [
     LeaderboardEntry(
@@ -55,10 +58,11 @@ class LeaderboardSignedOutMock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = AppLayout.of(context);
+    final count = rowCount.clamp(1, _entries.length);
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       padding: layout.pagePadding,
-      itemCount: _entries.length,
+      itemCount: count,
       separatorBuilder: (_, _) => SizedBox(height: layout.space(8)),
       itemBuilder: (context, index) {
         final entry = _entries[index];

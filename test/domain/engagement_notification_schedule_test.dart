@@ -21,17 +21,19 @@ void main() {
       expect(
         EngagementNotificationSchedule.shouldScheduleStreakAtRisk(
           zipClearedToday: true,
-          pathWordsClearedToday: false,
+          pathWordsClearedToday: true,
+          sudokuClearedToday: false,
         ),
         isTrue,
       );
     });
 
-    test('false when both cleared', () {
+    test('false when all cleared', () {
       expect(
         EngagementNotificationSchedule.shouldScheduleStreakAtRisk(
           zipClearedToday: true,
           pathWordsClearedToday: true,
+          sudokuClearedToday: true,
         ),
         isFalse,
       );

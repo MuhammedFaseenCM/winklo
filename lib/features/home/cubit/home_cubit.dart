@@ -60,15 +60,19 @@ class HomeCubit extends Cubit<HomeState> {
     final level = DailyPuzzleGenerator.forDate(now, period: playPeriod);
     final zipKey = 'zip_${level.id}';
     final pathWordsKey = 'path_words_${PlayPeriod.id(now, playPeriod)}';
+    final sudokuKey = 'sudoku_${PlayPeriod.id(now, playPeriod)}';
     final zipStreak = await getStreak(gameId: GameIds.zip, now: now);
     final pathWordsStreak = await getStreak(
       gameId: GameIds.pathWords,
       now: now,
     );
+    final sudokuStreak = await getStreak(gameId: GameIds.sudoku, now: now);
     final zipPts = getBestPoints(zipKey);
     final zipTime = getBestTimeSeconds(zipKey);
     final pathPts = getBestPoints(pathWordsKey);
     final pathTime = getBestTimeSeconds(pathWordsKey);
+    final sudokuPts = getBestPoints(sudokuKey);
+    final sudokuTime = getBestTimeSeconds(sudokuKey);
     final decision = await checkAppUpdate();
     if (isClosed) return;
     emit(
@@ -87,6 +91,12 @@ class HomeCubit extends Cubit<HomeState> {
         pathWordsLongestStreak: pathWordsStreak.longest,
         pathWordsIsOnFreeze: pathWordsStreak.isOnFreeze,
         pathWordsFreezeAvailable: pathWordsStreak.freezeAvailable,
+        sudokuBestPoints: sudokuPts,
+        sudokuBestTimeSeconds: sudokuTime,
+        sudokuCurrentStreak: sudokuStreak.current,
+        sudokuLongestStreak: sudokuStreak.longest,
+        sudokuIsOnFreeze: sudokuStreak.isOnFreeze,
+        sudokuFreezeAvailable: sudokuStreak.freezeAvailable,
         updateStatus: decision.status,
         updateStoreUrl: decision.storeUrl,
         updateCurrentLabel: decision.currentLabel,
@@ -98,6 +108,7 @@ class HomeCubit extends Cubit<HomeState> {
       scheduleEngagementNotifications?.call(
         zipClearedToday: zipPts > 0 || zipTime != null,
         pathWordsClearedToday: pathPts > 0 || pathTime != null,
+        sudokuClearedToday: sudokuPts > 0 || sudokuTime != null,
         dailyReadyTitle: AppStrings.notifDailyReadyTitle,
         dailyReadyBody: AppStrings.notifDailyReadyBody,
         streakAtRiskTitle: AppStrings.notifStreakAtRiskTitle,

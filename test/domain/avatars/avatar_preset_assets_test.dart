@@ -4,11 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/domain/avatars/avatar_catalog.dart';
 
 void main() {
-  test('each preset asset exists and is illustrated (not a tiny solid fill)', () {
+  test('each preset staging asset exists and is illustrated', () {
     for (final id in AvatarCatalog.presetIds) {
-      final relative = AvatarCatalog.assetPathFor(id);
-      expect(relative, isNotNull, reason: id);
-      final file = File(relative!);
+      final relative = 'tools/static-assets/avatars/$id.png';
+      final file = File(relative);
       expect(file.existsSync(), isTrue, reason: relative);
 
       final bytes = file.readAsBytesSync();
@@ -25,6 +24,8 @@ void main() {
       expect(bytes[1], 0x50); // P
       expect(bytes[2], 0x4E); // N
       expect(bytes[3], 0x47); // G
+
+      expect(AvatarCatalog.imageUrlFor(id), isNotNull, reason: id);
     }
   });
 }

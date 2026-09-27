@@ -13,6 +13,7 @@ abstract class NotificationRepository {
   Future<void> refreshEngagementSchedules({
     required bool zipClearedToday,
     required bool pathWordsClearedToday,
+    required bool sudokuClearedToday,
     required String dailyReadyTitle,
     required String dailyReadyBody,
     required String streakAtRiskTitle,

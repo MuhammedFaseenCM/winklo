@@ -8,9 +8,14 @@ import '../cubit/auth_cubit.dart';
 import '../cubit/auth_state.dart';
 
 /// Shows Google sign-in UI. Returns `true` when the user ends signed in.
-Future<bool> showSignInSheet(BuildContext context) async {
+Future<bool> showSignInSheet(
+  BuildContext context, {
+  String? title,
+  String? body,
+}) async {
   final result = await showModalBottomSheet<bool>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: ZipColors.wall,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -19,7 +24,10 @@ Future<bool> showSignInSheet(BuildContext context) async {
     builder: (sheetContext) {
       return BlocProvider.value(
         value: context.read<AuthCubit>(),
-        child: const _SignInSheetBody(),
+        child: _SignInSheetBody(
+          title: title ?? AppStrings.signInTitle,
+          body: body ?? AppStrings.signInBody,
+        ),
       );
     },
   );
@@ -27,7 +35,10 @@ Future<bool> showSignInSheet(BuildContext context) async {
 }
 
 class _SignInSheetBody extends StatelessWidget {
-  const _SignInSheetBody();
+  const _SignInSheetBody({required this.title, required this.body});
+
+  final String title;
+  final String body;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +77,7 @@ class _SignInSheetBody extends StatelessWidget {
                 const Center(child: ZipMark(size: 40)),
                 const SizedBox(height: 12),
                 Text(
-                  AppStrings.signInTitle,
+                  title,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: ZipColors.onInk,
                     fontWeight: FontWeight.w800,
@@ -75,10 +86,10 @@ class _SignInSheetBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  AppStrings.signInBody,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: ZipColors.inkSoft,
-                  ),
+                  body,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: ZipColors.inkSoft),
                   textAlign: TextAlign.center,
                 ),
                 if (state.status == AuthStatus.failure &&

@@ -9,8 +9,12 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
     function validGame(gameId) {
-      return gameId in ['zip', 'path_words'];
+      return gameId in ['zip', 'path_words', 'sudoku'];
     }
 
     function validTimeSeconds() {
@@ -156,5 +160,82 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
       allow read, update, delete: if false;
     }
+
+    // Automatic client telemetry (not user-submitted issue reports).
+    match /client_errors/{id} {
+      allow create: if validClientErrorCreate();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    function validClientErrorSeverity() {
+      return request.resource.data.severity in ['error', 'fatal'];
+    }
+
+    function validClientErrorSource() {
+      return request.resource.data.source in [
+        'handled', 'flutter', 'platform', 'bloc'
+      ];
+    }
+
+    function validClientErrorUid() {
+      return !('uid' in request.resource.data)
+        || request.resource.data.uid == null
+        || (
+          request.resource.data.uid is string
+          && request.resource.data.uid.size() > 0
+          && request.resource.data.uid.size() <= 128
+          && isSignedIn()
+          && request.auth.uid == request.resource.data.uid
+        );
+    }
+
+    function validClientErrorCreate() {
+      return request.resource.data.keys().hasOnly([
+          'createdAt', 'severity', 'source', 'code', 'message',
+          'cause', 'stack', 'screen', 'function', 'uid',
+          'appVersion', 'buildNumber', 'platform', 'locale'
+        ])
+        && validClientErrorSeverity()
+        && validClientErrorSource()
+        && request.resource.data.code is string
+        && request.resource.data.code.size() > 0
+        && request.resource.data.code.size() <= 80
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 500
+        && (!('cause' in request.resource.data)
+            || request.resource.data.cause == null
+            || (request.resource.data.cause is string
+                && request.resource.data.cause.size() <= 500))
+        && (!('stack' in request.resource.data)
+            || request.resource.data.stack == null
+            || (request.resource.data.stack is string
+                && request.resource.data.stack.size() <= 4000))
+        && (!('screen' in request.resource.data)
+            || request.resource.data.screen == null
+            || (request.resource.data.screen is string
+                && request.resource.data.screen.size() <= 120))
+        && (!('function' in request.resource.data)
+            || request.resource.data.function == null
+            || (request.resource.data.function is string
+                && request.resource.data.function.size() <= 160))
+        && validClientErrorUid()
+        && request.resource.data.appVersion is string
+        && request.resource.data.appVersion.size() > 0
+        && request.resource.data.appVersion.size() <= 32
+        && request.resource.data.buildNumber is string
+        && request.resource.data.buildNumber.size() > 0
+        && request.resource.data.buildNumber.size() <= 16
+        && request.resource.data.platform is string
+        && request.resource.data.platform.size() > 0
+        && request.resource.data.platform.size() <= 32
+        && (!('locale' in request.resource.data)
+            || request.resource.data.locale == null
+            || (request.resource.data.locale is string
+                && request.resource.data.locale.size() <= 32))
+        && request.resource.data.createdAt == request.time;
+    }
   }
 }
+

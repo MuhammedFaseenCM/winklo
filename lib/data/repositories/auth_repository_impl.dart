@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
+import '../../core/errors/client_error_reporter.dart';
 import '../../domain/entities/app_user.dart';
 import '../../domain/failures.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -72,6 +73,12 @@ class AuthRepositoryImpl implements AuthRepository {
   bool _googleInitialized = false;
   AppUser? _cachedUser;
 
+  /// Web OAuth client (`client_type: 3` in `google-services.json`).
+  /// Passed explicitly: release packaging can strip `@string/default_web_client_id`,
+  /// which makes Credential Manager fail before the account picker appears.
+  static const _googleServerClientId =
+      '43073222004-8urlsjf12lie435qjsk8t1tk9br7onp9.apps.googleusercontent.com';
+
   FirebaseAuth? get _firebaseAuth {
     if (!FirebaseBootstrap.isReady) return null;
     return _auth ?? FirebaseAuth.instance;
@@ -131,7 +138,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   Future<void> _ensureGoogleInitialized() async {
     if (_googleInitialized) return;
-    await _googleSignIn.initialize();
+    await _googleSignIn.initialize(serverClientId: _googleServerClientId);
     _googleInitialized = true;
   }
 
@@ -164,10 +171,35 @@ class AuthRepositoryImpl implements AuthRepository {
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw const Failure('sign_in_cancelled');
       }
+      debugPrint(
+        'GoogleSignInException code=${e.code} description=${e.description}',
+      );
+      ClientErrorReporter.instance.reportHandled(
+        code: 'google_sign_in_${e.code.name}',
+        message: e.description ?? 'Google sign-in failed.',
+        cause: e.toString(),
+        function: 'AuthRepositoryImpl.signInWithGoogle',
+      );
       throw Failure('Google sign-in failed.', cause: e);
-    } on Failure {
+    } on Failure catch (e) {
+      if (e.message != 'sign_in_cancelled') {
+        ClientErrorReporter.instance.reportHandled(
+          code: 'google_sign_in_failure',
+          message: e.message,
+          cause: e.cause?.toString(),
+          function: 'AuthRepositoryImpl.signInWithGoogle',
+        );
+      }
       rethrow;
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('Google sign-in unexpected error: $e\n$st');
+      ClientErrorReporter.instance.reportHandled(
+        code: 'google_sign_in_unexpected',
+        message: e.toString(),
+        cause: e.runtimeType.toString(),
+        stack: st.toString(),
+        function: 'AuthRepositoryImpl.signInWithGoogle',
+      );
       throw Failure('Google sign-in failed.', cause: e);
     }
   }

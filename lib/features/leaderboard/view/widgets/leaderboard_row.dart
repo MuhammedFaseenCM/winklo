@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/config/static_assets_config.dart';
 import '../../../../core/strings/app_strings.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_image.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../domain/entities/leaderboard_entry.dart';
 
@@ -25,9 +27,10 @@ class LeaderboardRow extends StatelessWidget {
       1 => const Color(0xFFFFD700).withValues(alpha: 0.8),
       2 => const Color(0xFFD4DFEB).withValues(alpha: 0.75),
       3 => const Color(0xFFE28B52).withValues(alpha: 0.75),
-      _ => isYou
-          ? ZipColors.ember.withValues(alpha: 0.65)
-          : Colors.white.withValues(alpha: 0.08),
+      _ =>
+        isYou
+            ? ZipColors.ember.withValues(alpha: 0.65)
+            : Colors.white.withValues(alpha: 0.08),
     };
     final accentWidth = switch (rank) {
       1 => 2.2,
@@ -49,10 +52,7 @@ class LeaderboardRow extends StatelessWidget {
                     : [const Color(0xFF1F2B3E), const Color(0xFF162030)],
               ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: accentBorder,
-          width: accentWidth,
-        ),
+        border: Border.all(color: accentBorder, width: accentWidth),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.25),
@@ -129,12 +129,13 @@ class LeaderboardRow extends StatelessWidget {
                         ),
                         child: Text(
                           AppStrings.youLabel,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: ZipColors.ember,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 10,
-                            letterSpacing: 0.4,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: ZipColors.ember,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 10,
+                                letterSpacing: 0.4,
+                              ),
                         ),
                       ),
                     ],
@@ -148,9 +149,7 @@ class LeaderboardRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.28),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Text(
               timeLabel,
@@ -168,20 +167,21 @@ class LeaderboardRow extends StatelessWidget {
 
   Widget _leading(BuildContext context) {
     final rank = entry.rank;
-    final asset = switch (rank) {
-      1 => 'assets/medals/medal_gold.png',
-      2 => 'assets/medals/medal_silver.png',
-      3 => 'assets/medals/medal_bronze.png',
+    final medalUrl = switch (rank) {
+      1 => StaticAssetsConfig.url('medals/medal_gold.png'),
+      2 => StaticAssetsConfig.url('medals/medal_silver.png'),
+      3 => StaticAssetsConfig.url('medals/medal_bronze.png'),
       _ => null,
     };
-    if (asset != null) {
+    if (medalUrl != null) {
       return SizedBox(
         width: 30,
         height: 30,
-        child: Image.asset(
-          asset,
+        child: AppImage.network(
+          medalUrl,
           fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => _rankText(context),
+          errorWidget: _rankText(context),
+          placeholder: const SizedBox.shrink(),
         ),
       );
     }

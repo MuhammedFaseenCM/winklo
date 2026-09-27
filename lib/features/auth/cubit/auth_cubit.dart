@@ -8,6 +8,7 @@ import '../../../domain/usecases/clear_notification_token.dart';
 import '../../../domain/usecases/sign_in_with_google.dart';
 import '../../../domain/usecases/sign_out.dart';
 import '../../../domain/usecases/sync_fcm_token.dart';
+import '../../../core/errors/client_error_reporter.dart';
 import 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
@@ -80,8 +81,15 @@ class AuthCubit extends Cubit<AuthState> {
         ),
       );
       return false;
-    } catch (e) {
+    } catch (e, st) {
       if (isClosed) return false;
+      ClientErrorReporter.instance.reportHandled(
+        code: 'auth_cubit_sign_in',
+        message: e.toString(),
+        cause: e.runtimeType.toString(),
+        stack: st.toString(),
+        function: 'AuthCubit.signIn',
+      );
       emit(
         AuthState(
           status: AuthStatus.failure,

@@ -8,6 +8,7 @@ on a newly created Play Console app.
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 
 from google.oauth2 import service_account
@@ -28,14 +29,33 @@ def _read(name: str) -> str:
   return (METADATA / name).read_text(encoding="utf-8").strip()
 
 
+def _execute_with_retry(request, max_attempts: int = 5):
+  for attempt in range(1, max_attempts + 1):
+    try:
+      return request.execute()
+    except HttpError as error:
+      if error.resp.status in (429, 500, 502, 503, 504) and attempt < max_attempts:
+        sleep_time = 2 ** attempt
+        print(
+            f"Transient HTTP {error.resp.status}, retrying in {sleep_time}s"
+            f" (attempt {attempt}/{max_attempts})...",
+            file=sys.stderr,
+        )
+        time.sleep(sleep_time)
+        continue
+      raise
+
+
 def _delete_images(service, edit_id: str, image_type: str) -> None:
   try:
-    service.edits().images().deleteall(
-        packageName=PACKAGE_NAME,
-        editId=edit_id,
-        language=LANGUAGE,
-        imageType=image_type,
-    ).execute()
+    _execute_with_retry(
+        service.edits().images().deleteall(
+            packageName=PACKAGE_NAME,
+            editId=edit_id,
+            language=LANGUAGE,
+            imageType=image_type,
+        )
+    )
   except HttpError as error:
     if error.resp.status != 404:
       raise
@@ -43,13 +63,15 @@ def _delete_images(service, edit_id: str, image_type: str) -> None:
 
 def _upload_image(service, edit_id: str, image_type: str, path: Path) -> None:
   media = MediaFileUpload(str(path), mimetype="image/png", resumable=False)
-  service.edits().images().upload(
-      packageName=PACKAGE_NAME,
-      editId=edit_id,
-      language=LANGUAGE,
-      imageType=image_type,
-      media_body=media,
-  ).execute()
+  _execute_with_retry(
+      service.edits().images().upload(
+          packageName=PACKAGE_NAME,
+          editId=edit_id,
+          language=LANGUAGE,
+          imageType=image_type,
+          media_body=media,
+      )
+  )
 
 
 def main() -> int:
@@ -62,9 +84,8 @@ def main() -> int:
       scopes=SCOPES,
   )
   service = build("androidpublisher", "v3", credentials=credentials)
-  edit_id = service.edits().insert(packageName=PACKAGE_NAME, body={}).execute()[
-      "id"
-  ]
+  insert_req = service.edits().insert(packageName=PACKAGE_NAME, body={})
+  edit_id = _execute_with_retry(insert_req)["id"]
 
   listing = {
       "language": LANGUAGE,
@@ -72,12 +93,14 @@ def main() -> int:
       "shortDescription": _read("short_description.txt"),
       "fullDescription": _read("full_description.txt"),
   }
-  service.edits().listings().update(
-      packageName=PACKAGE_NAME,
-      editId=edit_id,
-      language=LANGUAGE,
-      body=listing,
-  ).execute()
+  _execute_with_retry(
+      service.edits().listings().update(
+          packageName=PACKAGE_NAME,
+          editId=edit_id,
+          language=LANGUAGE,
+          body=listing,
+      )
+  )
   print(f"Updated {LANGUAGE} listing: {listing['title']}")
 
   icon = IMAGES / "icon.png"
@@ -97,7 +120,9 @@ def main() -> int:
       _upload_image(service, edit_id, "phoneScreenshots", path)
       print(f"Uploaded screenshot {path.name} ({path.stat().st_size} bytes)")
 
-  service.edits().commit(packageName=PACKAGE_NAME, editId=edit_id).execute()
+  _execute_with_retry(
+      service.edits().commit(packageName=PACKAGE_NAME, editId=edit_id)
+  )
   print("Committed Play Store listing edit.")
   return 0
 

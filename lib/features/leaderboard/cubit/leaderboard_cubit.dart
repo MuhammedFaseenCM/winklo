@@ -36,7 +36,11 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
 
   void selectGame(String gameId) {
     if (gameId == state.gameId) return;
-    if (gameId != GameIds.zip && gameId != GameIds.pathWords) return;
+    if (gameId != GameIds.zip &&
+        gameId != GameIds.pathWords &&
+        gameId != GameIds.sudoku) {
+      return;
+    }
     emit(state.copyWith(gameId: gameId, status: LeaderboardStatus.loading));
     _resubscribe();
   }

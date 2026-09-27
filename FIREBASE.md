@@ -254,6 +254,21 @@ After deploy:
 4. `users/{uid}` remains signed-in read / owner write. `avatarId` must be a string or null when present.
 5. Custom gallery photos: Worker accepts `PUT /v1/avatar` only with a valid Firebase ID token for that uid; object key `avatars/{uid}.jpg` on R2; JPEG, max 2 MiB. Public read via R2 `r2.dev` (no Firebase Storage rules).
 
+### Admin custom claims (panel foundation)
+
+Operators of the admin SPA use the same Firebase Auth project with a custom claim `{ admin: true }`. Firestore rules define `isAdmin()` (`request.auth.token.admin == true`) for later phases; **no admin collection reads are enabled yet** (issue report inbox is phase 2).
+
+Admin console code lives in a **separate repo**: [MuhammedFaseenCM/winklo-admin](https://github.com/MuhammedFaseenCM/winklo-admin) (SPA + `workers/admin-api` + claim script).
+
+Grant or revoke (from that repo):
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+node tools/set-admin-claim.mjs --email you@example.com --admin true
+```
+
+FCM announcements can be sent from the [winklo-admin](https://github.com/MuhammedFaseenCM/winklo-admin) **Announcements** module (Worker → FCM HTTP v1 + `announcement_sends` history). Console campaigns still work as a fallback.
+
 ### Data Safety / privacy (Auth)
 
 Leaderboards store **uid, displayName, photoUrl, avatarId, timeSeconds, updatedAt**. Custom photos live on **Cloudflare R2** (public `r2.dev` URLs). Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
@@ -295,7 +310,40 @@ flutter run --dart-define=AVATAR_UPLOAD_BASE_URL=https://winklo-avatar-upload.<a
 
 Use the same `--dart-define` for release builds (CI / Gradle / Xcode as applicable). If `AVATAR_UPLOAD_BASE_URL` is empty, gallery upload is unavailable; presets and Google sign-in photo still work.
 
-Upload flow: signed-in client `PUT`s JPEG to `/v1/avatar` with `Authorization: Bearer <Firebase ID token>`. Worker writes **`avatars/{uid}.jpg`** (overwrite) to R2 and returns JSON `{ "photoUrl": "..." }`. The app stores that URL on `users/{uid}.photoUrl` and sets `avatarId` to null. Choosing a bundled preset sets `avatarId` and clears `photoUrl` (no R2 upload).
+Upload flow: signed-in client `PUT`s JPEG to `/v1/avatar` with `Authorization: Bearer <Firebase ID token>`. Worker writes **`avatars/{uid}.jpg`** (overwrite) to R2 and returns JSON `{ "photoUrl": "..." }`. The app stores that URL on `users/{uid}.photoUrl` and sets `avatarId` to null. Choosing a preset sets `avatarId` and clears `photoUrl` (no R2 upload); preset art is loaded from public R2 `static/avatars/` (see below).
+
+### Static UI images (public R2)
+
+Game tiles, leaderboard medals, and preset avatars are **not** bundled in the APK. Sources live in `tools/static-assets/` and are served from the same public bucket:
+
+| R2 key | App usage |
+|--------|-----------|
+| `static/games/zip_tile.png` | Home Zip tile |
+| `static/games/path_words_tile.png` | Home Path Words tile |
+| `static/medals/medal_{gold,silver,bronze}.png` | Leaderboard top-3 |
+| `static/avatars/preset_0N.png` | `UserAvatar` presets |
+
+Flutter builds URLs via `StaticAssetsConfig` (`lib/core/config/static_assets_config.dart`). Default base is `PUBLIC_BASE_URL` from Wrangler. Override with:
+
+```bash
+flutter run --dart-define=STATIC_ASSETS_BASE_URL=https://pub-xxxxx.r2.dev
+```
+
+Upload / refresh objects (from repo root, Wrangler authenticated):
+
+```bash
+for f in tools/static-assets/games/*.png tools/static-assets/medals/*.png tools/static-assets/avatars/*.png; do
+  rel="${f#tools/static-assets/}"
+  npx --prefix workers/avatar-upload wrangler r2 object put \
+    "winklo-avatars/static/$rel" \
+    --file="$f" \
+    --content-type="image/png" \
+    --cache-control="public, max-age=31536000" \
+    --remote
+done
+```
+
+See `tools/static-assets/README.md`. Branding (`assets/branding/`) stays in the APK for launcher icon + native splash.
 
 ### Gallery pick (Android)
 
@@ -306,11 +354,12 @@ iOS is not a shipping target. If you add it later, `Info.plist` needs `NSPhotoLi
 ### Manual checklist
 
 1. Signed-in user can update `users/{uid}` `displayName` and `avatarId`.
-2. Preset select clears `photoUrl` and does not upload.
+2. Preset select clears `photoUrl` and does not upload; preset image loads from `static/avatars/` on R2.
 3. Gallery upload (with `AVATAR_UPLOAD_BASE_URL` set) returns a public `photoUrl`; Profile and Zip / Path Words **Leaderboard** show the image; `avatarId` is null.
 4. Worker rejects missing/invalid token, wrong content type, or body over 2 MiB.
 5. Zip and Path Words leaderboard rows for that user show the new name and avatar without a new best time.
 6. Sign-in again does not erase an existing `avatarId`.
+7. Home game tiles and medals load from `static/games/` and `static/medals/` (public GET).
 
 ## 9. Push + local notifications
 

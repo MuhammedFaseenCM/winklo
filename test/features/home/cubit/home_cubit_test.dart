@@ -100,6 +100,12 @@ void main() {
           now: any(named: 'now'),
         ),
       ).thenAnswer((_) async => const GameStreak(gameId: GameIds.pathWords));
+      when(
+        () => getStreak(
+          gameId: GameIds.sudoku,
+          now: any(named: 'now'),
+        ),
+      ).thenAnswer((_) async => const GameStreak(gameId: GameIds.sudoku));
 
       return buildCubit();
     },
@@ -151,6 +157,12 @@ void main() {
           isOnFreeze: true,
         ),
       );
+      when(
+        () => getStreak(
+          gameId: GameIds.sudoku,
+          now: any(named: 'now'),
+        ),
+      ).thenAnswer((_) async => const GameStreak(gameId: GameIds.sudoku));
 
       return buildCubit();
     },
@@ -173,6 +185,61 @@ void main() {
       verify(
         () => getStreak(
           gameId: GameIds.pathWords,
+          now: any(named: 'now'),
+        ),
+      ).called(1);
+    },
+  );
+
+  blocTest<HomeCubit, HomeState>(
+    'loads bests and streak for daily sudoku',
+    build: () {
+      when(() => pts(any())).thenReturn(0);
+      when(() => time(any())).thenReturn(null);
+      when(() => pts('sudoku_20260913')).thenReturn(880);
+      when(() => time('sudoku_20260913')).thenReturn(40);
+      when(
+        () => getStreak(
+          gameId: GameIds.zip,
+          now: any(named: 'now'),
+        ),
+      ).thenAnswer((_) async => const GameStreak(gameId: GameIds.zip));
+      when(
+        () => getStreak(
+          gameId: GameIds.pathWords,
+          now: any(named: 'now'),
+        ),
+      ).thenAnswer((_) async => const GameStreak(gameId: GameIds.pathWords));
+      when(
+        () => getStreak(
+          gameId: GameIds.sudoku,
+          now: any(named: 'now'),
+        ),
+      ).thenAnswer(
+        (_) async => const GameStreak(
+          gameId: GameIds.sudoku,
+          current: 2,
+          longest: 4,
+          lastClearedDateId: '20260913',
+        ),
+      );
+
+      return buildCubit();
+    },
+    act: (c) => c.load(),
+    expect: () => [
+      isA<HomeState>()
+          .having((s) => s.sudokuBestPoints, 'sudokuBestPoints', 880)
+          .having((s) => s.sudokuBestTimeSeconds, 'sudokuBestTimeSeconds', 40)
+          .having((s) => s.sudokuCurrentStreak, 'sudokuCurrentStreak', 2)
+          .having((s) => s.sudokuLongestStreak, 'sudokuLongestStreak', 4),
+    ],
+    verify: (_) {
+      verify(() => pts('sudoku_20260913')).called(1);
+      verify(() => time('sudoku_20260913')).called(1);
+      verify(
+        () => getStreak(
+          gameId: GameIds.sudoku,
           now: any(named: 'now'),
         ),
       ).called(1);

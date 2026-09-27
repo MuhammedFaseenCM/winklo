@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 SIZE = 512
-OUT_DIR = Path(__file__).resolve().parents[1] / "assets" / "avatars"
+OUT_DIR = Path(__file__).resolve().parents[1] / "tools" / "static-assets" / "avatars"
 
 SLATE = (30, 41, 59, 255)  # ZipColors.wall-ish
 INK = (15, 23, 42, 255)  # ZipColors.ink
