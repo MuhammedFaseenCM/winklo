@@ -400,8 +400,9 @@ void main() {
     );
 
     final analytics = _MockAnalytics();
-    when(() => analytics.logScreenView(any())).thenAnswer((_) async {});
-    // If AnalyticsRouteObserver needs more stubs, add them when compile fails.
+    when(
+      () => analytics.logScreenView(screenName: any(named: 'screenName')),
+    ).thenAnswer((_) async {});
 
     router = buildRouter(analytics: analytics, authCubit: authCubit);
   });
@@ -460,7 +461,9 @@ void main() {
     ).thenAnswer((_) => Stream<AppUser?>.value(user));
 
     final analytics = _MockAnalytics();
-    when(() => analytics.logScreenView(any())).thenAnswer((_) async {});
+    when(
+      () => analytics.logScreenView(screenName: any(named: 'screenName')),
+    ).thenAnswer((_) async {});
     router.dispose();
     router = buildRouter(analytics: analytics, authCubit: authCubit);
 
@@ -680,10 +683,12 @@ Add to `test/features/leaderboard/view/leaderboard_screen_test.dart`:
     );
 
     boardController.add([
-      const LeaderboardEntry(
+      LeaderboardEntry(
         uid: 'a',
         displayName: 'Alex',
         timeSeconds: 42,
+        updatedAt: DateTime.utc(2026, 9, 27),
+        rank: 1,
       ),
     ]);
     await tester.pumpAndSettle();
@@ -730,10 +735,12 @@ Add to `test/features/leaderboard/view/leaderboard_screen_test.dart`:
     );
 
     boardController.add([
-      const LeaderboardEntry(
+      LeaderboardEntry(
         uid: 'u1',
         displayName: 'Ada',
         timeSeconds: 40,
+        updatedAt: DateTime.utc(2026, 9, 27),
+        rank: 1,
       ),
     ]);
     await tester.pumpAndSettle();
