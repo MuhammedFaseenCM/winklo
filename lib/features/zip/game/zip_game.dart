@@ -12,6 +12,7 @@ import '../logic/zip_hints.dart';
 import '../logic/zip_rule_tip.dart';
 import 'zip_path_ribbon.dart';
 import 'zip_stroke.dart';
+import 'zip_tip_sparks.dart';
 
 typedef ZipWinCallback = void Function(int points, int elapsedSeconds);
 typedef ZipRuleTipCallback = void Function(ZipRuleTip tip);
@@ -31,6 +32,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   final ZipRuleTipCallback? onRuleTip;
   final bool readOnly;
   final PathValidator _validator;
+  final ZipTipSparks _tipSparks = ZipTipSparks();
   late double _cellSize;
   late Offset _origin;
   late double _boardRadius;
@@ -76,6 +78,12 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     super.update(dt);
     if (_celebrate) {
       _celebrateT += dt;
+    }
+    if (_drawing && _clampedLiveTip() != null) {
+      _tipSparks.ensureActive(seed: path.length);
+      _tipSparks.update(dt);
+    } else if (_tipSparks.isActive) {
+      _tipSparks.clear();
     }
   }
 
@@ -385,6 +393,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     _drawBoardShadow(canvas);
     _drawBoard(canvas);
     _drawPathStroke(canvas);
+    _drawTipSparks(canvas);
     _drawWalls(canvas);
     _drawHints(canvas);
     _drawNumbers(canvas);
@@ -602,6 +611,14 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5,
     );
+  }
+
+  void _drawTipSparks(Canvas canvas) {
+    if (!_drawing) return;
+    final tip = _clampedLiveTip();
+    if (tip == null) return;
+    final width = _cellSize * 0.46;
+    _tipSparks.paint(canvas, tip: tip, tipRadius: width * 0.42);
   }
 
   void _drawWalls(Canvas canvas) {
