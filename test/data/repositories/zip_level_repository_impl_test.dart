@@ -55,4 +55,12 @@ void main() {
     expect(levels.map((l) => l.id).toList(), ['l1', 'l2', 'l3']);
     expect(levels.map((l) => l.order).toList(), [1, 2, 3]);
   });
+
+  test('fetchDailyLevel falls back to generator when firestore is null', () async {
+    final repo = ZipLevelRepositoryImpl(firestore: null);
+    final level = await repo.fetchDailyLevel(DateTime(2026, 9, 29));
+    expect(level.id, 'daily_20260929');
+    expect(level.size, 6);
+    expect(level.maxNumber, 6);
+  });
 }

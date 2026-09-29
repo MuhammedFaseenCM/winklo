@@ -6,6 +6,7 @@ import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/app_update_repository.dart';
+import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/check_app_update.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
@@ -24,6 +25,7 @@ class HomeCubit extends Cubit<HomeState> {
     required this.checkAppUpdate,
     required this.appUpdateRepository,
     this.scheduleEngagementNotifications,
+    this.zipLevelRepository,
     DateTime? now,
     this.playPeriod = PlayPeriod.daily,
   }) : _now = now,
@@ -38,6 +40,7 @@ class HomeCubit extends Cubit<HomeState> {
   final CheckAppUpdate checkAppUpdate;
   final AppUpdateRepository appUpdateRepository;
   final ScheduleEngagementNotifications? scheduleEngagementNotifications;
+  final ZipLevelRepository? zipLevelRepository;
   final DateTime? _now;
   final Duration playPeriod;
   Timer? _refreshTimer;
@@ -57,7 +60,9 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<void> load() async {
     final now = _clock;
-    final level = DailyPuzzleGenerator.forDate(now, period: playPeriod);
+    final level = zipLevelRepository != null
+        ? await zipLevelRepository!.fetchDailyLevel(now, period: playPeriod)
+        : DailyPuzzleGenerator.forDate(now, period: playPeriod);
     final zipKey = 'zip_${level.id}';
     final pathWordsKey = 'path_words_${PlayPeriod.id(now, playPeriod)}';
     final sudokuKey = 'sudoku_${PlayPeriod.id(now, playPeriod)}';

@@ -44,6 +44,7 @@ import 'package:winklo/domain/usecases/clear_notification_token.dart';
 import 'package:winklo/domain/usecases/ensure_signed_in.dart';
 import 'package:winklo/domain/usecases/fetch_categories.dart';
 import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
+import 'package:winklo/domain/usecases/generate_daily_sudoku.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_deck_by_id.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_decks.dart';
 import 'package:winklo/domain/usecases/fetch_zip_levels.dart';
@@ -210,6 +211,11 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<GenerateDailyPathWords>(
       create: (context) => GenerateDailyPathWords(
         context.read<WordListRepository>(),
+        period: DevFlags.playPeriod,
+      ),
+    ),
+    RepositoryProvider<GenerateDailySudoku>(
+      create: (_) => GenerateDailySudoku(
         period: DevFlags.playPeriod,
       ),
     ),

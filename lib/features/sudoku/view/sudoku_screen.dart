@@ -12,6 +12,7 @@ import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/entities/sudoku_difficulty.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/usecases/generate_daily_sudoku.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
@@ -54,6 +55,8 @@ class _SudokuScreenState extends State<SudokuScreen> {
           getBestPoints: context.read<GetBestPoints>(),
           getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
           analytics: context.read<AnalyticsRepository>(),
+          generatePuzzle: ({required day}) =>
+              context.read<GenerateDailySudoku>()(day: day),
           playPeriod: DevFlags.playPeriod,
         );
 

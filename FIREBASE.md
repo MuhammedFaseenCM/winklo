@@ -45,13 +45,47 @@ Content collections remain **public read / no client writes**. Leaderboard and u
 
 3. Seed content collections (same shape as assets):
 
-### `zip_levels/{id}`
+### `zip_levels/{id}` (e.g. `daily_YYYYMMDD` for daily puzzle overrides)
 ```json
 {
-  "size": 3,
+  "size": 6,
   "order": 1,
-  "numbers": { "0,0": 1, "1,1": 2, "2,2": 3 },
-  "walls": []
+  "numbers": { "5,5": 1, "4,3": 2, "2,2": 3, "0,5": 4, "0,0": 5, "5,0": 6 },
+  "walls": [
+    { "a": [5, 0], "b": [5, 1] },
+    { "a": [1, 4], "b": [1, 5] }
+  ]
+}
+```
+
+### `path_words_levels/{id}` (e.g. `daily_YYYYMMDD`)
+```json
+{
+  "size": 5,
+  "day": "2026-09-29T00:00:00.000Z",
+  "letters": ["a", "p", "p", "l", "e", "t", "r", "e", "e", "s", "g", "r", "a", "p", "e", "m", "e", "l", "o", "n", "b", "e", "r", "r", "y"],
+  "targets": [
+    {
+      "id": "target_1",
+      "word": "APPLE",
+      "start": [0, 0],
+      "path": [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]],
+      "colorIndex": 0
+    }
+  ]
+}
+```
+
+### `sudoku_levels/{id}` (e.g. `daily_YYYYMMDD`)
+```json
+{
+  "dateId": "20260929",
+  "size": 6,
+  "boxRows": 2,
+  "boxCols": 3,
+  "difficulty": "easy",
+  "given": [1, 0, 0, 0, 0, 6, 0, 2, 0, 0, 5, 0, 0, 0, 3, 4, 0, 0, 0, 0, 5, 6, 0, 0, 0, 4, 0, 0, 1, 0, 6, 0, 0, 0, 0, 2],
+  "solution": [1, 5, 4, 2, 3, 6, 3, 2, 6, 1, 5, 4, 2, 6, 3, 4, 1, 5, 4, 1, 5, 6, 2, 3, 5, 4, 2, 3, 1, 6, 6, 3, 1, 5, 4, 2]
 }
 ```
 

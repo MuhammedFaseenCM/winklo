@@ -1,9 +1,11 @@
 import 'package:bloc/bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
@@ -23,12 +25,18 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     required this.getBestPoints,
     required this.getBestTimeSeconds,
     required this.analytics,
+    ZipLevelRepository? zipLevelRepository,
+    Future<ZipLevel> Function(DateTime date, {Duration period})? fetchDailyLevel,
     this.ignoreDailyLock = false,
     this.playPeriod = PlayPeriod.daily,
     this.celebrationDuration = const Duration(seconds: 2),
     DateTime? now,
     Future<void> Function(Duration duration)? wait,
-  }) : _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
+  }) : fetchDailyLevel = fetchDailyLevel ??
+           ((date, {period = PlayPeriod.daily}) =>
+               (zipLevelRepository?.fetchDailyLevel(date, period: period) ??
+                Future.value(DailyPuzzleGenerator.forDate(date, period: period)))),
+       _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
        super(
          _initialState(
            now ?? DateTime.now(),
@@ -50,6 +58,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
   final AnalyticsRepository analytics;
+  final Future<ZipLevel> Function(DateTime date, {Duration period}) fetchDailyLevel;
   final bool ignoreDailyLock;
   final Duration playPeriod;
   final Duration celebrationDuration;
@@ -85,7 +94,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   Future<void> _onStarted(ZipStarted event, Emitter<ZipState> emit) async {
     final seed = event.date ?? DateTime.now();
     final day = DateTime(seed.year, seed.month, seed.day);
-    final level = DailyPuzzleGenerator.forDate(seed, period: playPeriod);
+    final level = await fetchDailyLevel(seed, period: playPeriod);
+    if (emit.isDone) return;
     final cleared =
         !ignoreDailyLock &&
         _isCleared(

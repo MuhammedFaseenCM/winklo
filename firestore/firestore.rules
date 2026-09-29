@@ -56,6 +56,14 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    match /path_words_levels/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /sudoku_levels/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
     match /word_match_decks/{id} {
       allow read: if true;
       allow write: if false;

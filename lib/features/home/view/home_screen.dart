@@ -23,6 +23,7 @@ import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
 import '../../../domain/usecases/schedule_engagement_notifications.dart';
 import '../../../domain/repositories/notification_repository.dart';
+import '../../../domain/repositories/zip_level_repository.dart';
 import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
@@ -45,6 +46,7 @@ class HomeScreen extends StatelessWidget {
         appUpdateRepository: context.read<AppUpdateRepository>(),
         scheduleEngagementNotifications: context
             .read<ScheduleEngagementNotifications>(),
+        zipLevelRepository: context.read<ZipLevelRepository>(),
         playPeriod: DevFlags.playPeriod,
       )..load(),
       child: const _HomeView(),

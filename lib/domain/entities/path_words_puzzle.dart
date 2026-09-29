@@ -64,6 +64,24 @@ class PathWordsTarget {
   final Cell start;
   final List<Cell> path;
   final int colorIndex;
+
+  factory PathWordsTarget.fromJson(Map<String, dynamic> json) {
+    return PathWordsTarget(
+      id: json['id'] as String,
+      word: json['word'] as String,
+      start: Cell.fromJson(json['start']),
+      path: (json['path'] as List).map(Cell.fromJson).toList(),
+      colorIndex: (json['colorIndex'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'word': word,
+    'start': start.toList(),
+    'path': path.map((c) => c.toList()).toList(),
+    'colorIndex': colorIndex,
+  };
 }
 
 class PathWordsPuzzle {
@@ -86,4 +104,32 @@ class PathWordsPuzzle {
   String letterAt(Cell cell) => letters[cell.row * size + cell.col];
 
   bool hasLetter(Cell cell) => letterAt(cell).isNotEmpty;
+
+  factory PathWordsPuzzle.fromJson(Map<String, dynamic> json, {String? id}) {
+    final rawLetters = (json['letters'] as List)
+        .map((e) => e.toString().toLowerCase())
+        .toList();
+    final targets = (json['targets'] as List? ?? [])
+        .map((t) => PathWordsTarget.fromJson(Map<String, dynamic>.from(t as Map)))
+        .toList();
+    final rawDay = json['day'];
+    final day = rawDay is String
+        ? DateTime.tryParse(rawDay) ?? DateTime.now()
+        : DateTime.now();
+    return PathWordsPuzzle(
+      id: id ?? json['id'] as String? ?? '',
+      day: day,
+      size: (json['size'] as num).toInt(),
+      letters: rawLetters,
+      targets: targets,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'day': day.toIso8601String(),
+    'size': size,
+    'letters': letters,
+    'targets': targets.map((t) => t.toJson()).toList(),
+  };
 }

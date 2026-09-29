@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
@@ -53,7 +54,7 @@ class _ZipScreenState extends State<ZipScreen> {
 
   bool _ensureGame(ZipState state) {
     final current = _game;
-    if (current != null && current.level.id == state.level.id) return false;
+    if (current != null && identical(current.level, state.level)) return false;
     _game = ZipGame(
       level: state.level,
       readOnly: state.status == ZipStatus.locked || state.finished,
@@ -94,6 +95,7 @@ class _ZipScreenState extends State<ZipScreen> {
       getBestPoints: context.read<GetBestPoints>(),
       getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
       analytics: context.read<AnalyticsRepository>(),
+      zipLevelRepository: context.read<ZipLevelRepository>(),
       now: widget.date,
       ignoreDailyLock: DevFlags.zipOnlyTesting,
       playPeriod: DevFlags.playPeriod,
@@ -127,7 +129,7 @@ class _ZipScreenState extends State<ZipScreen> {
             },
           ),
           BlocListener<ZipBloc, ZipState>(
-            listenWhen: (prev, curr) => prev.level.id != curr.level.id,
+            listenWhen: (prev, curr) => !identical(prev.level, curr.level),
             listener: (context, state) {
               if (_ensureGame(state)) setState(() {});
             },

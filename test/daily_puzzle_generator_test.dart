@@ -92,6 +92,17 @@ void main() {
       );
     }
   });
+
+  test('Sept 29, 2026 provides a simple 6x6 puzzle with 6 numbers', () {
+    final level = DailyPuzzleGenerator.forDate(DateTime(2026, 9, 29));
+    expect(level.id, 'daily_20260929');
+    expect(level.size, 6);
+    expect(level.maxNumber, 6);
+    expect(level.numbers.length, 6);
+    expect(level.walls.length, 2);
+    expect(level.solution.length, 36);
+    expect(PathValidator(level).isWon(level.solution), isTrue);
+  });
 }
 
 int _longestStraightRun(List<Cell> path) {

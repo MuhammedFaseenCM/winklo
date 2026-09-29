@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
@@ -26,7 +28,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     required this.getBestPoints,
     required this.getBestTimeSeconds,
     required this.analytics,
-    SudokuPuzzle Function({required DateTime day})? generatePuzzle,
+    FutureOr<SudokuPuzzle> Function({required DateTime day})? generatePuzzle,
     DateTime Function()? now,
     Future<void> Function(Duration duration)? wait,
     this.celebrationDuration = const Duration(seconds: 2),
@@ -52,7 +54,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
   final AnalyticsRepository analytics;
-  final SudokuPuzzle Function({required DateTime day}) generatePuzzle;
+  final FutureOr<SudokuPuzzle> Function({required DateTime day}) generatePuzzle;
   final Duration celebrationDuration;
   final Duration playPeriod;
   final DateTime Function() _now;
@@ -93,7 +95,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       ),
     );
 
-    final puzzle = generatePuzzle(day: PlayPeriod.bucket(seed, playPeriod));
+    final puzzle = await generatePuzzle(day: PlayPeriod.bucket(seed, playPeriod));
     if (emit.isDone) return;
 
     if (alreadyCleared) {
