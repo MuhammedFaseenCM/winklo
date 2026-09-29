@@ -190,7 +190,6 @@ class _Fleck {
 ```
 
 Notes for implementer:
-- Drop the erroneous `abstract final class ZipTipSparks` stub — only the concrete class.
 - Keep `debugAngles()` for tests (or `@visibleForTesting`).
 - If `approximateBytesUsed` assertion is flaky across platforms, replace the paint no-op test with: call `paint` when inactive and assert `count == 0` / `isActive == false` only (skip canvas byte check).
 
