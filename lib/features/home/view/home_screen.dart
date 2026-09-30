@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/config/static_assets_config.dart';
 import '../../../core/dev_flags.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/app_update_decision.dart';
 import '../../../domain/game_ids.dart';
@@ -17,13 +21,18 @@ import '../../../domain/usecases/check_app_update.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
+import '../../../domain/usecases/schedule_engagement_notifications.dart';
+import '../../../domain/repositories/notification_repository.dart';
+import '../../../domain/repositories/zip_level_repository.dart';
+import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
-import 'widgets/home_force_update_overlay.dart';
 import 'widgets/home_update_banner.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  static const permissionPromptedKey = 'notif_permission_prompted';
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +44,9 @@ class HomeScreen extends StatelessWidget {
         analytics: context.read<AnalyticsRepository>(),
         checkAppUpdate: context.read<CheckAppUpdate>(),
         appUpdateRepository: context.read<AppUpdateRepository>(),
+        scheduleEngagementNotifications: context
+            .read<ScheduleEngagementNotifications>(),
+        zipLevelRepository: context.read<ZipLevelRepository>(),
         playPeriod: DevFlags.playPeriod,
       )..load(),
       child: const _HomeView(),
@@ -57,6 +69,18 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_maybeRequestNotificationPermission());
+    });
+  }
+
+  Future<void> _maybeRequestNotificationPermission() async {
+    if (!mounted) return;
+    final prefs = context.read<SharedPreferences>();
+    if (prefs.getBool(HomeScreen.permissionPromptedKey) ?? false) return;
+    await prefs.setBool(HomeScreen.permissionPromptedKey, true);
+    if (!mounted) return;
+    await context.read<NotificationRepository>().requestPermission();
   }
 
   @override
@@ -79,8 +103,11 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
 
   void _onRouteChanged() {
     if (!mounted) return;
-    final path = _router?.state.uri.path;
-    if (path == null) return;
+    final router = _router;
+    if (router == null) return;
+    // Guard empty match lists (e.g. a stray pop emptied the branch stack).
+    if (router.routerDelegate.currentConfiguration.isEmpty) return;
+    final path = router.state.uri.path;
     final returnedHome = path == '/' && _lastPath != null && _lastPath != '/';
     _lastPath = path;
     if (returnedHome) {
@@ -92,12 +119,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
     context.read<HomeCubit>().recheckUpdate();
-  }
-
-  String _formatBestTime(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
+    context.read<HomeCubit>().load();
   }
 
   @override
@@ -108,13 +130,14 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
         final zipCleared =
             !DevFlags.zipOnlyTesting &&
             (state.bestPoints > 0 || bestTime != null);
-        final pathWordsBestTime = state.pathWordsBestTimeSeconds;
         final pathWordsCleared =
-            state.pathWordsBestPoints > 0 || pathWordsBestTime != null;
+            state.pathWordsBestPoints > 0 ||
+            state.pathWordsBestTimeSeconds != null;
         final isSoftUpdate = state.updateStatus == AppUpdateStatus.soft;
-        final isForcedUpdate = state.updateStatus == AppUpdateStatus.forced;
 
         Future<void> openZip() async {
+          final ok = await ensureSignedInForPlay(context);
+          if (!ok || !context.mounted) return;
           final cubit = context.read<HomeCubit>();
           await cubit.openGame(GameIds.zip);
           if (!context.mounted) return;
@@ -123,6 +146,8 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
         }
 
         Future<void> openPathWords() async {
+          final ok = await ensureSignedInForPlay(context);
+          if (!ok || !context.mounted) return;
           final cubit = context.read<HomeCubit>();
           await cubit.openGame(GameIds.pathWords);
           if (!context.mounted) return;
@@ -130,105 +155,131 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
           if (!cubit.isClosed) await cubit.load();
         }
 
+        Future<void> openSudoku() async {
+          final ok = await ensureSignedInForPlay(context);
+          if (!ok || !context.mounted) return;
+          final cubit = context.read<HomeCubit>();
+          await cubit.openGame(GameIds.sudoku);
+          if (!context.mounted) return;
+          await context.push('/sudoku');
+          if (!cubit.isClosed) await cubit.load();
+        }
+
+        final sudokuCleared =
+            state.sudokuBestPoints > 0 || state.sudokuBestTimeSeconds != null;
         return Scaffold(
           body: ZipAtmosphere(
             child: Stack(
               fit: StackFit.expand,
               children: [
                 SafeArea(
-                  child: ListView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
-                    children: [
-                      const _HomeHeader()
-                          .animate()
-                          .fadeIn(duration: 450.ms)
-                          .slideY(begin: 0.08, curve: Curves.easeOutCubic),
-                      if (isSoftUpdate) ...[
-                        const SizedBox(height: 20),
-                        HomeUpdateBanner(
-                          currentLabel: state.updateCurrentLabel,
-                          requiredLabel: state.updateRequiredLabel,
-                          onUpdate: () {
-                            unawaited(context.read<HomeCubit>().openStore());
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 28),
-                      _DailyGameTile(
-                            accent: ZipColors.ember,
-                            accentSoft: ZipColors.emberSoft,
-                            iconAsset: _GameTileAssets.zip,
-                            title: AppStrings.zipTitle,
-                            tagline: AppStrings.zipTagline,
-                            playLabel: AppStrings.playTodaysZip,
-                            onPlay: zipCleared
-                                ? null
-                                : () {
-                                    openZip();
-                                  },
-                            onViewResult: zipCleared
-                                ? () {
-                                    openZip();
-                                  }
-                                : null,
-                            streak: state.currentStreak,
-                            isOnFreeze: state.isOnFreeze,
-                            longestStreak: state.longestStreak,
-                            cleared: zipCleared,
-                            bestTimeLabel: zipCleared && bestTime != null
-                                ? AppStrings.bestTimeLabel(
-                                    _formatBestTime(bestTime),
-                                  )
-                                : null,
-                          )
-                          .animate()
-                          .fadeIn(delay: 80.ms, duration: 450.ms)
-                          .slideY(begin: 0.1, curve: Curves.easeOutCubic),
-                      if (!DevFlags.zipOnlyTesting) ...[
-                        const SizedBox(height: 16),
-                        _DailyGameTile(
-                              accent: ZipColors.sky,
-                              accentSoft: ZipColors.skySoft,
-                              iconAsset: _GameTileAssets.pathWords,
-                              title: AppStrings.pathWordsTitle,
-                              tagline: AppStrings.pathWordsTagline,
-                              playLabel: AppStrings.playTodaysPathWords,
-                              playBackground: ZipColors.skyDeep,
-                              onPlay: pathWordsCleared
-                                  ? null
-                                  : () {
-                                      openPathWords();
-                                    },
-                              onViewResult: pathWordsCleared
-                                  ? () {
-                                      openPathWords();
-                                    }
-                                  : null,
-                              streak: state.pathWordsCurrentStreak,
-                              isOnFreeze: state.pathWordsIsOnFreeze,
-                              longestStreak: state.pathWordsLongestStreak,
-                              cleared: pathWordsCleared,
-                              bestTimeLabel:
-                                  pathWordsCleared && pathWordsBestTime != null
-                                  ? AppStrings.bestTimeLabel(
-                                      _formatBestTime(pathWordsBestTime),
-                                    )
-                                  : null,
-                            )
-                            .animate()
-                            .fadeIn(delay: 160.ms, duration: 450.ms)
-                            .slideY(begin: 0.1, curve: Curves.easeOutCubic),
-                      ],
-                    ],
+                  child: Builder(
+                    builder: (context) {
+                      final layout = AppLayout.of(context);
+                      return ListView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: layout.pagePadding,
+                        children: [
+                          const _HomeHeader()
+                              .animate()
+                              .fadeIn(duration: 450.ms)
+                              .slideY(begin: 0.08, curve: Curves.easeOutCubic),
+                          if (isSoftUpdate) ...[
+                            SizedBox(height: layout.space(16)),
+                            HomeUpdateBanner(
+                              currentLabel: state.updateCurrentLabel,
+                              requiredLabel: state.updateRequiredLabel,
+                              onUpdate: () {
+                                unawaited(
+                                  context.read<HomeCubit>().openStore(),
+                                );
+                              },
+                            ),
+                          ],
+                          SizedBox(height: layout.sectionGap),
+                          _DailyGameTile(
+                                accent: ZipColors.ember,
+                                accentSoft: ZipColors.emberSoft,
+                                imageUrl: _GameTileAssets.zip,
+                                title: AppStrings.zipTitle,
+                                tagline: AppStrings.zipTagline,
+                                playLabel: AppStrings.playTodaysZip,
+                                onPlay: zipCleared
+                                    ? null
+                                    : () {
+                                        openZip();
+                                      },
+                                onViewResult: zipCleared
+                                    ? () {
+                                        openZip();
+                                      }
+                                    : null,
+                                streak: state.currentStreak,
+                                isOnFreeze: state.isOnFreeze,
+                                cleared: zipCleared,
+                              )
+                              .animate()
+                              .fadeIn(delay: 80.ms, duration: 450.ms)
+                              .slideY(begin: 0.1, curve: Curves.easeOutCubic),
+                          if (!DevFlags.zipOnlyTesting) ...[
+                            SizedBox(height: layout.tileGap),
+                            _DailyGameTile(
+                                  accent: ZipColors.sky,
+                                  accentSoft: ZipColors.skySoft,
+                                  imageUrl: _GameTileAssets.pathWords,
+                                  title: AppStrings.pathWordsTitle,
+                                  tagline: AppStrings.pathWordsTagline,
+                                  playLabel: AppStrings.playTodaysPathWords,
+                                  playBackground: ZipColors.skyDeep,
+                                  onPlay: pathWordsCleared
+                                      ? null
+                                      : () {
+                                          openPathWords();
+                                        },
+                                  onViewResult: pathWordsCleared
+                                      ? () {
+                                          openPathWords();
+                                        }
+                                      : null,
+                                  streak: state.pathWordsCurrentStreak,
+                                  isOnFreeze: state.pathWordsIsOnFreeze,
+                                  cleared: pathWordsCleared,
+                                )
+                                .animate()
+                                .fadeIn(delay: 160.ms, duration: 450.ms)
+                                .slideY(begin: 0.1, curve: Curves.easeOutCubic),
+                            SizedBox(height: layout.tileGap),
+                            _DailyGameTile(
+                                  accent: ZipColors.success,
+                                  accentSoft: ZipColors.successSoft,
+                                  imageUrl: _GameTileAssets.sudoku,
+                                  title: AppStrings.sudokuTitle,
+                                  tagline: AppStrings.sudokuTagline,
+                                  playLabel: AppStrings.playTodaysSudoku,
+                                  playBackground: const Color(0xFF059669),
+                                  onPlay: sudokuCleared
+                                      ? null
+                                      : () {
+                                          openSudoku();
+                                        },
+                                  onViewResult: sudokuCleared
+                                      ? () {
+                                          openSudoku();
+                                        }
+                                      : null,
+                                  streak: state.sudokuCurrentStreak,
+                                  isOnFreeze: state.sudokuIsOnFreeze,
+                                  cleared: sudokuCleared,
+                                )
+                                .animate()
+                                .fadeIn(delay: 240.ms, duration: 450.ms)
+                                .slideY(begin: 0.1, curve: Curves.easeOutCubic),
+                          ],
+                        ],
+                      );
+                    },
                   ),
                 ),
-                if (isForcedUpdate)
-                  HomeForceUpdateOverlay(
-                    currentLabel: state.updateCurrentLabel,
-                    requiredLabel: state.updateRequiredLabel,
-                    onUpdate: () => context.read<HomeCubit>().openStore(),
-                  ),
               ],
             ),
           ),
@@ -243,30 +294,75 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final layout = AppLayout.of(context);
     return Row(
       children: [
-        const ZipMark(size: 56)
+        ZipMark(size: layout.headerMarkSize)
             .animate()
             .fadeIn(duration: 400.ms)
             .scale(begin: const Offset(0.85, 0.85), curve: Curves.easeOutBack),
-        const SizedBox(width: 14),
+        SizedBox(width: layout.space(14)),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                AppStrings.appTitle,
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: ZipColors.onInk,
-                  height: 1,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      AppStrings.appTitle,
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: ZipColors.onInk,
+                            fontWeight: FontWeight.w800,
+                            height: 1,
+                            fontSize: layout.isCompact ? 24 : 28,
+                            letterSpacing: -0.5,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(width: layout.space(8)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          ZipColors.ember.withValues(alpha: 0.22),
+                          ZipColors.ember.withValues(alpha: 0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: ZipColors.ember.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Text(
+                      'DAILY',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: ZipColors.ember,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 10,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: layout.space(5)),
               Text(
                 AppStrings.homeTagline,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: ZipColors.inkSoft),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: ZipColors.inkSoft,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -280,7 +376,7 @@ class _DailyGameTile extends StatelessWidget {
   const _DailyGameTile({
     required this.accent,
     required this.accentSoft,
-    required this.iconAsset,
+    required this.imageUrl,
     required this.title,
     required this.tagline,
     required this.playLabel,
@@ -289,14 +385,12 @@ class _DailyGameTile extends StatelessWidget {
     this.playBackground,
     this.streak = 0,
     this.isOnFreeze = false,
-    this.longestStreak = 0,
     this.cleared = false,
-    this.bestTimeLabel,
   });
 
   final Color accent;
   final Color accentSoft;
-  final String iconAsset;
+  final String imageUrl;
   final String title;
   final String tagline;
   final String playLabel;
@@ -305,153 +399,233 @@ class _DailyGameTile extends StatelessWidget {
   final Color? playBackground;
   final int streak;
   final bool isOnFreeze;
-  final int longestStreak;
   final bool cleared;
-  final String? bestTimeLabel;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final layout = AppLayout.of(context);
+    final titleStyle = layout.isCompact
+        ? textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)
+        : textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800);
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: ZipColors.wall,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: ZipColors.outlineQuiet),
+        borderRadius: BorderRadius.circular(layout.space(24)),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF223048), Color(0xFF1B263B), Color(0xFF131D2E)],
+        ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
+            color: Colors.black.withValues(alpha: 0.45),
+            blurRadius: layout.space(28),
+            offset: Offset(0, layout.space(12)),
+          ),
+          BoxShadow(
+            color: accent.withValues(alpha: 0.12),
+            blurRadius: layout.space(30),
+            spreadRadius: -4,
+            offset: Offset(0, layout.space(4)),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ColoredBox(color: accent, child: const SizedBox(width: 6)),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: accentSoft,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              AppStrings.today,
-                              style: textTheme.labelLarge?.copyWith(
-                                color: accent,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (streak > 0) ...[
-                            ZipHudPill(
-                              icon: Icons.local_fire_department_rounded,
-                              label: AppStrings.streakLabel(streak),
-                              emphasize: true,
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          if (cleared)
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.check_circle_rounded,
-                                  size: 18,
-                                  color: ZipColors.success,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  AppStrings.cleared,
-                                  style: textTheme.labelLarge?.copyWith(
-                                    color: ZipColors.success,
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                      if (isOnFreeze) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          AppStrings.streakProtectedLabel,
-                          style: textTheme.labelMedium?.copyWith(color: accent),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _GameTileArt(
-                            assetPath: iconAsset,
-                            semanticLabel: title,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(title, style: textTheme.headlineMedium),
-                                const SizedBox(height: 4),
-                                Text(
-                                  tagline,
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    color: ZipColors.inkSoft,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (longestStreak > 0 || bestTimeLabel != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          [
-                            ?bestTimeLabel,
-                            if (longestStreak > 0)
-                              AppStrings.longestStreakLabel(longestStreak),
-                          ].join('  ·  '),
-                          style: textTheme.labelMedium?.copyWith(
-                            color: ZipColors.inkSoft,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 18),
-                      if (cleared)
-                        ZipPrimaryButton(
-                          label: AppStrings.result,
-                          icon: Icons.emoji_events_rounded,
-                          backgroundColor: playBackground,
-                          onPressed: onViewResult,
-                        )
-                      else
-                        ZipPrimaryButton(
-                          label: playLabel,
-                          icon: Icons.play_arrow_rounded,
-                          backgroundColor: playBackground,
-                          onPressed: onPlay,
-                        ),
+        borderRadius: BorderRadius.circular(layout.space(24)),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -25,
+              top: -25,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      accent.withValues(alpha: 0.16),
+                      accent.withValues(alpha: 0.0),
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: layout.space(6),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [accent, accent.withValues(alpha: 0.6)],
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: layout.space(6)),
+              child: Padding(
+                padding: layout.tilePadding,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: layout.space(10),
+                            vertical: layout.space(5),
+                          ),
+                          decoration: BoxDecoration(
+                            color: accentSoft,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.35),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: accent,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: accent.withValues(alpha: 0.6),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: layout.space(6)),
+                              Text(
+                                AppStrings.today,
+                                style: textTheme.labelMedium?.copyWith(
+                                  color: accent,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: layout.space(8)),
+                        Expanded(
+                          child: Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: layout.space(8),
+                            runSpacing: layout.space(8),
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (streak > 0)
+                                ZipHudPill(
+                                  icon: Icons.local_fire_department_rounded,
+                                  label: AppStrings.streakLabel(streak),
+                                  emphasize: true,
+                                  compact: true,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (isOnFreeze) ...[
+                      SizedBox(height: layout.space(10)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ZipColors.skySoft,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: ZipColors.sky.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          AppStrings.streakProtectedLabel,
+                          style: textTheme.labelSmall?.copyWith(
+                            color: ZipColors.sky,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: layout.space(layout.isCompact ? 12 : 16)),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _GameTileArt(
+                          imageUrl: imageUrl,
+                          semanticLabel: title,
+                          size: layout.tileArtSize,
+                          accentColor: accent,
+                        ),
+                        SizedBox(width: layout.space(14)),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: titleStyle,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: layout.space(4)),
+                              Text(
+                                tagline,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: ZipColors.inkSoft,
+                                  height: 1.3,
+                                ),
+                                maxLines: layout.isCompact ? 2 : 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Best time / longest-streak chip hidden for now.
+                    SizedBox(height: layout.space(layout.isCompact ? 14 : 18)),
+                    if (cleared)
+                      ZipPrimaryButton(
+                        label: AppStrings.result,
+                        icon: Icons.emoji_events_rounded,
+                        backgroundColor: playBackground,
+                        onPressed: onViewResult,
+                      )
+                    else
+                      ZipPrimaryButton(
+                        label: playLabel,
+                        icon: Icons.play_arrow_rounded,
+                        backgroundColor: playBackground,
+                        onPressed: onPlay,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -459,17 +633,25 @@ class _DailyGameTile extends StatelessWidget {
 }
 
 abstract final class _GameTileAssets {
-  static const zip = 'assets/games/zip_tile.png';
-  static const pathWords = 'assets/games/path_words_tile.png';
+  static final zip = StaticAssetsConfig.url('games/zip_tile_v3.png');
+  static final pathWords = StaticAssetsConfig.url(
+    'games/path_words_tile_v2.png',
+  );
+  static final sudoku = StaticAssetsConfig.url('games/sudoku_tile_v2.png');
 }
 
 class _GameTileArt extends StatelessWidget {
-  const _GameTileArt({required this.assetPath, required this.semanticLabel});
+  const _GameTileArt({
+    required this.imageUrl,
+    required this.semanticLabel,
+    required this.size,
+    this.accentColor,
+  });
 
-  final String assetPath;
+  final String imageUrl;
   final String semanticLabel;
-
-  static const double size = 64;
+  final double size;
+  final Color? accentColor;
 
   @override
   Widget build(BuildContext context) {
@@ -477,18 +659,36 @@ class _GameTileArt extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ZipColors.outlineQuiet),
+        borderRadius: BorderRadius.circular(size * 0.28),
+        border: Border.all(
+          color: (accentColor ?? ZipColors.outlineQuiet).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+          if (accentColor != null)
+            BoxShadow(
+              color: accentColor!.withValues(alpha: 0.2),
+              blurRadius: 16,
+              spreadRadius: -2,
+            ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Image.asset(
-        assetPath,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.high,
-        gaplessPlayback: true,
-        semanticLabel: semanticLabel,
+      child: Semantics(
+        label: semanticLabel,
+        child: AppImage.network(
+          imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorWidget: const ColoredBox(color: ZipColors.mistDeep),
+          placeholder: const ColoredBox(color: ZipColors.mistDeep),
+        ),
       ),
     );
   }

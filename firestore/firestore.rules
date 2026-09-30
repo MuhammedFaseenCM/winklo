@@ -1,7 +1,66 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function validGame(gameId) {
+      return gameId in ['zip', 'path_words', 'sudoku'];
+    }
+
+    function validTimeSeconds() {
+      return request.resource.data.timeSeconds is int
+        && request.resource.data.timeSeconds > 0;
+    }
+
+    function improvingTime() {
+      return validTimeSeconds()
+        && request.resource.data.timeSeconds < resource.data.timeSeconds;
+    }
+
+    // Allow only expected score fields on leaderboard docs.
+    function validLeaderboardKeys() {
+      return request.resource.data.keys().hasOnly([
+        'timeSeconds',
+        'updatedAt',
+        'displayName',
+        'photoUrl',
+        'avatarId',
+      ]);
+    }
+
+    // Identity refresh that does not change the recorded time.
+    function profileOnlyLeaderboardUpdate() {
+      return request.resource.data.timeSeconds == resource.data.timeSeconds
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'photoUrl', 'avatarId', 'updatedAt']);
+    }
+
+    // users/{uid}.avatarId is an optional string (null clears a preset).
+    function validUserAvatarId() {
+      return !request.resource.data.keys().hasAny(['avatarId'])
+        || request.resource.data.avatarId == null
+        || request.resource.data.avatarId is string;
+    }
+
     match /zip_levels/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /path_words_levels/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /sudoku_levels/{id} {
       allow read: if true;
       allow write: if false;
     }
@@ -13,5 +72,178 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(uid) && validUserAvatarId();
+      allow delete: if false;
+    }
+
+    // Public read so the board loads even if the Auth ID token is still
+    // refreshing; writes stay owner-only + improve-only.
+    match /leaderboards/{gameId}/all_time/{uid} {
+      allow read: if validGame(gameId);
+      allow create: if isOwner(uid)
+        && validGame(gameId)
+        && validTimeSeconds()
+        && validLeaderboardKeys();
+      allow update: if isOwner(uid)
+        && validGame(gameId)
+        && (
+          (improvingTime() && validLeaderboardKeys())
+          || profileOnlyLeaderboardUpdate()
+        );
+      allow delete: if false;
+    }
+
+    match /leaderboards/{gameId}/daily/{dayId}/entries/{uid} {
+      allow read: if validGame(gameId);
+      allow create: if isOwner(uid)
+        && validGame(gameId)
+        && validTimeSeconds()
+        && validLeaderboardKeys();
+      allow update: if isOwner(uid)
+        && validGame(gameId)
+        && (
+          (improvingTime() && validLeaderboardKeys())
+          || profileOnlyLeaderboardUpdate()
+        );
+      allow delete: if false;
+    }
+
+    // Twin used by debug builds (`kDebugMode`) so demo seeds / local
+    // submits never touch production `leaderboards`.
+    match /leaderboards_debug/{gameId}/all_time/{uid} {
+      allow read: if validGame(gameId);
+      allow create: if isOwner(uid)
+        && validGame(gameId)
+        && validTimeSeconds()
+        && validLeaderboardKeys();
+      allow update: if isOwner(uid)
+        && validGame(gameId)
+        && (
+          (improvingTime() && validLeaderboardKeys())
+          || profileOnlyLeaderboardUpdate()
+        );
+      allow delete: if false;
+    }
+
+    match /leaderboards_debug/{gameId}/daily/{dayId}/entries/{uid} {
+      allow read: if validGame(gameId);
+      allow create: if isOwner(uid)
+        && validGame(gameId)
+        && validTimeSeconds()
+        && validLeaderboardKeys();
+      allow update: if isOwner(uid)
+        && validGame(gameId)
+        && (
+          (improvingTime() && validLeaderboardKeys())
+          || profileOnlyLeaderboardUpdate()
+        );
+      allow delete: if false;
+    }
+
+    match /issue_reports/{reportId} {
+      allow create: if isSignedIn()
+        && request.auth.uid == request.resource.data.uid
+        && request.resource.data.keys().hasOnly([
+          'title', 'description', 'uid', 'displayName', 'photoUrl',
+          'avatarId', 'appVersion', 'buildNumber', 'platform', 'createdAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.uid is string
+        && request.resource.data.displayName is string
+        && (request.resource.data.photoUrl == null
+            || request.resource.data.photoUrl is string)
+        && (request.resource.data.avatarId == null
+            || request.resource.data.avatarId is string)
+        && request.resource.data.appVersion is string
+        && request.resource.data.buildNumber is string
+        && request.resource.data.platform is string
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
+    }
+
+    // Automatic client telemetry (not user-submitted issue reports).
+    match /client_errors/{id} {
+      allow create: if validClientErrorCreate();
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    function validClientErrorSeverity() {
+      return request.resource.data.severity in ['error', 'fatal'];
+    }
+
+    function validClientErrorSource() {
+      return request.resource.data.source in [
+        'handled', 'flutter', 'platform', 'bloc'
+      ];
+    }
+
+    function validClientErrorUid() {
+      return !('uid' in request.resource.data)
+        || request.resource.data.uid == null
+        || (
+          request.resource.data.uid is string
+          && request.resource.data.uid.size() > 0
+          && request.resource.data.uid.size() <= 128
+          && isSignedIn()
+          && request.auth.uid == request.resource.data.uid
+        );
+    }
+
+    function validClientErrorCreate() {
+      return request.resource.data.keys().hasOnly([
+          'createdAt', 'severity', 'source', 'code', 'message',
+          'cause', 'stack', 'screen', 'function', 'uid',
+          'appVersion', 'buildNumber', 'platform', 'locale'
+        ])
+        && validClientErrorSeverity()
+        && validClientErrorSource()
+        && request.resource.data.code is string
+        && request.resource.data.code.size() > 0
+        && request.resource.data.code.size() <= 80
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 500
+        && (!('cause' in request.resource.data)
+            || request.resource.data.cause == null
+            || (request.resource.data.cause is string
+                && request.resource.data.cause.size() <= 500))
+        && (!('stack' in request.resource.data)
+            || request.resource.data.stack == null
+            || (request.resource.data.stack is string
+                && request.resource.data.stack.size() <= 4000))
+        && (!('screen' in request.resource.data)
+            || request.resource.data.screen == null
+            || (request.resource.data.screen is string
+                && request.resource.data.screen.size() <= 120))
+        && (!('function' in request.resource.data)
+            || request.resource.data.function == null
+            || (request.resource.data.function is string
+                && request.resource.data.function.size() <= 160))
+        && validClientErrorUid()
+        && request.resource.data.appVersion is string
+        && request.resource.data.appVersion.size() > 0
+        && request.resource.data.appVersion.size() <= 32
+        && request.resource.data.buildNumber is string
+        && request.resource.data.buildNumber.size() > 0
+        && request.resource.data.buildNumber.size() <= 16
+        && request.resource.data.platform is string
+        && request.resource.data.platform.size() > 0
+        && request.resource.data.platform.size() <= 32
+        && (!('locale' in request.resource.data)
+            || request.resource.data.locale == null
+            || (request.resource.data.locale is string
+                && request.resource.data.locale.size() <= 32))
+        && request.resource.data.createdAt == request.time;
+    }
   }
 }
+

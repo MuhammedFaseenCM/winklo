@@ -24,6 +24,11 @@ void main() {
       await repo.logTutorialShown(gameId: 'zip');
       await repo.logTutorialDismissed(gameId: 'zip');
       await repo.logResultsAction(gameId: 'zip', action: 'home');
+      await repo.logProfilePrivacyOpened();
+      await repo.logProfileAboutOpened();
+      await repo.logProfileReportOpened();
+      await repo.logProfileReportSubmitted();
+      await repo.logProfileSignOut();
     },
   );
 }

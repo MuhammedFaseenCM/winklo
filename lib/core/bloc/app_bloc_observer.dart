@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
+import '../errors/client_error_reporter.dart';
 import '../firebase/firebase_bootstrap.dart';
 
 class AppBlocObserver extends BlocObserver {
@@ -23,6 +24,11 @@ class AppBlocObserver extends BlocObserver {
         stackTrace,
         fatal: false,
         reason: bloc.runtimeType.toString(),
+      );
+      ClientErrorReporter.instance.reportBloc(
+        error,
+        stackTrace,
+        blocType: bloc.runtimeType.toString(),
       );
     }
     super.onError(bloc, error, stackTrace);

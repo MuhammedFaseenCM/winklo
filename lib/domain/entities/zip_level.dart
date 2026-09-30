@@ -35,12 +35,17 @@ class ZipLevel {
     final walls = (json['walls'] as List? ?? [])
         .map((e) => Wall.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
+    final rawSolution = json['solution'] as List?;
+    final solution = rawSolution != null
+        ? rawSolution.map(Cell.fromJson).toList()
+        : const <Cell>[];
     return ZipLevel(
       id: id ?? json['id'] as String,
       size: (json['size'] as num).toInt(),
       numbers: numbers,
       walls: walls,
       order: (json['order'] as num?)?.toInt() ?? 0,
+      solution: solution,
     );
   }
 
@@ -50,5 +55,7 @@ class ZipLevel {
     'order': order,
     'numbers': {for (final e in numbers.entries) e.key.toString(): e.value},
     'walls': walls.map((w) => w.toJson()).toList(),
+    if (solution.isNotEmpty)
+      'solution': solution.map((c) => c.toList()).toList(),
   };
 }

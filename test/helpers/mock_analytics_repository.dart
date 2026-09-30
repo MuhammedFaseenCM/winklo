@@ -45,4 +45,9 @@ void stubAnalytics(MockAnalyticsRepository analytics) {
       action: any(named: 'action'),
     ),
   ).thenAnswer((_) async {});
+  when(() => analytics.logProfilePrivacyOpened()).thenAnswer((_) async {});
+  when(() => analytics.logProfileAboutOpened()).thenAnswer((_) async {});
+  when(() => analytics.logProfileReportOpened()).thenAnswer((_) async {});
+  when(() => analytics.logProfileReportSubmitted()).thenAnswer((_) async {});
+  when(() => analytics.logProfileSignOut()).thenAnswer((_) async {});
 }

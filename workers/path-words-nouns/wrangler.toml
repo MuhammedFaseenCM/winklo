@@ -1,0 +1,14 @@
+name = "winklo-path-words-nouns"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[[kv_namespaces]]
+binding = "NOUNS"
+id = "41796eb6dc1340c6a6c504856cedf9ab"
+preview_id = "f3d68d8a3de24d4c98b727081a05e063"
+
+[ai]
+binding = "AI"
+
+[triggers]
+crons = ["0 0 * * *"]

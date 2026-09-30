@@ -19,5 +19,20 @@ class Cell {
     return Cell(int.parse(parts[0]), int.parse(parts[1]));
   }
 
+  static Cell fromJson(dynamic json) {
+    if (json is List) {
+      return Cell((json[0] as num).toInt(), (json[1] as num).toInt());
+    }
+    if (json is Map) {
+      return Cell((json['row'] as num).toInt(), (json['col'] as num).toInt());
+    }
+    if (json is String) {
+      return Cell.parse(json);
+    }
+    throw ArgumentError('Invalid cell json: $json');
+  }
+
   List<int> toList() => [row, col];
+
+  Map<String, dynamic> toJson() => {'row': row, 'col': col};
 }

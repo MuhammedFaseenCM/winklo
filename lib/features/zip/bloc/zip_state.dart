@@ -25,6 +25,6 @@ sealed class ZipState with _$ZipState {
   factory ZipState.initial(DateTime now, {Duration period = PlayPeriod.daily}) {
     final day = DateTime(now.year, now.month, now.day);
     final level = DailyPuzzleGenerator.forDate(now, period: period);
-    return ZipState(day: day, level: level, status: ZipStatus.ready);
+    return ZipState(day: day, level: level, status: ZipStatus.initial);
   }
 }

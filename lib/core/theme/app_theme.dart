@@ -46,6 +46,35 @@ abstract final class ZipColors {
 
   static const outline = Color(0xFF475569);
   static const outlineQuiet = Color(0xFF334155);
+
+  /// Gradients & glows for elevated modern UI
+  static const emberGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF7E40), Color(0xFFE85A1C)],
+  );
+
+  static const skyGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+  );
+
+  static const successGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF34D399), Color(0xFF059669)],
+  );
+
+  static const cardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF223049), Color(0xFF182234)],
+  );
+
+  static const emberGlow = Color(0x4DFF6B2C);
+  static const skyGlow = Color(0x4D38BDF8);
+  static const glassBorder = Color(0x3394A3B8);
 }
 
 ThemeData buildAppTheme() {
@@ -169,6 +198,58 @@ ThemeData buildAppTheme() {
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: ZipColors.ember,
       linearTrackColor: ZipColors.mistDeep,
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return ZipColors.ember;
+          }
+          return Colors.transparent;
+        }),
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return ZipColors.inkSoft;
+        }),
+        elevation: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return 3;
+          }
+          return 0;
+        }),
+        shadowColor: const WidgetStatePropertyAll(ZipColors.emberGlow),
+        side: const WidgetStatePropertyAll(BorderSide.none),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        visualDensity: VisualDensity.compact,
+        textStyle: WidgetStateProperty.resolveWith((states) {
+          return GoogleFonts.lexend(
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+            fontSize: 13.5,
+            letterSpacing: 0.2,
+          );
+        }),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: ZipColors.wall,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: ZipColors.outlineQuiet),
+      ),
+      elevation: 16,
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: ZipColors.wall,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
     ),
     dividerColor: ZipColors.outlineQuiet,
   );

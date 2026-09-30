@@ -10,8 +10,19 @@ abstract final class DevFlags {
   /// Widget tests run in debug; keep the daily keyspace stable there.
   static bool useDailyPlayPeriodInTests = false;
 
-  /// Debug builds rotate a new puzzle and unlock every minute.
-  static bool get minutePlayPeriod => kDebugMode && !useDailyPlayPeriodInTests;
+  /// Debug: use calendar-day puzzle IDs like release (`daily_YYYYMMDD`).
+  ///
+  /// Pass `--dart-define=DAILY_PLAY_PERIOD=true` (see `.vscode/launch.json`).
+  /// When false/absent, debug still rotates a new puzzle every minute.
+  static const dailyPlayPeriod = bool.fromEnvironment(
+    'DAILY_PLAY_PERIOD',
+    defaultValue: false,
+  );
+
+  /// Debug builds rotate a new puzzle every minute unless tests or
+  /// [dailyPlayPeriod] force the release-like daily keyspace.
+  static bool get minutePlayPeriod =>
+      kDebugMode && !useDailyPlayPeriodInTests && !dailyPlayPeriod;
 
   static Duration get playPeriod =>
       minutePlayPeriod ? PlayPeriod.minute : PlayPeriod.daily;

@@ -5,7 +5,7 @@ import '../entities/path_words_puzzle.dart';
 import '../play_period.dart';
 
 abstract final class PathWordsGenerator {
-  static const generatorVersion = 5;
+  static const generatorVersion = 6;
 
   static const int _minSize = 3;
   static const int _maxSize = 6;

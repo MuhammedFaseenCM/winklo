@@ -1,0 +1,11 @@
+name = "winklo-avatar-upload"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[[r2_buckets]]
+binding = "AVATARS"
+bucket_name = "winklo-avatars"
+
+[vars]
+FIREBASE_PROJECT_ID = "brain-zip-app"
+PUBLIC_BASE_URL = "https://pub-94fd8286c7fa4508a0e988821039d2a8.r2.dev"

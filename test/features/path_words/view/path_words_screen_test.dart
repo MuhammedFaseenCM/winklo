@@ -90,7 +90,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(GameTutorialOverlay), findsOneWidget);
-    expect(find.text(AppStrings.pathWordsTutorialDrag), findsOneWidget);
+    expect(find.text(AppStrings.pathWordsTutorialMatchList), findsOneWidget);
     expect(find.byType(ListView), findsNothing);
   });
 }

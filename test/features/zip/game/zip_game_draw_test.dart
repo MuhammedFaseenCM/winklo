@@ -61,4 +61,32 @@ void main() {
 
     expect(game.path, drawn);
   });
+
+  test('pressing an earlier path cell rewinds the tip and starts a stroke', () {
+    final game = gameWithPath();
+
+    expect(game.beginStrokeAt(const Cell(0, 0)), isTrue);
+
+    expect(game.path, const [Cell(0, 0)]);
+  });
+
+  test('after press rewind, extend continues from the new tip', () {
+    final game = gameWithPath();
+
+    expect(game.beginStrokeAt(const Cell(0, 0)), isTrue);
+    game.extendTo(const Cell(1, 0));
+
+    expect(game.path, const [Cell(0, 0), Cell(1, 0)]);
+  });
+
+  test('press rewind then extend leaves tip ready for a new branch', () {
+    final game = gameWithPath();
+
+    // Simulates pointer-down on an earlier path cell, then drag into empty.
+    expect(game.beginStrokeAt(const Cell(0, 1)), isTrue);
+    expect(game.path, const [Cell(0, 0), Cell(0, 1)]);
+    game.extendTo(const Cell(1, 1));
+
+    expect(game.path, const [Cell(0, 0), Cell(0, 1), Cell(1, 1)]);
+  });
 }

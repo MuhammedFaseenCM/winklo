@@ -1,0 +1,8 @@
+What's new
+
+• Sudoku coach hints — technique tips with board highlights (no auto-fill)
+• Shared daily hint quotas for Zip, Path Words, and Sudoku
+• Ember tip sparks while drawing your Zip path
+• Zip loads with a smoother shimmer while today's puzzle is ready
+• Daily Path Words and Sudoku puzzle flow improvements
+• Stability and polish across games

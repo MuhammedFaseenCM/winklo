@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/clients/remote_config_client.dart';
 import '../../firebase_options.dart';
+import '../errors/client_error_reporter.dart';
 
 class FirebaseBootstrap {
   FirebaseBootstrap._();
@@ -49,9 +50,16 @@ class FirebaseBootstrap {
   /// Wire Flutter / platform error handlers when Firebase is ready (release).
   static void installErrorHandlers() {
     if (!isReady || kDebugMode) return;
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    FlutterError.onError = (details) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+      ClientErrorReporter.instance.reportFlutter(
+        details.exception,
+        details.stack ?? StackTrace.current,
+      );
+    };
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      ClientErrorReporter.instance.reportPlatform(error, stack);
       return true;
     };
   }

@@ -5,10 +5,12 @@ import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/entities/path_words_puzzle.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
+import 'package:winklo/domain/repositories/hint_quota_repository.dart';
 import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
+import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/features/path_words/bloc/path_words_bloc.dart';
 import 'package:winklo/features/path_words/bloc/path_words_event.dart';
@@ -21,6 +23,9 @@ class _MockGenerateDailyPathWords extends Mock
 
 class _MockSubmitScore extends Mock implements SubmitScore {}
 
+class _MockSubmitLeaderboardTime extends Mock
+    implements SubmitLeaderboardTime {}
+
 class _MockRecordDailyClear extends Mock implements RecordDailyClear {}
 
 class _MockGetBestPoints extends Mock implements GetBestPoints {}
@@ -28,6 +33,22 @@ class _MockGetBestPoints extends Mock implements GetBestPoints {}
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 
 class _MockAnalyticsRepository extends Mock implements AnalyticsRepository {}
+
+class _FakeHintQuota implements HintQuotaRepository {
+  _FakeHintQuota(this._remaining);
+
+  int _remaining;
+
+  @override
+  int remaining(String gameId) => _remaining;
+
+  @override
+  Future<int> tryConsume(String gameId) async {
+    if (_remaining <= 0) return 0;
+    _remaining--;
+    return _remaining;
+  }
+}
 
 class _FakeClock {
   _FakeClock(this._times);
@@ -89,22 +110,53 @@ PathWordsPuzzle _linePuzzle3({required DateTime day}) {
 void main() {
   late _MockGenerateDailyPathWords generateDaily;
   late _MockSubmitScore submitScore;
+  late _MockSubmitLeaderboardTime submitLeaderboardTime;
   late _MockRecordDailyClear recordDailyClear;
   late _MockGetBestPoints getBestPoints;
   late _MockGetBestTimeSeconds getBestTimeSeconds;
   late _MockAnalyticsRepository analytics;
+  late _FakeHintQuota hintQuota;
   late List<Duration> waited;
+
+  PathWordsBloc buildBloc({
+    _FakeHintQuota? quota,
+    DateTime Function()? now,
+    Future<void> Function(Duration duration)? wait,
+    Duration celebrationDuration = const Duration(seconds: 2),
+  }) {
+    return PathWordsBloc(
+      generateDailyPathWords: generateDaily,
+      submitScore: submitScore,
+      submitLeaderboardTime: submitLeaderboardTime,
+      recordDailyClear: recordDailyClear,
+      getBestPoints: getBestPoints,
+      getBestTimeSeconds: getBestTimeSeconds,
+      analytics: analytics,
+      hintQuota: quota ?? hintQuota,
+      now: now ?? (() => DateTime(2026, 9, 17, 0, 0, 0)),
+      wait: wait,
+      celebrationDuration: celebrationDuration,
+    );
+  }
 
   setUp(() {
     generateDaily = _MockGenerateDailyPathWords();
     submitScore = _MockSubmitScore();
+    submitLeaderboardTime = _MockSubmitLeaderboardTime();
     recordDailyClear = _MockRecordDailyClear();
     getBestPoints = _MockGetBestPoints();
     getBestTimeSeconds = _MockGetBestTimeSeconds();
     analytics = _MockAnalyticsRepository();
+    hintQuota = _FakeHintQuota(3);
     waited = <Duration>[];
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
+    when(
+      () => submitLeaderboardTime(
+        gameId: any(named: 'gameId'),
+        timeSeconds: any(named: 'timeSeconds'),
+      ),
+    ).thenAnswer((_) async {});
     when(
       () => analytics.logGameStarted(gameId: any(named: 'gameId')),
     ).thenAnswer((_) async {});
@@ -137,10 +189,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -172,10 +226,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -231,10 +287,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: clock.call,
         wait: (duration) async {
           waited.add(duration);
@@ -339,6 +397,9 @@ void main() {
         ),
       ).called(1);
       verify(
+        () => submitLeaderboardTime(gameId: GameIds.pathWords, timeSeconds: 12),
+      ).called(1);
+      verify(
         () => recordDailyClear(gameId: GameIds.pathWords, dateId: '20260917'),
       ).called(1);
     },
@@ -353,10 +414,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
         wait: (_) async {},
       );
@@ -416,10 +479,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -466,10 +531,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -508,6 +575,119 @@ void main() {
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
+    'dragging back onto the previous cell pops LIFO like Zip',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
+      );
+      return PathWordsBloc(
+        generateDailyPathWords: generateDaily,
+        submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
+        recordDailyClear: recordDailyClear,
+        getBestPoints: getBestPoints,
+        getBestTimeSeconds: getBestTimeSeconds,
+        analytics: analytics,
+        hintQuota: hintQuota,
+        now: () => DateTime(2026, 9, 17, 0, 0, 0),
+      );
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 2)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 0)));
+    },
+    expect: () => [
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.loading,
+      ),
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.ready,
+      ),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(0, 0),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(0, 0),
+        const Cell(0, 1),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(0, 0),
+        const Cell(0, 1),
+        const Cell(0, 2),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(0, 0),
+        const Cell(0, 1),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(0, 0),
+      ]),
+    ],
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'releasing on the last remaining cell clears the path',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
+      );
+      return PathWordsBloc(
+        generateDailyPathWords: generateDaily,
+        submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
+        recordDailyClear: recordDailyClear,
+        getBestPoints: getBestPoints,
+        getBestTimeSeconds: getBestTimeSeconds,
+        analytics: analytics,
+        hintQuota: hintQuota,
+        now: () => DateTime(2026, 9, 17, 0, 0, 0),
+      );
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerUp());
+    },
+    expect: () => [
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.loading,
+      ),
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.ready,
+      ),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(0, 0),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(0, 0),
+        const Cell(0, 1),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(0, 0),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', isEmpty),
+    ],
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
     'drawing can start from any letter cell',
     build: () {
       when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
@@ -516,10 +696,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -546,7 +728,7 @@ void main() {
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
-    'pointer up keeps an incomplete path',
+    'releasing an incomplete stroke keeps it and clears only the active path',
     build: () {
       when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
@@ -554,10 +736,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -587,11 +771,21 @@ void main() {
         const Cell(0, 0),
         const Cell(0, 1),
       ]),
+      isA<PathWordsState>()
+          .having((s) => s.activePath, 'activePath', isEmpty)
+          .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty)
+          .having(
+            (s) => s.placedPaths.map((stroke) => stroke.cells).toList(),
+            'placedPaths',
+            [
+              [const Cell(0, 0), const Cell(0, 1)],
+            ],
+          ),
     ],
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
-    'tapping a selected cell clears the path and starts from that cell',
+    'pointer down on another letter starts a new stroke',
     build: () {
       when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
@@ -599,10 +793,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -613,9 +809,9 @@ void main() {
       b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
       b.add(const PathWordsEvent.pointerUp());
       await pumpEventQueue();
-      b.add(const PathWordsEvent.pointerDown(Cell(0, 1)));
-      await pumpEventQueue();
-      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      // Not adjacent to the tip (0,1) — begin a fresh stroke here.
+      b.add(const PathWordsEvent.pointerDown(Cell(2, 2)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(2, 1)));
     },
     expect: () => [
       isA<PathWordsState>().having(
@@ -635,12 +831,282 @@ void main() {
         const Cell(0, 0),
         const Cell(0, 1),
       ]),
+      isA<PathWordsState>()
+          .having((s) => s.activePath, 'activePath', isEmpty)
+          .having(
+            (s) => s.placedPaths.map((stroke) => stroke.cells).toList(),
+            'placedPaths',
+            [
+              [const Cell(0, 0), const Cell(0, 1)],
+            ],
+          ),
       isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
-        const Cell(0, 1),
+        const Cell(2, 2),
       ]),
+      isA<PathWordsState>()
+          .having((s) => s.activePath, 'activePath', [
+            const Cell(2, 2),
+            const Cell(2, 1),
+          ])
+          .having(
+            (s) => s.placedPaths.map((stroke) => stroke.cells).toList(),
+            'placedPaths',
+            [
+              [const Cell(0, 0), const Cell(0, 1)],
+            ],
+          ),
+    ],
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'tapping a cell on an incorrect placed path truncates it',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
+      );
+      return PathWordsBloc(
+        generateDailyPathWords: generateDaily,
+        submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
+        recordDailyClear: recordDailyClear,
+        getBestPoints: getBestPoints,
+        getBestTimeSeconds: getBestTimeSeconds,
+        analytics: analytics,
+        hintQuota: hintQuota,
+        now: () => DateTime(2026, 9, 17, 0, 0, 0),
+      );
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(1, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(1, 1)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(1, 2)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(1, 1)));
+    },
+    expect: () => [
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.loading,
+      ),
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.ready,
+      ),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(1, 0),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(1, 0),
+        const Cell(1, 1),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(1, 0),
+        const Cell(1, 1),
+        const Cell(1, 2),
+      ]),
+      isA<PathWordsState>()
+          .having((s) => s.activePath, 'activePath', isEmpty)
+          .having((s) => s.placedPaths, 'placedPaths', hasLength(1)),
+      isA<PathWordsState>()
+          .having((s) => s.activePath, 'activePath', isEmpty)
+          .having((s) => s.placedPaths.single.cells, 'truncated', [
+            const Cell(1, 0),
+            const Cell(1, 1),
+          ]),
+    ],
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'undo removes only the last placed path',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
+      );
+      return PathWordsBloc(
+        generateDailyPathWords: generateDaily,
+        submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
+        recordDailyClear: recordDailyClear,
+        getBestPoints: getBestPoints,
+        getBestTimeSeconds: getBestTimeSeconds,
+        analytics: analytics,
+        hintQuota: hintQuota,
+        now: () => DateTime(2026, 9, 17, 0, 0, 0),
+      );
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(1, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(1, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(2, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(2, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.undo());
+    },
+    expect: () => [
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.loading,
+      ),
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.ready,
+      ),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(1, 0),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(1, 0),
+        const Cell(1, 1),
+      ]),
+      isA<PathWordsState>()
+          .having((s) => s.activePath, 'activePath', isEmpty)
+          .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty)
+          .having((s) => s.placedPaths, 'placedPaths', hasLength(1)),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(2, 0),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(2, 0),
+        const Cell(2, 1),
+      ]),
+      isA<PathWordsState>()
+          .having((s) => s.activePath, 'activePath', isEmpty)
+          .having((s) => s.placedPaths, 'placedPaths', hasLength(2))
+          .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty),
+      isA<PathWordsState>()
+          .having((s) => s.placedPaths, 'placedPaths', hasLength(1))
+          .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty)
+          .having((s) => s.placedPaths.single.cells, 'remaining', [
+            const Cell(1, 0),
+            const Cell(1, 1),
+          ]),
+    ],
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'undo of a found word unlocks that word',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      return PathWordsBloc(
+        generateDailyPathWords: generateDaily,
+        submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
+        recordDailyClear: recordDailyClear,
+        getBestPoints: getBestPoints,
+        getBestTimeSeconds: getBestTimeSeconds,
+        analytics: analytics,
+        hintQuota: hintQuota,
+        now: () => DateTime(2026, 9, 17, 0, 0, 0),
+      );
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.undo());
+    },
+    expect: () => [
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.loading,
+      ),
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.ready,
+      ),
       isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
         const Cell(0, 0),
       ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(0, 0),
+        const Cell(0, 1),
+      ]),
+      isA<PathWordsState>()
+          .having((s) => s.completedTargetIds, 'completedTargetIds', {'t0'})
+          .having((s) => s.placedPaths, 'placedPaths', hasLength(1)),
+      isA<PathWordsState>()
+          .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty)
+          .having((s) => s.placedPaths, 'placedPaths', isEmpty),
+    ],
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'hint clears incorrect placed paths before revealing',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
+      );
+      return PathWordsBloc(
+        generateDailyPathWords: generateDaily,
+        submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
+        recordDailyClear: recordDailyClear,
+        getBestPoints: getBestPoints,
+        getBestTimeSeconds: getBestTimeSeconds,
+        analytics: analytics,
+        hintQuota: hintQuota,
+        now: () => DateTime(2026, 9, 17, 0, 0, 0),
+      );
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(1, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(1, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.hint());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.hint());
+    },
+    expect: () => [
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.loading,
+      ),
+      isA<PathWordsState>().having(
+        (s) => s.status,
+        'status',
+        PathWordsStatus.ready,
+      ),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(1, 0),
+      ]),
+      isA<PathWordsState>().having((s) => s.activePath, 'activePath', [
+        const Cell(1, 0),
+        const Cell(1, 1),
+      ]),
+      isA<PathWordsState>()
+          .having((s) => s.placedPaths, 'placedPaths', hasLength(1))
+          .having((s) => s.hintsRemaining, 'hintsRemaining', 3),
+      isA<PathWordsState>()
+          .having((s) => s.placedPaths, 'placedPaths', isEmpty)
+          .having((s) => s.hintsRemaining, 'hintsRemaining', 2)
+          .having((s) => s.hintRevealLength, 'hintRevealLength', 0),
+      isA<PathWordsState>()
+          .having((s) => s.hintsRemaining, 'hintsRemaining', 1)
+          .having((s) => s.hintRevealLength, 'hintRevealLength', 1)
+          .having((s) => s.hintFlashCell, 'hintFlashCell', const Cell(0, 0)),
     ],
   );
 
@@ -653,10 +1119,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -692,10 +1160,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -737,10 +1207,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -790,10 +1262,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => fixedNow,
       );
     },
@@ -848,6 +1322,30 @@ void main() {
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
+    'reset after two hint consumes leaves remaining at 1',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      return buildBloc(quota: _FakeHintQuota(3));
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.hint());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.hint());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.reset());
+    },
+    verify: (bloc) {
+      expect(bloc.state.hintsRemaining, 1);
+      expect(bloc.state.hintRevealLength, 0);
+      expect(bloc.state.completedTargetIds, isEmpty);
+    },
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
     'reset after win is a no-op',
     build: () {
       when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
@@ -880,10 +1378,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: clock.call,
         wait: (_) async {},
       );
@@ -981,10 +1481,12 @@ void main() {
       return PathWordsBloc(
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },

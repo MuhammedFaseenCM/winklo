@@ -45,14 +45,19 @@ abstract final class ZipTutorial {
 
   static Future<void> show(BuildContext context, {bool isFirstRun = false}) {
     final repo = context.read<TutorialRepository>();
-    final analytics = context.read<AnalyticsRepository>();
+    AnalyticsRepository? analytics;
+    try {
+      analytics = context.read<AnalyticsRepository>();
+    } on ProviderNotFoundException {
+      analytics = null;
+    }
     return GameTutorialOverlay.show(
       context: context,
       title: AppStrings.zipHowToPlayTitle,
       captions: captions,
       onDismissed: () async {
         if (isFirstRun) {
-          await analytics.logTutorialDismissed(gameId: GameIds.zip);
+          await analytics?.logTutorialDismissed(gameId: GameIds.zip);
         }
         await repo.markSeen(GameIds.zip);
       },

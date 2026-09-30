@@ -24,6 +24,7 @@ sealed class PathWordsState with _$PathWordsState {
     PathWordsPuzzle? puzzle,
     @Default(PathWordsStatus.loading) PathWordsStatus status,
     @Default(<Cell>[]) List<Cell> activePath,
+    @Default(<PathWordsStroke>[]) List<PathWordsStroke> placedPaths,
     @Default(<String>{}) Set<String> completedTargetIds,
     @Default(3) int hintsRemaining,
     @Default(0) int hintRevealLength,

@@ -7,23 +7,27 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/zip_level.dart';
+import '../../../domain/repositories/hint_quota_repository.dart';
 import '../logic/path_validator.dart';
 import '../logic/zip_hints.dart';
 import '../logic/zip_rule_tip.dart';
 import 'zip_path_ribbon.dart';
 import 'zip_stroke.dart';
+import 'zip_tip_sparks.dart';
 
 typedef ZipWinCallback = void Function(int points, int elapsedSeconds);
 typedef ZipRuleTipCallback = void Function(ZipRuleTip tip);
 
-class ZipGame extends FlameGame with DragCallbacks {
+class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   ZipGame({
     required this.level,
     required this.onWin,
     required this.onStatsChanged,
     this.onRuleTip,
     this.readOnly = false,
-  }) : _validator = PathValidator(level);
+    int initialHintsRemaining = HintQuotaRepository.cap,
+  }) : _validator = PathValidator(level),
+       hintsRemaining = initialHintsRemaining;
 
   final ZipLevel level;
   final ZipWinCallback onWin;
@@ -31,14 +35,18 @@ class ZipGame extends FlameGame with DragCallbacks {
   final ZipRuleTipCallback? onRuleTip;
   final bool readOnly;
   final PathValidator _validator;
+  final ZipTipSparks _tipSparks = ZipTipSparks();
   late double _cellSize;
   late Offset _origin;
   late double _boardRadius;
   final List<Cell> path = [];
   bool _won = false;
   bool _drawing = false;
+
+  /// True after [onTapDown] armed a stroke; drag may cancel the tap later.
+  bool _armedFromTapDown = false;
   DateTime? startedAt;
-  int hintsRemaining = 3;
+  int hintsRemaining;
   int hintRevealLength = 0;
   int hintFromIndex = 0;
   DateTime? _hintFlashStartedAt;
@@ -73,6 +81,12 @@ class ZipGame extends FlameGame with DragCallbacks {
     super.update(dt);
     if (_celebrate) {
       _celebrateT += dt;
+    }
+    if (_drawing && _clampedLiveTip() != null) {
+      _tipSparks.ensureActive(seed: path.length);
+      _tipSparks.update(dt);
+    } else if (_tipSparks.isActive) {
+      _tipSparks.clear();
     }
   }
 
@@ -142,7 +156,6 @@ class ZipGame extends FlameGame with DragCallbacks {
     );
     hintFromIndex = next.fromIndex;
     hintRevealLength = next.revealLength;
-    hintsRemaining--;
     _hintFlashStartedAt = DateTime.now();
     return true;
   }
@@ -158,7 +171,6 @@ class ZipGame extends FlameGame with DragCallbacks {
     path.clear();
     hintRevealLength = 0;
     hintFromIndex = 0;
-    hintsRemaining = 3;
     _hintFlashStartedAt = null;
     _notifyStats();
   }
@@ -236,39 +248,112 @@ class ZipGame extends FlameGame with DragCallbacks {
     return _pointerTravel <= slop;
   }
 
+  /// Starts a stroke at [cell]. Earlier path cells rewind the tip first.
+  /// Returns whether this press should continue as an active draw stroke.
+  bool beginStrokeAt(Cell cell) {
+    if (_won || readOnly) return false;
+
+    if (path.isEmpty) {
+      if (level.numbers[cell] == 1) {
+        extendTo(cell);
+        return true;
+      }
+      onRuleTip?.call(ZipRuleTip.startAtOne);
+      return false;
+    }
+
+    if (path.contains(cell) && cell != path.last) {
+      truncateTo(cell);
+      return true;
+    }
+
+    if (_canStartDrawing(cell)) {
+      extendTo(cell);
+      return true;
+    }
+    return false;
+  }
+
+  void _endStroke() {
+    final tapped = _downCell;
+    if (_isTap() && tapped != null) {
+      truncateTo(tapped);
+    }
+    if (!_won && !readOnly) {
+      final tip = _validator.ruleTipAfterStroke(path);
+      if (tip != null) onRuleTip?.call(tip);
+    }
+    _drawing = false;
+    _armedFromTapDown = false;
+    _lastPointer = null;
+    _downCell = null;
+    _pointerTravel = 0;
+  }
+
+  /// Arm the stroke on true pointer-down so press-rewind sees the press cell
+  /// before drag recognition moves past it.
+  @override
+  void onTapDown(TapDownEvent event) {
+    if (readOnly || _won) return;
+    final pos = event.localPosition;
+    final cell = _cellAt(pos);
+    _lastPointer = pos.clone();
+    _downCell = cell;
+    _pointerTravel = 0;
+    _armedFromTapDown = false;
+    if (cell == null) return;
+    if (beginStrokeAt(cell)) {
+      _drawing = true;
+      _armedFromTapDown = true;
+    }
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    if (!_armedFromTapDown) return;
+    // Pure tap (no drag took over) — finish the stroke.
+    _endStroke();
+  }
+
+  @override
+  void onTapCancel(TapCancelEvent event) {
+    // Drag won the arena; keep [_drawing] and continue via drag handlers.
+    _armedFromTapDown = false;
+  }
+
   @override
   void onDragStart(DragStartEvent event) {
     super.onDragStart(event);
     if (readOnly || _won) {
       _drawing = false;
       _downCell = null;
+      _armedFromTapDown = false;
       return;
     }
     final pos = event.localPosition;
+
+    // Stroke already armed on pointer-down (typical press-rewind case).
+    if (_drawing && _downCell != null) {
+      final from = _lastPointer ?? pos;
+      _pointerTravel += (pos - from).length;
+      _tracePointer(from, pos);
+      _lastPointer = pos.clone();
+      _armedFromTapDown = false;
+      return;
+    }
+
     final cell = _cellAt(pos);
     _lastPointer = pos.clone();
     _downCell = cell;
     _pointerTravel = 0;
+    _armedFromTapDown = false;
     if (cell == null) {
       _drawing = false;
       return;
     }
 
-    if (path.isEmpty) {
-      if (level.numbers[cell] == 1) {
-        _drawing = true;
-        extendTo(cell);
-        _lastPointer = pos.clone();
-      } else {
-        _drawing = false;
-        onRuleTip?.call(ZipRuleTip.startAtOne);
-      }
-      return;
-    }
-
-    if (_canStartDrawing(cell)) {
+    if (beginStrokeAt(cell)) {
       _drawing = true;
-      extendTo(cell);
       _lastPointer = pos.clone();
       return;
     }
@@ -290,24 +375,14 @@ class ZipGame extends FlameGame with DragCallbacks {
   @override
   void onDragEnd(DragEndEvent event) {
     super.onDragEnd(event);
-    final tapped = _downCell;
-    if (_isTap() && tapped != null) {
-      truncateTo(tapped);
-    }
-    if (!_won && !readOnly) {
-      final tip = _validator.ruleTipAfterStroke(path);
-      if (tip != null) onRuleTip?.call(tip);
-    }
-    _drawing = false;
-    _lastPointer = null;
-    _downCell = null;
-    _pointerTravel = 0;
+    _endStroke();
   }
 
   @override
   void onDragCancel(DragCancelEvent event) {
     super.onDragCancel(event);
     _drawing = false;
+    _armedFromTapDown = false;
     _lastPointer = null;
     _downCell = null;
     _pointerTravel = 0;
@@ -319,6 +394,7 @@ class ZipGame extends FlameGame with DragCallbacks {
     _drawBoardShadow(canvas);
     _drawBoard(canvas);
     _drawPathStroke(canvas);
+    _drawTipSparks(canvas);
     _drawWalls(canvas);
     _drawHints(canvas);
     _drawNumbers(canvas);
@@ -536,6 +612,14 @@ class ZipGame extends FlameGame with DragCallbacks {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5,
     );
+  }
+
+  void _drawTipSparks(Canvas canvas) {
+    if (!_drawing) return;
+    final tip = _clampedLiveTip();
+    if (tip == null) return;
+    final width = _cellSize * 0.46;
+    _tipSparks.paint(canvas, tip: tip, tipRadius: width * 0.42);
   }
 
   void _drawWalls(Canvas canvas) {

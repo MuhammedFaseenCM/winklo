@@ -7,31 +7,57 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:43073222004:android:04264a03ef2495c806a821",
-        "android_client_info": {
-          "package_name": "com.brainzip.brain_zip"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCINzqIpBqip2LbWDg0u-NhkCw0O138phQ"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:43073222004:android:ef6288c5b95ca6f306a821",
         "android_client_info": {
           "package_name": "com.winklo.faseencm"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "43073222004-4k4hah5sug3lfl9f6qv4fof3sa5ci608.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.winklo.faseencm",
+            "certificate_hash": "39a196f518fbb73e428462bf106caba3931344b9"
+          }
+        },
+        {
+          "client_id": "43073222004-e3skqkrob18h4j45bio8fnetlilhjg3g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.winklo.faseencm",
+            "certificate_hash": "a1c2313dba510ad3aa23407a09b185eeed4ecf8f"
+          }
+        },
+        {
+          "client_id": "43073222004-fmpd0h2tn9jem9nadc23a4kspn00d16v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.winklo.faseencm",
+            "certificate_hash": "6df44a7b057678b3fbca42dea3ed34528ec9081f"
+          }
+        },
+        {
+          "client_id": "43073222004-lts5bl5eqbsmefvn5domj14nomuesq2u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.winklo.faseencm",
+            "certificate_hash": "1f858b9d9d1aa432897d106276dcb5bc49f0adb8"
+          }
+        },
+        {
+          "client_id": "43073222004-v3u4q4uvp29ciae5oi2tjcjuoc4che76.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.winklo.faseencm",
+            "certificate_hash": "1138e5ef031fd68bc63daa6b86b493cb722f1d58"
+          }
+        },
+        {
+          "client_id": "43073222004-8urlsjf12lie435qjsk8t1tk9br7onp9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCINzqIpBqip2LbWDg0u-NhkCw0O138phQ"
@@ -39,7 +65,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "43073222004-8urlsjf12lie435qjsk8t1tk9br7onp9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -11,20 +11,23 @@ class PathWordsWordList extends StatelessWidget {
     super.key,
     required this.puzzle,
     required this.activePath,
+    required this.placedPaths,
     required this.completedTargetIds,
     required this.palette,
   });
 
   final PathWordsPuzzle puzzle;
   final List<Cell> activePath;
+  final List<PathWordsStroke> placedPaths;
   final Set<String> completedTargetIds;
   final List<Color> palette;
 
   @override
   Widget build(BuildContext context) {
-    final tracing = PathWordsRules.liveFillTarget(
+    final fills = PathWordsRules.listFills(
       puzzle: puzzle,
       activePath: activePath,
+      placedPaths: placedPaths,
       completedTargetIds: completedTargetIds,
     );
     final orderedTargets = PathWordsRules.orderedTargets(puzzle);
@@ -51,12 +54,12 @@ class PathWordsWordList extends StatelessWidget {
             if (i > 0) const SizedBox(height: 8),
             _WordRow(
               target: orderedTargets[i],
-              color: palette[orderedTargets[i].colorIndex % palette.length],
-              done: completedTargetIds.contains(orderedTargets[i].id),
-              filledLetters: _filledLetters(
+              color: _rowColor(
                 target: orderedTargets[i],
-                tracing: tracing,
+                fill: fills[orderedTargets[i].id],
               ),
+              done: completedTargetIds.contains(orderedTargets[i].id),
+              fill: fills[orderedTargets[i].id],
             ),
           ],
         ],
@@ -64,23 +67,12 @@ class PathWordsWordList extends StatelessWidget {
     );
   }
 
-  List<String> _filledLetters({
+  Color _rowColor({
     required PathWordsTarget target,
-    required PathWordsTarget? tracing,
+    required PathWordsListFill? fill,
   }) {
-    if (completedTargetIds.contains(target.id)) {
-      return [
-        for (var i = 0; i < target.word.length; i++)
-          target.word[i].toUpperCase(),
-      ];
-    }
-    if (tracing?.id != target.id) {
-      return const [];
-    }
-    return [
-      for (final cell in activePath.take(target.word.length))
-        puzzle.letterAt(cell).toUpperCase(),
-    ];
+    final index = fill?.colorIndex ?? target.colorIndex;
+    return palette[index % palette.length];
   }
 }
 
@@ -89,17 +81,21 @@ class _WordRow extends StatelessWidget {
     required this.target,
     required this.color,
     required this.done,
-    required this.filledLetters,
+    required this.fill,
   });
 
   final PathWordsTarget target;
   final Color color;
   final bool done;
-  final List<String> filledLetters;
+  final PathWordsListFill? fill;
 
   @override
   Widget build(BuildContext context) {
     final word = target.word.toUpperCase();
+    final filledLetters = done
+        ? [for (var i = 0; i < word.length; i++) word[i]]
+        : fill?.letters ?? const <String>[];
+    final overflowCount = done ? 0 : (fill?.overflowCount ?? 0);
     final semanticsLabel = done
         ? word
         : filledLetters.isEmpty
@@ -119,6 +115,16 @@ class _WordRow extends StatelessWidget {
               letter: i < filledLetters.length ? filledLetters[i] : null,
               color: color,
               done: done,
+            ),
+          ],
+          for (var i = 0; i < overflowCount; i++) ...[
+            const SizedBox(width: 3),
+            _LetterCell(
+              key: Key('pathWordsOverflow_${target.id}_$i'),
+              letter: filledLetters[target.word.length + i],
+              color: color,
+              done: false,
+              overflow: true,
             ),
           ],
           const SizedBox(width: 6),
@@ -142,48 +148,92 @@ class _WordRow extends StatelessWidget {
 
 class _LetterCell extends StatelessWidget {
   const _LetterCell({
+    super.key,
     required this.letter,
     required this.color,
     required this.done,
+    this.overflow = false,
   });
 
   final String? letter;
   final Color color;
   final bool done;
+  final bool overflow;
 
   @override
   Widget build(BuildContext context) {
     final shownLetter = letter;
+    final borderColor = overflow
+        ? const Color(0xFFF87171).withValues(alpha: 0.85)
+        : done
+        ? ZipColors.success.withValues(alpha: 0.55)
+        : shownLetter != null
+        ? color.withValues(alpha: 0.7)
+        : ZipColors.outlineQuiet;
+    final fillColor = overflow
+        ? const Color(0xFFF87171).withValues(alpha: 0.18)
+        : done
+        ? ZipColors.success.withValues(alpha: 0.14)
+        : shownLetter != null
+        ? color.withValues(alpha: 0.22)
+        : ZipColors.paper.withValues(alpha: 0.55);
+
     return Container(
       width: 22,
       height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: done
-            ? ZipColors.success.withValues(alpha: 0.14)
-            : shownLetter != null
-            ? color.withValues(alpha: 0.22)
-            : ZipColors.paper.withValues(alpha: 0.55),
+        color: fillColor,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: done
-              ? ZipColors.success.withValues(alpha: 0.55)
-              : shownLetter != null
-              ? color.withValues(alpha: 0.7)
-              : ZipColors.outlineQuiet,
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: shownLetter == null
           ? null
-          : Text(
-              shownLetter,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: ZipColors.onInk,
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-                height: 1,
-              ),
+          : Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  shownLetter,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: ZipColors.onInk,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    height: 1,
+                  ),
+                ),
+                if (overflow)
+                  CustomPaint(
+                    size: const Size(18, 22),
+                    painter: _CrossLinePainter(
+                      color: const Color(0xFFF87171).withValues(alpha: 0.9),
+                    ),
+                  ),
+              ],
             ),
     );
+  }
+}
+
+class _CrossLinePainter extends CustomPainter {
+  const _CrossLinePainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(size.width * 0.15, size.height * 0.2),
+      Offset(size.width * 0.85, size.height * 0.8),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CrossLinePainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }

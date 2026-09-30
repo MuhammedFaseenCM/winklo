@@ -5,6 +5,7 @@ class PathWordsBoardView {
   const PathWordsBoardView({
     required this.puzzle,
     required this.activePath,
+    required this.placedPaths,
     required this.completedPathsByTargetId,
     required this.hintPath,
     required this.hintRevealLength,
@@ -14,6 +15,7 @@ class PathWordsBoardView {
 
   final PathWordsPuzzle puzzle;
   final List<Cell> activePath;
+  final List<PathWordsStroke> placedPaths;
   final Map<String, List<Cell>> completedPathsByTargetId;
   final List<Cell> hintPath;
   final int hintRevealLength;

@@ -1,13 +1,16 @@
 import 'package:bloc/bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
+import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
 import '../logic/daily_puzzle_generator.dart';
@@ -17,25 +20,28 @@ import 'zip_state.dart';
 class ZipBloc extends Bloc<ZipEvent, ZipState> {
   ZipBloc({
     required this.submitScore,
+    required this.submitLeaderboardTime,
     required this.recordDailyClear,
     required this.getBestPoints,
     required this.getBestTimeSeconds,
     required this.analytics,
+    ZipLevelRepository? zipLevelRepository,
+    Future<ZipLevel> Function(DateTime date, {Duration period})?
+    fetchDailyLevel,
     this.ignoreDailyLock = false,
     this.playPeriod = PlayPeriod.daily,
     this.celebrationDuration = const Duration(seconds: 2),
     DateTime? now,
     Future<void> Function(Duration duration)? wait,
-  }) : _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
-       super(
-         _initialState(
-           now ?? DateTime.now(),
-           getBestPoints,
-           getBestTimeSeconds,
-           ignoreDailyLock: ignoreDailyLock,
-           playPeriod: playPeriod,
-         ),
-       ) {
+  }) : fetchDailyLevel =
+           fetchDailyLevel ??
+           ((date, {period = PlayPeriod.daily}) =>
+               (zipLevelRepository?.fetchDailyLevel(date, period: period) ??
+               Future.value(
+                 DailyPuzzleGenerator.forDate(date, period: period),
+               ))),
+       _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
+       super(_initialState(now ?? DateTime.now(), playPeriod: playPeriod)) {
     on<ZipStarted>(_onStarted);
     on<ZipCompleted>(_onCompleted);
     on<ZipHint>(_onHint);
@@ -43,32 +49,20 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   }
 
   final SubmitScore submitScore;
+  final SubmitLeaderboardTime submitLeaderboardTime;
   final RecordDailyClear recordDailyClear;
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
   final AnalyticsRepository analytics;
+  final Future<ZipLevel> Function(DateTime date, {Duration period})
+  fetchDailyLevel;
   final bool ignoreDailyLock;
   final Duration playPeriod;
   final Duration celebrationDuration;
   final Future<void> Function(Duration duration) _wait;
 
-  static ZipState _initialState(
-    DateTime now,
-    GetBestPoints getBestPoints,
-    GetBestTimeSeconds getBestTimeSeconds, {
-    required bool ignoreDailyLock,
-    required Duration playPeriod,
-  }) {
-    final state = ZipState.initial(now, period: playPeriod);
-    if (ignoreDailyLock ||
-        !_isCleared(
-          modeKey: 'zip_${state.level.id}',
-          getBestPoints: getBestPoints,
-          getBestTimeSeconds: getBestTimeSeconds,
-        )) {
-      return state;
-    }
-    return state.copyWith(status: ZipStatus.locked, finished: true);
+  static ZipState _initialState(DateTime now, {required Duration playPeriod}) {
+    return ZipState.initial(now, period: playPeriod);
   }
 
   static bool _isCleared({
@@ -82,7 +76,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   Future<void> _onStarted(ZipStarted event, Emitter<ZipState> emit) async {
     final seed = event.date ?? DateTime.now();
     final day = DateTime(seed.year, seed.month, seed.day);
-    final level = DailyPuzzleGenerator.forDate(seed, period: playPeriod);
+    final level = await fetchDailyLevel(seed, period: playPeriod);
+    if (emit.isDone) return;
     final cleared =
         !ignoreDailyLock &&
         _isCleared(
@@ -130,6 +125,17 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       points: event.points,
       timeSeconds: event.timeSeconds,
     );
+
+    if (improved) {
+      try {
+        await submitLeaderboardTime(
+          gameId: GameIds.zip,
+          timeSeconds: event.timeSeconds,
+        );
+      } catch (_) {
+        // Best-effort remote sync; local score already saved.
+      }
+    }
 
     final streak = await recordDailyClear(
       gameId: GameIds.zip,

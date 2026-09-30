@@ -41,9 +41,71 @@ class DailyPuzzleGenerator {
     return daySeed * 10000 + local.hour * 100 + local.minute;
   }
 
+  static final Map<String, ZipLevel Function(String id, int seed)>
+  _curatedOverrides = {
+    'daily_20260929': (id, seed) => ZipLevel(
+      id: id,
+      size: 6,
+      numbers: {
+        Cell(5, 5): 1,
+        Cell(4, 3): 2,
+        Cell(2, 2): 3,
+        Cell(0, 5): 4,
+        Cell(0, 0): 5,
+        Cell(5, 0): 6,
+      },
+      walls: const [Wall(Cell(5, 0), Cell(5, 1)), Wall(Cell(1, 4), Cell(1, 5))],
+      order: seed,
+      solution: const [
+        Cell(5, 5),
+        Cell(5, 4),
+        Cell(5, 3),
+        Cell(5, 2),
+        Cell(5, 1),
+        Cell(4, 1),
+        Cell(4, 2),
+        Cell(4, 3),
+        Cell(4, 4),
+        Cell(4, 5),
+        Cell(3, 5),
+        Cell(3, 4),
+        Cell(3, 3),
+        Cell(3, 2),
+        Cell(2, 2),
+        Cell(2, 3),
+        Cell(1, 3),
+        Cell(1, 4),
+        Cell(2, 4),
+        Cell(2, 5),
+        Cell(1, 5),
+        Cell(0, 5),
+        Cell(0, 4),
+        Cell(0, 3),
+        Cell(0, 2),
+        Cell(1, 2),
+        Cell(1, 1),
+        Cell(0, 1),
+        Cell(0, 0),
+        Cell(1, 0),
+        Cell(2, 0),
+        Cell(2, 1),
+        Cell(3, 1),
+        Cell(3, 0),
+        Cell(4, 0),
+        Cell(5, 0),
+      ],
+    ),
+  };
+
   /// Same play period → same puzzle for every player.
   static ZipLevel forDate(DateTime date, {Duration period = PlayPeriod.daily}) {
+    final id = dateId(date, period: period);
     final seed = seedFor(date, period: period);
+    final overrideBuilder = _curatedOverrides[id];
+    if (overrideBuilder != null) {
+      return overrideBuilder(id, seed);
+    }
+
     final rng = Random(seed);
     final size = _gridSizes[seed % _gridSizes.length];
     final path = _twistyHamiltonian(size, rng);
@@ -52,7 +114,7 @@ class DailyPuzzleGenerator {
     final walls = _placeWalls(size, path, rng);
 
     return ZipLevel(
-      id: dateId(date, period: period),
+      id: id,
       size: size,
       numbers: numbers,
       walls: walls,

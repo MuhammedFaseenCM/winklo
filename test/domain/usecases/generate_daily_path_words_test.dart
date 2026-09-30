@@ -26,9 +26,9 @@ void main() {
     fixtureWords = _fixtureWords();
   });
 
-  test('loads words and generates daily puzzle', () async {
+  test('loads daily nouns and generates puzzle', () async {
     when(
-      () => repo.loadEnglishWords(minLen: 3, maxLen: 5),
+      () => repo.loadDailyNouns(dateId: '20260917'),
     ).thenAnswer((_) async => fixtureWords);
 
     final puzzle = await usecase(day: DateTime(2026, 9, 17));
@@ -36,6 +36,6 @@ void main() {
     expect(puzzle.id, 'path_words_20260917');
     expect(puzzle.size, inInclusiveRange(3, 6));
     expect(puzzle.targets.length, inInclusiveRange(3, 6));
-    verify(() => repo.loadEnglishWords(minLen: 3, maxLen: 5)).called(1);
+    verify(() => repo.loadDailyNouns(dateId: '20260917')).called(1);
   });
 }

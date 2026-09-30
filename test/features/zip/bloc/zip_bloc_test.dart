@@ -6,6 +6,7 @@ import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
+import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/features/zip/bloc/zip_bloc.dart';
 import 'package:winklo/features/zip/bloc/zip_event.dart';
@@ -17,6 +18,9 @@ import '../../../helpers/mock_analytics_repository.dart';
 
 class _MockSubmitScore extends Mock implements SubmitScore {}
 
+class _MockSubmitLeaderboardTime extends Mock
+    implements SubmitLeaderboardTime {}
+
 class _MockRecordDailyClear extends Mock implements RecordDailyClear {}
 
 class _MockGetBestPoints extends Mock implements GetBestPoints {}
@@ -25,6 +29,7 @@ class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 
 void main() {
   late _MockSubmitScore submitScore;
+  late _MockSubmitLeaderboardTime submitLeaderboardTime;
   late _MockRecordDailyClear recordDailyClear;
   late _MockGetBestPoints getBestPoints;
   late _MockGetBestTimeSeconds getBestTimeSeconds;
@@ -32,6 +37,7 @@ void main() {
 
   setUp(() {
     submitScore = _MockSubmitScore();
+    submitLeaderboardTime = _MockSubmitLeaderboardTime();
     recordDailyClear = _MockRecordDailyClear();
     getBestPoints = _MockGetBestPoints();
     getBestTimeSeconds = _MockGetBestTimeSeconds();
@@ -39,6 +45,12 @@ void main() {
     stubAnalytics(analytics);
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
+    when(
+      () => submitLeaderboardTime(
+        gameId: any(named: 'gameId'),
+        timeSeconds: any(named: 'timeSeconds'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   ZipBloc buildBloc({
@@ -47,6 +59,7 @@ void main() {
   }) {
     return ZipBloc(
       submitScore: submitScore,
+      submitLeaderboardTime: submitLeaderboardTime,
       recordDailyClear: recordDailyClear,
       getBestPoints: getBestPoints,
       getBestTimeSeconds: getBestTimeSeconds,
@@ -68,7 +81,7 @@ void main() {
   );
 
   blocTest<ZipBloc, ZipState>(
-    'starts locked when today is already cleared',
+    'starts initial when today is already cleared (await fetch)',
     build: () {
       when(() => getBestPoints('zip_daily_20260913')).thenReturn(900);
       when(() => getBestTimeSeconds('zip_daily_20260913')).thenReturn(12);
@@ -76,8 +89,17 @@ void main() {
     },
     expect: () => <ZipState>[],
     verify: (b) {
-      expect(b.state.status, ZipStatus.locked);
-      expect(b.state.finished, isTrue);
+      expect(b.state.status, ZipStatus.initial);
+      expect(b.state.finished, isFalse);
+    },
+  );
+
+  blocTest<ZipBloc, ZipState>(
+    'ZipStarted transitions from initial to ready',
+    build: buildBloc,
+    act: (b) => b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 14))),
+    verify: (b) {
+      expect(b.state.status, ZipStatus.ready);
     },
   );
 
@@ -149,6 +171,9 @@ void main() {
         ),
       ).called(1);
       verify(
+        () => submitLeaderboardTime(gameId: GameIds.zip, timeSeconds: 12),
+      ).called(1);
+      verify(
         () => recordDailyClear(gameId: GameIds.zip, dateId: '20260913'),
       ).called(1);
       verify(
@@ -189,6 +214,7 @@ void main() {
       when(() => getBestPoints('zip_daily_202609201431')).thenReturn(900);
       return ZipBloc(
         submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
@@ -200,7 +226,7 @@ void main() {
     expect: () => <ZipState>[],
     verify: (b) {
       expect(b.state.level.id, 'daily_202609201431');
-      expect(b.state.status, ZipStatus.locked);
+      expect(b.state.status, ZipStatus.initial);
     },
   );
 
@@ -210,8 +236,13 @@ void main() {
       when(() => getBestPoints('zip_daily_20260913')).thenReturn(900);
       return buildBloc();
     },
-    act: (b) => b.add(const ZipEvent.completed(points: 900, timeSeconds: 12)),
-    expect: () => <ZipState>[],
+    act: (b) {
+      b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
+      b.add(const ZipEvent.completed(points: 900, timeSeconds: 12));
+    },
+    expect: () => [
+      isA<ZipState>().having((s) => s.status, 'status', ZipStatus.locked),
+    ],
     verify: (_) {
       verifyNever(
         () => submitScore(
