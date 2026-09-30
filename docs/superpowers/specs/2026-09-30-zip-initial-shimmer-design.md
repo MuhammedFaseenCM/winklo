@@ -1,7 +1,7 @@
 # Zip initial shimmer loading — Design
 
 **Date:** 2026-09-30  
-**Status:** Approved for planning  
+**Status:** Implemented  
 **Scope:** Show a board + chrome shimmer on Zip open until the daily level is fetched; no playable board until ready/locked.
 
 ## Goal
