@@ -24,6 +24,7 @@ import '../bloc/zip_state.dart';
 import '../game/zip_game.dart';
 import '../logic/zip_rule_tip.dart';
 import 'widgets/zip_how_to_play.dart';
+import 'widgets/zip_shimmer.dart';
 import 'widgets/zip_tutorial.dart';
 
 class ZipScreen extends StatefulWidget {
@@ -56,6 +57,7 @@ class _ZipScreenState extends State<ZipScreen> {
   }
 
   bool _ensureGame(ZipState state) {
+    if (state.status == ZipStatus.initial) return false;
     final current = _game;
     if (current != null && identical(current.level, state.level)) return false;
     final remaining = _hintQuota.remaining(GameIds.zip);
@@ -82,6 +84,7 @@ class _ZipScreenState extends State<ZipScreen> {
 
   void _maybeShowTutorial(ZipState state) {
     if (_tutorialPrompted) return;
+    if (state.status == ZipStatus.initial) return;
     if (state.status == ZipStatus.locked || state.finished) return;
     _tutorialPrompted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -135,6 +138,15 @@ class _ZipScreenState extends State<ZipScreen> {
             },
           ),
           BlocListener<ZipBloc, ZipState>(
+            listenWhen: (prev, curr) =>
+                prev.status == ZipStatus.initial &&
+                curr.status != ZipStatus.initial,
+            listener: (context, state) {
+              if (_ensureGame(state)) setState(() {});
+              _maybeShowTutorial(state);
+            },
+          ),
+          BlocListener<ZipBloc, ZipState>(
             listenWhen: (prev, curr) => !identical(prev.level, curr.level),
             listener: (context, state) {
               if (_ensureGame(state)) setState(() {});
@@ -146,7 +158,8 @@ class _ZipScreenState extends State<ZipScreen> {
             final finished = state.finished;
             final game = _game;
             final isReview = state.status == ZipStatus.locked;
-            final canPlay = !finished && !isReview;
+            final isLoading = state.status == ZipStatus.initial;
+            final canPlay = !isLoading && !finished && !isReview;
             final canUndo = canPlay && (game?.path.isNotEmpty ?? false);
             final canHint = canPlay && (game?.canHint ?? false);
 
@@ -190,104 +203,115 @@ class _ZipScreenState extends State<ZipScreen> {
                           ],
                         ),
                       ).animate().fadeIn(duration: 350.ms),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child:
-                              ClipRRect(
-                                    borderRadius: BorderRadius.circular(24),
-                                    child: game == null
-                                        ? const SizedBox.shrink()
-                                        : GameWidget(game: game),
-                                  )
-                                  .animate(
-                                    target:
-                                        state.status == ZipStatus.celebrating
-                                        ? 1
-                                        : 0,
-                                  )
-                                  .scaleXY(
-                                    begin: 1,
-                                    end: 1.045,
-                                    duration: 520.ms,
-                                    curve: Curves.easeOutBack,
-                                  )
-                                  .shimmer(
-                                    duration: 1600.ms,
-                                    color: Colors.white.withValues(alpha: 0.28),
-                                  ),
-                        ).animate().fadeIn(delay: 80.ms, duration: 400.ms),
-                      ),
-                      if (_ruleTip != null && canPlay)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                          child: GameRuleTipBanner(message: _ruleTip!),
-                        ),
-                      if (!isReview)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: canUndo
-                                      ? () {
-                                          _game?.undo();
-                                          setState(() => _ruleTip = null);
-                                        }
-                                      : null,
-                                  icon: const Icon(Icons.undo_rounded),
-                                  label: const Text(AppStrings.zipUndo),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: FilledButton.tonalIcon(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: ZipColors.wall,
-                                    foregroundColor: ZipColors.onInk,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  onPressed: canHint
-                                      ? () async {
-                                          final game = _game;
-                                          if (game == null || !game.canHint) {
-                                            return;
-                                          }
-                                          final before = game.hintsRemaining;
-                                          final remaining = await _hintQuota
-                                              .tryConsume(GameIds.zip);
-                                          if (remaining >= before) {
-                                            return;
-                                          }
-                                          if (!game.hint()) {
-                                            return;
-                                          }
-                                          game.hintsRemaining = remaining;
-                                          _bloc.add(
-                                            ZipEvent.hint(
-                                              hintsRemaining: remaining,
-                                            ),
-                                          );
-                                          if (mounted) setState(() {});
-                                        }
-                                      : null,
-                                  icon: const Icon(Icons.lightbulb_rounded),
-                                  label: Text(
-                                    AppStrings.zipHintWithCount(
-                                      game?.hintsRemaining ?? 0,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                      if (isLoading)
+                        Expanded(
+                          child: Semantics(
+                            label: AppStrings.zipLoading,
+                            child: const ZipShimmer(),
                           ),
+                        )
+                      else ...[
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child:
+                                ClipRRect(
+                                      borderRadius: BorderRadius.circular(24),
+                                      child: game == null
+                                          ? const SizedBox.shrink()
+                                          : GameWidget(game: game),
+                                    )
+                                    .animate(
+                                      target:
+                                          state.status == ZipStatus.celebrating
+                                          ? 1
+                                          : 0,
+                                    )
+                                    .scaleXY(
+                                      begin: 1,
+                                      end: 1.045,
+                                      duration: 520.ms,
+                                      curve: Curves.easeOutBack,
+                                    )
+                                    .shimmer(
+                                      duration: 1600.ms,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.28,
+                                      ),
+                                    ),
+                          ).animate().fadeIn(delay: 80.ms, duration: 400.ms),
                         ),
+                        if (_ruleTip != null && canPlay)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                            child: GameRuleTipBanner(message: _ruleTip!),
+                          ),
+                        if (!isReview)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: canUndo
+                                        ? () {
+                                            _game?.undo();
+                                            setState(() => _ruleTip = null);
+                                          }
+                                        : null,
+                                    icon: const Icon(Icons.undo_rounded),
+                                    label: const Text(AppStrings.zipUndo),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: FilledButton.tonalIcon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: ZipColors.wall,
+                                      foregroundColor: ZipColors.onInk,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    onPressed: canHint
+                                        ? () async {
+                                            final game = _game;
+                                            if (game == null || !game.canHint) {
+                                              return;
+                                            }
+                                            final before = game.hintsRemaining;
+                                            final remaining = await _hintQuota
+                                                .tryConsume(GameIds.zip);
+                                            if (remaining >= before) {
+                                              return;
+                                            }
+                                            if (!game.hint()) {
+                                              return;
+                                            }
+                                            game.hintsRemaining = remaining;
+                                            _bloc.add(
+                                              ZipEvent.hint(
+                                                hintsRemaining: remaining,
+                                              ),
+                                            );
+                                            if (mounted) setState(() {});
+                                          }
+                                        : null,
+                                    icon: const Icon(Icons.lightbulb_rounded),
+                                    label: Text(
+                                      AppStrings.zipHintWithCount(
+                                        game?.hintsRemaining ?? 0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ],
                   ),
                 ),
