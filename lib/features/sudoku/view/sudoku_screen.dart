@@ -10,6 +10,7 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/cell.dart';
+import '../../../domain/sudoku/sudoku_hint_coach.dart';
 import '../../../domain/entities/sudoku_difficulty.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
@@ -92,6 +93,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
     final puzzle = state.puzzle;
     if (puzzle == null) return null;
     final canPlay = !state.finished && state.status == SudokuStatus.ready;
+    final coach = state.activeCoachHint;
     return SudokuBoardView(
       size: puzzle.size,
       boxRows: puzzle.boxRows,
@@ -105,7 +107,32 @@ class _SudokuScreenState extends State<SudokuScreen> {
       unitFlashIndices: state.unitFlashIndices,
       inputEnabled: canPlay,
       celebrate: state.status == SudokuStatus.celebrating,
+      coachTargetIndex: coach?.targetIndex,
+      coachEvidenceIndices: coach?.evidenceIndices ?? const {},
+      coachExcludedIndices: coach?.excludedIndices ?? const {},
     );
+  }
+
+  String _coachMessage(SudokuCoachHint hint) {
+    switch (hint.technique) {
+      case SudokuHintTechnique.lastRemainingRegion:
+        return AppStrings.sudokuHintLastRemaining(
+          digit: hint.digit,
+          unit: AppStrings.sudokuHintUnitRegion,
+        );
+      case SudokuHintTechnique.lastRemainingRow:
+        return AppStrings.sudokuHintLastRemaining(
+          digit: hint.digit,
+          unit: AppStrings.sudokuHintUnitRow,
+        );
+      case SudokuHintTechnique.lastRemainingCol:
+        return AppStrings.sudokuHintLastRemaining(
+          digit: hint.digit,
+          unit: AppStrings.sudokuHintUnitColumn,
+        );
+      case SudokuHintTechnique.nakedSingle:
+        return AppStrings.sudokuHintNakedSingle(digit: hint.digit);
+    }
   }
 
   bool _ensureGame(SudokuState state) {
@@ -181,6 +208,9 @@ class _SudokuScreenState extends State<SudokuScreen> {
                 state.status == SudokuStatus.ready &&
                 puzzle != null;
             final game = _game;
+            final showHintBanner =
+                state.activeCoachHint != null || state.showNoSimpleHint;
+            final activeCoach = state.activeCoachHint;
 
             return Scaffold(
               resizeToAvoidBottomInset: false,
@@ -255,6 +285,56 @@ class _SudokuScreenState extends State<SudokuScreen> {
                                           )
                                         : GameWidget(game: game),
                                   ),
+                                  if (isReadyToPlay && showHintBanner)
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        12,
+                                        8,
+                                        12,
+                                        0,
+                                      ),
+                                      child: Material(
+                                        color: ZipColors.success.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            12,
+                                            10,
+                                            4,
+                                            10,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  state.showNoSimpleHint
+                                                      ? AppStrings
+                                                            .sudokuHintNoSimple
+                                                      : _coachMessage(
+                                                          activeCoach!,
+                                                        ),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    height: 1.25,
+                                                  ),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                onPressed: () => _bloc.add(
+                                                  const SudokuEvent.dismissHint(),
+                                                ),
+                                                icon: const Icon(
+                                                  Icons.close,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   if (isReadyToPlay) ...[
                                     _NotesToggle(
                                       enabled: state.notesMode,
@@ -263,6 +343,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
                                       ),
                                     ),
                                     _NumberPad(
+                                      hintsRemaining: state.hintsRemaining,
                                       onDigit: (d) =>
                                           _bloc.add(SudokuEvent.digitTapped(d)),
                                       onErase: () =>
@@ -360,11 +441,13 @@ class _NotesToggle extends StatelessWidget {
 
 class _NumberPad extends StatelessWidget {
   const _NumberPad({
+    required this.hintsRemaining,
     required this.onDigit,
     required this.onErase,
     required this.onHint,
   });
 
+  final int hintsRemaining;
   final void Function(int digit) onDigit;
   final VoidCallback onErase;
   final VoidCallback onHint;
@@ -416,7 +499,7 @@ class _NumberPad extends StatelessWidget {
   }
 
   Widget _actionButton({
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     required IconData icon,
     required String label,
   }) {
@@ -475,9 +558,9 @@ class _NumberPad extends StatelessWidget {
               _digitButton(5),
               _digitButton(6),
               _actionButton(
-                onPressed: onHint,
+                onPressed: hintsRemaining > 0 ? onHint : null,
                 icon: Icons.lightbulb_outline,
-                label: AppStrings.sudokuHint,
+                label: AppStrings.sudokuHintWithCount(hintsRemaining),
               ),
             ],
           ),

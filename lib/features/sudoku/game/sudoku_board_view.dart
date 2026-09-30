@@ -12,6 +12,9 @@ class SudokuBoardView {
     required this.unitFlashIndices,
     required this.inputEnabled,
     required this.celebrate,
+    this.coachTargetIndex,
+    this.coachEvidenceIndices = const {},
+    this.coachExcludedIndices = const {},
   });
 
   final int size;
@@ -26,4 +29,7 @@ class SudokuBoardView {
   final Set<int> unitFlashIndices;
   final bool inputEnabled;
   final bool celebrate;
+  final int? coachTargetIndex;
+  final Set<int> coachEvidenceIndices;
+  final Set<int> coachExcludedIndices;
 }

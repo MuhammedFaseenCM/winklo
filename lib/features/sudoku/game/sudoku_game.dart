@@ -158,6 +158,28 @@ class SudokuGame extends FlameGame with TapCallbacks {
       );
     }
 
+    if (view.coachExcludedIndices.contains(index)) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
+        Paint()..color = ZipColors.success.withValues(alpha: 0.22),
+      );
+    }
+    if (view.coachEvidenceIndices.contains(index)) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
+        Paint()..color = ZipColors.success.withValues(alpha: 0.40),
+      );
+    }
+    if (view.coachTargetIndex == index) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
+        Paint()
+          ..color = ZipColors.success
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5,
+      );
+    }
+
     final hintFlash = view.hintFlashIndex == index;
     if (hintFlash && _hintFlashStartedAt != null) {
       final t = now.difference(_hintFlashStartedAt!).inMilliseconds / 500.0;
