@@ -81,7 +81,7 @@ void main() {
   );
 
   blocTest<ZipBloc, ZipState>(
-    'starts locked when today is already cleared',
+    'starts initial when today is already cleared (await fetch)',
     build: () {
       when(() => getBestPoints('zip_daily_20260913')).thenReturn(900);
       when(() => getBestTimeSeconds('zip_daily_20260913')).thenReturn(12);
@@ -89,8 +89,17 @@ void main() {
     },
     expect: () => <ZipState>[],
     verify: (b) {
-      expect(b.state.status, ZipStatus.locked);
-      expect(b.state.finished, isTrue);
+      expect(b.state.status, ZipStatus.initial);
+      expect(b.state.finished, isFalse);
+    },
+  );
+
+  blocTest<ZipBloc, ZipState>(
+    'ZipStarted transitions from initial to ready',
+    build: buildBloc,
+    act: (b) => b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 14))),
+    verify: (b) {
+      expect(b.state.status, ZipStatus.ready);
     },
   );
 
@@ -217,7 +226,7 @@ void main() {
     expect: () => <ZipState>[],
     verify: (b) {
       expect(b.state.level.id, 'daily_202609201431');
-      expect(b.state.status, ZipStatus.locked);
+      expect(b.state.status, ZipStatus.initial);
     },
   );
 
@@ -227,8 +236,13 @@ void main() {
       when(() => getBestPoints('zip_daily_20260913')).thenReturn(900);
       return buildBloc();
     },
-    act: (b) => b.add(const ZipEvent.completed(points: 900, timeSeconds: 12)),
-    expect: () => <ZipState>[],
+    act: (b) {
+      b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
+      b.add(const ZipEvent.completed(points: 900, timeSeconds: 12));
+    },
+    expect: () => [
+      isA<ZipState>().having((s) => s.status, 'status', ZipStatus.locked),
+    ],
     verify: (_) {
       verifyNever(
         () => submitScore(

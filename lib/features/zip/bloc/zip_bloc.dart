@@ -26,26 +26,22 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     required this.getBestTimeSeconds,
     required this.analytics,
     ZipLevelRepository? zipLevelRepository,
-    Future<ZipLevel> Function(DateTime date, {Duration period})? fetchDailyLevel,
+    Future<ZipLevel> Function(DateTime date, {Duration period})?
+    fetchDailyLevel,
     this.ignoreDailyLock = false,
     this.playPeriod = PlayPeriod.daily,
     this.celebrationDuration = const Duration(seconds: 2),
     DateTime? now,
     Future<void> Function(Duration duration)? wait,
-  }) : fetchDailyLevel = fetchDailyLevel ??
+  }) : fetchDailyLevel =
+           fetchDailyLevel ??
            ((date, {period = PlayPeriod.daily}) =>
                (zipLevelRepository?.fetchDailyLevel(date, period: period) ??
-                Future.value(DailyPuzzleGenerator.forDate(date, period: period)))),
+               Future.value(
+                 DailyPuzzleGenerator.forDate(date, period: period),
+               ))),
        _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
-       super(
-         _initialState(
-           now ?? DateTime.now(),
-           getBestPoints,
-           getBestTimeSeconds,
-           ignoreDailyLock: ignoreDailyLock,
-           playPeriod: playPeriod,
-         ),
-       ) {
+       super(_initialState(now ?? DateTime.now(), playPeriod: playPeriod)) {
     on<ZipStarted>(_onStarted);
     on<ZipCompleted>(_onCompleted);
     on<ZipHint>(_onHint);
@@ -58,29 +54,15 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
   final AnalyticsRepository analytics;
-  final Future<ZipLevel> Function(DateTime date, {Duration period}) fetchDailyLevel;
+  final Future<ZipLevel> Function(DateTime date, {Duration period})
+  fetchDailyLevel;
   final bool ignoreDailyLock;
   final Duration playPeriod;
   final Duration celebrationDuration;
   final Future<void> Function(Duration duration) _wait;
 
-  static ZipState _initialState(
-    DateTime now,
-    GetBestPoints getBestPoints,
-    GetBestTimeSeconds getBestTimeSeconds, {
-    required bool ignoreDailyLock,
-    required Duration playPeriod,
-  }) {
-    final state = ZipState.initial(now, period: playPeriod);
-    if (ignoreDailyLock ||
-        !_isCleared(
-          modeKey: 'zip_${state.level.id}',
-          getBestPoints: getBestPoints,
-          getBestTimeSeconds: getBestTimeSeconds,
-        )) {
-      return state;
-    }
-    return state.copyWith(status: ZipStatus.locked, finished: true);
+  static ZipState _initialState(DateTime now, {required Duration playPeriod}) {
+    return ZipState.initial(now, period: playPeriod);
   }
 
   static bool _isCleared({
