@@ -256,11 +256,18 @@ class _ZipScreenState extends State<ZipScreen> {
                                   onPressed: canHint
                                       ? () async {
                                           final game = _game;
-                                          if (game == null || !game.hint()) {
+                                          if (game == null || !game.canHint) {
                                             return;
                                           }
+                                          final before = game.hintsRemaining;
                                           final remaining = await _hintQuota
                                               .tryConsume(GameIds.zip);
+                                          if (remaining >= before) {
+                                            return;
+                                          }
+                                          if (!game.hint()) {
+                                            return;
+                                          }
                                           game.hintsRemaining = remaining;
                                           _bloc.add(
                                             ZipEvent.hint(

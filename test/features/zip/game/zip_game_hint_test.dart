@@ -24,7 +24,7 @@ void main() {
     final game = gameWith();
 
     expect(game.hint(), isTrue);
-    expect(game.hintsRemaining, 2);
+    expect(game.hintsRemaining, 3);
     expect(game.hintedCells, const [Cell(0, 1)]);
   });
 
@@ -69,7 +69,7 @@ void main() {
     game.clearPath();
 
     expect(game.hintedCells, isEmpty);
-    expect(game.hintsRemaining, 2);
+    expect(game.hintsRemaining, 3);
   });
 
   test('clearPath does not restore hintsRemaining', () {

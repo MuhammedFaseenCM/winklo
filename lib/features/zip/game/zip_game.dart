@@ -156,7 +156,6 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     );
     hintFromIndex = next.fromIndex;
     hintRevealLength = next.revealLength;
-    hintsRemaining--;
     _hintFlashStartedAt = DateTime.now();
     return true;
   }
