@@ -25,6 +25,7 @@ abstract final class AppStrings {
   static const zipTipFinishOnLast = 'Finish on the last number';
   static const zipTipVisitInOrder = 'Visit the numbers in order';
   static const zipClearedTitle = 'Puzzle cleared!';
+  static const zipLoading = 'Building today’s puzzle…';
   static const playAgain = 'Play again';
   static const result = 'Result';
   static const comeBackTomorrow = 'Come back tomorrow';
