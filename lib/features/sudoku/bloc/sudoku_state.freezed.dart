@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SudokuState {
 
- DateTime get day; SudokuPuzzle? get puzzle; List<int> get grid; List<Set<int>> get notes; int? get selectedIndex; bool get notesMode; SudokuStatus get status; DateTime? get startedAt; int? get hintFlashIndex; int? get rejectFlashIndex; Set<int> get unitFlashIndices; Set<String> get celebratedUnitIds; bool get finished; int? get points; int? get timeSeconds; bool? get improved; ResultsArgs? get resultsExtra;
+ DateTime get day; SudokuPuzzle? get puzzle; List<int> get grid; List<Set<int>> get notes; int? get selectedIndex; bool get notesMode; SudokuStatus get status; DateTime? get startedAt; int? get hintFlashIndex; int get hintsRemaining; SudokuCoachHint? get activeCoachHint; bool get showNoSimpleHint; int? get rejectFlashIndex; Set<int> get unitFlashIndices; Set<String> get celebratedUnitIds; bool get finished; int? get points; int? get timeSeconds; bool? get improved; ResultsArgs? get resultsExtra;
 /// Create a copy of SudokuState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $SudokuStateCopyWith<SudokuState> get copyWith => _$SudokuStateCopyWithImpl<Sudo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SudokuState&&(identical(other.day, day) || other.day == day)&&(identical(other.puzzle, puzzle) || other.puzzle == puzzle)&&const DeepCollectionEquality().equals(other.grid, grid)&&const DeepCollectionEquality().equals(other.notes, notes)&&(identical(other.selectedIndex, selectedIndex) || other.selectedIndex == selectedIndex)&&(identical(other.notesMode, notesMode) || other.notesMode == notesMode)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.hintFlashIndex, hintFlashIndex) || other.hintFlashIndex == hintFlashIndex)&&(identical(other.rejectFlashIndex, rejectFlashIndex) || other.rejectFlashIndex == rejectFlashIndex)&&const DeepCollectionEquality().equals(other.unitFlashIndices, unitFlashIndices)&&const DeepCollectionEquality().equals(other.celebratedUnitIds, celebratedUnitIds)&&(identical(other.finished, finished) || other.finished == finished)&&(identical(other.points, points) || other.points == points)&&(identical(other.timeSeconds, timeSeconds) || other.timeSeconds == timeSeconds)&&(identical(other.improved, improved) || other.improved == improved)&&(identical(other.resultsExtra, resultsExtra) || other.resultsExtra == resultsExtra));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SudokuState&&(identical(other.day, day) || other.day == day)&&(identical(other.puzzle, puzzle) || other.puzzle == puzzle)&&const DeepCollectionEquality().equals(other.grid, grid)&&const DeepCollectionEquality().equals(other.notes, notes)&&(identical(other.selectedIndex, selectedIndex) || other.selectedIndex == selectedIndex)&&(identical(other.notesMode, notesMode) || other.notesMode == notesMode)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.hintFlashIndex, hintFlashIndex) || other.hintFlashIndex == hintFlashIndex)&&(identical(other.hintsRemaining, hintsRemaining) || other.hintsRemaining == hintsRemaining)&&(identical(other.activeCoachHint, activeCoachHint) || other.activeCoachHint == activeCoachHint)&&(identical(other.showNoSimpleHint, showNoSimpleHint) || other.showNoSimpleHint == showNoSimpleHint)&&(identical(other.rejectFlashIndex, rejectFlashIndex) || other.rejectFlashIndex == rejectFlashIndex)&&const DeepCollectionEquality().equals(other.unitFlashIndices, unitFlashIndices)&&const DeepCollectionEquality().equals(other.celebratedUnitIds, celebratedUnitIds)&&(identical(other.finished, finished) || other.finished == finished)&&(identical(other.points, points) || other.points == points)&&(identical(other.timeSeconds, timeSeconds) || other.timeSeconds == timeSeconds)&&(identical(other.improved, improved) || other.improved == improved)&&(identical(other.resultsExtra, resultsExtra) || other.resultsExtra == resultsExtra));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,day,puzzle,const DeepCollectionEquality().hash(grid),const DeepCollectionEquality().hash(notes),selectedIndex,notesMode,status,startedAt,hintFlashIndex,rejectFlashIndex,const DeepCollectionEquality().hash(unitFlashIndices),const DeepCollectionEquality().hash(celebratedUnitIds),finished,points,timeSeconds,improved,resultsExtra);
+int get hashCode => Object.hashAll([runtimeType,day,puzzle,const DeepCollectionEquality().hash(grid),const DeepCollectionEquality().hash(notes),selectedIndex,notesMode,status,startedAt,hintFlashIndex,hintsRemaining,activeCoachHint,showNoSimpleHint,rejectFlashIndex,const DeepCollectionEquality().hash(unitFlashIndices),const DeepCollectionEquality().hash(celebratedUnitIds),finished,points,timeSeconds,improved,resultsExtra]);
 
 @override
 String toString() {
-  return 'SudokuState(day: $day, puzzle: $puzzle, grid: $grid, notes: $notes, selectedIndex: $selectedIndex, notesMode: $notesMode, status: $status, startedAt: $startedAt, hintFlashIndex: $hintFlashIndex, rejectFlashIndex: $rejectFlashIndex, unitFlashIndices: $unitFlashIndices, celebratedUnitIds: $celebratedUnitIds, finished: $finished, points: $points, timeSeconds: $timeSeconds, improved: $improved, resultsExtra: $resultsExtra)';
+  return 'SudokuState(day: $day, puzzle: $puzzle, grid: $grid, notes: $notes, selectedIndex: $selectedIndex, notesMode: $notesMode, status: $status, startedAt: $startedAt, hintFlashIndex: $hintFlashIndex, hintsRemaining: $hintsRemaining, activeCoachHint: $activeCoachHint, showNoSimpleHint: $showNoSimpleHint, rejectFlashIndex: $rejectFlashIndex, unitFlashIndices: $unitFlashIndices, celebratedUnitIds: $celebratedUnitIds, finished: $finished, points: $points, timeSeconds: $timeSeconds, improved: $improved, resultsExtra: $resultsExtra)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $SudokuStateCopyWith<$Res>  {
   factory $SudokuStateCopyWith(SudokuState value, $Res Function(SudokuState) _then) = _$SudokuStateCopyWithImpl;
 @useResult
 $Res call({
- DateTime day, SudokuPuzzle? puzzle, List<int> grid, List<Set<int>> notes, int? selectedIndex, bool notesMode, SudokuStatus status, DateTime? startedAt, int? hintFlashIndex, int? rejectFlashIndex, Set<int> unitFlashIndices, Set<String> celebratedUnitIds, bool finished, int? points, int? timeSeconds, bool? improved, ResultsArgs? resultsExtra
+ DateTime day, SudokuPuzzle? puzzle, List<int> grid, List<Set<int>> notes, int? selectedIndex, bool notesMode, SudokuStatus status, DateTime? startedAt, int? hintFlashIndex, int hintsRemaining, SudokuCoachHint? activeCoachHint, bool showNoSimpleHint, int? rejectFlashIndex, Set<int> unitFlashIndices, Set<String> celebratedUnitIds, bool finished, int? points, int? timeSeconds, bool? improved, ResultsArgs? resultsExtra
 });
 
 
@@ -62,7 +62,7 @@ class _$SudokuStateCopyWithImpl<$Res>
 
 /// Create a copy of SudokuState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? day = null,Object? puzzle = freezed,Object? grid = null,Object? notes = null,Object? selectedIndex = freezed,Object? notesMode = null,Object? status = null,Object? startedAt = freezed,Object? hintFlashIndex = freezed,Object? rejectFlashIndex = freezed,Object? unitFlashIndices = null,Object? celebratedUnitIds = null,Object? finished = null,Object? points = freezed,Object? timeSeconds = freezed,Object? improved = freezed,Object? resultsExtra = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? day = null,Object? puzzle = freezed,Object? grid = null,Object? notes = null,Object? selectedIndex = freezed,Object? notesMode = null,Object? status = null,Object? startedAt = freezed,Object? hintFlashIndex = freezed,Object? hintsRemaining = null,Object? activeCoachHint = freezed,Object? showNoSimpleHint = null,Object? rejectFlashIndex = freezed,Object? unitFlashIndices = null,Object? celebratedUnitIds = null,Object? finished = null,Object? points = freezed,Object? timeSeconds = freezed,Object? improved = freezed,Object? resultsExtra = freezed,}) {
   return _then(_self.copyWith(
 day: null == day ? _self.day : day // ignore: cast_nullable_to_non_nullable
 as DateTime,puzzle: freezed == puzzle ? _self.puzzle : puzzle // ignore: cast_nullable_to_non_nullable
@@ -73,7 +73,10 @@ as int?,notesMode: null == notesMode ? _self.notesMode : notesMode // ignore: ca
 as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as SudokuStatus,startedAt: freezed == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,hintFlashIndex: freezed == hintFlashIndex ? _self.hintFlashIndex : hintFlashIndex // ignore: cast_nullable_to_non_nullable
-as int?,rejectFlashIndex: freezed == rejectFlashIndex ? _self.rejectFlashIndex : rejectFlashIndex // ignore: cast_nullable_to_non_nullable
+as int?,hintsRemaining: null == hintsRemaining ? _self.hintsRemaining : hintsRemaining // ignore: cast_nullable_to_non_nullable
+as int,activeCoachHint: freezed == activeCoachHint ? _self.activeCoachHint : activeCoachHint // ignore: cast_nullable_to_non_nullable
+as SudokuCoachHint?,showNoSimpleHint: null == showNoSimpleHint ? _self.showNoSimpleHint : showNoSimpleHint // ignore: cast_nullable_to_non_nullable
+as bool,rejectFlashIndex: freezed == rejectFlashIndex ? _self.rejectFlashIndex : rejectFlashIndex // ignore: cast_nullable_to_non_nullable
 as int?,unitFlashIndices: null == unitFlashIndices ? _self.unitFlashIndices : unitFlashIndices // ignore: cast_nullable_to_non_nullable
 as Set<int>,celebratedUnitIds: null == celebratedUnitIds ? _self.celebratedUnitIds : celebratedUnitIds // ignore: cast_nullable_to_non_nullable
 as Set<String>,finished: null == finished ? _self.finished : finished // ignore: cast_nullable_to_non_nullable
@@ -163,10 +166,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DateTime day,  SudokuPuzzle? puzzle,  List<int> grid,  List<Set<int>> notes,  int? selectedIndex,  bool notesMode,  SudokuStatus status,  DateTime? startedAt,  int? hintFlashIndex,  int? rejectFlashIndex,  Set<int> unitFlashIndices,  Set<String> celebratedUnitIds,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DateTime day,  SudokuPuzzle? puzzle,  List<int> grid,  List<Set<int>> notes,  int? selectedIndex,  bool notesMode,  SudokuStatus status,  DateTime? startedAt,  int? hintFlashIndex,  int hintsRemaining,  SudokuCoachHint? activeCoachHint,  bool showNoSimpleHint,  int? rejectFlashIndex,  Set<int> unitFlashIndices,  Set<String> celebratedUnitIds,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SudokuState() when $default != null:
-return $default(_that.day,_that.puzzle,_that.grid,_that.notes,_that.selectedIndex,_that.notesMode,_that.status,_that.startedAt,_that.hintFlashIndex,_that.rejectFlashIndex,_that.unitFlashIndices,_that.celebratedUnitIds,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);case _:
+return $default(_that.day,_that.puzzle,_that.grid,_that.notes,_that.selectedIndex,_that.notesMode,_that.status,_that.startedAt,_that.hintFlashIndex,_that.hintsRemaining,_that.activeCoachHint,_that.showNoSimpleHint,_that.rejectFlashIndex,_that.unitFlashIndices,_that.celebratedUnitIds,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);case _:
   return orElse();
 
 }
@@ -184,10 +187,10 @@ return $default(_that.day,_that.puzzle,_that.grid,_that.notes,_that.selectedInde
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DateTime day,  SudokuPuzzle? puzzle,  List<int> grid,  List<Set<int>> notes,  int? selectedIndex,  bool notesMode,  SudokuStatus status,  DateTime? startedAt,  int? hintFlashIndex,  int? rejectFlashIndex,  Set<int> unitFlashIndices,  Set<String> celebratedUnitIds,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DateTime day,  SudokuPuzzle? puzzle,  List<int> grid,  List<Set<int>> notes,  int? selectedIndex,  bool notesMode,  SudokuStatus status,  DateTime? startedAt,  int? hintFlashIndex,  int hintsRemaining,  SudokuCoachHint? activeCoachHint,  bool showNoSimpleHint,  int? rejectFlashIndex,  Set<int> unitFlashIndices,  Set<String> celebratedUnitIds,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)  $default,) {final _that = this;
 switch (_that) {
 case _SudokuState():
-return $default(_that.day,_that.puzzle,_that.grid,_that.notes,_that.selectedIndex,_that.notesMode,_that.status,_that.startedAt,_that.hintFlashIndex,_that.rejectFlashIndex,_that.unitFlashIndices,_that.celebratedUnitIds,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);}
+return $default(_that.day,_that.puzzle,_that.grid,_that.notes,_that.selectedIndex,_that.notesMode,_that.status,_that.startedAt,_that.hintFlashIndex,_that.hintsRemaining,_that.activeCoachHint,_that.showNoSimpleHint,_that.rejectFlashIndex,_that.unitFlashIndices,_that.celebratedUnitIds,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -201,10 +204,10 @@ return $default(_that.day,_that.puzzle,_that.grid,_that.notes,_that.selectedInde
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DateTime day,  SudokuPuzzle? puzzle,  List<int> grid,  List<Set<int>> notes,  int? selectedIndex,  bool notesMode,  SudokuStatus status,  DateTime? startedAt,  int? hintFlashIndex,  int? rejectFlashIndex,  Set<int> unitFlashIndices,  Set<String> celebratedUnitIds,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DateTime day,  SudokuPuzzle? puzzle,  List<int> grid,  List<Set<int>> notes,  int? selectedIndex,  bool notesMode,  SudokuStatus status,  DateTime? startedAt,  int? hintFlashIndex,  int hintsRemaining,  SudokuCoachHint? activeCoachHint,  bool showNoSimpleHint,  int? rejectFlashIndex,  Set<int> unitFlashIndices,  Set<String> celebratedUnitIds,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)?  $default,) {final _that = this;
 switch (_that) {
 case _SudokuState() when $default != null:
-return $default(_that.day,_that.puzzle,_that.grid,_that.notes,_that.selectedIndex,_that.notesMode,_that.status,_that.startedAt,_that.hintFlashIndex,_that.rejectFlashIndex,_that.unitFlashIndices,_that.celebratedUnitIds,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);case _:
+return $default(_that.day,_that.puzzle,_that.grid,_that.notes,_that.selectedIndex,_that.notesMode,_that.status,_that.startedAt,_that.hintFlashIndex,_that.hintsRemaining,_that.activeCoachHint,_that.showNoSimpleHint,_that.rejectFlashIndex,_that.unitFlashIndices,_that.celebratedUnitIds,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);case _:
   return null;
 
 }
@@ -216,7 +219,7 @@ return $default(_that.day,_that.puzzle,_that.grid,_that.notes,_that.selectedInde
 
 
 class _SudokuState implements SudokuState {
-  const _SudokuState({required this.day, this.puzzle, final  List<int> grid = const <int>[], final  List<Set<int>> notes = const <Set<int>>[], this.selectedIndex, this.notesMode = false, this.status = SudokuStatus.loading, this.startedAt, this.hintFlashIndex, this.rejectFlashIndex, final  Set<int> unitFlashIndices = const <int>{}, final  Set<String> celebratedUnitIds = const <String>{}, this.finished = false, this.points, this.timeSeconds, this.improved, this.resultsExtra}): _grid = grid,_notes = notes,_unitFlashIndices = unitFlashIndices,_celebratedUnitIds = celebratedUnitIds;
+  const _SudokuState({required this.day, this.puzzle, final  List<int> grid = const <int>[], final  List<Set<int>> notes = const <Set<int>>[], this.selectedIndex, this.notesMode = false, this.status = SudokuStatus.loading, this.startedAt, this.hintFlashIndex, this.hintsRemaining = 3, this.activeCoachHint, this.showNoSimpleHint = false, this.rejectFlashIndex, final  Set<int> unitFlashIndices = const <int>{}, final  Set<String> celebratedUnitIds = const <String>{}, this.finished = false, this.points, this.timeSeconds, this.improved, this.resultsExtra}): _grid = grid,_notes = notes,_unitFlashIndices = unitFlashIndices,_celebratedUnitIds = celebratedUnitIds;
   
 
 @override final  DateTime day;
@@ -240,6 +243,9 @@ class _SudokuState implements SudokuState {
 @override@JsonKey() final  SudokuStatus status;
 @override final  DateTime? startedAt;
 @override final  int? hintFlashIndex;
+@override@JsonKey() final  int hintsRemaining;
+@override final  SudokuCoachHint? activeCoachHint;
+@override@JsonKey() final  bool showNoSimpleHint;
 @override final  int? rejectFlashIndex;
  final  Set<int> _unitFlashIndices;
 @override@JsonKey() Set<int> get unitFlashIndices {
@@ -271,16 +277,16 @@ _$SudokuStateCopyWith<_SudokuState> get copyWith => __$SudokuStateCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SudokuState&&(identical(other.day, day) || other.day == day)&&(identical(other.puzzle, puzzle) || other.puzzle == puzzle)&&const DeepCollectionEquality().equals(other._grid, _grid)&&const DeepCollectionEquality().equals(other._notes, _notes)&&(identical(other.selectedIndex, selectedIndex) || other.selectedIndex == selectedIndex)&&(identical(other.notesMode, notesMode) || other.notesMode == notesMode)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.hintFlashIndex, hintFlashIndex) || other.hintFlashIndex == hintFlashIndex)&&(identical(other.rejectFlashIndex, rejectFlashIndex) || other.rejectFlashIndex == rejectFlashIndex)&&const DeepCollectionEquality().equals(other._unitFlashIndices, _unitFlashIndices)&&const DeepCollectionEquality().equals(other._celebratedUnitIds, _celebratedUnitIds)&&(identical(other.finished, finished) || other.finished == finished)&&(identical(other.points, points) || other.points == points)&&(identical(other.timeSeconds, timeSeconds) || other.timeSeconds == timeSeconds)&&(identical(other.improved, improved) || other.improved == improved)&&(identical(other.resultsExtra, resultsExtra) || other.resultsExtra == resultsExtra));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SudokuState&&(identical(other.day, day) || other.day == day)&&(identical(other.puzzle, puzzle) || other.puzzle == puzzle)&&const DeepCollectionEquality().equals(other._grid, _grid)&&const DeepCollectionEquality().equals(other._notes, _notes)&&(identical(other.selectedIndex, selectedIndex) || other.selectedIndex == selectedIndex)&&(identical(other.notesMode, notesMode) || other.notesMode == notesMode)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.hintFlashIndex, hintFlashIndex) || other.hintFlashIndex == hintFlashIndex)&&(identical(other.hintsRemaining, hintsRemaining) || other.hintsRemaining == hintsRemaining)&&(identical(other.activeCoachHint, activeCoachHint) || other.activeCoachHint == activeCoachHint)&&(identical(other.showNoSimpleHint, showNoSimpleHint) || other.showNoSimpleHint == showNoSimpleHint)&&(identical(other.rejectFlashIndex, rejectFlashIndex) || other.rejectFlashIndex == rejectFlashIndex)&&const DeepCollectionEquality().equals(other._unitFlashIndices, _unitFlashIndices)&&const DeepCollectionEquality().equals(other._celebratedUnitIds, _celebratedUnitIds)&&(identical(other.finished, finished) || other.finished == finished)&&(identical(other.points, points) || other.points == points)&&(identical(other.timeSeconds, timeSeconds) || other.timeSeconds == timeSeconds)&&(identical(other.improved, improved) || other.improved == improved)&&(identical(other.resultsExtra, resultsExtra) || other.resultsExtra == resultsExtra));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,day,puzzle,const DeepCollectionEquality().hash(_grid),const DeepCollectionEquality().hash(_notes),selectedIndex,notesMode,status,startedAt,hintFlashIndex,rejectFlashIndex,const DeepCollectionEquality().hash(_unitFlashIndices),const DeepCollectionEquality().hash(_celebratedUnitIds),finished,points,timeSeconds,improved,resultsExtra);
+int get hashCode => Object.hashAll([runtimeType,day,puzzle,const DeepCollectionEquality().hash(_grid),const DeepCollectionEquality().hash(_notes),selectedIndex,notesMode,status,startedAt,hintFlashIndex,hintsRemaining,activeCoachHint,showNoSimpleHint,rejectFlashIndex,const DeepCollectionEquality().hash(_unitFlashIndices),const DeepCollectionEquality().hash(_celebratedUnitIds),finished,points,timeSeconds,improved,resultsExtra]);
 
 @override
 String toString() {
-  return 'SudokuState(day: $day, puzzle: $puzzle, grid: $grid, notes: $notes, selectedIndex: $selectedIndex, notesMode: $notesMode, status: $status, startedAt: $startedAt, hintFlashIndex: $hintFlashIndex, rejectFlashIndex: $rejectFlashIndex, unitFlashIndices: $unitFlashIndices, celebratedUnitIds: $celebratedUnitIds, finished: $finished, points: $points, timeSeconds: $timeSeconds, improved: $improved, resultsExtra: $resultsExtra)';
+  return 'SudokuState(day: $day, puzzle: $puzzle, grid: $grid, notes: $notes, selectedIndex: $selectedIndex, notesMode: $notesMode, status: $status, startedAt: $startedAt, hintFlashIndex: $hintFlashIndex, hintsRemaining: $hintsRemaining, activeCoachHint: $activeCoachHint, showNoSimpleHint: $showNoSimpleHint, rejectFlashIndex: $rejectFlashIndex, unitFlashIndices: $unitFlashIndices, celebratedUnitIds: $celebratedUnitIds, finished: $finished, points: $points, timeSeconds: $timeSeconds, improved: $improved, resultsExtra: $resultsExtra)';
 }
 
 
@@ -291,7 +297,7 @@ abstract mixin class _$SudokuStateCopyWith<$Res> implements $SudokuStateCopyWith
   factory _$SudokuStateCopyWith(_SudokuState value, $Res Function(_SudokuState) _then) = __$SudokuStateCopyWithImpl;
 @override @useResult
 $Res call({
- DateTime day, SudokuPuzzle? puzzle, List<int> grid, List<Set<int>> notes, int? selectedIndex, bool notesMode, SudokuStatus status, DateTime? startedAt, int? hintFlashIndex, int? rejectFlashIndex, Set<int> unitFlashIndices, Set<String> celebratedUnitIds, bool finished, int? points, int? timeSeconds, bool? improved, ResultsArgs? resultsExtra
+ DateTime day, SudokuPuzzle? puzzle, List<int> grid, List<Set<int>> notes, int? selectedIndex, bool notesMode, SudokuStatus status, DateTime? startedAt, int? hintFlashIndex, int hintsRemaining, SudokuCoachHint? activeCoachHint, bool showNoSimpleHint, int? rejectFlashIndex, Set<int> unitFlashIndices, Set<String> celebratedUnitIds, bool finished, int? points, int? timeSeconds, bool? improved, ResultsArgs? resultsExtra
 });
 
 
@@ -308,7 +314,7 @@ class __$SudokuStateCopyWithImpl<$Res>
 
 /// Create a copy of SudokuState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? day = null,Object? puzzle = freezed,Object? grid = null,Object? notes = null,Object? selectedIndex = freezed,Object? notesMode = null,Object? status = null,Object? startedAt = freezed,Object? hintFlashIndex = freezed,Object? rejectFlashIndex = freezed,Object? unitFlashIndices = null,Object? celebratedUnitIds = null,Object? finished = null,Object? points = freezed,Object? timeSeconds = freezed,Object? improved = freezed,Object? resultsExtra = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? day = null,Object? puzzle = freezed,Object? grid = null,Object? notes = null,Object? selectedIndex = freezed,Object? notesMode = null,Object? status = null,Object? startedAt = freezed,Object? hintFlashIndex = freezed,Object? hintsRemaining = null,Object? activeCoachHint = freezed,Object? showNoSimpleHint = null,Object? rejectFlashIndex = freezed,Object? unitFlashIndices = null,Object? celebratedUnitIds = null,Object? finished = null,Object? points = freezed,Object? timeSeconds = freezed,Object? improved = freezed,Object? resultsExtra = freezed,}) {
   return _then(_SudokuState(
 day: null == day ? _self.day : day // ignore: cast_nullable_to_non_nullable
 as DateTime,puzzle: freezed == puzzle ? _self.puzzle : puzzle // ignore: cast_nullable_to_non_nullable
@@ -319,7 +325,10 @@ as int?,notesMode: null == notesMode ? _self.notesMode : notesMode // ignore: ca
 as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as SudokuStatus,startedAt: freezed == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,hintFlashIndex: freezed == hintFlashIndex ? _self.hintFlashIndex : hintFlashIndex // ignore: cast_nullable_to_non_nullable
-as int?,rejectFlashIndex: freezed == rejectFlashIndex ? _self.rejectFlashIndex : rejectFlashIndex // ignore: cast_nullable_to_non_nullable
+as int?,hintsRemaining: null == hintsRemaining ? _self.hintsRemaining : hintsRemaining // ignore: cast_nullable_to_non_nullable
+as int,activeCoachHint: freezed == activeCoachHint ? _self.activeCoachHint : activeCoachHint // ignore: cast_nullable_to_non_nullable
+as SudokuCoachHint?,showNoSimpleHint: null == showNoSimpleHint ? _self.showNoSimpleHint : showNoSimpleHint // ignore: cast_nullable_to_non_nullable
+as bool,rejectFlashIndex: freezed == rejectFlashIndex ? _self.rejectFlashIndex : rejectFlashIndex // ignore: cast_nullable_to_non_nullable
 as int?,unitFlashIndices: null == unitFlashIndices ? _self._unitFlashIndices : unitFlashIndices // ignore: cast_nullable_to_non_nullable
 as Set<int>,celebratedUnitIds: null == celebratedUnitIds ? _self._celebratedUnitIds : celebratedUnitIds // ignore: cast_nullable_to_non_nullable
 as Set<String>,finished: null == finished ? _self.finished : finished // ignore: cast_nullable_to_non_nullable

@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../domain/entities/sudoku_puzzle.dart';
+import '../../../domain/sudoku/sudoku_hint_coach.dart';
 import '../../results/results_args.dart';
 
 part 'sudoku_state.freezed.dart';
@@ -26,6 +27,9 @@ sealed class SudokuState with _$SudokuState {
     @Default(SudokuStatus.loading) SudokuStatus status,
     DateTime? startedAt,
     int? hintFlashIndex,
+    @Default(3) int hintsRemaining,
+    SudokuCoachHint? activeCoachHint,
+    @Default(false) bool showNoSimpleHint,
     int? rejectFlashIndex,
     @Default(<int>{}) Set<int> unitFlashIndices,
     @Default(<String>{}) Set<String> celebratedUnitIds,
