@@ -1,7 +1,7 @@
 # Sudoku explanatory hints + daily hint quota — Design
 
 **Date:** 2026-09-30  
-**Status:** Approved (design sections)  
+**Status:** Implemented  
 **Scope:** Replace Sudoku’s fill-from-solution hints with LinkedIn Mini Sudoku–style teachable hints (text + highlights, no auto-fill). Add a shared **HintQuota** persistence layer used by Sudoku, Zip, and Path Words — **3 hints per gameId per play period**, surviving game reset.
 
 ---
