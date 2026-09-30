@@ -69,7 +69,14 @@ void main() {
     game.clearPath();
 
     expect(game.hintedCells, isEmpty);
-    expect(game.hintsRemaining, 3);
+    expect(game.hintsRemaining, 2);
+  });
+
+  test('clearPath does not restore hintsRemaining', () {
+    final game = gameWith();
+    game.hintsRemaining = 1;
+    game.clearPath();
+    expect(game.hintsRemaining, 1);
   });
 
   test('hint after drawing past the spent window shows the next cell', () {

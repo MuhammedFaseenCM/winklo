@@ -9,7 +9,9 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
 import '../../../core/widgets/zip_ui.dart';
+import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
@@ -35,6 +37,7 @@ class ZipScreen extends StatefulWidget {
 
 class _ZipScreenState extends State<ZipScreen> {
   late final ZipBloc _bloc;
+  late final HintQuotaRepository _hintQuota;
   ZipGame? _game;
   bool _tutorialPrompted = false;
   String? _ruleTip;
@@ -55,8 +58,10 @@ class _ZipScreenState extends State<ZipScreen> {
   bool _ensureGame(ZipState state) {
     final current = _game;
     if (current != null && identical(current.level, state.level)) return false;
+    final remaining = _hintQuota.remaining(GameIds.zip);
     _game = ZipGame(
       level: state.level,
+      initialHintsRemaining: remaining,
       readOnly: state.status == ZipStatus.locked || state.finished,
       onWin: (points, elapsedSeconds) {
         if (mounted) setState(() => _ruleTip = null);
@@ -88,6 +93,7 @@ class _ZipScreenState extends State<ZipScreen> {
   @override
   void initState() {
     super.initState();
+    _hintQuota = context.read<HintQuotaRepository>();
     _bloc = ZipBloc(
       submitScore: context.read<SubmitScore>(),
       submitLeaderboardTime: context.read<SubmitLeaderboardTime>(),
@@ -169,7 +175,12 @@ class _ZipScreenState extends State<ZipScreen> {
                                 onPressed: !canPlay
                                     ? null
                                     : () {
-                                        _game?.clearPath();
+                                        final game = _game;
+                                        game?.clearPath();
+                                        if (game != null) {
+                                          game.hintsRemaining = _hintQuota
+                                              .remaining(GameIds.zip);
+                                        }
                                         _bloc.add(const ZipEvent.reset());
                                         setState(() => _ruleTip = null);
                                       },
@@ -243,18 +254,20 @@ class _ZipScreenState extends State<ZipScreen> {
                                     ),
                                   ),
                                   onPressed: canHint
-                                      ? () {
+                                      ? () async {
                                           final game = _game;
                                           if (game == null || !game.hint()) {
                                             return;
                                           }
+                                          final remaining = await _hintQuota
+                                              .tryConsume(GameIds.zip);
+                                          game.hintsRemaining = remaining;
                                           _bloc.add(
                                             ZipEvent.hint(
-                                              hintsRemaining:
-                                                  game.hintsRemaining,
+                                              hintsRemaining: remaining,
                                             ),
                                           );
-                                          setState(() {});
+                                          if (mounted) setState(() {});
                                         }
                                       : null,
                                   icon: const Icon(Icons.lightbulb_rounded),

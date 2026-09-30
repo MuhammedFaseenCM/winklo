@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/zip_level.dart';
+import '../../../domain/repositories/hint_quota_repository.dart';
 import '../logic/path_validator.dart';
 import '../logic/zip_hints.dart';
 import '../logic/zip_rule_tip.dart';
@@ -24,7 +25,9 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     required this.onStatsChanged,
     this.onRuleTip,
     this.readOnly = false,
-  }) : _validator = PathValidator(level);
+    int initialHintsRemaining = HintQuotaRepository.cap,
+  }) : _validator = PathValidator(level),
+       hintsRemaining = initialHintsRemaining;
 
   final ZipLevel level;
   final ZipWinCallback onWin;
@@ -43,7 +46,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   /// True after [onTapDown] armed a stroke; drag may cancel the tap later.
   bool _armedFromTapDown = false;
   DateTime? startedAt;
-  int hintsRemaining = 3;
+  int hintsRemaining;
   int hintRevealLength = 0;
   int hintFromIndex = 0;
   DateTime? _hintFlashStartedAt;
@@ -169,7 +172,6 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     path.clear();
     hintRevealLength = 0;
     hintFromIndex = 0;
-    hintsRemaining = 3;
     _hintFlashStartedAt = null;
     _notifyStats();
   }
