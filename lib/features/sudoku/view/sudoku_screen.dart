@@ -285,56 +285,6 @@ class _SudokuScreenState extends State<SudokuScreen> {
                                           )
                                         : GameWidget(game: game),
                                   ),
-                                  if (isReadyToPlay && showHintBanner)
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        12,
-                                        8,
-                                        12,
-                                        0,
-                                      ),
-                                      child: Material(
-                                        color: ZipColors.success.withValues(
-                                          alpha: 0.85,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                            12,
-                                            10,
-                                            4,
-                                            10,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  state.showNoSimpleHint
-                                                      ? AppStrings
-                                                            .sudokuHintNoSimple
-                                                      : _coachMessage(
-                                                          activeCoach!,
-                                                        ),
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    height: 1.25,
-                                                  ),
-                                                ),
-                                              ),
-                                              IconButton(
-                                                onPressed: () => _bloc.add(
-                                                  const SudokuEvent.dismissHint(),
-                                                ),
-                                                icon: const Icon(
-                                                  Icons.close,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
                                   if (isReadyToPlay) ...[
                                     _NotesToggle(
                                       enabled: state.notesMode,
@@ -376,6 +326,41 @@ class _SudokuScreenState extends State<SudokuScreen> {
                           },
                         ),
                       ),
+                      if (isReadyToPlay && showHintBanner)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                          child: Material(
+                            color: ZipColors.success.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      state.showNoSimpleHint
+                                          ? AppStrings.sudokuHintNoSimple
+                                          : _coachMessage(activeCoach!),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        height: 1.25,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: () => _bloc.add(
+                                      const SudokuEvent.dismissHint(),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -477,13 +462,14 @@ class _NumberPad extends StatelessWidget {
   static ButtonStyle get _actionButtonStyle => OutlinedButton.styleFrom(
     foregroundColor: ZipColors.onInk,
     minimumSize: const Size(0, _buttonHeight),
-    padding: const EdgeInsets.symmetric(horizontal: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
     side: BorderSide(color: ZipColors.outline.withValues(alpha: 0.7)),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
   );
 
   Widget _digitButton(int digit) {
     return Expanded(
+      flex: 5,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3),
         child: SizedBox(
@@ -503,7 +489,9 @@ class _NumberPad extends StatelessWidget {
     required IconData icon,
     required String label,
   }) {
+    // Slightly wider than digit cells so "Hint (n)" fits without ellipsis.
     return Expanded(
+      flex: 6,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3),
         child: SizedBox(
@@ -515,13 +503,16 @@ class _NumberPad extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon, size: 18),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Flexible(
-                  child: Text(
-                    label,
-                    style: _actionLabelStyle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      style: _actionLabelStyle,
+                      maxLines: 1,
+                      softWrap: false,
+                    ),
                   ),
                 ),
               ],

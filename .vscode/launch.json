@@ -4,11 +4,18 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-    
         {
             "name": "winklo",
             "request": "launch",
             "type": "dart"
+        },
+        {
+            "name": "winklo (daily play period)",
+            "request": "launch",
+            "type": "dart",
+            "toolArgs": [
+                "--dart-define=DAILY_PLAY_PERIOD=true"
+            ]
         },
         {
             "name": "winklo (profile mode)",

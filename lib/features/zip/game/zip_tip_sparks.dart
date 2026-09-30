@@ -1,14 +1,13 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import 'zip_path_ribbon.dart';
 
-/// Soft ember flecks that orbit the live Zip stroke tip while drawing.
+/// Ember diamond twinkles that orbit the live Zip stroke tip while drawing.
 class ZipTipSparks {
-  static const fleckCount = 8;
+  static const fleckCount = 6;
 
   final List<_Fleck> _flecks = [];
 
@@ -26,14 +25,14 @@ class ZipTipSparks {
       _flecks.add(
         _Fleck(
           angle: t * math.pi * 2 + random.nextDouble() * 0.4,
-          speed: 1.2 + random.nextDouble() * 1.6,
-          radiusFactor: 1.1 + random.nextDouble() * 0.5,
-          size: 1.5 + random.nextDouble() * 2.0,
+          speed: 1.0 + random.nextDouble() * 1.4,
+          radiusFactor: 1.15 + random.nextDouble() * 0.45,
+          size: 2.2 + random.nextDouble() * 1.8,
           color: Color.lerp(
             ZipColors.ember,
             ZipPathRibbon.colorAt(i),
             0.35 + random.nextDouble() * 0.45,
-          )!.withValues(alpha: 0.35 + random.nextDouble() * 0.4),
+          )!.withValues(alpha: 0.55 + random.nextDouble() * 0.35),
         ),
       );
     }
@@ -49,12 +48,59 @@ class ZipTipSparks {
 
   void paint(Canvas canvas, {required Offset tip, required double tipRadius}) {
     if (_flecks.isEmpty) return;
+    final diamondPaint = Paint()..style = PaintingStyle.fill;
+    final rayPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
     for (final fleck in _flecks) {
       final r = tipRadius * fleck.radiusFactor;
       final pos =
           tip + Offset(math.cos(fleck.angle) * r, math.sin(fleck.angle) * r);
-      canvas.drawCircle(pos, fleck.size, Paint()..color = fleck.color);
+      _paintTwinkle(
+        canvas,
+        pos: pos,
+        size: fleck.size,
+        color: fleck.color,
+        diamondPaint: diamondPaint,
+        rayPaint: rayPaint,
+      );
     }
+  }
+
+  static void _paintTwinkle(
+    Canvas canvas, {
+    required Offset pos,
+    required double size,
+    required Color color,
+    required Paint diamondPaint,
+    required Paint rayPaint,
+  }) {
+    final half = size * 0.55;
+    final ray = size * 1.7;
+
+    rayPaint
+      ..color = Colors.white.withValues(alpha: color.a * 0.55)
+      ..strokeWidth = math.max(0.8, size * 0.22);
+    canvas.drawLine(
+      Offset(pos.dx, pos.dy - ray),
+      Offset(pos.dx, pos.dy + ray),
+      rayPaint,
+    );
+    canvas.drawLine(
+      Offset(pos.dx - ray, pos.dy),
+      Offset(pos.dx + ray, pos.dy),
+      rayPaint,
+    );
+
+    diamondPaint.color = color;
+    canvas.save();
+    canvas.translate(pos.dx, pos.dy);
+    canvas.rotate(math.pi / 4);
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset.zero, width: half * 2, height: half * 2),
+      diamondPaint,
+    );
+    canvas.restore();
   }
 }
 

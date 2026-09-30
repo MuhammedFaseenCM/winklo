@@ -15,6 +15,7 @@ class RemoteConfigClient {
   static const kForceUpdateKey = 'forceUpdate';
   static const kAppStoreUrlKey = 'appStoreUrl';
   static const kPlayStoreUrlKey = 'playStoreUrl';
+  static const kShowAllTimeLeaderboardKey = 'showAllTimeLeaderboard';
 
   static const defaultPlayStoreUrl =
       'https://play.google.com/store/apps/details?id=com.winklo.faseencm';
@@ -25,6 +26,7 @@ class RemoteConfigClient {
     kForceUpdateKey: false,
     kAppStoreUrlKey: '',
     kPlayStoreUrlKey: defaultPlayStoreUrl,
+    kShowAllTimeLeaderboardKey: true,
   };
 
   Future<void> initialize({
@@ -61,38 +63,44 @@ class RemoteConfigClient {
   }
 
   String getString(String key) {
+    final fallback =
+        (_defaults[key] as String?) ?? (defaultValues()[key] as String? ?? '');
     if (!_initialized) {
-      return (_defaults[key] as String? ?? '').trim();
+      return fallback.trim();
     }
     try {
       return FirebaseRemoteConfig.instance.getString(key).trim();
     } catch (e) {
       debugPrint('RemoteConfigClient: getString($key) failed — $e');
-      return (_defaults[key] as String? ?? '').trim();
+      return fallback.trim();
     }
   }
 
   bool getBool(String key) {
+    final fallback =
+        (_defaults[key] as bool?) ?? (defaultValues()[key] as bool? ?? false);
     if (!_initialized) {
-      return _defaults[key] as bool? ?? false;
+      return fallback;
     }
     try {
       return FirebaseRemoteConfig.instance.getBool(key);
     } catch (e) {
       debugPrint('RemoteConfigClient: getBool($key) failed — $e');
-      return _defaults[key] as bool? ?? false;
+      return fallback;
     }
   }
 
   int getInt(String key) {
+    final fallback =
+        (_defaults[key] as int?) ?? (defaultValues()[key] as int? ?? 0);
     if (!_initialized) {
-      return _defaults[key] as int? ?? 0;
+      return fallback;
     }
     try {
       return FirebaseRemoteConfig.instance.getInt(key);
     } catch (e) {
       debugPrint('RemoteConfigClient: getInt($key) failed — $e');
-      return _defaults[key] as int? ?? 0;
+      return fallback;
     }
   }
 
@@ -101,4 +109,5 @@ class RemoteConfigClient {
   bool get forceUpdate => getBool(kForceUpdateKey);
   String get playStoreUrl => getString(kPlayStoreUrlKey);
   String get appStoreUrl => getString(kAppStoreUrlKey);
+  bool get showAllTimeLeaderboard => getBool(kShowAllTimeLeaderboardKey);
 }

@@ -8,6 +8,7 @@ import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/centered_message_body.dart';
 import '../../../core/widgets/zip_ui.dart';
+import '../../../data/clients/remote_config_client.dart';
 import '../../../domain/entities/leaderboard_entry.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/game_ids.dart';
@@ -23,9 +24,16 @@ import 'widgets/leaderboard_row.dart';
 import 'widgets/leaderboard_shimmer.dart';
 
 class LeaderboardScreen extends StatelessWidget {
-  const LeaderboardScreen({super.key, this.initialGameId = GameIds.zip});
+  LeaderboardScreen({
+    super.key,
+    this.initialGameId = GameIds.zip,
+    bool? showAllTimeLeaderboard,
+  }) : showAllTimeLeaderboard =
+           showAllTimeLeaderboard ??
+           RemoteConfigClient.instance.showAllTimeLeaderboard;
 
   final String initialGameId;
+  final bool showAllTimeLeaderboard;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +43,9 @@ class LeaderboardScreen extends StatelessWidget {
         authRepository: context.read<AuthRepository>(),
         initialGameId: _resolveLeaderboardGameId(initialGameId),
       ),
-      child: const _RouteGameSync(child: _LeaderboardView()),
+      child: _RouteGameSync(
+        child: _LeaderboardView(showAllTimeLeaderboard: showAllTimeLeaderboard),
+      ),
     );
   }
 }
@@ -109,7 +119,9 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
 }
 
 class _LeaderboardView extends StatefulWidget {
-  const _LeaderboardView();
+  const _LeaderboardView({required this.showAllTimeLeaderboard});
+
+  final bool showAllTimeLeaderboard;
 
   @override
   State<_LeaderboardView> createState() => _LeaderboardViewState();
@@ -128,6 +140,12 @@ class _LeaderboardViewState extends State<_LeaderboardView> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    if (!widget.showAllTimeLeaderboard) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<LeaderboardCubit>().selectPeriod(LeaderboardPeriod.daily);
+      });
+    }
   }
 
   @override
@@ -368,87 +386,91 @@ class _LeaderboardViewState extends State<_LeaderboardView> {
                       },
                     ),
                   ),
-                  SizedBox(height: layout.space(10)),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: layout.space(16)),
-                    child: BlocBuilder<LeaderboardCubit, LeaderboardState>(
-                      buildWhen: (p, n) => p.period != n.period,
-                      builder: (context, state) {
-                        final selectedIndex =
-                            state.period == LeaderboardPeriod.allTime ? 1 : 0;
-                        return _LeaderboardPillTrack(
-                          selectedIndex: selectedIndex,
-                          isSecondary: true,
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: SegmentedButton<LeaderboardPeriod>(
-                              showSelectedIcon: false,
-                              style: ButtonStyle(
-                                backgroundColor: const WidgetStatePropertyAll(
-                                  Colors.transparent,
-                                ),
-                                foregroundColor:
-                                    WidgetStateProperty.resolveWith((states) {
-                                      if (states.contains(
-                                        WidgetState.selected,
-                                      )) {
-                                        return ZipColors.ember;
-                                      }
-                                      return ZipColors.inkSoft;
-                                    }),
-                                elevation: const WidgetStatePropertyAll(0),
-                                shadowColor: const WidgetStatePropertyAll(
-                                  Colors.transparent,
-                                ),
-                                side: const WidgetStatePropertyAll(
-                                  BorderSide.none,
-                                ),
-                                shape: WidgetStatePropertyAll(
-                                  RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                  if (widget.showAllTimeLeaderboard) ...[
+                    SizedBox(height: layout.space(10)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: layout.space(16),
+                      ),
+                      child: BlocBuilder<LeaderboardCubit, LeaderboardState>(
+                        buildWhen: (p, n) => p.period != n.period,
+                        builder: (context, state) {
+                          final selectedIndex =
+                              state.period == LeaderboardPeriod.allTime ? 1 : 0;
+                          return _LeaderboardPillTrack(
+                            selectedIndex: selectedIndex,
+                            isSecondary: true,
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: SegmentedButton<LeaderboardPeriod>(
+                                showSelectedIcon: false,
+                                style: ButtonStyle(
+                                  backgroundColor: const WidgetStatePropertyAll(
+                                    Colors.transparent,
                                   ),
+                                  foregroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                        if (states.contains(
+                                          WidgetState.selected,
+                                        )) {
+                                          return ZipColors.ember;
+                                        }
+                                        return ZipColors.inkSoft;
+                                      }),
+                                  elevation: const WidgetStatePropertyAll(0),
+                                  shadowColor: const WidgetStatePropertyAll(
+                                    Colors.transparent,
+                                  ),
+                                  side: const WidgetStatePropertyAll(
+                                    BorderSide.none,
+                                  ),
+                                  shape: WidgetStatePropertyAll(
+                                    RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  textStyle: WidgetStateProperty.resolveWith((
+                                    states,
+                                  ) {
+                                    return GoogleFonts.lexend(
+                                      fontWeight:
+                                          states.contains(WidgetState.selected)
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      fontSize: 13,
+                                      letterSpacing: 0.2,
+                                    );
+                                  }),
                                 ),
-                                visualDensity: VisualDensity.compact,
-                                textStyle: WidgetStateProperty.resolveWith((
-                                  states,
-                                ) {
-                                  return GoogleFonts.lexend(
-                                    fontWeight:
-                                        states.contains(WidgetState.selected)
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    fontSize: 13,
-                                    letterSpacing: 0.2,
+                                segments: const [
+                                  ButtonSegment(
+                                    value: LeaderboardPeriod.daily,
+                                    icon: Icon(Icons.today_rounded, size: 16),
+                                    label: Text(AppStrings.leaderboardDaily),
+                                  ),
+                                  ButtonSegment(
+                                    value: LeaderboardPeriod.allTime,
+                                    icon: Icon(
+                                      Icons.military_tech_rounded,
+                                      size: 16,
+                                    ),
+                                    label: Text(AppStrings.leaderboardAllTime),
+                                  ),
+                                ],
+                                selected: {state.period},
+                                onSelectionChanged: (values) {
+                                  context.read<LeaderboardCubit>().selectPeriod(
+                                    values.first,
                                   );
-                                }),
+                                },
                               ),
-                              segments: const [
-                                ButtonSegment(
-                                  value: LeaderboardPeriod.daily,
-                                  icon: Icon(Icons.today_rounded, size: 16),
-                                  label: Text(AppStrings.leaderboardDaily),
-                                ),
-                                ButtonSegment(
-                                  value: LeaderboardPeriod.allTime,
-                                  icon: Icon(
-                                    Icons.military_tech_rounded,
-                                    size: 16,
-                                  ),
-                                  label: Text(AppStrings.leaderboardAllTime),
-                                ),
-                              ],
-                              selected: {state.period},
-                              onSelectionChanged: (values) {
-                                context.read<LeaderboardCubit>().selectPeriod(
-                                  values.first,
-                                );
-                              },
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  ),
+                  ],
                   SizedBox(height: layout.space(12)),
                   Expanded(
                     child: _LeaderboardSlideSwitch(

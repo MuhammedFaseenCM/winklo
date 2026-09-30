@@ -29,7 +29,7 @@ platform :android do
   desc "Upload a production AAB to closed testing (alpha)"
   lane :closed do
     upload_to_play_store(
-      **upload_common,
+      **upload_common.merge(skip_upload_changelogs: false),
       track: "alpha",
       aab: aab_path
     )

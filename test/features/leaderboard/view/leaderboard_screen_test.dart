@@ -129,6 +129,7 @@ void main() {
     required AuthCubit authCubit,
     required _MockAuthRepository auth,
     required _MockWatchLeaderboard watch,
+    bool showAllTimeLeaderboard = true,
   }) async {
     addTearDown(authCubit.close);
     final router = GoRouter(
@@ -136,7 +137,8 @@ void main() {
       routes: [
         GoRoute(
           path: '/leaderboard',
-          builder: (_, _) => const LeaderboardScreen(),
+          builder: (_, _) =>
+              LeaderboardScreen(showAllTimeLeaderboard: showAllTimeLeaderboard),
         ),
       ],
     );
@@ -541,5 +543,48 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('leaderboard_sign_in_fab')), findsNothing);
+  });
+
+  testWidgets('hides All-time period when showAllTimeLeaderboard is false', (
+    tester,
+  ) async {
+    final auth = _MockAuthRepository();
+    final watch = _MockWatchLeaderboard();
+    final periods = <LeaderboardPeriod>[];
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+
+    when(() => auth.currentUser).thenReturn(null);
+    when(() => auth.authStateChanges()).thenAnswer((_) => const Stream.empty());
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((invocation) {
+      periods.add(invocation.namedArguments[#period] as LeaderboardPeriod);
+      return boardController.stream;
+    });
+
+    final authCubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: _MockSignInWithGoogle(),
+      signOut: _MockSignOut(),
+    );
+    await pumpLeaderboard(
+      tester,
+      authCubit: authCubit,
+      auth: auth,
+      watch: watch,
+      showAllTimeLeaderboard: false,
+    );
+    await tester.pump();
+
+    expect(find.text(AppStrings.leaderboardAllTime), findsNothing);
+    expect(find.text(AppStrings.leaderboardDaily), findsNothing);
+    expect(periods, isNotEmpty);
+    expect(periods, everyElement(LeaderboardPeriod.daily));
   });
 }
