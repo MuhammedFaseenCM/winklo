@@ -155,6 +155,9 @@ class _ZipScreenState extends State<ZipScreen> {
         ],
         child: BlocBuilder<ZipBloc, ZipState>(
           builder: (context, state) {
+            if (state.status != ZipStatus.initial) {
+              _ensureGame(state);
+            }
             final finished = state.finished;
             final game = _game;
             final isReview = state.status == ZipStatus.locked;
