@@ -151,13 +151,6 @@ class SudokuGame extends FlameGame with TapCallbacks {
     final value = index < view.grid.length ? view.grid[index] : 0;
     final selected = view.selectedIndex == index;
 
-    if (selected) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
-        Paint()..color = ZipColors.sky.withValues(alpha: 0.22),
-      );
-    }
-
     if (view.coachExcludedIndices.contains(index)) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(rect, const Radius.circular(6)),
@@ -177,6 +170,13 @@ class SudokuGame extends FlameGame with TapCallbacks {
           ..color = ZipColors.success
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2.5,
+      );
+    }
+
+    if (selected) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
+        Paint()..color = ZipColors.sky.withValues(alpha: 0.22),
       );
     }
 
