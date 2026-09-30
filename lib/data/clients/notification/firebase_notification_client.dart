@@ -47,6 +47,9 @@ class FirebaseNotificationClient implements NotificationClient {
   /// Status-bar icon (white silhouette drawable name, no `@drawable/`).
   static const String _androidNotificationIcon = 'ic_stat_winklo';
 
+  /// Expanded notification large icon (full-color launcher, no `@mipmap/`).
+  static const String _androidLargeIcon = 'ic_launcher';
+
   @override
   Stream<NotificationMessage> get onForegroundMessage =>
       _foregroundMessageController.stream;
@@ -201,6 +204,7 @@ class FirebaseNotificationClient implements NotificationClient {
         importance: Importance.high,
         priority: Priority.high,
         icon: _androidNotificationIcon,
+        largeIcon: const DrawableResourceAndroidBitmap(_androidLargeIcon),
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,
