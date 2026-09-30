@@ -15,6 +15,7 @@ import 'package:winklo/data/repositories/app_update_repository_impl.dart';
 import 'package:winklo/data/repositories/auth_repository_impl.dart';
 import 'package:winklo/data/repositories/category_repository_impl.dart';
 import 'package:winklo/data/repositories/firebase_analytics_repository_impl.dart';
+import 'package:winklo/data/repositories/hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/issue_report_repository_impl.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
@@ -29,6 +30,7 @@ import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/category_repository.dart';
+import 'package:winklo/domain/repositories/hint_quota_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
@@ -152,6 +154,12 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) =>
           ScoreRepositoryImpl(context.read<SharedPreferences>()),
     ),
+    RepositoryProvider<HintQuotaRepository>(
+      create: (context) => HintQuotaRepositoryImpl(
+        context.read<SharedPreferences>(),
+        playPeriod: DevFlags.playPeriod,
+      ),
+    ),
     RepositoryProvider<StreakRepository>(
       create: (context) =>
           StreakRepositoryImpl(context.read<SharedPreferences>()),
@@ -215,9 +223,7 @@ List<SingleChildWidget> buildRepositoryProviders({
       ),
     ),
     RepositoryProvider<GenerateDailySudoku>(
-      create: (_) => GenerateDailySudoku(
-        period: DevFlags.playPeriod,
-      ),
+      create: (_) => GenerateDailySudoku(period: DevFlags.playPeriod),
     ),
   ];
 }
