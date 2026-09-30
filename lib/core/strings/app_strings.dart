@@ -63,12 +63,24 @@ abstract final class AppStrings {
   static const sudokuTagline = 'Fill every cell with 1–6.';
   static const playTodaysSudoku = "Play today's Sudoku";
   static const sudokuHint = 'Hint';
+  static String sudokuHintWithCount(int n) => 'Hint ($n)';
+  static const sudokuHintUnitRegion = 'region';
+  static const sudokuHintUnitRow = 'row';
+  static const sudokuHintUnitColumn = 'column';
+  static String sudokuHintLastRemaining({
+    required int digit,
+    required String unit,
+  }) =>
+      'This cell has to be $digit due to all other cells in this $unit being blocked by other ${digit}s.';
+  static String sudokuHintNakedSingle({required int digit}) =>
+      'This cell has to be $digit — every other digit conflicts with the row, column, or region.';
+  static const sudokuHintNoSimple = 'No simple hint right now.';
   static const sudokuErase = 'Erase';
   static const sudokuReset = 'Reset';
   static const sudokuNotes = 'Notes';
   static const sudokuHowToPlayTitle = 'How to play';
   static const sudokuHowToPlayBody =
-      'Fill every empty cell with 1–6 so each row, column, and 2×3 box has every digit once. Wrong entries are rejected. Notes and hints are unlimited.';
+      'Fill every empty cell with 1–6 so each row, column, and 2×3 box has every digit once. Wrong entries are rejected. Notes are unlimited; you get 3 hints per day.';
   static const sudokuHowToPlayGotIt = 'Got it';
   static const sudokuClearedTitle = 'Puzzle cleared!';
   static const sudokuDifficultyEasy = 'Easy';

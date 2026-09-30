@@ -144,29 +144,6 @@ void main() {
     expect(erased.notes[1], isEmpty);
   });
 
-  test('applyHint prefers selected empty cell', () {
-    final hint = SudokuRules.applyHint(
-      puzzle: puzzle,
-      grid: grid,
-      notes: notes,
-      selectedIndex: 7,
-    );
-    expect(hint, isNotNull);
-    expect(hint!.index, 7);
-    expect(hint.grid[7], puzzle.solution[7]);
-  });
-
-  test('applyHint falls back to first empty row-major', () {
-    final hint = SudokuRules.applyHint(
-      puzzle: puzzle,
-      grid: grid,
-      notes: notes,
-    );
-    expect(hint, isNotNull);
-    expect(hint!.index, 1);
-    expect(hint.grid[1], 2);
-  });
-
   test('isSolved is true only when grid matches solution', () {
     expect(SudokuRules.isSolved(grid, puzzle.solution), isFalse);
     final filled = List<int>.from(puzzle.solution);

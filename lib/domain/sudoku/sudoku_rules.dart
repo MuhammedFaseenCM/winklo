@@ -14,18 +14,6 @@ class SudokuPlaceResult {
   final int? rejectIndex;
 }
 
-class SudokuHintResult {
-  const SudokuHintResult({
-    required this.grid,
-    required this.notes,
-    required this.index,
-  });
-
-  final List<int> grid;
-  final List<Set<int>> notes;
-  final int index;
-}
-
 abstract final class SudokuRules {
   SudokuRules._();
 
@@ -119,26 +107,6 @@ abstract final class SudokuRules {
     final nextNotes = notes.map(Set<int>.from).toList();
     nextNotes[index] = <int>{};
     return (grid: nextGrid, notes: nextNotes);
-  }
-
-  static SudokuHintResult? applyHint({
-    required SudokuPuzzle puzzle,
-    required List<int> grid,
-    required List<Set<int>> notes,
-    int? selectedIndex,
-  }) {
-    final index = _hintIndex(
-      puzzle: puzzle,
-      grid: grid,
-      selectedIndex: selectedIndex,
-    );
-    if (index == null) return null;
-
-    final nextGrid = List<int>.from(grid);
-    nextGrid[index] = puzzle.solution[index];
-    final nextNotes = notes.map(Set<int>.from).toList();
-    nextNotes[index] = <int>{};
-    return SudokuHintResult(grid: nextGrid, notes: nextNotes, index: index);
   }
 
   static bool isSolved(List<int> grid, List<int> solution) {
@@ -300,23 +268,5 @@ abstract final class SudokuRules {
       }
     }
     return true;
-  }
-
-  static int? _hintIndex({
-    required SudokuPuzzle puzzle,
-    required List<int> grid,
-    int? selectedIndex,
-  }) {
-    if (selectedIndex != null &&
-        selectedIndex >= 0 &&
-        selectedIndex < grid.length &&
-        !isGiven(puzzle, selectedIndex) &&
-        grid[selectedIndex] == 0) {
-      return selectedIndex;
-    }
-    for (var i = 0; i < grid.length; i++) {
-      if (!isGiven(puzzle, i) && grid[i] == 0) return i;
-    }
-    return null;
   }
 }
