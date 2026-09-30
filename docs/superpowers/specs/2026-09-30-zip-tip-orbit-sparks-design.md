@@ -1,7 +1,7 @@
 # Zip tip orbit sparks — Design
 
 **Date:** 2026-09-30  
-**Status:** Approved for planning  
+**Status:** Implemented  
 **Scope:** Soft ember flecks that orbit the live Zip stroke tip while the user is drawing; stop immediately on release.
 
 ## Goal
