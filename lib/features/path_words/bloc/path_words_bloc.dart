@@ -6,6 +6,7 @@ import '../../../domain/play_period.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/path_words/path_words_scoring.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
@@ -26,6 +27,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     required this.getBestPoints,
     required this.getBestTimeSeconds,
     required this.analytics,
+    required this.hintQuota,
     DateTime Function()? now,
     Future<void> Function(Duration duration)? wait,
     this.celebrationDuration = const Duration(seconds: 2),
@@ -49,6 +51,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
   final AnalyticsRepository analytics;
+  final HintQuotaRepository hintQuota;
   final Duration celebrationDuration;
   final Duration playPeriod;
   final DateTime Function() _now;
@@ -69,7 +72,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         activePath: const [],
         placedPaths: const [],
         completedTargetIds: const {},
-        hintsRemaining: 3,
+        hintsRemaining: hintQuota.remaining(GameIds.pathWords),
         hintRevealLength: 0,
         startedAt: null,
         hintFlashCell: null,
@@ -116,7 +119,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           status: PathWordsStatus.ready,
           puzzle: puzzle,
           startedAt: _now(),
-          hintsRemaining: 3,
+          hintsRemaining: hintQuota.remaining(GameIds.pathWords),
           hintRevealLength: 0,
           activePath: const [],
           placedPaths: const [],
@@ -411,14 +414,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     );
   }
 
-  void _onHint(PathWordsHint event, Emitter<PathWordsState> emit) {
+  Future<void> _onHint(PathWordsHint event, Emitter<PathWordsState> emit) async {
     if (state.finished) return;
     final puzzle = state.puzzle;
     if (puzzle == null) return;
     if (state.hintsRemaining <= 0) return;
 
     if (PathWordsRules.hasIncorrectStroke(state.placedPaths)) {
-      final remaining = state.hintsRemaining - 1;
+      final remaining = await hintQuota.tryConsume(GameIds.pathWords);
       emit(
         state.copyWith(
           placedPaths: PathWordsRules.withoutIncorrect(state.placedPaths),
@@ -427,7 +430,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           ruleTip: null,
         ),
       );
-      analytics.logHintUsed(
+      await analytics.logHintUsed(
         gameId: GameIds.pathWords,
         hintsRemaining: remaining,
       );
@@ -444,7 +447,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       return;
     }
 
-    final remaining = state.hintsRemaining - 1;
+    final remaining = await hintQuota.tryConsume(GameIds.pathWords);
     emit(
       state.copyWith(
         hintsRemaining: remaining,
@@ -452,7 +455,10 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         hintRevealLength: path.length,
       ),
     );
-    analytics.logHintUsed(gameId: GameIds.pathWords, hintsRemaining: remaining);
+    await analytics.logHintUsed(
+      gameId: GameIds.pathWords,
+      hintsRemaining: remaining,
+    );
   }
 
   void _onReset(PathWordsReset event, Emitter<PathWordsState> emit) {
@@ -469,7 +475,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         activePath: const [],
         placedPaths: const [],
         completedTargetIds: const {},
-        hintsRemaining: 3,
+        hintsRemaining: hintQuota.remaining(GameIds.pathWords),
         hintRevealLength: 0,
         hintFlashCell: null,
         errorMessage: null,

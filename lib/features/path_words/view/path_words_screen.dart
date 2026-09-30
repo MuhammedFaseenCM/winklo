@@ -14,6 +14,7 @@ import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
@@ -162,6 +163,7 @@ class _PathWordsScreenState extends State<PathWordsScreen> {
           getBestPoints: context.read<GetBestPoints>(),
           getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
           analytics: context.read<AnalyticsRepository>(),
+          hintQuota: context.read<HintQuotaRepository>(),
           playPeriod: DevFlags.playPeriod,
         );
 

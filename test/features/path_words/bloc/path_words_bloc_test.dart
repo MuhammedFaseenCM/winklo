@@ -5,6 +5,7 @@ import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/entities/path_words_puzzle.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
+import 'package:winklo/domain/repositories/hint_quota_repository.dart';
 import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
@@ -32,6 +33,22 @@ class _MockGetBestPoints extends Mock implements GetBestPoints {}
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 
 class _MockAnalyticsRepository extends Mock implements AnalyticsRepository {}
+
+class _FakeHintQuota implements HintQuotaRepository {
+  _FakeHintQuota(this._remaining);
+
+  int _remaining;
+
+  @override
+  int remaining(String gameId) => _remaining;
+
+  @override
+  Future<int> tryConsume(String gameId) async {
+    if (_remaining <= 0) return 0;
+    _remaining--;
+    return _remaining;
+  }
+}
 
 class _FakeClock {
   _FakeClock(this._times);
@@ -98,7 +115,29 @@ void main() {
   late _MockGetBestPoints getBestPoints;
   late _MockGetBestTimeSeconds getBestTimeSeconds;
   late _MockAnalyticsRepository analytics;
+  late _FakeHintQuota hintQuota;
   late List<Duration> waited;
+
+  PathWordsBloc buildBloc({
+    _FakeHintQuota? quota,
+    DateTime Function()? now,
+    Future<void> Function(Duration duration)? wait,
+    Duration celebrationDuration = const Duration(seconds: 2),
+  }) {
+    return PathWordsBloc(
+      generateDailyPathWords: generateDaily,
+      submitScore: submitScore,
+      submitLeaderboardTime: submitLeaderboardTime,
+      recordDailyClear: recordDailyClear,
+      getBestPoints: getBestPoints,
+      getBestTimeSeconds: getBestTimeSeconds,
+      analytics: analytics,
+      hintQuota: quota ?? hintQuota,
+      now: now ?? (() => DateTime(2026, 9, 17, 0, 0, 0)),
+      wait: wait,
+      celebrationDuration: celebrationDuration,
+    );
+  }
 
   setUp(() {
     generateDaily = _MockGenerateDailyPathWords();
@@ -108,6 +147,7 @@ void main() {
     getBestPoints = _MockGetBestPoints();
     getBestTimeSeconds = _MockGetBestTimeSeconds();
     analytics = _MockAnalyticsRepository();
+    hintQuota = _FakeHintQuota(3);
     waited = <Duration>[];
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
@@ -154,6 +194,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -190,6 +231,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -250,6 +292,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: clock.call,
         wait: (duration) async {
           waited.add(duration);
@@ -376,6 +419,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
         wait: (_) async {},
       );
@@ -440,6 +484,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -491,6 +536,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -542,6 +588,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -602,6 +649,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -653,6 +701,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -692,6 +741,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -748,6 +798,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -821,6 +872,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -883,6 +935,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -956,6 +1009,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -1009,6 +1063,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -1069,6 +1124,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -1109,6 +1165,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -1155,6 +1212,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
@@ -1209,6 +1267,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => fixedNow,
       );
     },
@@ -1263,6 +1322,30 @@ void main() {
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
+    'reset after two hint consumes leaves remaining at 1',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      return buildBloc(quota: _FakeHintQuota(3));
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.hint());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.hint());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.reset());
+    },
+    verify: (bloc) {
+      expect(bloc.state.hintsRemaining, 1);
+      expect(bloc.state.hintRevealLength, 0);
+      expect(bloc.state.completedTargetIds, isEmpty);
+    },
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
     'reset after win is a no-op',
     build: () {
       when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
@@ -1300,6 +1383,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: clock.call,
         wait: (_) async {},
       );
@@ -1402,6 +1486,7 @@ void main() {
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
         analytics: analytics,
+        hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
       );
     },
