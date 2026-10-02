@@ -1,14 +1,9 @@
+import 'app_calendar.dart';
 import 'entities/game_streak.dart';
 
 /// Pure calendar/streak math. Date ids are local `YYYYMMDD` strings.
 abstract final class StreakCalculator {
-  static String dateId(DateTime date) {
-    final local = DateTime(date.year, date.month, date.day);
-    final y = local.year.toString().padLeft(4, '0');
-    final m = local.month.toString().padLeft(2, '0');
-    final d = local.day.toString().padLeft(2, '0');
-    return '$y$m$d';
-  }
+  static String dateId(DateTime date) => AppCalendar.dateIdCompact(date);
 
   static DateTime parseDateId(String id) {
     final y = int.parse(id.substring(0, 4));

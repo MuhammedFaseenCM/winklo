@@ -46,6 +46,8 @@ Content collections remain **public read / no client writes**. Leaderboard and u
 3. Seed content collections (same shape as assets):
 
 ### `zip_levels/{id}` (e.g. `daily_YYYYMMDD` for daily puzzle overrides)
+
+Doc ids use the **player’s local calendar** date (`YYYYMMDD`). Publish today and the next 1–2 days ahead so other timezones pick up the curated board at their midnight.
 ```json
 {
   "size": 6,
@@ -253,7 +255,7 @@ leaderboards_debug/{gameId}/all_time/{uid}    # debug builds (`kDebugMode`)
 leaderboards_debug/{gameId}/daily/{yyyy-MM-dd}/entries/{uid}
 ```
 
-`gameId` is only `zip` or `path_words`. Daily day keys are **UTC** `yyyy-MM-dd`. Ranking: ascending `timeSeconds`, then ascending `updatedAt` (earlier submit wins ties). Client shows top 50. Debug builds (`flutter run`) read and write **only** `leaderboards_debug`; release and profile builds use `leaderboards`.
+`gameId` is only `zip` or `path_words`. Daily day keys are **device-local** `yyyy-MM-dd` (the player's phone calendar). Ranking: ascending `timeSeconds`, then ascending `updatedAt` (earlier submit wins ties). Client shows top 50. Debug builds (`flutter run`) read and write **only** `leaderboards_debug`; release and profile builds use `leaderboards`.
 
 `avatarId` is an optional preset id (`preset_01` … `preset_06`) or null when the player uses a photo. `photoUrl` is the Google photo or a public R2 URL (`*.r2.dev`) after gallery upload. Display priority: preset asset, then `photoUrl`, then the first letter of `displayName`.
 
@@ -263,7 +265,7 @@ Profile edits patch the signed-in user’s Zip and Path Words **all-time** docs 
 
 Debug / `flutter run` builds use Firestore root `leaderboards_debug` (same shape as `leaderboards`). Release and profile builds use `leaderboards`.
 
-Seed 28 fake players (`demo_001` …) into **debug** Zip + Path Words boards (Daily today UTC + All-time):
+Seed 28 fake players (`demo_001` …) into **debug** Zip + Path Words boards (Daily today local + All-time):
 
 ```bash
 # requires `firebase login` (project brain-zip-app)

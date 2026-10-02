@@ -19,12 +19,9 @@ class _MockLeaderboardRepository extends Mock
 void main() {
   const user = AppUser(uid: 'u1', displayName: 'Ada', photoUrl: 'https://x');
 
-  group('utcLeaderboardDayId', () {
-    test('formats UTC calendar day as yyyy-MM-dd', () {
-      expect(
-        utcLeaderboardDayId(DateTime.utc(2026, 9, 24, 23, 30)),
-        '2026-09-24',
-      );
+  group('leaderboardDayId', () {
+    test('formats local calendar day as yyyy-MM-dd', () {
+      expect(leaderboardDayId(DateTime(2026, 9, 24, 23, 30)), '2026-09-24');
     });
   });
 

@@ -1,4 +1,5 @@
 import { generateNounCandidates } from './ai';
+import { prefetchDateIds } from './dates';
 import { hasEnoughNouns, normalizeNouns, MIN_NOUN_COUNT } from './nouns';
 
 export interface Env {
@@ -22,22 +23,6 @@ function kvKey(dateId: string): string {
 
 function isValidDateId(dateId: string): boolean {
   return /^\d{8}$/.test(dateId);
-}
-
-function utcDateId(d = new Date()): string {
-  const y = d.getUTCFullYear().toString().padStart(4, '0');
-  const m = (d.getUTCMonth() + 1).toString().padStart(2, '0');
-  const day = d.getUTCDate().toString().padStart(2, '0');
-  return `${y}${m}${day}`;
-}
-
-function addUtcDays(dateId: string, days: number): string {
-  const y = Number(dateId.slice(0, 4));
-  const m = Number(dateId.slice(4, 6));
-  const d = Number(dateId.slice(6, 8));
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + days);
-  return utcDateId(dt);
 }
 
 function errorMessage(err: unknown): string {
@@ -126,13 +111,9 @@ export default {
     env: Env,
     ctx: ExecutionContext,
   ): Promise<void> {
-    const today = utcDateId();
-    const tomorrow = addUtcDays(today, 1);
+    const ids = prefetchDateIds();
     ctx.waitUntil(
-      Promise.all([
-        getOrCreatePool(env, today).catch(() => null),
-        getOrCreatePool(env, tomorrow).catch(() => null),
-      ]),
+      Promise.all(ids.map((id) => getOrCreatePool(env, id).catch(() => null))),
     );
   },
 };

@@ -25,6 +25,16 @@ void main() {
       expect(StreakCalculator.dateId(DateTime(2026, 9, 15)), '20260915');
       expect(StreakCalculator.dateId(DateTime(2026, 1, 5)), '20260105');
     });
+
+    test('UTC instant uses local calendar components', () {
+      final utc = DateTime.utc(2026, 9, 15, 22, 0);
+      final local = utc.toLocal();
+      final expected =
+          '${local.year.toString().padLeft(4, '0')}'
+          '${local.month.toString().padLeft(2, '0')}'
+          '${local.day.toString().padLeft(2, '0')}';
+      expect(StreakCalculator.dateId(utc), expected);
+    });
   });
 
   group('applyDailyClear', () {

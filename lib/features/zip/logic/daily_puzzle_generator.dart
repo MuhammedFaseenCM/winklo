@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../../domain/app_calendar.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/play_period.dart';
 
@@ -30,7 +31,7 @@ class DailyPuzzleGenerator {
       'Nov',
       'Dec',
     ];
-    final local = DateTime(date.year, date.month, date.day);
+    final local = AppCalendar.calendarDay(date);
     return '${months[local.month - 1]} ${local.day}, ${local.year}';
   }
 

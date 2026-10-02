@@ -121,7 +121,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       case LeaderboardPeriod.allTime:
         return gameRef.collection('all_time');
       case LeaderboardPeriod.daily:
-        final id = dayId ?? utcLeaderboardDayId();
+        final id = dayId ?? leaderboardDayId();
         return gameRef.collection('daily').doc(id).collection('entries');
     }
   }
@@ -190,7 +190,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       authPhotoUrl: user.photoURL,
       profile: profile,
     );
-    final dayId = utcLeaderboardDayId();
+    final dayId = leaderboardDayId();
 
     final root = leaderboardRootCollection();
     final allTimeRef = db

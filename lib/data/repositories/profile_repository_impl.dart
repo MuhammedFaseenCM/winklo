@@ -211,7 +211,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     AppUser user,
   ) async {
     try {
-      final dayId = utcLeaderboardDayId();
+      final dayId = leaderboardDayId();
       final refs = <DocumentReference<Map<String, dynamic>>>[];
       final root = leaderboardRootCollection();
       for (final gameId in [GameIds.zip, GameIds.pathWords]) {

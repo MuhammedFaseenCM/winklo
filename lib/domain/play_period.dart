@@ -1,3 +1,5 @@
+import 'app_calendar.dart';
+
 /// How often a playable puzzle rotates. Streaks always stay on calendar days.
 abstract final class PlayPeriod {
   static const daily = Duration(days: 1);
@@ -6,10 +8,17 @@ abstract final class PlayPeriod {
   static bool isSubDaily(Duration period) => period < const Duration(days: 1);
 
   static DateTime bucket(DateTime date, Duration period) {
+    final local = AppCalendar.localWallClock(date);
     if (isSubDaily(period)) {
-      return DateTime(date.year, date.month, date.day, date.hour, date.minute);
+      return DateTime(
+        local.year,
+        local.month,
+        local.day,
+        local.hour,
+        local.minute,
+      );
     }
-    return DateTime(date.year, date.month, date.day);
+    return DateTime(local.year, local.month, local.day);
   }
 
   static String id(DateTime date, Duration period) {
