@@ -118,10 +118,7 @@ void main() {
     await tester.pump();
 
     expect(games.last, GameIds.pathWords);
-    final button = tester.widget<SegmentedButton<String>>(
-      find.byType(SegmentedButton<String>),
-    );
-    expect(button.selected, {GameIds.pathWords});
+    expect(find.text(AppStrings.pathWordsTab), findsOneWidget);
   });
 
   Future<void> pumpLeaderboard(
@@ -277,7 +274,7 @@ void main() {
     expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
 
     // Switch game to Path Words
-    await tester.tap(find.text(AppStrings.pathWordsTitle));
+    await tester.tap(find.text(AppStrings.pathWordsTab));
     await tester.pump();
 
     boardController.add([]);

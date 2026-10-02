@@ -1,12 +1,19 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../domain/entities/cell.dart';
+import '../../../domain/entities/in_progress_run.dart';
+import '../../../domain/entities/path_words_puzzle.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
+import '../../../domain/play_run_clock.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/path_words/path_words_scoring.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
+import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
@@ -28,6 +35,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     required this.getBestTimeSeconds,
     required this.analytics,
     required this.hintQuota,
+    required this.inProgressRuns,
     DateTime Function()? now,
     Future<void> Function(Duration duration)? wait,
     this.celebrationDuration = const Duration(seconds: 2),
@@ -42,6 +50,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     on<PathWordsUndo>(_onUndo);
     on<PathWordsHint>(_onHint);
     on<PathWordsReset>(_onReset);
+    on<PathWordsPauseRun>(_onPauseRun);
+    on<PathWordsResumeRun>(_onResumeRun);
   }
 
   final GenerateDailyPathWords generateDailyPathWords;
@@ -52,10 +62,13 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   final GetBestTimeSeconds getBestTimeSeconds;
   final AnalyticsRepository analytics;
   final HintQuotaRepository hintQuota;
+  final InProgressRunRepository inProgressRuns;
   final Duration celebrationDuration;
   final Duration playPeriod;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
+  String? _playId;
+  PlayRunClock? _clock;
 
   Future<void> _onStarted(
     PathWordsStarted event,
@@ -63,6 +76,9 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   ) async {
     final seed = event.date ?? _now();
     final day = DateTime(seed.year, seed.month, seed.day);
+    final playId = PlayPeriod.id(seed, playPeriod);
+    _playId = playId;
+    _clock = null;
 
     emit(
       state.copyWith(
@@ -74,7 +90,9 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         completedTargetIds: const {},
         hintsRemaining: hintQuota.remaining(GameIds.pathWords),
         hintRevealLength: 0,
-        startedAt: null,
+        usedHintsThisRun: false,
+        elapsedMs: 0,
+        resumedAt: null,
         hintFlashCell: null,
         errorMessage: null,
         finished: false,
@@ -85,7 +103,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       ),
     );
 
-    final modeKey = 'path_words_${PlayPeriod.id(seed, playPeriod)}';
+    final modeKey = 'path_words_$playId';
     final alreadyCleared =
         getBestPoints(modeKey) > 0 || getBestTimeSeconds(modeKey) != null;
 
@@ -96,6 +114,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       if (emit.isDone) return;
 
       if (alreadyCleared) {
+        await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
         emit(
           state.copyWith(
             status: PathWordsStatus.locked,
@@ -114,26 +133,65 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         return;
       }
 
-      emit(
-        state.copyWith(
-          status: PathWordsStatus.ready,
-          puzzle: puzzle,
-          startedAt: _now(),
-          hintsRemaining: hintQuota.remaining(GameIds.pathWords),
-          hintRevealLength: 0,
-          activePath: const [],
-          placedPaths: const [],
-          completedTargetIds: const {},
-          hintFlashCell: null,
-          errorMessage: null,
-          ruleTip: null,
-          finished: false,
-          points: null,
-          timeSeconds: null,
-          improved: null,
-          resultsExtra: null,
-        ),
+      final draft = await inProgressRuns.load(
+        gameId: GameIds.pathWords,
+        playId: playId,
       );
+      if (emit.isDone) return;
+
+      final now = _now();
+      if (draft != null) {
+        final restored = _restoreFromDraft(draft);
+        _clock = PlayRunClock.restore(
+          elapsedMs: draft.elapsedMs,
+        ).resume(at: now);
+        emit(
+          state.copyWith(
+            status: PathWordsStatus.ready,
+            puzzle: puzzle,
+            elapsedMs: draft.elapsedMs,
+            resumedAt: now,
+            hintsRemaining: hintQuota.remaining(GameIds.pathWords),
+            hintRevealLength: restored.hintRevealLength,
+            usedHintsThisRun: draft.usedHintsThisRun,
+            activePath: restored.activePath,
+            placedPaths: restored.placedPaths,
+            completedTargetIds: restored.completedTargetIds,
+            hintFlashCell: null,
+            errorMessage: null,
+            ruleTip: null,
+            finished: false,
+            points: null,
+            timeSeconds: null,
+            improved: null,
+            resultsExtra: null,
+          ),
+        );
+      } else {
+        _clock = PlayRunClock.start(at: now);
+        emit(
+          state.copyWith(
+            status: PathWordsStatus.ready,
+            puzzle: puzzle,
+            elapsedMs: 0,
+            resumedAt: now,
+            hintsRemaining: hintQuota.remaining(GameIds.pathWords),
+            hintRevealLength: 0,
+            usedHintsThisRun: false,
+            activePath: const [],
+            placedPaths: const [],
+            completedTargetIds: const {},
+            hintFlashCell: null,
+            errorMessage: null,
+            ruleTip: null,
+            finished: false,
+            points: null,
+            timeSeconds: null,
+            improved: null,
+            resultsExtra: null,
+          ),
+        );
+      }
       await analytics.logGameStarted(gameId: GameIds.pathWords);
     } catch (e) {
       if (emit.isDone) return;
@@ -375,6 +433,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
 
     if (updatedCompleted.length >= puzzle.targets.length) {
       await _finish(emit);
+    } else {
+      await _persistDraft();
     }
   }
 
@@ -399,6 +459,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           ruleTip: null,
         ),
       );
+      unawaited(_persistDraft());
       return;
     }
 
@@ -412,9 +473,13 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         hintFlashCell: null,
       ),
     );
+    unawaited(_persistDraft());
   }
 
-  Future<void> _onHint(PathWordsHint event, Emitter<PathWordsState> emit) async {
+  Future<void> _onHint(
+    PathWordsHint event,
+    Emitter<PathWordsState> emit,
+  ) async {
     if (state.finished) return;
     final puzzle = state.puzzle;
     if (puzzle == null) return;
@@ -428,12 +493,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           hintsRemaining: remaining,
           hintFlashCell: null,
           ruleTip: null,
+          usedHintsThisRun: true,
         ),
       );
       await analytics.logHintUsed(
         gameId: GameIds.pathWords,
         hintsRemaining: remaining,
       );
+      await _persistDraft();
       return;
     }
 
@@ -453,12 +520,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         hintsRemaining: remaining,
         hintFlashCell: path.last,
         hintRevealLength: path.length,
+        usedHintsThisRun: true,
       ),
     );
     await analytics.logHintUsed(
       gameId: GameIds.pathWords,
       hintsRemaining: remaining,
     );
+    await _persistDraft();
   }
 
   void _onReset(PathWordsReset event, Emitter<PathWordsState> emit) {
@@ -480,6 +549,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         hintFlashCell: null,
         errorMessage: null,
         ruleTip: null,
+        usedHintsThisRun: false,
         finished: false,
         points: null,
         timeSeconds: null,
@@ -487,7 +557,40 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         resultsExtra: null,
       ),
     );
+    unawaited(_persistDraft());
     analytics.logGameReset(gameId: GameIds.pathWords);
+  }
+
+  Future<void> _onPauseRun(
+    PathWordsPauseRun event,
+    Emitter<PathWordsState> emit,
+  ) async {
+    if (state.finished) return;
+    if (state.status != PathWordsStatus.ready &&
+        state.status != PathWordsStatus.playing) {
+      return;
+    }
+    final clock = _clock;
+    if (clock == null || !clock.isRunning) return;
+    final now = _now();
+    final paused = clock.pause(at: now);
+    _clock = paused;
+    emit(state.copyWith(elapsedMs: paused.elapsedMs, resumedAt: null));
+    await _persistDraft();
+  }
+
+  void _onResumeRun(PathWordsResumeRun event, Emitter<PathWordsState> emit) {
+    if (state.finished) return;
+    if (state.status != PathWordsStatus.ready &&
+        state.status != PathWordsStatus.playing) {
+      return;
+    }
+    final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
+    if (clock.isRunning) return;
+    final now = _now();
+    final resumed = clock.resume(at: now);
+    _clock = resumed;
+    emit(state.copyWith(elapsedMs: resumed.elapsedMs, resumedAt: now));
   }
 
   Future<void> _finish(Emitter<PathWordsState> emit) async {
@@ -497,11 +600,12 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         state.status == PathWordsStatus.navigating) {
       return;
     }
-    final startedAt = state.startedAt;
-    if (startedAt == null) return;
-
-    final elapsed = _now().difference(startedAt).inSeconds;
+    final now = _now();
+    final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
+    final elapsed = clock.displayedSeconds(at: now);
+    _clock = clock.pause(at: now);
     final points = PathWordsScoring.pointsForElapsed(elapsed);
+    final playId = _playId ?? PlayPeriod.id(state.day, playPeriod);
 
     emit(
       state.copyWith(
@@ -509,9 +613,13 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         status: PathWordsStatus.celebrating,
         points: points,
         timeSeconds: elapsed,
+        elapsedMs: _clock!.elapsedMs,
+        resumedAt: null,
         hintFlashCell: null,
       ),
     );
+
+    await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
 
     await _wait(celebrationDuration);
     if (emit.isDone) return;
@@ -519,12 +627,6 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     emit(state.copyWith(status: PathWordsStatus.submitting));
 
     final dateId = StreakCalculator.dateId(state.day);
-    final playId = PlayPeriod.id(
-      PlayPeriod.isSubDaily(playPeriod)
-          ? (state.startedAt ?? state.day)
-          : state.day,
-      playPeriod,
-    );
     final improved = await submitScore(
       modeKey: 'path_words_$playId',
       points: points,
@@ -536,6 +638,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         await submitLeaderboardTime(
           gameId: GameIds.pathWords,
           timeSeconds: elapsed,
+          usedHints: state.usedHintsThisRun,
+          hadMistakes: false,
         );
       } catch (_) {
         // Best-effort remote sync; local score already saved.
@@ -571,8 +675,86 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           currentStreak: streak.current,
           longestStreak: streak.longest,
           gameId: GameIds.pathWords,
+          usedHints: state.usedHintsThisRun,
+          hadMistakes: false,
         ),
       ),
+    );
+  }
+
+  Future<void> _persistDraft() async {
+    final playId = _playId;
+    if (playId == null) return;
+    if (state.finished) return;
+    if (state.status != PathWordsStatus.ready &&
+        state.status != PathWordsStatus.playing) {
+      return;
+    }
+    final elapsedMs =
+        (_clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs))
+            .displayedMs(at: _now());
+    await inProgressRuns.save(
+      InProgressRun(
+        gameId: GameIds.pathWords,
+        playId: playId,
+        elapsedMs: elapsedMs,
+        usedHintsThisRun: state.usedHintsThisRun,
+        board: {
+          'activePath': [for (final cell in state.activePath) cell.toList()],
+          'placedPaths': [
+            for (final stroke in state.placedPaths)
+              {
+                'cells': [for (final cell in stroke.cells) cell.toList()],
+                'colorIndex': stroke.colorIndex,
+                if (stroke.targetId != null) 'targetId': stroke.targetId,
+              },
+          ],
+          'completedTargetIds': state.completedTargetIds.toList(),
+          'hintRevealLength': state.hintRevealLength,
+        },
+      ),
+    );
+  }
+
+  ({
+    List<Cell> activePath,
+    List<PathWordsStroke> placedPaths,
+    Set<String> completedTargetIds,
+    int hintRevealLength,
+  })
+  _restoreFromDraft(InProgressRun draft) {
+    final board = draft.board;
+    final activeRaw = board['activePath'];
+    final placedRaw = board['placedPaths'];
+    final completedRaw = board['completedTargetIds'];
+    final activePath = <Cell>[
+      if (activeRaw is List)
+        for (final entry in activeRaw) Cell.fromJson(entry),
+    ];
+    final placedPaths = <PathWordsStroke>[
+      if (placedRaw is List)
+        for (final entry in placedRaw)
+          if (entry is Map)
+            PathWordsStroke(
+              cells: [
+                for (final cell in (entry['cells'] as List? ?? const []))
+                  Cell.fromJson(cell),
+              ],
+              colorIndex: (entry['colorIndex'] as num?)?.toInt() ?? 0,
+              targetId: entry['targetId'] as String?,
+            ),
+    ];
+    final completedTargetIds = <String>{
+      if (completedRaw is List)
+        for (final id in completedRaw)
+          if (id is String) id,
+    };
+    final hintRevealLength = (board['hintRevealLength'] as num?)?.toInt() ?? 0;
+    return (
+      activePath: activePath,
+      placedPaths: placedPaths,
+      completedTargetIds: completedTargetIds,
+      hintRevealLength: hintRevealLength,
     );
   }
 }

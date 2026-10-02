@@ -22,10 +22,16 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
            currentUid: authRepository.currentUser?.uid,
          ),
        ) {
-    _authSub = _authRepository.authStateChanges().listen((user) {
-      if (isClosed) return;
-      emit(state.copyWith(currentUid: user?.uid));
-    });
+    _authSub = _authRepository.authStateChanges().listen(
+      (user) {
+        if (isClosed) return;
+        emit(state.copyWith(currentUid: user?.uid));
+      },
+      onError: (Object error, StackTrace stack) {
+        if (isClosed) return;
+        // Ignore — usually permission-denied from users/{uid} during sign-out.
+      },
+    );
     _resubscribe();
   }
 

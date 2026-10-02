@@ -7,11 +7,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/dev_flags.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
+import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
@@ -36,7 +38,7 @@ class ZipScreen extends StatefulWidget {
   State<ZipScreen> createState() => _ZipScreenState();
 }
 
-class _ZipScreenState extends State<ZipScreen> {
+class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
   late final ZipBloc _bloc;
   late final HintQuotaRepository _hintQuota;
   ZipGame? _game;
@@ -64,12 +66,14 @@ class _ZipScreenState extends State<ZipScreen> {
     _game = ZipGame(
       level: state.level,
       initialHintsRemaining: remaining,
+      initialPath: state.path,
       readOnly: state.status == ZipStatus.locked || state.finished,
-      onWin: (points, elapsedSeconds) {
+      onWin: () {
         if (mounted) setState(() => _ruleTip = null);
-        _bloc.add(
-          ZipEvent.completed(points: points, timeSeconds: elapsedSeconds),
-        );
+        _bloc.add(const ZipEvent.completed());
+      },
+      onPathChanged: (path) {
+        _bloc.add(ZipEvent.pathChanged(path: path));
       },
       onStatsChanged: (_, _) {
         if (mounted) setState(() {});
@@ -96,6 +100,7 @@ class _ZipScreenState extends State<ZipScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _hintQuota = context.read<HintQuotaRepository>();
     _bloc = ZipBloc(
       submitScore: context.read<SubmitScore>(),
@@ -104,6 +109,7 @@ class _ZipScreenState extends State<ZipScreen> {
       getBestPoints: context.read<GetBestPoints>(),
       getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
       analytics: context.read<AnalyticsRepository>(),
+      inProgressRuns: context.read<InProgressRunRepository>(),
       zipLevelRepository: context.read<ZipLevelRepository>(),
       now: widget.date,
       ignoreDailyLock: DevFlags.zipOnlyTesting,
@@ -115,7 +121,22 @@ class _ZipScreenState extends State<ZipScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _bloc.add(const ZipEvent.resumeRun());
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _bloc.add(const ZipEvent.pauseRun());
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _bloc.add(const ZipEvent.pauseRun());
     final game = _game;
     _game = null;
     game?.pauseEngine();
@@ -185,6 +206,11 @@ class _ZipScreenState extends State<ZipScreen> {
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                             ),
+                            if (canPlay)
+                              DevRunTimerLabel(
+                                elapsedMs: state.elapsedMs,
+                                resumedAt: state.resumedAt,
+                              ),
                             if (!isReview)
                               IconButton(
                                 tooltip: AppStrings.zipClear,

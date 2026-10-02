@@ -53,7 +53,7 @@ void main() {
       day: day,
       puzzle: puzzle,
       status: PathWordsStatus.ready,
-      startedAt: day,
+      resumedAt: day,
     );
 
     final bloc = _MockPathWordsBloc();

@@ -8,7 +8,7 @@ class SudokuBoardView {
     required this.notes,
     required this.selectedIndex,
     required this.hintFlashIndex,
-    required this.rejectFlashIndex,
+    required this.errorIndices,
     required this.unitFlashIndices,
     required this.inputEnabled,
     required this.celebrate,
@@ -25,7 +25,7 @@ class SudokuBoardView {
   final List<Set<int>> notes;
   final int? selectedIndex;
   final int? hintFlashIndex;
-  final int? rejectFlashIndex;
+  final Set<int> errorIndices;
   final Set<int> unitFlashIndices;
   final bool inputEnabled;
   final bool celebrate;

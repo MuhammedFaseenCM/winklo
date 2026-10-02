@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
+import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/get_best_points.dart';
@@ -25,6 +30,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     required this.getBestPoints,
     required this.getBestTimeSeconds,
     required this.analytics,
+    required this.inProgressRuns,
     ZipLevelRepository? zipLevelRepository,
     Future<ZipLevel> Function(DateTime date, {Duration period})?
     fetchDailyLevel,
@@ -32,6 +38,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     this.playPeriod = PlayPeriod.daily,
     this.celebrationDuration = const Duration(seconds: 2),
     DateTime? now,
+    DateTime Function()? clockNow,
     Future<void> Function(Duration duration)? wait,
   }) : fetchDailyLevel =
            fetchDailyLevel ??
@@ -40,12 +47,21 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
                Future.value(
                  DailyPuzzleGenerator.forDate(date, period: period),
                ))),
+       _now = clockNow ?? (() => now ?? DateTime.now()),
        _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
-       super(_initialState(now ?? DateTime.now(), playPeriod: playPeriod)) {
+       super(
+         _initialState(
+           clockNow?.call() ?? now ?? DateTime.now(),
+           playPeriod: playPeriod,
+         ),
+       ) {
     on<ZipStarted>(_onStarted);
+    on<ZipPathChanged>(_onPathChanged);
     on<ZipCompleted>(_onCompleted);
     on<ZipHint>(_onHint);
     on<ZipReset>(_onReset);
+    on<ZipPauseRun>(_onPauseRun);
+    on<ZipResumeRun>(_onResumeRun);
   }
 
   final SubmitScore submitScore;
@@ -54,12 +70,16 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
   final AnalyticsRepository analytics;
+  final InProgressRunRepository inProgressRuns;
   final Future<ZipLevel> Function(DateTime date, {Duration period})
   fetchDailyLevel;
   final bool ignoreDailyLock;
   final Duration playPeriod;
   final Duration celebrationDuration;
+  final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
+  PlayRunClock? _clock;
+  String? _playId;
 
   static ZipState _initialState(DateTime now, {required Duration playPeriod}) {
     return ZipState.initial(now, period: playPeriod);
@@ -74,8 +94,12 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   }
 
   Future<void> _onStarted(ZipStarted event, Emitter<ZipState> emit) async {
-    final seed = event.date ?? DateTime.now();
+    final seed = event.date ?? _now();
     final day = DateTime(seed.year, seed.month, seed.day);
+    final playId = PlayPeriod.id(seed, playPeriod);
+    _playId = playId;
+    _clock = null;
+
     final level = await fetchDailyLevel(seed, period: playPeriod);
     if (emit.isDone) return;
     final cleared =
@@ -85,35 +109,80 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           getBestPoints: getBestPoints,
           getBestTimeSeconds: getBestTimeSeconds,
         );
+
+    if (cleared) {
+      await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
+      emit(
+        ZipState(
+          day: day,
+          level: level,
+          status: ZipStatus.locked,
+          finished: true,
+        ),
+      );
+      return;
+    }
+
+    final draft = await inProgressRuns.load(
+      gameId: GameIds.zip,
+      playId: playId,
+    );
+    if (emit.isDone) return;
+
+    final now = _now();
+    final path = draft == null ? const <Cell>[] : _pathFromDraft(draft);
+    _clock = draft == null
+        ? PlayRunClock.start(at: now)
+        : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+
     emit(
       ZipState(
         day: day,
         level: level,
-        status: cleared ? ZipStatus.locked : ZipStatus.ready,
-        finished: cleared,
+        status: ZipStatus.ready,
+        finished: false,
+        usedHintsThisRun: draft?.usedHintsThisRun ?? false,
+        elapsedMs: draft?.elapsedMs ?? 0,
+        resumedAt: now,
+        path: path,
       ),
     );
-    if (!cleared) {
-      await analytics.logGameStarted(gameId: GameIds.zip);
-    }
+    await analytics.logGameStarted(gameId: GameIds.zip);
+  }
+
+  Future<void> _onPathChanged(
+    ZipPathChanged event,
+    Emitter<ZipState> emit,
+  ) async {
+    if (state.finished || state.status != ZipStatus.ready) return;
+    emit(state.copyWith(path: List<Cell>.from(event.path)));
+    await _persistDraft();
   }
 
   Future<void> _onCompleted(ZipCompleted event, Emitter<ZipState> emit) async {
-    if (state.finished ||
-        state.status == ZipStatus.celebrating ||
-        state.status == ZipStatus.submitting ||
-        state.status == ZipStatus.navigating) {
+    if (state.finished || state.status != ZipStatus.ready) {
       return;
     }
+
+    final now = _now();
+    final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
+    final elapsed = clock.displayedSeconds(at: now);
+    _clock = clock.pause(at: now);
+    final points = (1000 - elapsed * 5).clamp(50, 1000);
+    final playId = _playId ?? PlayPeriod.id(state.day, playPeriod);
 
     emit(
       state.copyWith(
         finished: true,
         status: ZipStatus.celebrating,
-        points: event.points,
-        timeSeconds: event.timeSeconds,
+        points: points,
+        timeSeconds: elapsed,
+        elapsedMs: _clock!.elapsedMs,
+        resumedAt: null,
       ),
     );
+
+    await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
 
     await _wait(celebrationDuration);
     if (emit.isDone) return;
@@ -122,15 +191,17 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
 
     final improved = await submitScore(
       modeKey: 'zip_${state.level.id}',
-      points: event.points,
-      timeSeconds: event.timeSeconds,
+      points: points,
+      timeSeconds: elapsed,
     );
 
     if (improved) {
       try {
         await submitLeaderboardTime(
           gameId: GameIds.zip,
-          timeSeconds: event.timeSeconds,
+          timeSeconds: elapsed,
+          usedHints: state.usedHintsThisRun,
+          hadMistakes: false,
         );
       } catch (_) {
         // Best-effort remote sync; local score already saved.
@@ -144,8 +215,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
 
     await analytics.logGameCompleted(
       gameId: GameIds.zip,
-      points: event.points,
-      timeSeconds: event.timeSeconds,
+      points: points,
+      timeSeconds: elapsed,
       streak: streak.current,
     );
 
@@ -158,20 +229,24 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         resultsExtra: ResultsArgs(
           title: AppStrings.zipClearedTitle,
           subtitle: '',
-          timeSeconds: event.timeSeconds,
+          timeSeconds: elapsed,
           improved: improved,
-          points: event.points,
+          points: points,
           replayDaily: true,
           replayRoute: '/zip',
           currentStreak: streak.current,
           longestStreak: streak.longest,
           gameId: GameIds.zip,
+          usedHints: state.usedHintsThisRun,
+          hadMistakes: false,
         ),
       ),
     );
   }
 
   Future<void> _onHint(ZipHint event, Emitter<ZipState> emit) async {
+    emit(state.copyWith(usedHintsThisRun: true));
+    await _persistDraft();
     await analytics.logHintUsed(
       gameId: GameIds.zip,
       hintsRemaining: event.hintsRemaining,
@@ -179,6 +254,55 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   }
 
   Future<void> _onReset(ZipReset event, Emitter<ZipState> emit) async {
+    emit(state.copyWith(usedHintsThisRun: false, path: const []));
+    await _persistDraft();
     await analytics.logGameReset(gameId: GameIds.zip);
+  }
+
+  Future<void> _onPauseRun(ZipPauseRun event, Emitter<ZipState> emit) async {
+    if (state.finished || state.status != ZipStatus.ready) return;
+    final clock = _clock;
+    if (clock == null || !clock.isRunning) return;
+    final now = _now();
+    final paused = clock.pause(at: now);
+    _clock = paused;
+    emit(state.copyWith(elapsedMs: paused.elapsedMs, resumedAt: null));
+    await _persistDraft();
+  }
+
+  void _onResumeRun(ZipResumeRun event, Emitter<ZipState> emit) {
+    if (state.finished || state.status != ZipStatus.ready) return;
+    final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
+    if (clock.isRunning) return;
+    final now = _now();
+    final resumed = clock.resume(at: now);
+    _clock = resumed;
+    emit(state.copyWith(elapsedMs: resumed.elapsedMs, resumedAt: now));
+  }
+
+  Future<void> _persistDraft() async {
+    final playId = _playId;
+    if (playId == null) return;
+    if (state.finished || state.status != ZipStatus.ready) return;
+    final elapsedMs =
+        (_clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs))
+            .displayedMs(at: _now());
+    await inProgressRuns.save(
+      InProgressRun(
+        gameId: GameIds.zip,
+        playId: playId,
+        elapsedMs: elapsedMs,
+        usedHintsThisRun: state.usedHintsThisRun,
+        board: {
+          'path': [for (final cell in state.path) cell.toList()],
+        },
+      ),
+    );
+  }
+
+  List<Cell> _pathFromDraft(InProgressRun draft) {
+    final raw = draft.board['path'];
+    if (raw is! List) return const [];
+    return [for (final entry in raw) Cell.fromJson(entry)];
   }
 }

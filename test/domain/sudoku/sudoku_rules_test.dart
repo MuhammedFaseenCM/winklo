@@ -79,10 +79,9 @@ void main() {
     expect(result.accepted, isTrue);
     expect(result.grid[1], 2);
     expect(result.notes[1], isEmpty);
-    expect(result.rejectIndex, isNull);
   });
 
-  test('tryPlaceDigit rejects wrong digit without changing grid', () {
+  test('tryPlaceDigit accepts wrong digit and writes it', () {
     final result = SudokuRules.tryPlaceDigit(
       puzzle: puzzle,
       grid: grid,
@@ -90,9 +89,45 @@ void main() {
       index: 1,
       digit: 3,
     );
-    expect(result.accepted, isFalse);
-    expect(result.grid[1], 0);
-    expect(result.rejectIndex, 1);
+    expect(result.accepted, isTrue);
+    expect(result.grid[1], 3);
+  });
+
+  test('errorIndices is empty when no unit is fully filled wrong', () {
+    expect(SudokuRules.errorIndices(puzzle: puzzle, grid: grid), isEmpty);
+  });
+
+  test('errorIndices marks only mismatched cells in a full wrong row', () {
+    final filled = List<int>.from(puzzle.solution);
+    // Row 0 solution is 1,2,3,4,5,6 — flip two cells so the row is full but wrong.
+    filled[1] = 3; // was 2
+    filled[2] = 2; // was 3
+    final errors = SudokuRules.errorIndices(puzzle: puzzle, grid: filled);
+    expect(errors, equals({1, 2}));
+  });
+
+  test('errorIndices clears when a wrong unit becomes incomplete', () {
+    final filled = List<int>.from(puzzle.solution);
+    filled[1] = 3;
+    filled[2] = 2;
+    expect(
+      SudokuRules.errorIndices(puzzle: puzzle, grid: filled),
+      equals({1, 2}),
+    );
+    // Emptying both mismatches leaves no full-wrong unit.
+    filled[1] = 0;
+    filled[2] = 0;
+    expect(SudokuRules.errorIndices(puzzle: puzzle, grid: filled), isEmpty);
+  });
+
+  test('errorIndices is empty for a fully correct grid', () {
+    expect(
+      SudokuRules.errorIndices(
+        puzzle: puzzle,
+        grid: List<int>.from(puzzle.solution),
+      ),
+      isEmpty,
+    );
   });
 
   test('tryPlaceDigit rejects given cells', () {

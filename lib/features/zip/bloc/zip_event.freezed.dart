@@ -55,14 +55,17 @@ extension ZipEventPatterns on ZipEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ZipStarted value)?  started,TResult Function( ZipCompleted value)?  completed,TResult Function( ZipHint value)?  hint,TResult Function( ZipReset value)?  reset,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ZipStarted value)?  started,TResult Function( ZipPathChanged value)?  pathChanged,TResult Function( ZipCompleted value)?  completed,TResult Function( ZipHint value)?  hint,TResult Function( ZipReset value)?  reset,TResult Function( ZipPauseRun value)?  pauseRun,TResult Function( ZipResumeRun value)?  resumeRun,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
-return started(_that);case ZipCompleted() when completed != null:
+return started(_that);case ZipPathChanged() when pathChanged != null:
+return pathChanged(_that);case ZipCompleted() when completed != null:
 return completed(_that);case ZipHint() when hint != null:
 return hint(_that);case ZipReset() when reset != null:
-return reset(_that);case _:
+return reset(_that);case ZipPauseRun() when pauseRun != null:
+return pauseRun(_that);case ZipResumeRun() when resumeRun != null:
+return resumeRun(_that);case _:
   return orElse();
 
 }
@@ -80,14 +83,17 @@ return reset(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ZipStarted value)  started,required TResult Function( ZipCompleted value)  completed,required TResult Function( ZipHint value)  hint,required TResult Function( ZipReset value)  reset,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ZipStarted value)  started,required TResult Function( ZipPathChanged value)  pathChanged,required TResult Function( ZipCompleted value)  completed,required TResult Function( ZipHint value)  hint,required TResult Function( ZipReset value)  reset,required TResult Function( ZipPauseRun value)  pauseRun,required TResult Function( ZipResumeRun value)  resumeRun,}){
 final _that = this;
 switch (_that) {
 case ZipStarted():
-return started(_that);case ZipCompleted():
+return started(_that);case ZipPathChanged():
+return pathChanged(_that);case ZipCompleted():
 return completed(_that);case ZipHint():
 return hint(_that);case ZipReset():
-return reset(_that);}
+return reset(_that);case ZipPauseRun():
+return pauseRun(_that);case ZipResumeRun():
+return resumeRun(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -101,14 +107,17 @@ return reset(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ZipStarted value)?  started,TResult? Function( ZipCompleted value)?  completed,TResult? Function( ZipHint value)?  hint,TResult? Function( ZipReset value)?  reset,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ZipStarted value)?  started,TResult? Function( ZipPathChanged value)?  pathChanged,TResult? Function( ZipCompleted value)?  completed,TResult? Function( ZipHint value)?  hint,TResult? Function( ZipReset value)?  reset,TResult? Function( ZipPauseRun value)?  pauseRun,TResult? Function( ZipResumeRun value)?  resumeRun,}){
 final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
-return started(_that);case ZipCompleted() when completed != null:
+return started(_that);case ZipPathChanged() when pathChanged != null:
+return pathChanged(_that);case ZipCompleted() when completed != null:
 return completed(_that);case ZipHint() when hint != null:
 return hint(_that);case ZipReset() when reset != null:
-return reset(_that);case _:
+return reset(_that);case ZipPauseRun() when pauseRun != null:
+return pauseRun(_that);case ZipResumeRun() when resumeRun != null:
+return resumeRun(_that);case _:
   return null;
 
 }
@@ -125,13 +134,16 @@ return reset(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( int points,  int timeSeconds)?  completed,TResult Function( int hintsRemaining)?  hint,TResult Function()?  reset,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( List<Cell> path)?  pathChanged,TResult Function()?  completed,TResult Function( int hintsRemaining)?  hint,TResult Function()?  reset,TResult Function()?  pauseRun,TResult Function()?  resumeRun,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
-return started(_that.date);case ZipCompleted() when completed != null:
-return completed(_that.points,_that.timeSeconds);case ZipHint() when hint != null:
+return started(_that.date);case ZipPathChanged() when pathChanged != null:
+return pathChanged(_that.path);case ZipCompleted() when completed != null:
+return completed();case ZipHint() when hint != null:
 return hint(_that.hintsRemaining);case ZipReset() when reset != null:
-return reset();case _:
+return reset();case ZipPauseRun() when pauseRun != null:
+return pauseRun();case ZipResumeRun() when resumeRun != null:
+return resumeRun();case _:
   return orElse();
 
 }
@@ -149,13 +161,16 @@ return reset();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( int points,  int timeSeconds)  completed,required TResult Function( int hintsRemaining)  hint,required TResult Function()  reset,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( List<Cell> path)  pathChanged,required TResult Function()  completed,required TResult Function( int hintsRemaining)  hint,required TResult Function()  reset,required TResult Function()  pauseRun,required TResult Function()  resumeRun,}) {final _that = this;
 switch (_that) {
 case ZipStarted():
-return started(_that.date);case ZipCompleted():
-return completed(_that.points,_that.timeSeconds);case ZipHint():
+return started(_that.date);case ZipPathChanged():
+return pathChanged(_that.path);case ZipCompleted():
+return completed();case ZipHint():
 return hint(_that.hintsRemaining);case ZipReset():
-return reset();}
+return reset();case ZipPauseRun():
+return pauseRun();case ZipResumeRun():
+return resumeRun();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -169,13 +184,16 @@ return reset();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( int points,  int timeSeconds)?  completed,TResult? Function( int hintsRemaining)?  hint,TResult? Function()?  reset,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( List<Cell> path)?  pathChanged,TResult? Function()?  completed,TResult? Function( int hintsRemaining)?  hint,TResult? Function()?  reset,TResult? Function()?  pauseRun,TResult? Function()?  resumeRun,}) {final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
-return started(_that.date);case ZipCompleted() when completed != null:
-return completed(_that.points,_that.timeSeconds);case ZipHint() when hint != null:
+return started(_that.date);case ZipPathChanged() when pathChanged != null:
+return pathChanged(_that.path);case ZipCompleted() when completed != null:
+return completed();case ZipHint() when hint != null:
 return hint(_that.hintsRemaining);case ZipReset() when reset != null:
-return reset();case _:
+return reset();case ZipPauseRun() when pauseRun != null:
+return pauseRun();case ZipResumeRun() when resumeRun != null:
+return resumeRun();case _:
   return null;
 
 }
@@ -252,44 +270,49 @@ as DateTime?,
 /// @nodoc
 
 
-class ZipCompleted implements ZipEvent {
-  const ZipCompleted({required this.points, required this.timeSeconds});
+class ZipPathChanged implements ZipEvent {
+  const ZipPathChanged({required final  List<Cell> path}): _path = path;
   
 
- final  int points;
- final  int timeSeconds;
+ final  List<Cell> _path;
+ List<Cell> get path {
+  if (_path is EqualUnmodifiableListView) return _path;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_path);
+}
+
 
 /// Create a copy of ZipEvent
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$ZipCompletedCopyWith<ZipCompleted> get copyWith => _$ZipCompletedCopyWithImpl<ZipCompleted>(this, _$identity);
+$ZipPathChangedCopyWith<ZipPathChanged> get copyWith => _$ZipPathChangedCopyWithImpl<ZipPathChanged>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ZipCompleted&&(identical(other.points, points) || other.points == points)&&(identical(other.timeSeconds, timeSeconds) || other.timeSeconds == timeSeconds));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ZipPathChanged&&const DeepCollectionEquality().equals(other._path, _path));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,points,timeSeconds);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_path));
 
 @override
 String toString() {
-  return 'ZipEvent.completed(points: $points, timeSeconds: $timeSeconds)';
+  return 'ZipEvent.pathChanged(path: $path)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $ZipCompletedCopyWith<$Res> implements $ZipEventCopyWith<$Res> {
-  factory $ZipCompletedCopyWith(ZipCompleted value, $Res Function(ZipCompleted) _then) = _$ZipCompletedCopyWithImpl;
+abstract mixin class $ZipPathChangedCopyWith<$Res> implements $ZipEventCopyWith<$Res> {
+  factory $ZipPathChangedCopyWith(ZipPathChanged value, $Res Function(ZipPathChanged) _then) = _$ZipPathChangedCopyWithImpl;
 @useResult
 $Res call({
- int points, int timeSeconds
+ List<Cell> path
 });
 
 
@@ -297,25 +320,56 @@ $Res call({
 
 }
 /// @nodoc
-class _$ZipCompletedCopyWithImpl<$Res>
-    implements $ZipCompletedCopyWith<$Res> {
-  _$ZipCompletedCopyWithImpl(this._self, this._then);
+class _$ZipPathChangedCopyWithImpl<$Res>
+    implements $ZipPathChangedCopyWith<$Res> {
+  _$ZipPathChangedCopyWithImpl(this._self, this._then);
 
-  final ZipCompleted _self;
-  final $Res Function(ZipCompleted) _then;
+  final ZipPathChanged _self;
+  final $Res Function(ZipPathChanged) _then;
 
 /// Create a copy of ZipEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? points = null,Object? timeSeconds = null,}) {
-  return _then(ZipCompleted(
-points: null == points ? _self.points : points // ignore: cast_nullable_to_non_nullable
-as int,timeSeconds: null == timeSeconds ? _self.timeSeconds : timeSeconds // ignore: cast_nullable_to_non_nullable
-as int,
+@pragma('vm:prefer-inline') $Res call({Object? path = null,}) {
+  return _then(ZipPathChanged(
+path: null == path ? _self._path : path // ignore: cast_nullable_to_non_nullable
+as List<Cell>,
   ));
 }
 
 
 }
+
+/// @nodoc
+
+
+class ZipCompleted implements ZipEvent {
+  const ZipCompleted();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ZipCompleted);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'ZipEvent.completed()';
+}
+
+
+}
+
+
+
 
 /// @nodoc
 
@@ -407,6 +461,70 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
   return 'ZipEvent.reset()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class ZipPauseRun implements ZipEvent {
+  const ZipPauseRun();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ZipPauseRun);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'ZipEvent.pauseRun()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class ZipResumeRun implements ZipEvent {
+  const ZipResumeRun();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ZipResumeRun);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'ZipEvent.resumeRun()';
 }
 
 

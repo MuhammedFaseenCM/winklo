@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_image.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../domain/entities/leaderboard_entry.dart';
+import '../../../../domain/game_ids.dart';
 
 class LeaderboardRow extends StatelessWidget {
   const LeaderboardRow({
@@ -13,11 +14,17 @@ class LeaderboardRow extends StatelessWidget {
     required this.entry,
     required this.timeLabel,
     required this.isYou,
+    this.showCleanRunChips = false,
+    this.gameId,
   });
 
   final LeaderboardEntry entry;
   final String timeLabel;
   final bool isYou;
+
+  /// When true (daily board / mini board), show No hint / No mistakes chips.
+  final bool showCleanRunChips;
+  final String? gameId;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +45,38 @@ class LeaderboardRow extends StatelessWidget {
       3 => 2.0,
       _ => isYou ? 1.5 : 1.0,
     };
+
+    final showNoHint = showCleanRunChips && entry.usedHints == false;
+    final showNoMistakes =
+        showCleanRunChips &&
+        gameId == GameIds.sudoku &&
+        entry.hadMistakes == false;
+    final chips = <Widget>[
+      if (isYou)
+        _chip(
+          context,
+          label: AppStrings.youLabel,
+          foreground: ZipColors.ember,
+          background: ZipColors.ember.withValues(alpha: 0.22),
+          border: ZipColors.ember.withValues(alpha: 0.5),
+        ),
+      if (showNoHint)
+        _chip(
+          context,
+          label: AppStrings.leaderboardNoHintChip,
+          foreground: const Color(0xFF7EE0C3),
+          background: const Color(0xFF5EC4A8).withValues(alpha: 0.18),
+          border: const Color(0xFF7EE0C3).withValues(alpha: 0.35),
+        ),
+      if (showNoMistakes)
+        _chip(
+          context,
+          label: AppStrings.leaderboardNoMistakesChip,
+          foreground: const Color(0xFF9EC0FF),
+          background: const Color(0xFF78AAFF).withValues(alpha: 0.16),
+          border: const Color(0xFF9EC0FF).withValues(alpha: 0.35),
+        ),
+    ];
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -99,51 +138,23 @@ class LeaderboardRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        entry.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: ZipColors.onInk,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    if (isYou) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: ZipColors.ember.withValues(alpha: 0.22),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: ZipColors.ember.withValues(alpha: 0.5),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Text(
-                          AppStrings.youLabel,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: ZipColors.ember,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 10,
-                                letterSpacing: 0.4,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ],
+                Text(
+                  entry.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: ZipColors.onInk,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                if (chips.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Wrap(spacing: 6, runSpacing: 4, children: chips),
+                ],
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
@@ -161,6 +172,32 @@ class LeaderboardRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _chip(
+    BuildContext context, {
+    required String label,
+    required Color foreground,
+    required Color background,
+    required Color border,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: border, width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: foreground,
+          fontWeight: FontWeight.w800,
+          fontSize: 10,
+          letterSpacing: 0.4,
+        ),
       ),
     );
   }

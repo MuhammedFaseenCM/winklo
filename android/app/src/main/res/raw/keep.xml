@@ -4,4 +4,4 @@
   Keep so release packaging cannot strip them.
 -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/ic_stat_winklo,@string/default_web_client_id" />
+    tools:keep="@drawable/ic_stat_winklo,@drawable/ic_launcher_foreground,@string/default_web_client_id" />

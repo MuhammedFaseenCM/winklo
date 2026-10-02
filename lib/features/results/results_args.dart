@@ -12,6 +12,8 @@ class ResultsArgs {
     this.currentStreak,
     this.longestStreak,
     this.gameId,
+    this.usedHints,
+    this.hadMistakes,
   });
 
   final String title;
@@ -26,4 +28,8 @@ class ResultsArgs {
   final int? currentStreak;
   final int? longestStreak;
   final String? gameId;
+
+  /// Session flags for soft-claim leaderboard sync. Null = unknown.
+  final bool? usedHints;
+  final bool? hadMistakes;
 }

@@ -159,6 +159,10 @@ async function seedViaRest(accessToken, players, dayId) {
         timeSeconds: { integerValue: String(timeSeconds) },
         displayName: { stringValue: p.displayName },
         photoUrl: { nullValue: null },
+        usedHints: { booleanValue: i % 3 !== 0 },
+        hadMistakes: {
+          booleanValue: gameId === 'sudoku' ? i % 4 !== 0 : false,
+        },
         updatedAt: { timestampValue: new Date(p.updatedAtMs).toISOString() },
       };
       for (const path of [
@@ -218,6 +222,8 @@ async function seedViaAdmin(players, dayId, { clearOnly = false } = {}) {
           timeSeconds: p.timeSeconds,
           displayName: p.displayName,
           photoUrl: null,
+          usedHints: p.usedHints ?? true,
+          hadMistakes: p.hadMistakes ?? false,
           updatedAt: admin.firestore.Timestamp.fromMillis(p.updatedAtMs),
         },
         { merge: true },
@@ -249,6 +255,8 @@ async function seedViaAdmin(players, dayId, { clearOnly = false } = {}) {
     const gamePlayers = players.map((p, i) => ({
       ...p,
       timeSeconds: p.timeSeconds + (gameId === 'path_words' ? 5 : 0) + (i % 3),
+      usedHints: i % 3 !== 0,
+      hadMistakes: gameId === 'sudoku' ? i % 4 !== 0 : false,
     }));
     await writePlayers(allTime, gamePlayers);
     await writePlayers(daily, gamePlayers);

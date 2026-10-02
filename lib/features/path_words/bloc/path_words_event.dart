@@ -15,4 +15,6 @@ sealed class PathWordsEvent with _$PathWordsEvent {
   const factory PathWordsEvent.undo() = PathWordsUndo;
   const factory PathWordsEvent.hint() = PathWordsHint;
   const factory PathWordsEvent.reset() = PathWordsReset;
+  const factory PathWordsEvent.pauseRun() = PathWordsPauseRun;
+  const factory PathWordsEvent.resumeRun() = PathWordsResumeRun;
 }

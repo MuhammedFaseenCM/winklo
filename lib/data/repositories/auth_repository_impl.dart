@@ -114,16 +114,28 @@ class AuthRepositoryImpl implements AuthRepository {
         _cachedUser = mapped;
         return Stream<AppUser?>.value(mapped);
       }
-      return db.collection('users').doc(user.uid).snapshots().map((snap) {
-        final merged = mergeAuthWithProfile(
-          uid: user.uid,
-          authDisplayName: user.displayName,
-          authPhotoUrl: user.photoURL,
-          profile: snap.exists ? snap.data() : null,
-        );
-        _cachedUser = merged;
-        return merged;
-      });
+      return db
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .map((snap) {
+            final merged = mergeAuthWithProfile(
+              uid: user.uid,
+              authDisplayName: user.displayName,
+              authPhotoUrl: user.photoURL,
+              profile: snap.exists ? snap.data() : null,
+            );
+            _cachedUser = merged;
+            return merged;
+          })
+          .handleError((Object error, StackTrace stack) {
+            // Sign-out races: auth is cleared before this listener is cancelled,
+            // so Firestore returns permission-denied. Expected — ignore quietly.
+            final text = error.toString();
+            if (!text.contains('permission-denied')) {
+              debugPrint('Auth profile snapshots error: $error');
+            }
+          });
     });
   }
 

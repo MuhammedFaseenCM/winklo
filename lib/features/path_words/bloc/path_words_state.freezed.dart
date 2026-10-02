@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$PathWordsState {
 
- DateTime get day; PathWordsPuzzle? get puzzle; PathWordsStatus get status; List<Cell> get activePath; List<PathWordsStroke> get placedPaths; Set<String> get completedTargetIds; int get hintsRemaining; int get hintRevealLength; DateTime? get startedAt; Cell? get hintFlashCell; String? get errorMessage; String? get ruleTip; bool get finished; int? get points; int? get timeSeconds; bool? get improved; ResultsArgs? get resultsExtra;
+ DateTime get day; PathWordsPuzzle? get puzzle; PathWordsStatus get status; List<Cell> get activePath; List<PathWordsStroke> get placedPaths; Set<String> get completedTargetIds; int get hintsRemaining; int get hintRevealLength; bool get usedHintsThisRun; int get elapsedMs; DateTime? get resumedAt; Cell? get hintFlashCell; String? get errorMessage; String? get ruleTip; bool get finished; int? get points; int? get timeSeconds; bool? get improved; ResultsArgs? get resultsExtra;
 /// Create a copy of PathWordsState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $PathWordsStateCopyWith<PathWordsState> get copyWith => _$PathWordsStateCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PathWordsState&&(identical(other.day, day) || other.day == day)&&(identical(other.puzzle, puzzle) || other.puzzle == puzzle)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.activePath, activePath)&&const DeepCollectionEquality().equals(other.placedPaths, placedPaths)&&const DeepCollectionEquality().equals(other.completedTargetIds, completedTargetIds)&&(identical(other.hintsRemaining, hintsRemaining) || other.hintsRemaining == hintsRemaining)&&(identical(other.hintRevealLength, hintRevealLength) || other.hintRevealLength == hintRevealLength)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.hintFlashCell, hintFlashCell) || other.hintFlashCell == hintFlashCell)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.ruleTip, ruleTip) || other.ruleTip == ruleTip)&&(identical(other.finished, finished) || other.finished == finished)&&(identical(other.points, points) || other.points == points)&&(identical(other.timeSeconds, timeSeconds) || other.timeSeconds == timeSeconds)&&(identical(other.improved, improved) || other.improved == improved)&&(identical(other.resultsExtra, resultsExtra) || other.resultsExtra == resultsExtra));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PathWordsState&&(identical(other.day, day) || other.day == day)&&(identical(other.puzzle, puzzle) || other.puzzle == puzzle)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.activePath, activePath)&&const DeepCollectionEquality().equals(other.placedPaths, placedPaths)&&const DeepCollectionEquality().equals(other.completedTargetIds, completedTargetIds)&&(identical(other.hintsRemaining, hintsRemaining) || other.hintsRemaining == hintsRemaining)&&(identical(other.hintRevealLength, hintRevealLength) || other.hintRevealLength == hintRevealLength)&&(identical(other.usedHintsThisRun, usedHintsThisRun) || other.usedHintsThisRun == usedHintsThisRun)&&(identical(other.elapsedMs, elapsedMs) || other.elapsedMs == elapsedMs)&&(identical(other.resumedAt, resumedAt) || other.resumedAt == resumedAt)&&(identical(other.hintFlashCell, hintFlashCell) || other.hintFlashCell == hintFlashCell)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.ruleTip, ruleTip) || other.ruleTip == ruleTip)&&(identical(other.finished, finished) || other.finished == finished)&&(identical(other.points, points) || other.points == points)&&(identical(other.timeSeconds, timeSeconds) || other.timeSeconds == timeSeconds)&&(identical(other.improved, improved) || other.improved == improved)&&(identical(other.resultsExtra, resultsExtra) || other.resultsExtra == resultsExtra));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,day,puzzle,status,const DeepCollectionEquality().hash(activePath),const DeepCollectionEquality().hash(placedPaths),const DeepCollectionEquality().hash(completedTargetIds),hintsRemaining,hintRevealLength,startedAt,hintFlashCell,errorMessage,ruleTip,finished,points,timeSeconds,improved,resultsExtra);
+int get hashCode => Object.hashAll([runtimeType,day,puzzle,status,const DeepCollectionEquality().hash(activePath),const DeepCollectionEquality().hash(placedPaths),const DeepCollectionEquality().hash(completedTargetIds),hintsRemaining,hintRevealLength,usedHintsThisRun,elapsedMs,resumedAt,hintFlashCell,errorMessage,ruleTip,finished,points,timeSeconds,improved,resultsExtra]);
 
 @override
 String toString() {
-  return 'PathWordsState(day: $day, puzzle: $puzzle, status: $status, activePath: $activePath, placedPaths: $placedPaths, completedTargetIds: $completedTargetIds, hintsRemaining: $hintsRemaining, hintRevealLength: $hintRevealLength, startedAt: $startedAt, hintFlashCell: $hintFlashCell, errorMessage: $errorMessage, ruleTip: $ruleTip, finished: $finished, points: $points, timeSeconds: $timeSeconds, improved: $improved, resultsExtra: $resultsExtra)';
+  return 'PathWordsState(day: $day, puzzle: $puzzle, status: $status, activePath: $activePath, placedPaths: $placedPaths, completedTargetIds: $completedTargetIds, hintsRemaining: $hintsRemaining, hintRevealLength: $hintRevealLength, usedHintsThisRun: $usedHintsThisRun, elapsedMs: $elapsedMs, resumedAt: $resumedAt, hintFlashCell: $hintFlashCell, errorMessage: $errorMessage, ruleTip: $ruleTip, finished: $finished, points: $points, timeSeconds: $timeSeconds, improved: $improved, resultsExtra: $resultsExtra)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $PathWordsStateCopyWith<$Res>  {
   factory $PathWordsStateCopyWith(PathWordsState value, $Res Function(PathWordsState) _then) = _$PathWordsStateCopyWithImpl;
 @useResult
 $Res call({
- DateTime day, PathWordsPuzzle? puzzle, PathWordsStatus status, List<Cell> activePath, List<PathWordsStroke> placedPaths, Set<String> completedTargetIds, int hintsRemaining, int hintRevealLength, DateTime? startedAt, Cell? hintFlashCell, String? errorMessage, String? ruleTip, bool finished, int? points, int? timeSeconds, bool? improved, ResultsArgs? resultsExtra
+ DateTime day, PathWordsPuzzle? puzzle, PathWordsStatus status, List<Cell> activePath, List<PathWordsStroke> placedPaths, Set<String> completedTargetIds, int hintsRemaining, int hintRevealLength, bool usedHintsThisRun, int elapsedMs, DateTime? resumedAt, Cell? hintFlashCell, String? errorMessage, String? ruleTip, bool finished, int? points, int? timeSeconds, bool? improved, ResultsArgs? resultsExtra
 });
 
 
@@ -62,7 +62,7 @@ class _$PathWordsStateCopyWithImpl<$Res>
 
 /// Create a copy of PathWordsState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? day = null,Object? puzzle = freezed,Object? status = null,Object? activePath = null,Object? placedPaths = null,Object? completedTargetIds = null,Object? hintsRemaining = null,Object? hintRevealLength = null,Object? startedAt = freezed,Object? hintFlashCell = freezed,Object? errorMessage = freezed,Object? ruleTip = freezed,Object? finished = null,Object? points = freezed,Object? timeSeconds = freezed,Object? improved = freezed,Object? resultsExtra = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? day = null,Object? puzzle = freezed,Object? status = null,Object? activePath = null,Object? placedPaths = null,Object? completedTargetIds = null,Object? hintsRemaining = null,Object? hintRevealLength = null,Object? usedHintsThisRun = null,Object? elapsedMs = null,Object? resumedAt = freezed,Object? hintFlashCell = freezed,Object? errorMessage = freezed,Object? ruleTip = freezed,Object? finished = null,Object? points = freezed,Object? timeSeconds = freezed,Object? improved = freezed,Object? resultsExtra = freezed,}) {
   return _then(_self.copyWith(
 day: null == day ? _self.day : day // ignore: cast_nullable_to_non_nullable
 as DateTime,puzzle: freezed == puzzle ? _self.puzzle : puzzle // ignore: cast_nullable_to_non_nullable
@@ -72,7 +72,9 @@ as List<Cell>,placedPaths: null == placedPaths ? _self.placedPaths : placedPaths
 as List<PathWordsStroke>,completedTargetIds: null == completedTargetIds ? _self.completedTargetIds : completedTargetIds // ignore: cast_nullable_to_non_nullable
 as Set<String>,hintsRemaining: null == hintsRemaining ? _self.hintsRemaining : hintsRemaining // ignore: cast_nullable_to_non_nullable
 as int,hintRevealLength: null == hintRevealLength ? _self.hintRevealLength : hintRevealLength // ignore: cast_nullable_to_non_nullable
-as int,startedAt: freezed == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
+as int,usedHintsThisRun: null == usedHintsThisRun ? _self.usedHintsThisRun : usedHintsThisRun // ignore: cast_nullable_to_non_nullable
+as bool,elapsedMs: null == elapsedMs ? _self.elapsedMs : elapsedMs // ignore: cast_nullable_to_non_nullable
+as int,resumedAt: freezed == resumedAt ? _self.resumedAt : resumedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,hintFlashCell: freezed == hintFlashCell ? _self.hintFlashCell : hintFlashCell // ignore: cast_nullable_to_non_nullable
 as Cell?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,ruleTip: freezed == ruleTip ? _self.ruleTip : ruleTip // ignore: cast_nullable_to_non_nullable
@@ -163,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DateTime day,  PathWordsPuzzle? puzzle,  PathWordsStatus status,  List<Cell> activePath,  List<PathWordsStroke> placedPaths,  Set<String> completedTargetIds,  int hintsRemaining,  int hintRevealLength,  DateTime? startedAt,  Cell? hintFlashCell,  String? errorMessage,  String? ruleTip,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DateTime day,  PathWordsPuzzle? puzzle,  PathWordsStatus status,  List<Cell> activePath,  List<PathWordsStroke> placedPaths,  Set<String> completedTargetIds,  int hintsRemaining,  int hintRevealLength,  bool usedHintsThisRun,  int elapsedMs,  DateTime? resumedAt,  Cell? hintFlashCell,  String? errorMessage,  String? ruleTip,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PathWordsState() when $default != null:
-return $default(_that.day,_that.puzzle,_that.status,_that.activePath,_that.placedPaths,_that.completedTargetIds,_that.hintsRemaining,_that.hintRevealLength,_that.startedAt,_that.hintFlashCell,_that.errorMessage,_that.ruleTip,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);case _:
+return $default(_that.day,_that.puzzle,_that.status,_that.activePath,_that.placedPaths,_that.completedTargetIds,_that.hintsRemaining,_that.hintRevealLength,_that.usedHintsThisRun,_that.elapsedMs,_that.resumedAt,_that.hintFlashCell,_that.errorMessage,_that.ruleTip,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);case _:
   return orElse();
 
 }
@@ -184,10 +186,10 @@ return $default(_that.day,_that.puzzle,_that.status,_that.activePath,_that.place
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DateTime day,  PathWordsPuzzle? puzzle,  PathWordsStatus status,  List<Cell> activePath,  List<PathWordsStroke> placedPaths,  Set<String> completedTargetIds,  int hintsRemaining,  int hintRevealLength,  DateTime? startedAt,  Cell? hintFlashCell,  String? errorMessage,  String? ruleTip,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DateTime day,  PathWordsPuzzle? puzzle,  PathWordsStatus status,  List<Cell> activePath,  List<PathWordsStroke> placedPaths,  Set<String> completedTargetIds,  int hintsRemaining,  int hintRevealLength,  bool usedHintsThisRun,  int elapsedMs,  DateTime? resumedAt,  Cell? hintFlashCell,  String? errorMessage,  String? ruleTip,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)  $default,) {final _that = this;
 switch (_that) {
 case _PathWordsState():
-return $default(_that.day,_that.puzzle,_that.status,_that.activePath,_that.placedPaths,_that.completedTargetIds,_that.hintsRemaining,_that.hintRevealLength,_that.startedAt,_that.hintFlashCell,_that.errorMessage,_that.ruleTip,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);}
+return $default(_that.day,_that.puzzle,_that.status,_that.activePath,_that.placedPaths,_that.completedTargetIds,_that.hintsRemaining,_that.hintRevealLength,_that.usedHintsThisRun,_that.elapsedMs,_that.resumedAt,_that.hintFlashCell,_that.errorMessage,_that.ruleTip,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -201,10 +203,10 @@ return $default(_that.day,_that.puzzle,_that.status,_that.activePath,_that.place
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DateTime day,  PathWordsPuzzle? puzzle,  PathWordsStatus status,  List<Cell> activePath,  List<PathWordsStroke> placedPaths,  Set<String> completedTargetIds,  int hintsRemaining,  int hintRevealLength,  DateTime? startedAt,  Cell? hintFlashCell,  String? errorMessage,  String? ruleTip,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DateTime day,  PathWordsPuzzle? puzzle,  PathWordsStatus status,  List<Cell> activePath,  List<PathWordsStroke> placedPaths,  Set<String> completedTargetIds,  int hintsRemaining,  int hintRevealLength,  bool usedHintsThisRun,  int elapsedMs,  DateTime? resumedAt,  Cell? hintFlashCell,  String? errorMessage,  String? ruleTip,  bool finished,  int? points,  int? timeSeconds,  bool? improved,  ResultsArgs? resultsExtra)?  $default,) {final _that = this;
 switch (_that) {
 case _PathWordsState() when $default != null:
-return $default(_that.day,_that.puzzle,_that.status,_that.activePath,_that.placedPaths,_that.completedTargetIds,_that.hintsRemaining,_that.hintRevealLength,_that.startedAt,_that.hintFlashCell,_that.errorMessage,_that.ruleTip,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);case _:
+return $default(_that.day,_that.puzzle,_that.status,_that.activePath,_that.placedPaths,_that.completedTargetIds,_that.hintsRemaining,_that.hintRevealLength,_that.usedHintsThisRun,_that.elapsedMs,_that.resumedAt,_that.hintFlashCell,_that.errorMessage,_that.ruleTip,_that.finished,_that.points,_that.timeSeconds,_that.improved,_that.resultsExtra);case _:
   return null;
 
 }
@@ -215,8 +217,8 @@ return $default(_that.day,_that.puzzle,_that.status,_that.activePath,_that.place
 /// @nodoc
 
 
-class _PathWordsState implements PathWordsState {
-  const _PathWordsState({required this.day, this.puzzle, this.status = PathWordsStatus.loading, final  List<Cell> activePath = const <Cell>[], final  List<PathWordsStroke> placedPaths = const <PathWordsStroke>[], final  Set<String> completedTargetIds = const <String>{}, this.hintsRemaining = 3, this.hintRevealLength = 0, this.startedAt, this.hintFlashCell, this.errorMessage, this.ruleTip, this.finished = false, this.points, this.timeSeconds, this.improved, this.resultsExtra}): _activePath = activePath,_placedPaths = placedPaths,_completedTargetIds = completedTargetIds;
+class _PathWordsState extends PathWordsState {
+  const _PathWordsState({required this.day, this.puzzle, this.status = PathWordsStatus.loading, final  List<Cell> activePath = const <Cell>[], final  List<PathWordsStroke> placedPaths = const <PathWordsStroke>[], final  Set<String> completedTargetIds = const <String>{}, this.hintsRemaining = 3, this.hintRevealLength = 0, this.usedHintsThisRun = false, this.elapsedMs = 0, this.resumedAt, this.hintFlashCell, this.errorMessage, this.ruleTip, this.finished = false, this.points, this.timeSeconds, this.improved, this.resultsExtra}): _activePath = activePath,_placedPaths = placedPaths,_completedTargetIds = completedTargetIds,super._();
   
 
 @override final  DateTime day;
@@ -245,7 +247,9 @@ class _PathWordsState implements PathWordsState {
 
 @override@JsonKey() final  int hintsRemaining;
 @override@JsonKey() final  int hintRevealLength;
-@override final  DateTime? startedAt;
+@override@JsonKey() final  bool usedHintsThisRun;
+@override@JsonKey() final  int elapsedMs;
+@override final  DateTime? resumedAt;
 @override final  Cell? hintFlashCell;
 @override final  String? errorMessage;
 @override final  String? ruleTip;
@@ -265,16 +269,16 @@ _$PathWordsStateCopyWith<_PathWordsState> get copyWith => __$PathWordsStateCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PathWordsState&&(identical(other.day, day) || other.day == day)&&(identical(other.puzzle, puzzle) || other.puzzle == puzzle)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._activePath, _activePath)&&const DeepCollectionEquality().equals(other._placedPaths, _placedPaths)&&const DeepCollectionEquality().equals(other._completedTargetIds, _completedTargetIds)&&(identical(other.hintsRemaining, hintsRemaining) || other.hintsRemaining == hintsRemaining)&&(identical(other.hintRevealLength, hintRevealLength) || other.hintRevealLength == hintRevealLength)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.hintFlashCell, hintFlashCell) || other.hintFlashCell == hintFlashCell)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.ruleTip, ruleTip) || other.ruleTip == ruleTip)&&(identical(other.finished, finished) || other.finished == finished)&&(identical(other.points, points) || other.points == points)&&(identical(other.timeSeconds, timeSeconds) || other.timeSeconds == timeSeconds)&&(identical(other.improved, improved) || other.improved == improved)&&(identical(other.resultsExtra, resultsExtra) || other.resultsExtra == resultsExtra));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PathWordsState&&(identical(other.day, day) || other.day == day)&&(identical(other.puzzle, puzzle) || other.puzzle == puzzle)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._activePath, _activePath)&&const DeepCollectionEquality().equals(other._placedPaths, _placedPaths)&&const DeepCollectionEquality().equals(other._completedTargetIds, _completedTargetIds)&&(identical(other.hintsRemaining, hintsRemaining) || other.hintsRemaining == hintsRemaining)&&(identical(other.hintRevealLength, hintRevealLength) || other.hintRevealLength == hintRevealLength)&&(identical(other.usedHintsThisRun, usedHintsThisRun) || other.usedHintsThisRun == usedHintsThisRun)&&(identical(other.elapsedMs, elapsedMs) || other.elapsedMs == elapsedMs)&&(identical(other.resumedAt, resumedAt) || other.resumedAt == resumedAt)&&(identical(other.hintFlashCell, hintFlashCell) || other.hintFlashCell == hintFlashCell)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage)&&(identical(other.ruleTip, ruleTip) || other.ruleTip == ruleTip)&&(identical(other.finished, finished) || other.finished == finished)&&(identical(other.points, points) || other.points == points)&&(identical(other.timeSeconds, timeSeconds) || other.timeSeconds == timeSeconds)&&(identical(other.improved, improved) || other.improved == improved)&&(identical(other.resultsExtra, resultsExtra) || other.resultsExtra == resultsExtra));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,day,puzzle,status,const DeepCollectionEquality().hash(_activePath),const DeepCollectionEquality().hash(_placedPaths),const DeepCollectionEquality().hash(_completedTargetIds),hintsRemaining,hintRevealLength,startedAt,hintFlashCell,errorMessage,ruleTip,finished,points,timeSeconds,improved,resultsExtra);
+int get hashCode => Object.hashAll([runtimeType,day,puzzle,status,const DeepCollectionEquality().hash(_activePath),const DeepCollectionEquality().hash(_placedPaths),const DeepCollectionEquality().hash(_completedTargetIds),hintsRemaining,hintRevealLength,usedHintsThisRun,elapsedMs,resumedAt,hintFlashCell,errorMessage,ruleTip,finished,points,timeSeconds,improved,resultsExtra]);
 
 @override
 String toString() {
-  return 'PathWordsState(day: $day, puzzle: $puzzle, status: $status, activePath: $activePath, placedPaths: $placedPaths, completedTargetIds: $completedTargetIds, hintsRemaining: $hintsRemaining, hintRevealLength: $hintRevealLength, startedAt: $startedAt, hintFlashCell: $hintFlashCell, errorMessage: $errorMessage, ruleTip: $ruleTip, finished: $finished, points: $points, timeSeconds: $timeSeconds, improved: $improved, resultsExtra: $resultsExtra)';
+  return 'PathWordsState(day: $day, puzzle: $puzzle, status: $status, activePath: $activePath, placedPaths: $placedPaths, completedTargetIds: $completedTargetIds, hintsRemaining: $hintsRemaining, hintRevealLength: $hintRevealLength, usedHintsThisRun: $usedHintsThisRun, elapsedMs: $elapsedMs, resumedAt: $resumedAt, hintFlashCell: $hintFlashCell, errorMessage: $errorMessage, ruleTip: $ruleTip, finished: $finished, points: $points, timeSeconds: $timeSeconds, improved: $improved, resultsExtra: $resultsExtra)';
 }
 
 
@@ -285,7 +289,7 @@ abstract mixin class _$PathWordsStateCopyWith<$Res> implements $PathWordsStateCo
   factory _$PathWordsStateCopyWith(_PathWordsState value, $Res Function(_PathWordsState) _then) = __$PathWordsStateCopyWithImpl;
 @override @useResult
 $Res call({
- DateTime day, PathWordsPuzzle? puzzle, PathWordsStatus status, List<Cell> activePath, List<PathWordsStroke> placedPaths, Set<String> completedTargetIds, int hintsRemaining, int hintRevealLength, DateTime? startedAt, Cell? hintFlashCell, String? errorMessage, String? ruleTip, bool finished, int? points, int? timeSeconds, bool? improved, ResultsArgs? resultsExtra
+ DateTime day, PathWordsPuzzle? puzzle, PathWordsStatus status, List<Cell> activePath, List<PathWordsStroke> placedPaths, Set<String> completedTargetIds, int hintsRemaining, int hintRevealLength, bool usedHintsThisRun, int elapsedMs, DateTime? resumedAt, Cell? hintFlashCell, String? errorMessage, String? ruleTip, bool finished, int? points, int? timeSeconds, bool? improved, ResultsArgs? resultsExtra
 });
 
 
@@ -302,7 +306,7 @@ class __$PathWordsStateCopyWithImpl<$Res>
 
 /// Create a copy of PathWordsState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? day = null,Object? puzzle = freezed,Object? status = null,Object? activePath = null,Object? placedPaths = null,Object? completedTargetIds = null,Object? hintsRemaining = null,Object? hintRevealLength = null,Object? startedAt = freezed,Object? hintFlashCell = freezed,Object? errorMessage = freezed,Object? ruleTip = freezed,Object? finished = null,Object? points = freezed,Object? timeSeconds = freezed,Object? improved = freezed,Object? resultsExtra = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? day = null,Object? puzzle = freezed,Object? status = null,Object? activePath = null,Object? placedPaths = null,Object? completedTargetIds = null,Object? hintsRemaining = null,Object? hintRevealLength = null,Object? usedHintsThisRun = null,Object? elapsedMs = null,Object? resumedAt = freezed,Object? hintFlashCell = freezed,Object? errorMessage = freezed,Object? ruleTip = freezed,Object? finished = null,Object? points = freezed,Object? timeSeconds = freezed,Object? improved = freezed,Object? resultsExtra = freezed,}) {
   return _then(_PathWordsState(
 day: null == day ? _self.day : day // ignore: cast_nullable_to_non_nullable
 as DateTime,puzzle: freezed == puzzle ? _self.puzzle : puzzle // ignore: cast_nullable_to_non_nullable
@@ -312,7 +316,9 @@ as List<Cell>,placedPaths: null == placedPaths ? _self._placedPaths : placedPath
 as List<PathWordsStroke>,completedTargetIds: null == completedTargetIds ? _self._completedTargetIds : completedTargetIds // ignore: cast_nullable_to_non_nullable
 as Set<String>,hintsRemaining: null == hintsRemaining ? _self.hintsRemaining : hintsRemaining // ignore: cast_nullable_to_non_nullable
 as int,hintRevealLength: null == hintRevealLength ? _self.hintRevealLength : hintRevealLength // ignore: cast_nullable_to_non_nullable
-as int,startedAt: freezed == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
+as int,usedHintsThisRun: null == usedHintsThisRun ? _self.usedHintsThisRun : usedHintsThisRun // ignore: cast_nullable_to_non_nullable
+as bool,elapsedMs: null == elapsedMs ? _self.elapsedMs : elapsedMs // ignore: cast_nullable_to_non_nullable
+as int,resumedAt: freezed == resumedAt ? _self.resumedAt : resumedAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,hintFlashCell: freezed == hintFlashCell ? _self.hintFlashCell : hintFlashCell // ignore: cast_nullable_to_non_nullable
 as Cell?,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
 as String?,ruleTip: freezed == ruleTip ? _self.ruleTip : ruleTip // ignore: cast_nullable_to_non_nullable

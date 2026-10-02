@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../domain/failures.dart';
 import '../../../domain/repositories/auth_repository.dart';
@@ -26,21 +27,29 @@ class AuthCubit extends Cubit<AuthState> {
                )
              : const AuthState(),
        ) {
-    _subscription = _authRepository.authStateChanges().listen((user) {
-      if (isClosed) return;
-      if (user == null) {
-        emit(const AuthState(status: AuthStatus.signedOut));
-        return;
-      }
-      // authStateChanges also re-emits on users/{uid} profile snapshots.
-      // Only sync FCM when the signed-in uid changes — otherwise writing
-      // fcmUpdatedAt retriggers snapshots and loops forever.
-      final previousUid = state.user?.uid;
-      emit(AuthState(status: AuthStatus.signedIn, user: user));
-      if (previousUid != user.uid) {
-        unawaited(_syncFcmToken?.call(user.uid));
-      }
-    });
+    _subscription = _authRepository.authStateChanges().listen(
+      (user) {
+        if (isClosed) return;
+        if (user == null) {
+          emit(const AuthState(status: AuthStatus.signedOut));
+          return;
+        }
+        // authStateChanges also re-emits on users/{uid} profile snapshots.
+        // Only sync FCM when the signed-in uid changes — otherwise writing
+        // fcmUpdatedAt retriggers snapshots and loops forever.
+        final previousUid = state.user?.uid;
+        emit(AuthState(status: AuthStatus.signedIn, user: user));
+        if (previousUid != user.uid) {
+          unawaited(_syncFcmToken?.call(user.uid));
+        }
+      },
+      onError: (Object error, StackTrace stack) {
+        // Firestore users/{uid} snapshots often error with permission-denied
+        // during sign-out; never let that become an unhandled exception.
+        if (isClosed) return;
+        debugPrint('AuthCubit authStateChanges error: $error');
+      },
+    );
   }
 
   final AuthRepository _authRepository;
@@ -103,12 +112,19 @@ class AuthCubit extends Cubit<AuthState> {
 
   Future<void> signOut() async {
     final uid = state.user?.uid;
-    // Firebase/Google sign-out first so UI can flip to signed-out immediately.
-    // FCM cleanup can hang on some devices — never block sign-out on it.
+    // Clear Firestore FCM fields while still authenticated (rules: isOwner).
+    // Local FCM detach continues in the background and must not delay UI.
+    final clear = _clearNotificationToken;
+    if (clear != null) {
+      try {
+        await clear(uid: uid).timeout(const Duration(seconds: 3));
+      } catch (e) {
+        debugPrint('clearNotificationToken before signOut: $e');
+      }
+    }
     await _signOut();
     if (isClosed) return;
     emit(const AuthState(status: AuthStatus.signedOut));
-    unawaited(_clearNotificationToken?.call(uid: uid));
   }
 
   @override

@@ -9,12 +9,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/dev_flags.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
+import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
@@ -47,7 +49,8 @@ class PathWordsScreen extends StatefulWidget {
   State<PathWordsScreen> createState() => _PathWordsScreenState();
 }
 
-class _PathWordsScreenState extends State<PathWordsScreen> {
+class _PathWordsScreenState extends State<PathWordsScreen>
+    with WidgetsBindingObserver {
   late final PathWordsBloc _bloc;
   late final bool _ownsBloc;
   PathWordsGame? _game;
@@ -151,6 +154,7 @@ class _PathWordsScreenState extends State<PathWordsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final injected = widget.bloc;
     _ownsBloc = injected == null;
     _bloc =
@@ -164,6 +168,7 @@ class _PathWordsScreenState extends State<PathWordsScreen> {
           getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
           analytics: context.read<AnalyticsRepository>(),
           hintQuota: context.read<HintQuotaRepository>(),
+          inProgressRuns: context.read<InProgressRunRepository>(),
           playPeriod: DevFlags.playPeriod,
         );
 
@@ -173,7 +178,22 @@ class _PathWordsScreenState extends State<PathWordsScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _bloc.add(const PathWordsEvent.resumeRun());
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _bloc.add(const PathWordsEvent.pauseRun());
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _bloc.add(const PathWordsEvent.pauseRun());
     final game = _game;
     _game = null;
     game?.pauseEngine();
@@ -258,6 +278,11 @@ class _PathWordsScreenState extends State<PathWordsScreen> {
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                             ),
+                            if (isReadyToPlay)
+                              DevRunTimerLabel(
+                                elapsedMs: state.elapsedMs,
+                                resumedAt: state.resumedAt,
+                              ),
                             if (!isReview)
                               IconButton(
                                 onPressed: !isReadyToPlay

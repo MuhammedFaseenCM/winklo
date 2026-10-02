@@ -24,16 +24,16 @@ import 'widgets/leaderboard_row.dart';
 import 'widgets/leaderboard_shimmer.dart';
 
 class LeaderboardScreen extends StatelessWidget {
-  LeaderboardScreen({
+  const LeaderboardScreen({
     super.key,
     this.initialGameId = GameIds.zip,
-    bool? showAllTimeLeaderboard,
-  }) : showAllTimeLeaderboard =
-           showAllTimeLeaderboard ??
-           RemoteConfigClient.instance.showAllTimeLeaderboard;
+    this.showAllTimeLeaderboard,
+  });
 
   final String initialGameId;
-  final bool showAllTimeLeaderboard;
+
+  /// Test override. Production reads live Remote Config (refreshed on open/resume).
+  final bool? showAllTimeLeaderboard;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +44,9 @@ class LeaderboardScreen extends StatelessWidget {
         initialGameId: _resolveLeaderboardGameId(initialGameId),
       ),
       child: _RouteGameSync(
-        child: _LeaderboardView(showAllTimeLeaderboard: showAllTimeLeaderboard),
+        child: _LeaderboardView(
+          showAllTimeLeaderboardOverride: showAllTimeLeaderboard,
+        ),
       ),
     );
   }
@@ -119,15 +121,16 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
 }
 
 class _LeaderboardView extends StatefulWidget {
-  const _LeaderboardView({required this.showAllTimeLeaderboard});
+  const _LeaderboardView({this.showAllTimeLeaderboardOverride});
 
-  final bool showAllTimeLeaderboard;
+  final bool? showAllTimeLeaderboardOverride;
 
   @override
   State<_LeaderboardView> createState() => _LeaderboardViewState();
 }
 
-class _LeaderboardViewState extends State<_LeaderboardView> {
+class _LeaderboardViewState extends State<_LeaderboardView>
+    with WidgetsBindingObserver {
   String _previousGameId = GameIds.zip;
   LeaderboardPeriod _previousPeriod = LeaderboardPeriod.daily;
   double _slideDirection = 1.0;
@@ -135,23 +138,83 @@ class _LeaderboardViewState extends State<_LeaderboardView> {
   final GlobalKey _userRowKey = GlobalKey();
   final GlobalKey _listKey = GlobalKey();
   bool _userReached = false;
+  late bool _showAllTimeLeaderboard;
+  GoRouter? _router;
+  String? _lastRoutePath;
+
+  bool get _usesLiveRemoteConfig =>
+      widget.showAllTimeLeaderboardOverride == null;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _scrollController = ScrollController();
-    if (!widget.showAllTimeLeaderboard) {
+    _showAllTimeLeaderboard =
+        widget.showAllTimeLeaderboardOverride ??
+        RemoteConfigClient.instance.showAllTimeLeaderboard;
+    _ensureDailyWhenAllTimeHidden();
+    if (_usesLiveRemoteConfig) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        context.read<LeaderboardCubit>().selectPeriod(LeaderboardPeriod.daily);
+        _refreshShowAllTimeFlag();
       });
     }
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_usesLiveRemoteConfig) return;
+    final router = GoRouter.of(context);
+    if (!identical(_router, router)) {
+      _router?.routerDelegate.removeListener(_onRouteChanged);
+      _router = router;
+      router.routerDelegate.addListener(_onRouteChanged);
+      _lastRoutePath = router.routerDelegate.currentConfiguration.uri.path;
+    }
+  }
+
+  @override
   void dispose() {
+    _router?.routerDelegate.removeListener(_onRouteChanged);
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _usesLiveRemoteConfig) {
+      _refreshShowAllTimeFlag();
+    }
+  }
+
+  void _onRouteChanged() {
+    if (!mounted || !_usesLiveRemoteConfig) return;
+    final path = _router?.routerDelegate.currentConfiguration.uri.path;
+    final previous = _lastRoutePath;
+    _lastRoutePath = path;
+    if (path == '/leaderboard' && previous != '/leaderboard') {
+      _refreshShowAllTimeFlag();
+    }
+  }
+
+  Future<void> _refreshShowAllTimeFlag() async {
+    if (!_usesLiveRemoteConfig) return;
+    await RemoteConfigClient.instance.refresh();
+    if (!mounted) return;
+    final next = RemoteConfigClient.instance.showAllTimeLeaderboard;
+    if (next == _showAllTimeLeaderboard) return;
+    setState(() => _showAllTimeLeaderboard = next);
+    _ensureDailyWhenAllTimeHidden();
+  }
+
+  void _ensureDailyWhenAllTimeHidden() {
+    if (_showAllTimeLeaderboard) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _showAllTimeLeaderboard) return;
+      context.read<LeaderboardCubit>().selectPeriod(LeaderboardPeriod.daily);
+    });
   }
 
   String _formatTime(int seconds) {
@@ -314,79 +377,36 @@ class _LeaderboardViewState extends State<_LeaderboardView> {
                         return _LeaderboardPillTrack(
                           selectedIndex: selectedIndex,
                           segmentCount: 3,
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: SegmentedButton<String>(
-                              showSelectedIcon: false,
-                              style: ButtonStyle(
-                                backgroundColor: const WidgetStatePropertyAll(
-                                  Colors.transparent,
-                                ),
-                                foregroundColor:
-                                    WidgetStateProperty.resolveWith((states) {
-                                      if (states.contains(
-                                        WidgetState.selected,
-                                      )) {
-                                        return Colors.white;
-                                      }
-                                      return ZipColors.inkSoft;
-                                    }),
-                                elevation: const WidgetStatePropertyAll(0),
-                                shadowColor: const WidgetStatePropertyAll(
-                                  Colors.transparent,
-                                ),
-                                side: const WidgetStatePropertyAll(
-                                  BorderSide.none,
-                                ),
-                                shape: WidgetStatePropertyAll(
-                                  RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                visualDensity: VisualDensity.compact,
-                                textStyle: WidgetStateProperty.resolveWith((
-                                  states,
-                                ) {
-                                  return GoogleFonts.lexend(
-                                    fontWeight:
-                                        states.contains(WidgetState.selected)
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    fontSize: 13,
-                                    letterSpacing: 0.2,
-                                  );
-                                }),
+                          child: _LeaderboardSegmentBar<String>(
+                            selected: state.gameId,
+                            onChanged: (value) {
+                              context.read<LeaderboardCubit>().selectGame(
+                                value,
+                              );
+                            },
+                            segments: const [
+                              _LeaderboardSegment(
+                                value: GameIds.zip,
+                                icon: Icons.bolt_rounded,
+                                label: AppStrings.zipTitle,
                               ),
-                              segments: const [
-                                ButtonSegment(
-                                  value: GameIds.zip,
-                                  icon: Icon(Icons.bolt_rounded, size: 18),
-                                  label: Text(AppStrings.zipTitle),
-                                ),
-                                ButtonSegment(
-                                  value: GameIds.pathWords,
-                                  icon: Icon(Icons.route_rounded, size: 18),
-                                  label: Text(AppStrings.pathWordsTitle),
-                                ),
-                                ButtonSegment(
-                                  value: GameIds.sudoku,
-                                  icon: Icon(Icons.grid_on_rounded, size: 18),
-                                  label: Text(AppStrings.sudokuTitle),
-                                ),
-                              ],
-                              selected: {state.gameId},
-                              onSelectionChanged: (values) {
-                                context.read<LeaderboardCubit>().selectGame(
-                                  values.first,
-                                );
-                              },
-                            ),
+                              _LeaderboardSegment(
+                                value: GameIds.pathWords,
+                                icon: Icons.route_rounded,
+                                label: AppStrings.pathWordsTab,
+                              ),
+                              _LeaderboardSegment(
+                                value: GameIds.sudoku,
+                                icon: Icons.grid_on_rounded,
+                                label: AppStrings.sudokuTitle,
+                              ),
+                            ],
                           ),
                         );
                       },
                     ),
                   ),
-                  if (widget.showAllTimeLeaderboard) ...[
+                  if (_showAllTimeLeaderboard) ...[
                     SizedBox(height: layout.space(10)),
                     Padding(
                       padding: EdgeInsets.symmetric(
@@ -400,71 +420,28 @@ class _LeaderboardViewState extends State<_LeaderboardView> {
                           return _LeaderboardPillTrack(
                             selectedIndex: selectedIndex,
                             isSecondary: true,
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: SegmentedButton<LeaderboardPeriod>(
-                                showSelectedIcon: false,
-                                style: ButtonStyle(
-                                  backgroundColor: const WidgetStatePropertyAll(
-                                    Colors.transparent,
-                                  ),
-                                  foregroundColor:
-                                      WidgetStateProperty.resolveWith((states) {
-                                        if (states.contains(
-                                          WidgetState.selected,
-                                        )) {
-                                          return ZipColors.ember;
-                                        }
-                                        return ZipColors.inkSoft;
-                                      }),
-                                  elevation: const WidgetStatePropertyAll(0),
-                                  shadowColor: const WidgetStatePropertyAll(
-                                    Colors.transparent,
-                                  ),
-                                  side: const WidgetStatePropertyAll(
-                                    BorderSide.none,
-                                  ),
-                                  shape: WidgetStatePropertyAll(
-                                    RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  textStyle: WidgetStateProperty.resolveWith((
-                                    states,
-                                  ) {
-                                    return GoogleFonts.lexend(
-                                      fontWeight:
-                                          states.contains(WidgetState.selected)
-                                          ? FontWeight.w700
-                                          : FontWeight.w500,
-                                      fontSize: 13,
-                                      letterSpacing: 0.2,
-                                    );
-                                  }),
+                            child: _LeaderboardSegmentBar<LeaderboardPeriod>(
+                              selected: state.period,
+                              isSecondary: true,
+                              onChanged: (value) {
+                                context.read<LeaderboardCubit>().selectPeriod(
+                                  value,
+                                );
+                              },
+                              segments: const [
+                                _LeaderboardSegment(
+                                  value: LeaderboardPeriod.daily,
+                                  icon: Icons.today_rounded,
+                                  label: AppStrings.leaderboardDaily,
+                                  iconSize: 16,
                                 ),
-                                segments: const [
-                                  ButtonSegment(
-                                    value: LeaderboardPeriod.daily,
-                                    icon: Icon(Icons.today_rounded, size: 16),
-                                    label: Text(AppStrings.leaderboardDaily),
-                                  ),
-                                  ButtonSegment(
-                                    value: LeaderboardPeriod.allTime,
-                                    icon: Icon(
-                                      Icons.military_tech_rounded,
-                                      size: 16,
-                                    ),
-                                    label: Text(AppStrings.leaderboardAllTime),
-                                  ),
-                                ],
-                                selected: {state.period},
-                                onSelectionChanged: (values) {
-                                  context.read<LeaderboardCubit>().selectPeriod(
-                                    values.first,
-                                  );
-                                },
-                              ),
+                                _LeaderboardSegment(
+                                  value: LeaderboardPeriod.allTime,
+                                  icon: Icons.military_tech_rounded,
+                                  label: AppStrings.leaderboardAllTime,
+                                  iconSize: 16,
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -636,6 +613,10 @@ class _LeaderboardViewState extends State<_LeaderboardView> {
                                             entry.timeSeconds,
                                           ),
                                           isYou: isYou,
+                                          showCleanRunChips:
+                                              state.period ==
+                                              LeaderboardPeriod.daily,
+                                          gameId: state.gameId,
                                         );
                                       },
                                     ),
@@ -705,6 +686,11 @@ class _LeaderboardViewState extends State<_LeaderboardView> {
                                                       timeLabel: _formatTime(
                                                         userEntry.timeSeconds,
                                                       ),
+                                                      showCleanRunChips:
+                                                          state.period ==
+                                                          LeaderboardPeriod
+                                                              .daily,
+                                                      gameId: state.gameId,
                                                       onTap: () =>
                                                           _scrollToUser(
                                                             userIndex,
@@ -748,6 +734,91 @@ class _LeaderboardViewState extends State<_LeaderboardView> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LeaderboardSegment<T> {
+  const _LeaderboardSegment({
+    required this.value,
+    required this.icon,
+    required this.label,
+    this.iconSize = 18,
+  });
+
+  final T value;
+  final IconData icon;
+  final String label;
+  final double iconSize;
+}
+
+class _LeaderboardSegmentBar<T> extends StatelessWidget {
+  const _LeaderboardSegmentBar({
+    required this.segments,
+    required this.selected,
+    required this.onChanged,
+    this.isSecondary = false,
+  });
+
+  final List<_LeaderboardSegment<T>> segments;
+  final T selected;
+  final ValueChanged<T> onChanged;
+  final bool isSecondary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final segment in segments)
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => onChanged(segment.value),
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  height: 40,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          segment.icon,
+                          size: segment.iconSize,
+                          color: segment.value == selected
+                              ? (isSecondary ? ZipColors.ember : Colors.white)
+                              : ZipColors.inkSoft,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            segment.label,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.lexend(
+                              fontWeight: segment.value == selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              fontSize: 13,
+                              letterSpacing: 0.2,
+                              color: segment.value == selected
+                                  ? (isSecondary
+                                        ? ZipColors.ember
+                                        : Colors.white)
+                                  : ZipColors.inkSoft,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -912,11 +983,15 @@ class _PinnedUserRow extends StatelessWidget {
     required this.entry,
     required this.timeLabel,
     required this.onTap,
+    this.showCleanRunChips = false,
+    this.gameId,
   });
 
   final LeaderboardEntry entry;
   final String timeLabel;
   final VoidCallback onTap;
+  final bool showCleanRunChips;
+  final String? gameId;
 
   @override
   Widget build(BuildContext context) {
@@ -945,7 +1020,13 @@ class _PinnedUserRow extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              LeaderboardRow(entry: entry, timeLabel: timeLabel, isYou: true),
+              LeaderboardRow(
+                entry: entry,
+                timeLabel: timeLabel,
+                isYou: true,
+                showCleanRunChips: showCleanRunChips,
+                gameId: gameId,
+              ),
               Positioned(
                 top: -8,
                 right: 16,

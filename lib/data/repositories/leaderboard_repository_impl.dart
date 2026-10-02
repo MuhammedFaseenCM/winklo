@@ -13,10 +13,15 @@ import '../leaderboard_root.dart';
 const _allowedGameIds = {GameIds.zip, GameIds.pathWords, GameIds.sudoku};
 
 /// Maps ordered leaderboard rows to ranked [LeaderboardEntry] values.
+///
+/// Equal [timeSeconds] share a dense rank (1, 2, 2, 3). Rows must already be
+/// ordered by time ascending (ties by earlier [updatedAt]).
 List<LeaderboardEntry> mapLeaderboardRows(
   Iterable<({String id, Map<String, dynamic> data})> rows,
 ) {
   final entries = <LeaderboardEntry>[];
+  var rank = 0;
+  int? previousTime;
   for (final row in rows) {
     final data = row.data;
     final timeSeconds = data['timeSeconds'];
@@ -28,6 +33,12 @@ List<LeaderboardEntry> mapLeaderboardRows(
     final name = data['displayName'];
     final photo = data['photoUrl'];
     final avatar = data['avatarId'];
+    if (previousTime == null || timeSeconds != previousTime) {
+      rank += 1;
+    }
+    previousTime = timeSeconds;
+    final usedHints = data['usedHints'];
+    final hadMistakes = data['hadMistakes'];
     entries.add(
       LeaderboardEntry(
         uid: row.id,
@@ -38,7 +49,9 @@ List<LeaderboardEntry> mapLeaderboardRows(
         avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
         timeSeconds: timeSeconds,
         updatedAt: updatedAt,
-        rank: entries.length + 1,
+        rank: rank,
+        usedHints: usedHints is bool ? usedHints : null,
+        hadMistakes: hadMistakes is bool ? hadMistakes : null,
       ),
     );
   }
@@ -87,8 +100,8 @@ leaderboardSubmitIdentity({
 
 class LeaderboardRepositoryImpl implements LeaderboardRepository {
   LeaderboardRepositoryImpl({
-    FirebaseFirestore? this._firestore,
-    FirebaseAuth? this._auth,
+    this._firestore,
+    this._auth,
   });
 
   final FirebaseFirestore? _firestore;
@@ -162,6 +175,8 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
   Future<void> submitBestTime({
     required String gameId,
     required int timeSeconds,
+    required bool usedHints,
+    required bool hadMistakes,
   }) async {
     _assertGameId(gameId);
     if (timeSeconds <= 0) {
@@ -210,11 +225,15 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       await _writeImproveOnly(
         allTimeRef,
         timeSeconds: timeSeconds,
+        usedHints: usedHints,
+        hadMistakes: hadMistakes,
         identity: identity,
       );
       await _writeImproveOnly(
         dailyRef,
         timeSeconds: timeSeconds,
+        usedHints: usedHints,
+        hadMistakes: hadMistakes,
         identity: identity,
       );
     } catch (e, st) {
@@ -227,6 +246,8 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
   Future<void> _writeImproveOnly(
     DocumentReference<Map<String, dynamic>> ref, {
     required int timeSeconds,
+    required bool usedHints,
+    required bool hadMistakes,
     ({String displayName, String? photoUrl, String? avatarId})? identity,
   }) async {
     await ref.firestore.runTransaction((tx) async {
@@ -240,6 +261,8 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       final payload = <String, dynamic>{
         'timeSeconds': timeSeconds,
         'updatedAt': FieldValue.serverTimestamp(),
+        'usedHints': usedHints,
+        'hadMistakes': hadMistakes,
       };
       if (identity != null) {
         payload['displayName'] = identity.displayName;

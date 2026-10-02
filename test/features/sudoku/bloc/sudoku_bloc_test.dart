@@ -3,11 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
+import 'package:winklo/domain/entities/in_progress_run.dart';
 import 'package:winklo/domain/entities/sudoku_difficulty.dart';
 import 'package:winklo/domain/entities/sudoku_puzzle.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/hint_quota_repository.dart';
+import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
@@ -43,6 +45,31 @@ class _FakeHintQuota implements HintQuotaRepository {
     if (_remaining <= 0) return 0;
     _remaining--;
     return _remaining;
+  }
+}
+
+class _MemoryInProgressRuns implements InProgressRunRepository {
+  final Map<String, InProgressRun> runs = {};
+
+  String _key(String gameId, String playId) => '${gameId}_$playId';
+
+  @override
+  Future<InProgressRun?> load({
+    required String gameId,
+    required String playId,
+  }) async => runs[_key(gameId, playId)];
+
+  @override
+  Future<void> save(InProgressRun run) async {
+    runs[_key(run.gameId, run.playId)] = run;
+  }
+
+  @override
+  Future<void> clear({
+    required String gameId,
+    required String playId,
+  }) async {
+    runs.remove(_key(gameId, playId));
   }
 }
 
@@ -127,12 +154,14 @@ void main() {
   late _MockGetBestTimeSeconds getBestTimeSeconds;
   late _MockAnalyticsRepository analytics;
   late _FakeHintQuota hintQuota;
+  late _MemoryInProgressRuns inProgressRuns;
   final day = DateTime(2026, 9, 27);
 
   SudokuBloc buildBloc({
     SudokuPuzzle Function({required DateTime day})? generatePuzzle,
     DateTime Function()? now,
     _FakeHintQuota? quota,
+    _MemoryInProgressRuns? drafts,
   }) {
     return SudokuBloc(
       submitScore: submitScore,
@@ -142,6 +171,7 @@ void main() {
       getBestTimeSeconds: getBestTimeSeconds,
       analytics: analytics,
       hintQuota: quota ?? hintQuota,
+      inProgressRuns: drafts ?? inProgressRuns,
       generatePuzzle:
           generatePuzzle ??
           ({required DateTime day}) => _almostSolvedPuzzle(day: day),
@@ -159,6 +189,7 @@ void main() {
     getBestTimeSeconds = _MockGetBestTimeSeconds();
     analytics = _MockAnalyticsRepository();
     hintQuota = _FakeHintQuota(3);
+    inProgressRuns = _MemoryInProgressRuns();
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
     when(
@@ -172,6 +203,8 @@ void main() {
       () => submitLeaderboardTime(
         gameId: any(named: 'gameId'),
         timeSeconds: any(named: 'timeSeconds'),
+        usedHints: any(named: 'usedHints'),
+        hadMistakes: any(named: 'hadMistakes'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -224,7 +257,8 @@ void main() {
           .having((s) => s.puzzle, 'puzzle', isNotNull)
           .having((s) => s.grid[1], 'empty cell', 0)
           .having((s) => s.hintsRemaining, 'hintsRemaining', 3)
-          .having((s) => s.startedAt, 'startedAt', isNotNull),
+          .having((s) => s.resumedAt, 'resumedAt', isNotNull)
+          .having((s) => s.elapsedMs, 'elapsedMs', 0),
     ],
   );
 
@@ -248,7 +282,7 @@ void main() {
   );
 
   blocTest<SudokuBloc, SudokuState>(
-    'wrong digit is rejected',
+    'wrong digit is accepted and marks error when unit is full',
     build: buildBloc,
     act: (bloc) async {
       bloc.add(SudokuEvent.started(date: day));
@@ -260,8 +294,9 @@ void main() {
     expect: () => [
       isA<SudokuState>().having((s) => s.selectedIndex, 'selected', 1),
       isA<SudokuState>()
-          .having((s) => s.grid[1], 'grid', 0)
-          .having((s) => s.rejectFlashIndex, 'reject', 1),
+          .having((s) => s.grid[1], 'grid', 3)
+          .having((s) => s.errorIndices, 'errors', equals({1}))
+          .having((s) => s.hadMistakesThisRun, 'hadMistakesThisRun', isTrue),
     ],
   );
 
@@ -294,6 +329,14 @@ void main() {
           modeKey: any(named: 'modeKey', that: startsWith('sudoku_')),
           points: 950,
           timeSeconds: 10,
+        ),
+      ).called(1);
+      verify(
+        () => submitLeaderboardTime(
+          gameId: GameIds.sudoku,
+          timeSeconds: 10,
+          usedHints: false,
+          hadMistakes: false,
         ),
       ).called(1);
       verify(
@@ -344,14 +387,12 @@ void main() {
           .having((s) => s.activeCoachHint?.targetIndex, 'target', 1)
           .having((s) => s.activeCoachHint?.digit, 'digit', 2)
           .having((s) => s.hintsRemaining, 'remaining', 2)
+          .having((s) => s.usedHintsThisRun, 'usedHintsThisRun', isTrue)
           .having((s) => s.hintFlashIndex, 'no flash', isNull),
     ],
     verify: (_) {
       verify(
-        () => analytics.logHintUsed(
-          gameId: GameIds.sudoku,
-          hintsRemaining: 2,
-        ),
+        () => analytics.logHintUsed(gameId: GameIds.sudoku, hintsRemaining: 2),
       ).called(1);
     },
   );
@@ -397,6 +438,7 @@ void main() {
       expect(bloc.state.hintsRemaining, 2);
       expect(bloc.state.activeCoachHint, isNull);
       expect(bloc.state.grid[1], 0);
+      expect(bloc.state.usedHintsThisRun, isFalse);
     },
   );
 
@@ -440,12 +482,13 @@ void main() {
   );
 
   blocTest<SudokuBloc, SudokuState>(
-    'reset clears player cells and keeps startedAt',
+    'reset clears player cells and keeps elapsed clock',
     build: buildBloc,
     act: (bloc) async {
       bloc.add(SudokuEvent.started(date: day));
       await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
-      final started = bloc.state.startedAt;
+      final resumedAt = bloc.state.resumedAt;
+      final elapsedMs = bloc.state.elapsedMs;
       bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
       bloc.add(const SudokuEvent.notesModeToggled());
       bloc.add(const SudokuEvent.digitTapped(3));
@@ -453,9 +496,64 @@ void main() {
       await bloc.stream.firstWhere(
         (s) => s.notes.every((n) => n.isEmpty) && !s.notesMode,
       );
-      expect(bloc.state.startedAt, started);
+      expect(bloc.state.resumedAt, resumedAt);
+      expect(bloc.state.elapsedMs, elapsedMs);
       expect(bloc.state.grid[1], 0);
       expect(bloc.state.notesMode, isFalse);
     },
+  );
+
+  test('pause then resume does not count away time', () async {
+    var now = day;
+    final bloc = buildBloc(now: () => now);
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+
+    now = day.add(const Duration(seconds: 5));
+    bloc.add(const SudokuEvent.pauseRun());
+    await bloc.stream.firstWhere((s) => !s.isClockRunning);
+    expect(bloc.state.elapsedMs, 5000);
+
+    now = day.add(const Duration(minutes: 10));
+    bloc.add(const SudokuEvent.resumeRun());
+    await bloc.stream.firstWhere((s) => s.isClockRunning);
+
+    now = day.add(const Duration(minutes: 10, seconds: 3));
+    expect(bloc.state.liveElapsedSeconds(now), 8);
+    await bloc.close();
+  });
+
+  blocTest<SudokuBloc, SudokuState>(
+    'restores draft grid and elapsed on start',
+    build: () {
+      final puzzle = _almostSolvedPuzzle(day: day);
+      final grid = List<int>.from(puzzle.given);
+      grid[1] = 3;
+      inProgressRuns.runs['${GameIds.sudoku}_20260927'] = InProgressRun(
+        gameId: GameIds.sudoku,
+        playId: '20260927',
+        elapsedMs: 12000,
+        hadMistakesThisRun: true,
+        board: {
+          'grid': grid,
+          'notes': List.generate(puzzle.cellCount, (_) => <int>[]),
+          'notesMode': false,
+        },
+      );
+      return buildBloc();
+    },
+    act: (bloc) => bloc.add(SudokuEvent.started(date: day)),
+    expect: () => [
+      isA<SudokuState>().having(
+        (s) => s.status,
+        'status',
+        SudokuStatus.loading,
+      ),
+      isA<SudokuState>()
+          .having((s) => s.status, 'status', SudokuStatus.ready)
+          .having((s) => s.grid[1], 'restored cell', 3)
+          .having((s) => s.elapsedMs, 'elapsedMs', 12000)
+          .having((s) => s.hadMistakesThisRun, 'hadMistakes', isTrue),
+    ],
   );
 }

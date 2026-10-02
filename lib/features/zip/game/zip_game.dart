@@ -15,7 +15,7 @@ import 'zip_path_ribbon.dart';
 import 'zip_stroke.dart';
 import 'zip_tip_sparks.dart';
 
-typedef ZipWinCallback = void Function(int points, int elapsedSeconds);
+typedef ZipWinCallback = void Function();
 typedef ZipRuleTipCallback = void Function(ZipRuleTip tip);
 
 class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
@@ -23,18 +23,22 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     required this.level,
     required this.onWin,
     required this.onStatsChanged,
+    this.onPathChanged,
     this.onRuleTip,
     this.readOnly = false,
     int initialHintsRemaining = HintQuotaRepository.cap,
+    this._initialPath = const [],
   }) : _validator = PathValidator(level),
        hintsRemaining = initialHintsRemaining;
 
   final ZipLevel level;
   final ZipWinCallback onWin;
   final void Function(int pathLength, int nextNumber) onStatsChanged;
+  final void Function(List<Cell> path)? onPathChanged;
   final ZipRuleTipCallback? onRuleTip;
   final bool readOnly;
   final PathValidator _validator;
+  final List<Cell> _initialPath;
   final ZipTipSparks _tipSparks = ZipTipSparks();
   late double _cellSize;
   late Offset _origin;
@@ -45,7 +49,6 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
 
   /// True after [onTapDown] armed a stroke; drag may cancel the tap later.
   bool _armedFromTapDown = false;
-  DateTime? startedAt;
   int hintsRemaining;
   int hintRevealLength = 0;
   int hintFromIndex = 0;
@@ -59,12 +62,16 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    startedAt = DateTime.now();
     _layout();
     if (readOnly && level.solution.isNotEmpty) {
       path.addAll(level.solution);
       _won = true;
       onStatsChanged(path.length, level.maxNumber);
+      return;
+    }
+    if (_initialPath.isNotEmpty) {
+      path.addAll(_initialPath);
+      onStatsChanged(path.length, _validator.nextRequiredAfter(path));
       return;
     }
     onStatsChanged(0, 1);
@@ -175,8 +182,19 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     _notifyStats();
   }
 
+  void restorePath(List<Cell> cells) {
+    if (_won || readOnly) return;
+    path
+      ..clear()
+      ..addAll(cells);
+    _notifyStats();
+  }
+
   void _notifyStats() {
     onStatsChanged(path.length, _validator.nextRequiredAfter(path));
+    if (!_won && !readOnly) {
+      onPathChanged?.call(List<Cell>.from(path));
+    }
   }
 
   Vector2? _lastPointer;
@@ -207,9 +225,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     if (_validator.isWon(path)) {
       _won = true;
       _celebrate = true;
-      final elapsed = DateTime.now().difference(startedAt!).inSeconds;
-      final points = (1000 - elapsed * 5).clamp(50, 1000);
-      onWin(points, elapsed);
+      onWin();
     }
   }
 

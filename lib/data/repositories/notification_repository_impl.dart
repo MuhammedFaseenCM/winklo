@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -112,9 +114,10 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
   @override
   Future<void> clearTokenOnSignOut({String? uid}) async {
+    // Firestore clear must finish while still signed in (rules: isOwner).
+    // Topic unsubscribe / token delete often hang on emulators with flaky GMS —
+    // never block sign-out on those.
     try {
-      await _client.unsubscribeFromTopic(NotificationTypes.topicAnnouncements);
-      await _client.unsubscribeFromTopic(NotificationTypes.topicAppUpdates);
       final db = _db;
       if (uid != null && db != null) {
         await db.collection('users').doc(uid).set({
@@ -124,9 +127,23 @@ class NotificationRepositoryImpl implements NotificationRepository {
       }
       _lastSyncedUid = null;
       _lastSyncedToken = null;
-      await _client.regenerateFcmToken();
     } catch (e) {
-      debugPrint('clearTokenOnSignOut failed: $e');
+      debugPrint('clearTokenOnSignOut firestore failed: $e');
+    }
+    unawaited(_detachLocalFcm());
+  }
+
+  Future<void> _detachLocalFcm() async {
+    try {
+      await _client
+          .unsubscribeFromTopic(NotificationTypes.topicAnnouncements)
+          .timeout(const Duration(seconds: 3));
+      await _client
+          .unsubscribeFromTopic(NotificationTypes.topicAppUpdates)
+          .timeout(const Duration(seconds: 3));
+      await _client.regenerateFcmToken().timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('detachLocalFcm failed: $e');
     }
   }
 

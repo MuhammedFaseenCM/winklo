@@ -2,10 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/features/leaderboard/logic/mini_leaderboard_slice.dart';
 
-LeaderboardEntry e({required int rank, String uid = 'u', int time = 10}) {
+LeaderboardEntry e({required int rank, String? uid, int time = 10}) {
+  final id = uid ?? 'uid$rank';
   return LeaderboardEntry(
-    uid: 'uid$rank',
-    displayName: 'P$rank',
+    uid: id,
+    displayName: 'P$id',
     timeSeconds: time,
     updatedAt: DateTime.utc(2026, 9, 24),
     rank: rank,
@@ -87,5 +88,37 @@ void main() {
       sliceLeaderboardForMini(entries: const [], currentUid: 'x'),
       isEmpty,
     );
+  });
+
+  test('tied ranks both appear and gap uses dense values', () {
+    final entries = [
+      e(rank: 1, uid: 'a', time: 10),
+      e(rank: 2, uid: 'b', time: 15),
+      e(rank: 2, uid: 'c', time: 15),
+      e(rank: 3, uid: 'd', time: 18),
+      e(rank: 4, uid: 'e', time: 20),
+      e(rank: 5, uid: 'f', time: 22),
+      e(rank: 10, uid: 'g', time: 40),
+      e(rank: 11, uid: 'h', time: 41),
+      e(rank: 12, uid: 'i', time: 42),
+    ];
+    final items = sliceLeaderboardForMini(
+      entries: entries,
+      currentUid: 'h',
+      above: 2,
+      below: 1,
+    );
+    final ranks = <Object>[];
+    final uids = <String>[];
+    for (final item in items) {
+      if (item is MiniLeaderboardGap) {
+        ranks.add('gap');
+      } else if (item is MiniLeaderboardEntryItem) {
+        ranks.add(item.entry.rank);
+        uids.add(item.entry.uid);
+      }
+    }
+    expect(uids, ['a', 'b', 'c', 'd', 'g', 'h', 'i']);
+    expect(ranks, [1, 2, 2, 3, 'gap', 10, 11, 12]);
   });
 }

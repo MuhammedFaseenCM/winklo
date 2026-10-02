@@ -16,6 +16,7 @@ import 'package:winklo/data/repositories/auth_repository_impl.dart';
 import 'package:winklo/data/repositories/category_repository_impl.dart';
 import 'package:winklo/data/repositories/firebase_analytics_repository_impl.dart';
 import 'package:winklo/data/repositories/hint_quota_repository_impl.dart';
+import 'package:winklo/data/repositories/in_progress_run_repository_impl.dart';
 import 'package:winklo/data/repositories/issue_report_repository_impl.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
@@ -31,6 +32,7 @@ import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/category_repository.dart';
 import 'package:winklo/domain/repositories/hint_quota_repository.dart';
+import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
@@ -167,6 +169,10 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<TutorialRepository>(
       create: (context) =>
           TutorialRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<InProgressRunRepository>(
+      create: (context) =>
+          InProgressRunRepositoryImpl(context.read<SharedPreferences>()),
     ),
     RepositoryProvider<ZipLevelRepository>(
       create: (_) => ZipLevelRepositoryImpl(),

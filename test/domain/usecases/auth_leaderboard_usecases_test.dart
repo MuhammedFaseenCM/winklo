@@ -93,12 +93,27 @@ void main() {
 
     test('SubmitLeaderboardTime forwards params', () async {
       when(
-        () => repo.submitBestTime(gameId: 'path_words', timeSeconds: 42),
+        () => repo.submitBestTime(
+          gameId: 'path_words',
+          timeSeconds: 42,
+          usedHints: false,
+          hadMistakes: false,
+        ),
       ).thenAnswer((_) async {});
 
-      await SubmitLeaderboardTime(repo)(gameId: 'path_words', timeSeconds: 42);
+      await SubmitLeaderboardTime(repo)(
+        gameId: 'path_words',
+        timeSeconds: 42,
+        usedHints: false,
+        hadMistakes: false,
+      );
       verify(
-        () => repo.submitBestTime(gameId: 'path_words', timeSeconds: 42),
+        () => repo.submitBestTime(
+          gameId: 'path_words',
+          timeSeconds: 42,
+          usedHints: false,
+          hadMistakes: false,
+        ),
       ).called(1);
     });
   });

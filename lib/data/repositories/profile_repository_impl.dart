@@ -79,10 +79,20 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Stream<AppUser?> watchProfile(String uid) {
     final db = _db;
     if (db == null) return Stream.error(_profileUnavailable);
-    return db.collection('users').doc(uid).snapshots().map((snap) {
-      if (!snap.exists) return null;
-      return mapUserProfile(uid, snap.data());
-    });
+    return db
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((snap) {
+          if (!snap.exists) return null;
+          return mapUserProfile(uid, snap.data());
+        })
+        .handleError((Object error, StackTrace stack) {
+          final text = error.toString();
+          if (!text.contains('permission-denied')) {
+            debugPrint('watchProfile snapshots error: $error');
+          }
+        });
   }
 
   @override

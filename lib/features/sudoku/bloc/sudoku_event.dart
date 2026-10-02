@@ -14,4 +14,6 @@ sealed class SudokuEvent with _$SudokuEvent {
   const factory SudokuEvent.hint() = SudokuHint;
   const factory SudokuEvent.dismissHint() = SudokuDismissHint;
   const factory SudokuEvent.reset() = SudokuReset;
+  const factory SudokuEvent.pauseRun() = SudokuPauseRun;
+  const factory SudokuEvent.resumeRun() = SudokuResumeRun;
 }

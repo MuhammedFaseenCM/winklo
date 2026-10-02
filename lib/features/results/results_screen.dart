@@ -182,6 +182,8 @@ class _CelebrateAndClaimResults extends StatelessWidget {
       await context.read<SubmitLeaderboardTime>()(
         gameId: gameId,
         timeSeconds: args.timeSeconds,
+        usedHints: args.usedHints ?? true,
+        hadMistakes: args.hadMistakes ?? true,
       );
     } catch (_) {
       // Best-effort remote sync; signed-in UI still shows live board.
@@ -215,6 +217,8 @@ class _CelebrateAndClaimResults extends StatelessWidget {
                         child: MiniLeaderboardPanel(
                           gameId: gameId,
                           timeSeconds: args.timeSeconds,
+                          usedHints: args.usedHints,
+                          hadMistakes: args.hadMistakes,
                         ),
                       ),
                     ],

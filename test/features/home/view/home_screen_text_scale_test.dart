@@ -84,18 +84,16 @@ void main() {
     expect(overflowErrors, isEmpty);
   });
 
-  testWidgets('short phone can reach Path Words play CTA', (tester) async {
+  testWidgets('short phone shows all game CTAs without scrolling', (
+    tester,
+  ) async {
     await pumpHome(tester, size: const Size(320, 640));
 
     final playFinder = find.text(AppStrings.playTodaysPathWords);
-    await tester.scrollUntilVisible(
-      playFinder,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-
     expect(playFinder, findsOneWidget);
+    expect(find.text(AppStrings.playTodaysZip), findsOneWidget);
+    expect(find.text(AppStrings.playTodaysSudoku), findsOneWidget);
+
     final buttonBox = tester.getRect(playFinder);
     expect(buttonBox.bottom, lessThanOrEqualTo(640));
     expect(buttonBox.height, greaterThan(0));

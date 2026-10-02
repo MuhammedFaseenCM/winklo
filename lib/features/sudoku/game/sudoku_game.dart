@@ -18,7 +18,6 @@ class SudokuGame extends FlameGame with TapCallbacks {
   Offset _origin = Offset.zero;
 
   DateTime? _hintFlashStartedAt;
-  DateTime? _rejectFlashStartedAt;
   DateTime? _unitFlashStartedAt;
   Set<int> _unitFlashIndices = const {};
   double _celebrateT = 0;
@@ -42,17 +41,12 @@ class SudokuGame extends FlameGame with TapCallbacks {
   void applyView(SudokuBoardView view) {
     final wasCelebrating = this.view.celebrate;
     final oldHint = this.view.hintFlashIndex;
-    final oldReject = this.view.rejectFlashIndex;
     final oldUnits = this.view.unitFlashIndices;
     this.view = view;
     if (view.hintFlashIndex != null && view.hintFlashIndex != oldHint) {
       _hintFlashStartedAt = DateTime.now();
     }
     if (view.hintFlashIndex == null) _hintFlashStartedAt = null;
-    if (view.rejectFlashIndex != null && view.rejectFlashIndex != oldReject) {
-      _rejectFlashStartedAt = DateTime.now();
-    }
-    if (view.rejectFlashIndex == null) _rejectFlashStartedAt = null;
     if (view.unitFlashIndices.isNotEmpty && view.unitFlashIndices != oldUnits) {
       _unitFlashIndices = view.unitFlashIndices;
       _unitFlashStartedAt = DateTime.now();
@@ -191,15 +185,11 @@ class SudokuGame extends FlameGame with TapCallbacks {
       }
     }
 
-    final rejectFlash = view.rejectFlashIndex == index;
-    if (rejectFlash && _rejectFlashStartedAt != null) {
-      final t = now.difference(_rejectFlashStartedAt!).inMilliseconds / 400.0;
-      if (t < 1) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(rect, const Radius.circular(6)),
-          Paint()..color = ZipColors.number.withValues(alpha: (1 - t) * 0.5),
-        );
-      }
+    if (view.errorIndices.contains(index)) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
+        Paint()..color = ZipColors.number.withValues(alpha: 0.4),
+      );
     }
 
     if (_unitFlashIndices.contains(index) && _unitFlashStartedAt != null) {

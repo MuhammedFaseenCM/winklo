@@ -35,7 +35,14 @@ service cloud.firestore {
         'displayName',
         'photoUrl',
         'avatarId',
+        'usedHints',
+        'hadMistakes',
       ]);
+    }
+
+    function validCleanRunFlags() {
+      return request.resource.data.usedHints is bool
+        && request.resource.data.hadMistakes is bool;
     }
 
     // Identity refresh that does not change the recorded time.
@@ -86,11 +93,12 @@ service cloud.firestore {
       allow create: if isOwner(uid)
         && validGame(gameId)
         && validTimeSeconds()
-        && validLeaderboardKeys();
+        && validLeaderboardKeys()
+        && validCleanRunFlags();
       allow update: if isOwner(uid)
         && validGame(gameId)
         && (
-          (improvingTime() && validLeaderboardKeys())
+          (improvingTime() && validLeaderboardKeys() && validCleanRunFlags())
           || profileOnlyLeaderboardUpdate()
         );
       allow delete: if false;
@@ -101,11 +109,12 @@ service cloud.firestore {
       allow create: if isOwner(uid)
         && validGame(gameId)
         && validTimeSeconds()
-        && validLeaderboardKeys();
+        && validLeaderboardKeys()
+        && validCleanRunFlags();
       allow update: if isOwner(uid)
         && validGame(gameId)
         && (
-          (improvingTime() && validLeaderboardKeys())
+          (improvingTime() && validLeaderboardKeys() && validCleanRunFlags())
           || profileOnlyLeaderboardUpdate()
         );
       allow delete: if false;
@@ -118,11 +127,12 @@ service cloud.firestore {
       allow create: if isOwner(uid)
         && validGame(gameId)
         && validTimeSeconds()
-        && validLeaderboardKeys();
+        && validLeaderboardKeys()
+        && validCleanRunFlags();
       allow update: if isOwner(uid)
         && validGame(gameId)
         && (
-          (improvingTime() && validLeaderboardKeys())
+          (improvingTime() && validLeaderboardKeys() && validCleanRunFlags())
           || profileOnlyLeaderboardUpdate()
         );
       allow delete: if false;
@@ -133,11 +143,12 @@ service cloud.firestore {
       allow create: if isOwner(uid)
         && validGame(gameId)
         && validTimeSeconds()
-        && validLeaderboardKeys();
+        && validLeaderboardKeys()
+        && validCleanRunFlags();
       allow update: if isOwner(uid)
         && validGame(gameId)
         && (
-          (improvingTime() && validLeaderboardKeys())
+          (improvingTime() && validLeaderboardKeys() && validCleanRunFlags())
           || profileOnlyLeaderboardUpdate()
         );
       allow delete: if false;

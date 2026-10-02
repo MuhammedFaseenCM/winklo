@@ -160,36 +160,44 @@ class ZipPrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.backgroundColor,
+    this.compact = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final Color? backgroundColor;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final layout = AppLayout.of(context);
     final isEnabled = onPressed != null;
     final primaryColor = backgroundColor ?? ZipColors.ember;
+    final radius = layout.space(compact ? 12 : 16);
+    final labelStyle = TextStyle(
+      fontWeight: FontWeight.w700,
+      fontSize: compact ? 14 : 16,
+      letterSpacing: 0.2,
+    );
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(layout.space(16)),
+        borderRadius: BorderRadius.circular(radius),
         boxShadow: isEnabled
             ? [
                 BoxShadow(
                   color: primaryColor.withValues(alpha: 0.35),
-                  blurRadius: layout.space(18),
-                  offset: Offset(0, layout.space(6)),
+                  blurRadius: layout.space(compact ? 12 : 18),
+                  offset: Offset(0, layout.space(compact ? 4 : 6)),
                 ),
               ]
             : null,
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(layout.space(16)),
+          borderRadius: BorderRadius.circular(radius),
           gradient: isEnabled
               ? LinearGradient(
                   begin: Alignment.topCenter,
@@ -215,9 +223,11 @@ class ZipPrimaryButton extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
-            padding: layout.buttonPadding,
+            padding: compact
+                ? layout.compactButtonPadding
+                : layout.buttonPadding,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(layout.space(16)),
+              borderRadius: BorderRadius.circular(radius),
             ),
           ),
           child: icon == null
@@ -226,28 +236,20 @@ class ZipPrimaryButton extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    letterSpacing: 0.2,
-                  ),
+                  style: labelStyle,
                 )
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, size: layout.space(20)),
-                    SizedBox(width: layout.space(8)),
+                    Icon(icon, size: layout.space(compact ? 18 : 20)),
+                    SizedBox(width: layout.space(compact ? 6 : 8)),
                     Flexible(
                       child: Text(
                         label,
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          letterSpacing: 0.2,
-                        ),
+                        style: labelStyle,
                       ),
                     ),
                   ],

@@ -20,6 +20,17 @@ void main() {
       expect(entries[1].rank, 2);
     });
 
+    test('assigns dense ranks for equal timeSeconds', () {
+      final entries = mapLeaderboardRows([
+        (id: 'a', data: {'timeSeconds': 12, 'displayName': 'Siyadh'}),
+        (id: 'b', data: {'timeSeconds': 15, 'displayName': 'Amal'}),
+        (id: 'c', data: {'timeSeconds': 15, 'displayName': 'Anas'}),
+        (id: 'd', data: {'timeSeconds': 20, 'displayName': 'Dev'}),
+      ]);
+      expect(entries.map((e) => e.rank).toList(), [1, 2, 2, 3]);
+      expect(entries.map((e) => e.uid).toList(), ['a', 'b', 'c', 'd']);
+    });
+
     test('parses avatarId', () {
       final entries = mapLeaderboardRows([
         (
@@ -32,6 +43,25 @@ void main() {
         ),
       ]);
       expect(entries.single.avatarId, 'preset_03');
+    });
+
+    test('parses usedHints and hadMistakes', () {
+      final entries = mapLeaderboardRows([
+        (
+          id: 'a',
+          data: {
+            'timeSeconds': 12,
+            'displayName': 'Ada',
+            'usedHints': false,
+            'hadMistakes': true,
+          },
+        ),
+        (id: 'b', data: {'timeSeconds': 15, 'displayName': 'Bob'}),
+      ]);
+      expect(entries[0].usedHints, isFalse);
+      expect(entries[0].hadMistakes, isTrue);
+      expect(entries[1].usedHints, isNull);
+      expect(entries[1].hadMistakes, isNull);
     });
 
     test('falls back to Player when displayName missing', () {
@@ -97,7 +127,12 @@ void main() {
       FirebaseBootstrap.isReady = false;
       final repo = LeaderboardRepositoryImpl();
       expect(
-        () => repo.submitBestTime(gameId: 'word_match', timeSeconds: 10),
+        () => repo.submitBestTime(
+          gameId: 'word_match',
+          timeSeconds: 10,
+          usedHints: false,
+          hadMistakes: false,
+        ),
         throwsA(isA<Failure>()),
       );
     });
@@ -106,7 +141,12 @@ void main() {
       FirebaseBootstrap.isReady = false;
       final repo = LeaderboardRepositoryImpl();
       expect(
-        () => repo.submitBestTime(gameId: 'zip', timeSeconds: 0),
+        () => repo.submitBestTime(
+          gameId: 'zip',
+          timeSeconds: 0,
+          usedHints: false,
+          hadMistakes: false,
+        ),
         throwsA(isA<Failure>()),
       );
     });

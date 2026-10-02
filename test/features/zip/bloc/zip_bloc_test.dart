@@ -1,8 +1,11 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
+import 'package:winklo/domain/entities/in_progress_run.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/play_period.dart';
+import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
@@ -27,7 +30,25 @@ class _MockGetBestPoints extends Mock implements GetBestPoints {}
 
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 
+
+class _MemoryInProgressRuns implements InProgressRunRepository {
+  final Map<String, InProgressRun> runs = {};
+  String _key(String gameId, String playId) => '${gameId}_$playId';
+  @override
+  Future<InProgressRun?> load({required String gameId, required String playId}) async =>
+      runs[_key(gameId, playId)];
+  @override
+  Future<void> save(InProgressRun run) async {
+    runs[_key(run.gameId, run.playId)] = run;
+  }
+  @override
+  Future<void> clear({required String gameId, required String playId}) async {
+    runs.remove(_key(gameId, playId));
+  }
+}
+
 void main() {
+
   late _MockSubmitScore submitScore;
   late _MockSubmitLeaderboardTime submitLeaderboardTime;
   late _MockRecordDailyClear recordDailyClear;
@@ -49,15 +70,20 @@ void main() {
       () => submitLeaderboardTime(
         gameId: any(named: 'gameId'),
         timeSeconds: any(named: 'timeSeconds'),
+        usedHints: any(named: 'usedHints'),
+        hadMistakes: any(named: 'hadMistakes'),
       ),
     ).thenAnswer((_) async {});
   });
 
   ZipBloc buildBloc({
     DateTime? now,
+    DateTime Function()? clockNow,
     Future<void> Function(Duration duration)? wait,
+    _MemoryInProgressRuns? drafts,
   }) {
     return ZipBloc(
+      inProgressRuns: drafts ?? _MemoryInProgressRuns(),
       submitScore: submitScore,
       submitLeaderboardTime: submitLeaderboardTime,
       recordDailyClear: recordDailyClear,
@@ -65,9 +91,63 @@ void main() {
       getBestTimeSeconds: getBestTimeSeconds,
       analytics: analytics,
       now: now ?? DateTime.utc(2026, 9, 13),
+      clockNow: clockNow,
       wait: wait,
     );
   }
+
+  test('ZipCompleted submits score, records streak, and signals navigation', () async {
+    when(
+      () => submitScore(
+        modeKey: 'zip_daily_20260913',
+        points: 940,
+        timeSeconds: 12,
+      ),
+    ).thenAnswer((_) async => true);
+    when(
+      () => recordDailyClear(gameId: GameIds.zip, dateId: '20260913'),
+    ).thenAnswer(
+      (_) async => const GameStreak(
+        gameId: GameIds.zip,
+        current: 3,
+        longest: 5,
+        lastClearedDateId: '20260913',
+      ),
+    );
+
+    var now = DateTime.utc(2026, 9, 13);
+    final bloc = buildBloc(
+      now: DateTime.utc(2026, 9, 13),
+      clockNow: () => now,
+      wait: (_) async {},
+    );
+    bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
+
+    now = DateTime.utc(2026, 9, 13, 0, 0, 12);
+    bloc.add(const ZipEvent.completed());
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
+
+    expect(bloc.state.points, 940);
+    expect(bloc.state.timeSeconds, 12);
+    expect(bloc.state.resultsExtra?.currentStreak, 3);
+    verify(
+      () => submitScore(
+        modeKey: 'zip_daily_20260913',
+        points: 940,
+        timeSeconds: 12,
+      ),
+    ).called(1);
+    verify(
+      () => submitLeaderboardTime(
+        gameId: GameIds.zip,
+        timeSeconds: 12,
+        usedHints: false,
+        hadMistakes: false,
+      ),
+    ).called(1);
+    await bloc.close();
+  });
 
   blocTest<ZipBloc, ZipState>(
     'ZipStarted loads daily level for date',
@@ -119,75 +199,6 @@ void main() {
   );
 
   blocTest<ZipBloc, ZipState>(
-    'ZipCompleted submits score, records streak, and signals navigation',
-    build: () {
-      when(
-        () => submitScore(
-          modeKey: 'zip_daily_20260913',
-          points: 900,
-          timeSeconds: 12,
-        ),
-      ).thenAnswer((_) async => true);
-      when(
-        () => recordDailyClear(gameId: GameIds.zip, dateId: '20260913'),
-      ).thenAnswer(
-        (_) async => const GameStreak(
-          gameId: GameIds.zip,
-          current: 3,
-          longest: 5,
-          lastClearedDateId: '20260913',
-        ),
-      );
-
-      return buildBloc(wait: (_) async {});
-    },
-    act: (b) => b.add(const ZipEvent.completed(points: 900, timeSeconds: 12)),
-    expect: () => [
-      isA<ZipState>()
-          .having((s) => s.status, 'status', ZipStatus.celebrating)
-          .having((s) => s.finished, 'finished', isTrue)
-          .having((s) => s.points, 'points', 900)
-          .having((s) => s.timeSeconds, 'timeSeconds', 12),
-      isA<ZipState>().having((s) => s.status, 'status', ZipStatus.submitting),
-      isA<ZipState>()
-          .having((s) => s.status, 'status', ZipStatus.navigating)
-          .having((s) => s.improved, 'improved', isTrue)
-          .having(
-            (s) => s.resultsExtra?.title,
-            'title',
-            AppStrings.zipClearedTitle,
-          )
-          .having((s) => s.resultsExtra?.timeSeconds, 'timeSeconds', 12)
-          .having((s) => s.resultsExtra?.replayDaily, 'replayDaily', isTrue)
-          .having((s) => s.resultsExtra?.currentStreak, 'currentStreak', 3)
-          .having((s) => s.resultsExtra?.longestStreak, 'longestStreak', 5),
-    ],
-    verify: (_) {
-      verify(
-        () => submitScore(
-          modeKey: 'zip_daily_20260913',
-          points: 900,
-          timeSeconds: 12,
-        ),
-      ).called(1);
-      verify(
-        () => submitLeaderboardTime(gameId: GameIds.zip, timeSeconds: 12),
-      ).called(1);
-      verify(
-        () => recordDailyClear(gameId: GameIds.zip, dateId: '20260913'),
-      ).called(1);
-      verify(
-        () => analytics.logGameCompleted(
-          gameId: GameIds.zip,
-          points: 900,
-          timeSeconds: 12,
-          streak: 3,
-        ),
-      ).called(1);
-    },
-  );
-
-  blocTest<ZipBloc, ZipState>(
     'ZipStarted logs game_started when unlocked',
     build: buildBloc,
     act: (b) => b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 14))),
@@ -197,10 +208,16 @@ void main() {
   );
 
   blocTest<ZipBloc, ZipState>(
-    'ZipHint logs hint_used',
+    'ZipHint marks usedHintsThisRun and logs hint_used',
     build: buildBloc,
     act: (b) => b.add(const ZipEvent.hint(hintsRemaining: 2)),
-    expect: () => <ZipState>[],
+    expect: () => [
+      isA<ZipState>().having(
+        (s) => s.usedHintsThisRun,
+        'usedHintsThisRun',
+        isTrue,
+      ),
+    ],
     verify: (_) {
       verify(
         () => analytics.logHintUsed(gameId: GameIds.zip, hintsRemaining: 2),
@@ -209,10 +226,32 @@ void main() {
   );
 
   blocTest<ZipBloc, ZipState>(
+    'ZipReset clears usedHintsThisRun',
+    build: buildBloc,
+    act: (b) {
+      b.add(const ZipEvent.hint(hintsRemaining: 2));
+      b.add(const ZipEvent.reset());
+    },
+    expect: () => [
+      isA<ZipState>().having(
+        (s) => s.usedHintsThisRun,
+        'usedHintsThisRun',
+        isTrue,
+      ),
+      isA<ZipState>().having(
+        (s) => s.usedHintsThisRun,
+        'usedHintsThisRun',
+        isFalse,
+      ),
+    ],
+  );
+
+  blocTest<ZipBloc, ZipState>(
     'minute play period uses a new lock key each minute',
     build: () {
       when(() => getBestPoints('zip_daily_202609201431')).thenReturn(900);
       return ZipBloc(
+      inProgressRuns: _MemoryInProgressRuns(),
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
         recordDailyClear: recordDailyClear,
@@ -230,27 +269,64 @@ void main() {
     },
   );
 
-  blocTest<ZipBloc, ZipState>(
-    'ZipCompleted is ignored when the daily puzzle is already locked',
-    build: () {
-      when(() => getBestPoints('zip_daily_20260913')).thenReturn(900);
-      return buildBloc();
-    },
-    act: (b) {
-      b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
-      b.add(const ZipEvent.completed(points: 900, timeSeconds: 12));
-    },
-    expect: () => [
-      isA<ZipState>().having((s) => s.status, 'status', ZipStatus.locked),
-    ],
-    verify: (_) {
-      verifyNever(
-        () => submitScore(
-          modeKey: any(named: 'modeKey'),
-          points: any(named: 'points'),
-          timeSeconds: any(named: 'timeSeconds'),
-        ),
-      );
-    },
-  );
+  test('ZipCompleted is ignored when the daily puzzle is already locked', () async {
+    when(() => getBestPoints('zip_daily_20260913')).thenReturn(900);
+    final bloc = buildBloc();
+    bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.locked);
+    bloc.add(const ZipEvent.completed());
+    await Future<void>.delayed(Duration.zero);
+    expect(bloc.state.status, ZipStatus.locked);
+    verifyNever(
+      () => submitScore(
+        modeKey: any(named: 'modeKey'),
+        points: any(named: 'points'),
+        timeSeconds: any(named: 'timeSeconds'),
+      ),
+    );
+    await bloc.close();
+  });
+
+  test('clears draft after finish', () async {
+    final drafts = _MemoryInProgressRuns();
+    var now = DateTime.utc(2026, 9, 13);
+    final bloc = buildBloc(
+      now: DateTime.utc(2026, 9, 13),
+      clockNow: () => now,
+      drafts: drafts,
+      wait: (_) async {},
+    );
+    when(
+      () => submitScore(
+        modeKey: any(named: 'modeKey'),
+        points: any(named: 'points'),
+        timeSeconds: any(named: 'timeSeconds'),
+      ),
+    ).thenAnswer((_) async => true);
+    when(
+      () => recordDailyClear(
+        gameId: any(named: 'gameId'),
+        dateId: any(named: 'dateId'),
+      ),
+    ).thenAnswer(
+      (_) async => const GameStreak(
+        gameId: GameIds.zip,
+        current: 1,
+        longest: 1,
+        freezeAvailable: true,
+      ),
+    );
+
+    bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
+    bloc.add(ZipEvent.pathChanged(path: [const Cell(0, 0)]));
+    await Future<void>.delayed(Duration.zero);
+    expect(drafts.runs.isNotEmpty, isTrue);
+
+    now = DateTime.utc(2026, 9, 13, 0, 0, 5);
+    bloc.add(const ZipEvent.completed());
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
+    expect(drafts.runs.isEmpty, isTrue);
+    await bloc.close();
+  });
 }

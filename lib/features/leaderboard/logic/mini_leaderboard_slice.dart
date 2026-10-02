@@ -21,9 +21,6 @@ List<MiniLeaderboardItem> sliceLeaderboardForMini({
 }) {
   if (entries.isEmpty) return const [];
 
-  final byRank = <int, LeaderboardEntry>{for (final e in entries) e.rank: e};
-  final ranks = byRank.keys.toList()..sort();
-
   LeaderboardEntry? me;
   if (currentUid != null) {
     for (final e in entries) {
@@ -34,39 +31,30 @@ List<MiniLeaderboardItem> sliceLeaderboardForMini({
     }
   }
 
-  final selected = <int>{};
-  for (final r in ranks) {
-    if (r <= 3) selected.add(r);
-  }
-
-  if (me == null) {
-    return [
-      for (final r in selected.toList()..sort())
-        MiniLeaderboardEntryItem(byRank[r]!),
-    ];
-  }
-
-  if (me.rank <= 3) {
-    for (final r in ranks) {
-      if (r > 3 && r <= 3 + below) selected.add(r);
+  final selected = <LeaderboardEntry>[];
+  for (final e in entries) {
+    if (e.rank <= 3) {
+      selected.add(e);
+      continue;
     }
-  } else {
-    final lo = me.rank - above;
-    final hi = me.rank + below;
-    for (final r in ranks) {
-      if (r >= lo && r <= hi) selected.add(r);
+    if (me == null) continue;
+    if (me.rank <= 3) {
+      if (e.rank > 3 && e.rank <= 3 + below) selected.add(e);
+    } else {
+      final lo = me.rank - above;
+      final hi = me.rank + below;
+      if (e.rank >= lo && e.rank <= hi) selected.add(e);
     }
   }
 
-  final ordered = selected.toList()..sort();
   final items = <MiniLeaderboardItem>[];
-  int? prev;
-  for (final r in ordered) {
-    if (prev != null && r > prev + 1) {
+  int? prevRank;
+  for (final e in selected) {
+    if (prevRank != null && e.rank > prevRank + 1) {
       items.add(const MiniLeaderboardGap());
     }
-    items.add(MiniLeaderboardEntryItem(byRank[r]!));
-    prev = r;
+    items.add(MiniLeaderboardEntryItem(e));
+    prevRank = e.rank;
   }
   return items;
 }

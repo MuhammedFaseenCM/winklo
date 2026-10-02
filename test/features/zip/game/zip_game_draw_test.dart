@@ -14,7 +14,7 @@ void main() {
         walls: const [],
         solution: const [Cell(0, 0), Cell(0, 1), Cell(1, 1), Cell(1, 0)],
       ),
-      onWin: (_, _) {},
+      onWin: () {},
       onStatsChanged: (_, _) {},
     );
     game.path.addAll(drawn);

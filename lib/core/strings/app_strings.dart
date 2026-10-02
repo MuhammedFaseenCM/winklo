@@ -4,8 +4,7 @@ abstract final class AppStrings {
   // Home
   static const homeTagline = 'Quick solo mini-games.';
   static const zipTitle = 'Zip';
-  static const zipTagline =
-      'Start at 1. Fill every cell. Finish on the last number.';
+  static const zipTagline = 'Fill every cell from 1 to the finish.';
   static const playTodaysZip = "Play today's Zip";
   static const zipUndo = 'Undo';
   static const zipClear = 'Clear';
@@ -159,6 +158,11 @@ abstract final class AppStrings {
   static const seeFullLeaderboard = 'See full leaderboard';
   static const leaderboardGapEllipsis = '…';
   static const youLabel = 'You';
+  static const leaderboardNoHintChip = 'No hint';
+  static const leaderboardNoMistakesChip = 'No mistakes';
+
+  /// Compact game-tab label (full title stays [pathWordsTitle]).
+  static const pathWordsTab = 'Path';
 
   // Notifications
   static const notifDailyReadyTitle = 'Today’s puzzles are ready';
@@ -195,8 +199,12 @@ abstract final class AppStrings {
   static const profileAboutGame = 'About the game';
   static const profileReportIssue = 'Report an issue';
   static const profileAboutBody =
-      'Winklo is a daily puzzle app with solo mini-games like Zip and Path Words. '
-      'Clear today’s puzzles, climb the leaderboard, and keep your streak going.';
+      'Winklo is a daily puzzle app with solo mini-games you can clear at your own pace.';
+  static const profileAboutGamesHeading = 'Games';
+  static const profileAboutDailyHeading = 'Daily play';
+  static const profileAboutDailyBody =
+      'Each day brings fresh puzzles for Zip, Path Words, and Sudoku. '
+      'Clear them to climb the leaderboard and keep your streak alive.';
   static String profileAboutVersion(String version) => 'Version $version';
   static const profileReportTitleLabel = 'Title';
   static const profileReportTitleHint = 'Short summary';

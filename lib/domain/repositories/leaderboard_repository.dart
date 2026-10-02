@@ -14,5 +14,7 @@ abstract class LeaderboardRepository {
   Future<void> submitBestTime({
     required String gameId,
     required int timeSeconds,
+    required bool usedHints,
+    required bool hadMistakes,
   });
 }

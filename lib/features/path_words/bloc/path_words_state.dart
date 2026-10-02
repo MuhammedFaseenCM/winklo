@@ -19,6 +19,8 @@ enum PathWordsStatus {
 
 @freezed
 sealed class PathWordsState with _$PathWordsState {
+  const PathWordsState._();
+
   const factory PathWordsState({
     required DateTime day,
     PathWordsPuzzle? puzzle,
@@ -28,7 +30,9 @@ sealed class PathWordsState with _$PathWordsState {
     @Default(<String>{}) Set<String> completedTargetIds,
     @Default(3) int hintsRemaining,
     @Default(0) int hintRevealLength,
-    DateTime? startedAt,
+    @Default(false) bool usedHintsThisRun,
+    @Default(0) int elapsedMs,
+    DateTime? resumedAt,
     Cell? hintFlashCell,
     String? errorMessage,
     String? ruleTip,
@@ -43,4 +47,14 @@ sealed class PathWordsState with _$PathWordsState {
     final day = DateTime(now.year, now.month, now.day);
     return PathWordsState(day: day);
   }
+
+  int liveElapsedSeconds(DateTime now) {
+    final resumed = resumedAt;
+    final live = resumed == null
+        ? 0
+        : now.difference(resumed).inMilliseconds.clamp(0, 1 << 62);
+    return (elapsedMs + live) ~/ 1000;
+  }
+
+  bool get isClockRunning => resumedAt != null;
 }

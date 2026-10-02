@@ -301,4 +301,36 @@ void main() {
     expect(find.text(AppStrings.playSignInTitle), findsNothing);
     expect(find.text('zip-screen'), findsOneWidget);
   });
+
+  testWidgets('tile leaderboard button opens that game leaderboard', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
+        GoRoute(
+          path: '/leaderboard',
+          builder: (context, state) {
+            final game = state.uri.queryParameters['game'] ?? '';
+            return Scaffold(body: Text('leaderboard:$game'));
+          },
+        ),
+      ],
+    );
+
+    await pumpHome(tester, prefs: prefs, router: router);
+
+    final leaderboardButtons = find.byIcon(Icons.leaderboard_rounded);
+    expect(leaderboardButtons, findsNWidgets(3));
+
+    await tester.tap(leaderboardButtons.at(1));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('leaderboard:path_words'), findsOneWidget);
+  });
 }

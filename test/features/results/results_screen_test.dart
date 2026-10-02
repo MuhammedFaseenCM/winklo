@@ -288,6 +288,8 @@ void main() {
       () => submit(
         gameId: any(named: 'gameId'),
         timeSeconds: any(named: 'timeSeconds'),
+        usedHints: any(named: 'usedHints'),
+        hadMistakes: any(named: 'hadMistakes'),
       ),
     ).thenAnswer((_) async {});
 
@@ -358,7 +360,14 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    verify(() => submit(gameId: GameIds.zip, timeSeconds: 42)).called(1);
+    verify(
+      () => submit(
+        gameId: GameIds.zip,
+        timeSeconds: 42,
+        usedHints: true,
+        hadMistakes: true,
+      ),
+    ).called(1);
 
     when(() => auth.currentUser).thenReturn(signedInUser);
     boardController.add([
@@ -464,6 +473,8 @@ void main() {
         () => submit(
           gameId: any(named: 'gameId'),
           timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
         ),
       ).thenAnswer((_) async {});
 
@@ -514,7 +525,14 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      verify(() => submit(gameId: GameIds.zip, timeSeconds: 42)).called(1);
+      verify(
+        () => submit(
+          gameId: GameIds.zip,
+          timeSeconds: 42,
+          usedHints: true,
+          hadMistakes: true,
+        ),
+      ).called(1);
 
       when(() => auth.currentUser).thenReturn(signedInUser);
       boardController.add([

@@ -15,7 +15,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
 
-  testWidgets('about dialog shows body and version', (tester) async {
+  testWidgets('about sheet shows games, daily play, and version', (
+    tester,
+  ) async {
     PackageInfo.setMockInitialValues(
       appName: 'Winklo',
       packageName: 'com.example.winklo',
@@ -50,11 +52,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.profileAboutBody), findsOneWidget);
+    expect(find.text(AppStrings.profileAboutGamesHeading), findsOneWidget);
+    expect(find.text(AppStrings.zipTitle), findsOneWidget);
+    expect(find.text(AppStrings.zipTagline), findsOneWidget);
+    expect(find.text(AppStrings.pathWordsTitle), findsOneWidget);
+    expect(find.text(AppStrings.pathWordsTagline), findsOneWidget);
+    expect(find.text(AppStrings.sudokuTitle), findsOneWidget);
+    expect(find.text(AppStrings.sudokuTagline), findsOneWidget);
+    expect(find.text(AppStrings.profileAboutDailyHeading), findsOneWidget);
+    expect(find.text(AppStrings.profileAboutDailyBody), findsOneWidget);
     expect(find.text(AppStrings.profileAboutVersion('1.0.0')), findsOneWidget);
     expect(find.text(AppStrings.tutorialGotIt), findsOneWidget);
     verify(() => analytics.logProfileAboutOpened()).called(1);
 
-    await tester.tap(find.text(AppStrings.tutorialGotIt));
+    final gotIt = find.text(AppStrings.tutorialGotIt);
+    await tester.ensureVisible(gotIt);
+    await tester.pumpAndSettle();
+    await tester.tap(gotIt);
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.profileAboutBody), findsNothing);

@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/usecases/clear_notification_token.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/sync_fcm_token.dart';
@@ -20,6 +21,9 @@ class _MockSignOut extends Mock implements SignOut {}
 
 class _MockSyncFcmToken extends Mock implements SyncFcmToken {}
 
+class _MockClearNotificationToken extends Mock
+    implements ClearNotificationToken {}
+
 void main() {
   const user = AppUser(uid: 'u1', displayName: 'Ada');
 
@@ -27,6 +31,7 @@ void main() {
   late _MockSignInWithGoogle signIn;
   late _MockSignOut signOut;
   late _MockSyncFcmToken syncFcmToken;
+  late _MockClearNotificationToken clearNotificationToken;
   late StreamController<AppUser?> controller;
 
   setUp(() {
@@ -34,21 +39,27 @@ void main() {
     signIn = _MockSignInWithGoogle();
     signOut = _MockSignOut();
     syncFcmToken = _MockSyncFcmToken();
+    clearNotificationToken = _MockClearNotificationToken();
     controller = StreamController<AppUser?>.broadcast();
     when(() => auth.authStateChanges()).thenAnswer((_) => controller.stream);
     when(() => syncFcmToken(any())).thenAnswer((_) async {});
+    when(
+      () => clearNotificationToken(uid: any(named: 'uid')),
+    ).thenAnswer((_) async {});
   });
 
   tearDown(() async {
     await controller.close();
   });
 
-  AuthCubit buildCubit({bool withSync = false}) => AuthCubit(
-    authRepository: auth,
-    signInWithGoogle: signIn,
-    signOut: signOut,
-    syncFcmToken: withSync ? syncFcmToken : null,
-  );
+  AuthCubit buildCubit({bool withSync = false, bool withClearToken = false}) =>
+      AuthCubit(
+        authRepository: auth,
+        signInWithGoogle: signIn,
+        signOut: signOut,
+        syncFcmToken: withSync ? syncFcmToken : null,
+        clearNotificationToken: withClearToken ? clearNotificationToken : null,
+      );
 
   blocTest<AuthCubit, AuthState>(
     'emits signedIn when auth stream has a user',
@@ -130,5 +141,30 @@ void main() {
     seed: () => const AuthState(status: AuthStatus.signedIn, user: user),
     act: (cubit) => cubit.signOut(),
     expect: () => [const AuthState(status: AuthStatus.signedOut)],
+  );
+
+  blocTest<AuthCubit, AuthState>(
+    'signOut clears FCM token while still authenticated',
+    build: () => buildCubit(withClearToken: true),
+    setUp: () {
+      when(() => signOut()).thenAnswer((_) async {});
+    },
+    seed: () => const AuthState(status: AuthStatus.signedIn, user: user),
+    act: (cubit) => cubit.signOut(),
+    expect: () => [const AuthState(status: AuthStatus.signedOut)],
+    verify: (_) {
+      verifyInOrder([() => clearNotificationToken(uid: 'u1'), () => signOut()]);
+    },
+  );
+
+  blocTest<AuthCubit, AuthState>(
+    'auth stream errors do not crash and keep current state',
+    build: buildCubit,
+    seed: () => const AuthState(status: AuthStatus.signedIn, user: user),
+    act: (cubit) async {
+      controller.addError(Exception('permission-denied'));
+      await pumpEventQueue();
+    },
+    expect: () => <AuthState>[],
   );
 }

@@ -8,12 +8,14 @@ import 'package:go_router/go_router.dart';
 import '../../../core/dev_flags.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/sudoku/sudoku_hint_coach.dart';
 import '../../../domain/entities/sudoku_difficulty.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
+import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/usecases/generate_daily_sudoku.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
@@ -38,7 +40,8 @@ class SudokuScreen extends StatefulWidget {
   State<SudokuScreen> createState() => _SudokuScreenState();
 }
 
-class _SudokuScreenState extends State<SudokuScreen> {
+class _SudokuScreenState extends State<SudokuScreen>
+    with WidgetsBindingObserver {
   late final SudokuBloc _bloc;
   late final bool _ownsBloc;
   SudokuGame? _game;
@@ -46,6 +49,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final injected = widget.bloc;
     _ownsBloc = injected == null;
     _bloc =
@@ -58,6 +62,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
           getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
           analytics: context.read<AnalyticsRepository>(),
           hintQuota: context.read<HintQuotaRepository>(),
+          inProgressRuns: context.read<InProgressRunRepository>(),
           generatePuzzle: ({required day}) =>
               context.read<GenerateDailySudoku>()(day: day),
           playPeriod: DevFlags.playPeriod,
@@ -69,7 +74,22 @@ class _SudokuScreenState extends State<SudokuScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _bloc.add(const SudokuEvent.resumeRun());
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _bloc.add(const SudokuEvent.pauseRun());
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _bloc.add(const SudokuEvent.pauseRun());
     final game = _game;
     _game = null;
     game?.pauseEngine();
@@ -103,7 +123,7 @@ class _SudokuScreenState extends State<SudokuScreen> {
       notes: state.notes,
       selectedIndex: state.selectedIndex,
       hintFlashIndex: state.hintFlashIndex,
-      rejectFlashIndex: state.rejectFlashIndex,
+      errorIndices: state.errorIndices,
       unitFlashIndices: state.unitFlashIndices,
       inputEnabled: canPlay,
       celebrate: state.status == SudokuStatus.celebrating,
@@ -232,6 +252,11 @@ class _SudokuScreenState extends State<SudokuScreen> {
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                             ),
+                            if (isReadyToPlay)
+                              DevRunTimerLabel(
+                                elapsedMs: state.elapsedMs,
+                                resumedAt: state.resumedAt,
+                              ),
                             if (puzzle != null)
                               Padding(
                                 padding: const EdgeInsets.only(right: 8),

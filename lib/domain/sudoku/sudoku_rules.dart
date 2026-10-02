@@ -5,13 +5,11 @@ class SudokuPlaceResult {
     required this.accepted,
     required this.grid,
     required this.notes,
-    this.rejectIndex,
   });
 
   final bool accepted;
   final List<int> grid;
   final List<Set<int>> notes;
-  final int? rejectIndex;
 }
 
 abstract final class SudokuRules {
@@ -47,20 +45,64 @@ abstract final class SudokuRules {
     if (digit < digitMin || digit > digitMax) {
       return SudokuPlaceResult(accepted: false, grid: grid, notes: notes);
     }
-    if (puzzle.solution[index] != digit) {
-      return SudokuPlaceResult(
-        accepted: false,
-        grid: grid,
-        notes: notes,
-        rejectIndex: index,
-      );
-    }
 
     final nextGrid = List<int>.from(grid);
     nextGrid[index] = digit;
     final nextNotes = notes.map(Set<int>.from).toList();
     nextNotes[index] = <int>{};
     return SudokuPlaceResult(accepted: true, grid: nextGrid, notes: nextNotes);
+  }
+
+  /// Cells that mismatch the solution inside any fully filled but incorrect
+  /// row, column, or box. Incomplete units contribute no errors.
+  static Set<int> errorIndices({
+    required SudokuPuzzle puzzle,
+    required List<int> grid,
+  }) {
+    final size = puzzle.size;
+    final boxRows = puzzle.boxRows;
+    final boxCols = puzzle.boxCols;
+    final solution = puzzle.solution;
+    final errors = <int>{};
+
+    void addMismatches(Iterable<int> indices) {
+      var filled = true;
+      var matches = true;
+      for (final i in indices) {
+        if (grid[i] == 0) {
+          filled = false;
+          break;
+        }
+        if (grid[i] != solution[i]) matches = false;
+      }
+      if (!filled || matches) return;
+      for (final i in indices) {
+        if (grid[i] != solution[i]) errors.add(i);
+      }
+    }
+
+    for (var row = 0; row < size; row++) {
+      addMismatches(List<int>.generate(size, (col) => row * size + col));
+    }
+    for (var col = 0; col < size; col++) {
+      addMismatches(List<int>.generate(size, (row) => row * size + col));
+    }
+    final bandCount = size ~/ boxRows;
+    final stackCount = size ~/ boxCols;
+    for (var br = 0; br < bandCount; br++) {
+      for (var bc = 0; bc < stackCount; bc++) {
+        final startRow = br * boxRows;
+        final startCol = bc * boxCols;
+        final indices = <int>[];
+        for (var r = startRow; r < startRow + boxRows; r++) {
+          for (var c = startCol; c < startCol + boxCols; c++) {
+            indices.add(r * size + c);
+          }
+        }
+        addMismatches(indices);
+      }
+    }
+    return errors;
   }
 
   static ({List<int> grid, List<Set<int>> notes}) toggleNote({

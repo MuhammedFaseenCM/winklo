@@ -37,24 +37,37 @@ class AppLayout {
   double space(double base) => base * scale;
 
   EdgeInsets get pagePadding => EdgeInsets.fromLTRB(
-    space(isCompact ? 16 : 24),
-    space(isCompact ? 16 : 28),
-    space(isCompact ? 16 : 24),
-    space(isCompact ? 24 : 32),
+    space(isCompact ? 16 : 20),
+    space(isCompact ? 12 : 16),
+    space(isCompact ? 16 : 20),
+    space(isCompact ? 16 : 20),
   );
 
-  double get sectionGap => space(isCompact ? 18 : 28);
+  double get sectionGap => space(isCompact ? 10 : 12);
 
-  double get tileGap => space(isCompact ? 12 : 16);
+  double get tileGap => space(isCompact ? 8 : 10);
 
-  double get headerMarkSize => space(isCompact ? 44 : 56);
+  double get headerMarkSize => space(isCompact ? 40 : 48);
 
-  EdgeInsets get tilePadding => EdgeInsets.all(space(isCompact ? 14 : 18));
+  EdgeInsets get tilePadding => EdgeInsets.fromLTRB(
+    space(isCompact ? 10 : 12),
+    space(isCompact ? 8 : 10),
+    space(isCompact ? 10 : 12),
+    space(isCompact ? 8 : 10),
+  );
 
-  double get tileArtSize => space(isCompact ? 52 : 64);
+  double get tileArtSize => space(isCompact ? 44 : 52);
+
+  /// Estimated tile height used to decide whether home needs a scroll fallback.
+  double get homeMinTileHeight => isCompact ? 128 : 140;
 
   EdgeInsets get buttonPadding => EdgeInsets.symmetric(
     horizontal: space(isCompact ? 16 : 22),
     vertical: space(isCompact ? 12 : 16),
+  );
+
+  EdgeInsets get compactButtonPadding => EdgeInsets.symmetric(
+    horizontal: space(isCompact ? 12 : 16),
+    vertical: space(isCompact ? 10 : 12),
   );
 }

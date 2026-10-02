@@ -16,7 +16,7 @@ Ship a **real-time** per-game leaderboard with **real Google-signed-in users** f
 | Games | Zip + Path Words only (Word Match / Category Race out of scope) |
 | Boards | Per-game; Daily (UTC) + All-time tabs |
 | Ranking | Fastest `timeSeconds` wins (not points) |
-| Ties | Same time → earlier `updatedAt` ranks higher |
+| Ties | Same `timeSeconds` → same dense rank (1, 2, 2, 3); `updatedAt` only orders rows within a tie |
 | Backend | Firestore client writes + live `snapshots()` (Approach 1) |
 | Local scores | Unchanged SharedPreferences; sync best time when improved |
 
@@ -53,7 +53,7 @@ gameId ∈ { zip, path_words }
 Daily date key: UTC yyyy-MM-dd
 ```
 
-**Query:** `orderBy timeSeconds asc`, then `orderBy updatedAt asc`, `limit(50)`. Client assigns ranks `1…n`.
+**Query:** `orderBy timeSeconds asc`, then `orderBy updatedAt asc`, `limit(50)`. Client assigns dense ranks (equal times share a place).
 
 **Writes:** own doc only; improve-only (new time strictly less than existing). Submit updates all-time and today’s daily.
 

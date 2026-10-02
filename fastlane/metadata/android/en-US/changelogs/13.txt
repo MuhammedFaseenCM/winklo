@@ -1,0 +1,7 @@
+What's new
+
+• Pause-aware run timer — leave and come back without losing time or board
+• Sudoku free entry with clear wrong-unit feedback
+• Daily leaderboard “No hint” and Sudoku “No mistakes” chips
+• Smoother home, leaderboard, and how-to-play polish
+• Stability fixes across Zip, Path Words, and Sudoku
