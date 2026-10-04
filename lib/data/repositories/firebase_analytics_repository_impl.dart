@@ -160,10 +160,13 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
   Future<void> logAppOpen({String? platform}) {
     return _safe((a) {
       final parameters = <String, Object>{};
-      if (platform != null) {
+      if (platform != null && platform.isNotEmpty) {
         parameters['platform'] = platform;
       }
-      return a.logEvent(name: 'app_open', parameters: parameters);
+      return a.logEvent(
+        name: 'app_open',
+        parameters: parameters.isEmpty ? null : parameters,
+      );
     });
   }
 }

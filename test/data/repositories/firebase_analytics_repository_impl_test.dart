@@ -29,6 +29,7 @@ void main() {
       await repo.logProfileReportOpened();
       await repo.logProfileReportSubmitted();
       await repo.logProfileSignOut();
+      await repo.logAppOpen(platform: 'android');
     },
   );
 }
