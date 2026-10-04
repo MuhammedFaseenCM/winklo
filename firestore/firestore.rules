@@ -286,7 +286,7 @@ service cloud.firestore {
     }
 
     match /daily_activity/{dayId}/users/{uid} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || isOwner(uid);
       allow create: if isOwner(uid)
         && validActivityDayId(dayId)
         && validActivityCreate();
