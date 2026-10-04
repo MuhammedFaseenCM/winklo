@@ -11,6 +11,7 @@ import 'package:winklo/data/clients/notification/firebase_notification_client.da
 import 'package:winklo/data/clients/notification/notification_client.dart';
 import 'package:winklo/data/clients/path_words/http_path_words_nouns_client.dart';
 import 'package:winklo/data/clients/path_words/path_words_nouns_client.dart';
+import 'package:winklo/data/repositories/activity_repository_impl.dart';
 import 'package:winklo/data/repositories/app_update_repository_impl.dart';
 import 'package:winklo/data/repositories/auth_repository_impl.dart';
 import 'package:winklo/data/repositories/category_repository_impl.dart';
@@ -27,6 +28,7 @@ import 'package:winklo/data/repositories/tutorial_repository_impl.dart';
 import 'package:winklo/data/repositories/word_list_repository_impl.dart';
 import 'package:winklo/data/repositories/word_match_repository_impl.dart';
 import 'package:winklo/data/repositories/zip_level_repository_impl.dart';
+import 'package:winklo/domain/repositories/activity_repository.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
@@ -57,6 +59,7 @@ import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/domain/usecases/handle_notification_tap.dart';
 import 'package:winklo/domain/usecases/initialize_notifications.dart';
+import 'package:winklo/domain/usecases/record_app_open.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/schedule_engagement_notifications.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
@@ -105,6 +108,17 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (_) => HandleNotificationTap(),
     ),
     RepositoryProvider<AuthRepository>(create: (_) => AuthRepositoryImpl()),
+    RepositoryProvider<ActivityRepository>(
+      create: (context) =>
+          ActivityRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<RecordAppOpen>(
+      create: (context) => RecordAppOpen(
+        context.read<AuthRepository>(),
+        context.read<ActivityRepository>(),
+        context.read<AnalyticsRepository>(),
+      ),
+    ),
     RepositoryProvider<AvatarUploadClient>(
       create: (_) => R2AvatarUploadClient(baseUrl: AvatarUploadConfig.baseUrl),
     ),
