@@ -122,7 +122,7 @@ void main() {
 
   test('records open and analytics when signed in', () async {
     when(() => auth.currentUser).thenReturn(
-      const AppUser(uid: 'u1', displayName: 'A', email: 'a@b.c'),
+      const AppUser(uid: 'u1', displayName: 'A'),
     );
     when(() => activity.lastRecordedAt()).thenReturn(null);
 
@@ -143,7 +143,7 @@ void main() {
 
   test('skips when within 5 minute throttle', () async {
     when(() => auth.currentUser).thenReturn(
-      const AppUser(uid: 'u1', displayName: 'A', email: 'a@b.c'),
+      const AppUser(uid: 'u1', displayName: 'A'),
     );
     final now = DateTime(2026, 10, 5, 12, 0);
     when(() => activity.lastRecordedAt())
