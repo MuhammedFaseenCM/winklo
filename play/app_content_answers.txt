@@ -23,6 +23,11 @@ Data safety: upload via Play API (play/data_safety.csv + upload_data_safety.py)
 - Name, user IDs, optional photos; name/photo may appear on in-app leaderboard
 - Device IDs / approximate location (IP) / crash / diagnostics / app interactions
   for Firebase
+- App interactions (game progress: daily clears with hint/mistake flags, hint
+  usage, streaks) collected for App functionality + Analytics; progress is
+  synced privately to the user's account (owner-only), not shared
+- Leaderboard entries (Zip, Path Words, Sudoku) show name/photo, best time,
+  hint/mistake flags and current streak to other players in the app
 - Encrypted in transit: Yes
 - Account deletion: request via GitHub issues (see privacy policy); no in-app delete yet
 

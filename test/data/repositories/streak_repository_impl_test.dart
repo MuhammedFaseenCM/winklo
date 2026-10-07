@@ -65,4 +65,56 @@ void main() {
     expect(match.longest, 2);
     expect(match.freezeAvailable, isFalse);
   });
+
+  group('onChanged', () {
+    const streak = GameStreak(
+      gameId: 'zip',
+      current: 2,
+      longest: 3,
+      lastClearedDateId: '20261007',
+    );
+
+    test('fires when saveStreak changes the stored streak', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      var calls = 0;
+      final repo = StreakRepositoryImpl(prefs, onChanged: () => calls++);
+
+      await repo.saveStreak(streak);
+      expect(calls, 1);
+      await repo.saveStreak(streak);
+      expect(calls, 1, reason: 'unchanged streak is not a change');
+      await repo.saveStreak(streak.copyWith(clearLastClearedDateId: true));
+      expect(calls, 2);
+      expect((await repo.getStreak('zip')).lastClearedDateId, isNull);
+    });
+
+    test('saving the defaults on a fresh device still persists them', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      var calls = 0;
+      final repo = StreakRepositoryImpl(prefs, onChanged: () => calls++);
+
+      await repo.saveStreak(const GameStreak(gameId: 'zip'));
+      expect(prefs.getInt('streak_current_zip'), 0);
+      expect(prefs.getBool('streak_freeze_zip'), isTrue);
+      expect(calls, 1);
+    });
+
+    test('restoreStreak writes and reports changes without firing', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      var calls = 0;
+      final repo = StreakRepositoryImpl(prefs, onChanged: () => calls++);
+
+      expect(await repo.restoreStreak(streak), isTrue);
+      expect(await repo.restoreStreak(streak), isFalse);
+      final loaded = await repo.getStreak('zip');
+      expect(loaded.current, 2);
+      expect(loaded.longest, 3);
+      expect(loaded.lastClearedDateId, '20261007');
+      expect(loaded.freezeAvailable, isTrue);
+      expect(calls, 0);
+    });
+  });
 }

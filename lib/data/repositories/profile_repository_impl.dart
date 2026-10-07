@@ -15,6 +15,13 @@ const _profileUnavailable = Failure(
   'Firebase is unavailable. Try again later.',
 );
 
+/// Games whose leaderboard rows get name / avatar refreshes.
+const leaderboardIdentityGameIds = [
+  GameIds.zip,
+  GameIds.pathWords,
+  GameIds.sudoku,
+];
+
 /// Identity fields copied onto existing leaderboard docs.
 /// Omits `updatedAt` so tie-break order stays on the score submit time.
 /// Null photo/avatar become deletes so presets clear a custom photo cleanly.
@@ -224,7 +231,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       final dayId = leaderboardDayId();
       final refs = <DocumentReference<Map<String, dynamic>>>[];
       final root = leaderboardRootCollection();
-      for (final gameId in [GameIds.zip, GameIds.pathWords]) {
+      for (final gameId in leaderboardIdentityGameIds) {
         final game = db.collection(root).doc(gameId);
         refs.add(game.collection('all_time').doc(user.uid));
         refs.add(

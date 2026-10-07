@@ -9,6 +9,7 @@ import '../../../domain/usecases/clear_notification_token.dart';
 import '../../../domain/usecases/sign_in_with_google.dart';
 import '../../../domain/usecases/sign_out.dart';
 import '../../../domain/usecases/sync_fcm_token.dart';
+import '../../../domain/usecases/sync_progress.dart';
 import '../../../core/errors/client_error_reporter.dart';
 import 'auth_state.dart';
 
@@ -19,6 +20,7 @@ class AuthCubit extends Cubit<AuthState> {
     required this._signOut,
     this._syncFcmToken,
     this._clearNotificationToken,
+    this._syncProgress,
   }) : super(
          _authRepository.currentUser != null
              ? AuthState(
@@ -57,7 +59,13 @@ class AuthCubit extends Cubit<AuthState> {
   final SignOut _signOut;
   final SyncFcmToken? _syncFcmToken;
   final ClearNotificationToken? _clearNotificationToken;
+
+  /// Flushes unpushed local progress before sign-out (see [signOut]).
+  final SyncProgress? _syncProgress;
   StreamSubscription? _subscription;
+
+  /// Upper bound for each pre-sign-out remote step.
+  static const signOutStepTimeout = Duration(seconds: 3);
 
   bool get isSignedIn => state.user != null;
 
@@ -112,12 +120,23 @@ class AuthCubit extends Cubit<AuthState> {
 
   Future<void> signOut() async {
     final uid = state.user?.uid;
+    // Push pending local progress while still authenticated: the sync
+    // lifecycle drops its debounced push on sign-out, and a later sign-in by
+    // another account would otherwise purge it from this device.
+    final sync = _syncProgress;
+    if (sync != null) {
+      try {
+        await sync(pull: false).timeout(signOutStepTimeout);
+      } catch (e) {
+        debugPrint('Progress flush before signOut: $e');
+      }
+    }
     // Clear Firestore FCM fields while still authenticated (rules: isOwner).
     // Local FCM detach continues in the background and must not delay UI.
     final clear = _clearNotificationToken;
     if (clear != null) {
       try {
-        await clear(uid: uid).timeout(const Duration(seconds: 3));
+        await clear(uid: uid).timeout(signOutStepTimeout);
       } catch (e) {
         debugPrint('clearNotificationToken before signOut: $e');
       }

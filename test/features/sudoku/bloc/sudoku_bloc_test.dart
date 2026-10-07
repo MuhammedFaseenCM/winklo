@@ -50,6 +50,13 @@ class _FakeHintQuota implements HintQuotaRepository {
     _remaining--;
     return _remaining;
   }
+
+  @override
+  int usedFor(String gameId, String playId) => 0;
+
+  @override
+  Future<bool> restoreUsed(String gameId, String playId, int used) async =>
+      false;
 }
 
 class _MemoryInProgressRuns implements InProgressRunRepository {
@@ -134,7 +141,6 @@ SudokuPuzzle _noCoachPuzzle({required DateTime day}) {
   );
 }
 
-
 /// Extra empties in the same row, column, and box as index 1 so placing
 /// one correct digit there does not complete any unit.
 SudokuPuzzle _noUnitCompletePuzzle({required DateTime day}) {
@@ -155,22 +161,6 @@ SudokuPuzzle _twoEmptyPuzzle({required DateTime day}) {
   final puzzle = _almostSolvedPuzzle(day: day);
   final given = List<int>.from(puzzle.given);
   given[34] = 0; // second empty — solution digit 1
-  return SudokuPuzzle(
-    id: puzzle.id,
-    dateId: puzzle.dateId,
-    given: given,
-    solution: puzzle.solution,
-    difficulty: puzzle.difficulty,
-  );
-}
-
-/// Extra empties in the same row, column, and box as index 1 so placing
-/// one correct digit there does not complete any unit.
-SudokuPuzzle _noUnitCompletePuzzle({required DateTime day}) {
-  final puzzle = _almostSolvedPuzzle(day: day);
-  final given = List<int>.from(puzzle.given);
-  given[2] = 0; // (0,2) same row + box
-  given[7] = 0; // (1,1) same column + box
   return SudokuPuzzle(
     id: puzzle.id,
     dateId: puzzle.dateId,
@@ -239,6 +229,8 @@ void main() {
         modeKey: any(named: 'modeKey'),
         points: any(named: 'points'),
         timeSeconds: any(named: 'timeSeconds'),
+        usedHints: any(named: 'usedHints'),
+        hadMistakes: any(named: 'hadMistakes'),
       ),
     ).thenAnswer((_) async => true);
     when(
@@ -248,6 +240,8 @@ void main() {
         usedHints: any(named: 'usedHints'),
         hadMistakes: any(named: 'hadMistakes'),
         currentStreak: any(named: 'currentStreak'),
+        dayId: any(named: 'dayId'),
+        playId: any(named: 'playId'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -373,6 +367,8 @@ void main() {
           modeKey: any(named: 'modeKey', that: startsWith('sudoku_')),
           points: 950,
           timeSeconds: 10,
+          usedHints: false,
+          hadMistakes: false,
         ),
       ).called(1);
       verify(
@@ -382,12 +378,60 @@ void main() {
           usedHints: false,
           hadMistakes: false,
           currentStreak: 1,
+          dayId: '2026-09-27',
+          playId: '20260927',
         ),
       ).called(1);
       verify(
         () => recordDailyClear(
           gameId: GameIds.sudoku,
           dateId: any(named: 'dateId'),
+        ),
+      ).called(1);
+    },
+  );
+
+  blocTest<SudokuBloc, SudokuState>(
+    'win after a mistake passes hadMistakes and the puzzle day',
+    build: () {
+      var tick = 0;
+      final times = [
+        day,
+        day,
+        day.add(const Duration(seconds: 10)),
+        day.add(const Duration(seconds: 10)),
+      ];
+      return buildBloc(
+        now: () => times[tick < times.length ? tick++ : times.length - 1],
+      );
+    },
+    act: (bloc) async {
+      bloc.add(SudokuEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+      bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+      bloc.add(const SudokuEvent.digitTapped(3));
+      bloc.add(const SudokuEvent.digitTapped(2));
+    },
+    verify: (bloc) {
+      expect(bloc.state.status, SudokuStatus.navigating);
+      verify(
+        () => submitScore(
+          modeKey: any(named: 'modeKey', that: startsWith('sudoku_')),
+          points: any(named: 'points'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: false,
+          hadMistakes: true,
+        ),
+      ).called(1);
+      verify(
+        () => submitLeaderboardTime(
+          gameId: GameIds.sudoku,
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: false,
+          hadMistakes: true,
+          currentStreak: any(named: 'currentStreak'),
+          dayId: '2026-09-27',
+          playId: '20260927',
         ),
       ).called(1);
     },

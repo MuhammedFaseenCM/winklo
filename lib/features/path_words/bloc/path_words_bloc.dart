@@ -7,6 +7,7 @@ import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/entities/in_progress_run.dart';
+import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/entities/path_words_puzzle.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
@@ -661,6 +662,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       modeKey: 'path_words_$playId',
       points: points,
       timeSeconds: elapsed,
+      usedHints: state.usedHintsThisRun,
+      hadMistakes: false,
     );
 
     final streak = await recordDailyClear(
@@ -675,6 +678,10 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         usedHints: state.usedHintsThisRun,
         hadMistakes: false,
         currentStreak: streak.current,
+        // The puzzle's day, not submit time (runs finished after midnight).
+        dayId: leaderboardDayId(state.day),
+        // Lets a successful submit mark this clear as posted for the sync.
+        playId: playId,
       );
     } catch (_) {
       // Best-effort remote sync; local score already saved.

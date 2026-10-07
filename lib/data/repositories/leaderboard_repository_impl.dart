@@ -12,6 +12,51 @@ import '../leaderboard_root.dart';
 
 const _allowedGameIds = {GameIds.zip, GameIds.pathWords, GameIds.sudoku};
 
+/// Daily board key `yyyy-MM-dd`.
+final _dayIdPattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+
+/// Every key [leaderboardImprovePayload] may write on a leaderboard doc.
+///
+/// Must match the rules' `validLeaderboardKeys` whitelist exactly (the
+/// `currentStreak` incident: a key written here but missing there rejects the
+/// whole write). `test/firestore/rules_key_whitelist_test.dart` pins both.
+const leaderboardFirestoreKeys = {
+  'timeSeconds',
+  'updatedAt',
+  'displayName',
+  'photoUrl',
+  'avatarId',
+  'usedHints',
+  'hadMistakes',
+  'currentStreak',
+};
+
+/// Merge payload for one improve-only leaderboard write: `currentStreak`
+/// always; time + clean-run flags only when [timeImproved]; identity when
+/// known.
+Map<String, dynamic> leaderboardImprovePayload({
+  required bool timeImproved,
+  required int timeSeconds,
+  required bool usedHints,
+  required bool hadMistakes,
+  required int currentStreak,
+  ({String displayName, String? photoUrl, String? avatarId})? identity,
+}) {
+  final payload = <String, dynamic>{'currentStreak': currentStreak};
+  if (timeImproved) {
+    payload['timeSeconds'] = timeSeconds;
+    payload['updatedAt'] = FieldValue.serverTimestamp();
+    payload['usedHints'] = usedHints;
+    payload['hadMistakes'] = hadMistakes;
+  }
+  if (identity != null) {
+    payload['displayName'] = identity.displayName;
+    payload['photoUrl'] = identity.photoUrl;
+    payload['avatarId'] = identity.avatarId;
+  }
+  return payload;
+}
+
 /// Maps ordered leaderboard rows to ranked [LeaderboardEntry] values.
 ///
 /// Equal [timeSeconds] share a dense rank (1, 2, 2, 3). Rows must already be
@@ -122,6 +167,14 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     }
   }
 
+  /// Throws when [expectedUid] is set and is no longer the signed-in account.
+  void _assertExpectedUser(FirebaseAuth? auth, String? expectedUid) {
+    if (expectedUid == null) return;
+    if (auth?.currentUser?.uid != expectedUid) {
+      throw const Failure('Signed-in account changed; leaderboard skipped.');
+    }
+  }
+
   CollectionReference<Map<String, dynamic>> _boardCollection({
     required FirebaseFirestore db,
     required String gameId,
@@ -177,10 +230,15 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     required bool usedHints,
     required bool hadMistakes,
     required int currentStreak,
+    String? dayId,
+    String? expectedUid,
   }) async {
     _assertGameId(gameId);
     if (timeSeconds <= 0) {
       throw const Failure('Invalid time for leaderboard.');
+    }
+    if (dayId != null && !_dayIdPattern.hasMatch(dayId)) {
+      throw Failure('Invalid leaderboard day: $dayId');
     }
 
     final db = _db;
@@ -189,6 +247,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     if (db == null || user == null) {
       throw const Failure('Sign in required to join the leaderboard.');
     }
+    _assertExpectedUser(auth, expectedUid);
 
     Map<String, dynamic>? profile;
     var profileDocumentRead = false;
@@ -205,7 +264,9 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       authPhotoUrl: user.photoURL,
       profile: profile,
     );
-    final dayId = leaderboardDayId();
+    // The account may have switched during the profile read.
+    _assertExpectedUser(auth, expectedUid);
+    final boardDayId = dayId ?? leaderboardDayId();
 
     final root = leaderboardRootCollection();
     final allTimeRef = db
@@ -217,7 +278,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         .collection(root)
         .doc(gameId)
         .collection('daily')
-        .doc(dayId)
+        .doc(boardDayId)
         .collection('entries')
         .doc(user.uid);
 
@@ -259,18 +320,14 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       final timeImproved =
           !snap.exists || existing is! int || timeSeconds < existing;
 
-      final payload = <String, dynamic>{'currentStreak': currentStreak};
-      if (timeImproved) {
-        payload['timeSeconds'] = timeSeconds;
-        payload['updatedAt'] = FieldValue.serverTimestamp();
-        payload['usedHints'] = usedHints;
-        payload['hadMistakes'] = hadMistakes;
-      }
-      if (identity != null) {
-        payload['displayName'] = identity.displayName;
-        payload['photoUrl'] = identity.photoUrl;
-        payload['avatarId'] = identity.avatarId;
-      }
+      final payload = leaderboardImprovePayload(
+        timeImproved: timeImproved,
+        timeSeconds: timeSeconds,
+        usedHints: usedHints,
+        hadMistakes: hadMistakes,
+        currentStreak: currentStreak,
+        identity: identity,
+      );
       tx.set(ref, payload, SetOptions(merge: true));
     });
   }

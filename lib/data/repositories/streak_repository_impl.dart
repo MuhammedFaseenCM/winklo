@@ -3,9 +3,14 @@ import 'package:winklo/domain/repositories/streak_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StreakRepositoryImpl implements StreakRepository {
-  StreakRepositoryImpl(this._prefs);
+  StreakRepositoryImpl(this._prefs, {this._onChanged});
 
   final SharedPreferences _prefs;
+
+  /// Called after [saveStreak] changes the stored streak (DI wires it to the
+  /// debounced progress push). [restoreStreak] never calls it, so a sync
+  /// restore cannot feed back into another push.
+  final void Function()? _onChanged;
 
   static String _currentKey(String gameId) => 'streak_current_$gameId';
   static String _longestKey(String gameId) => 'streak_longest_$gameId';
@@ -25,6 +30,25 @@ class StreakRepositoryImpl implements StreakRepository {
 
   @override
   Future<GameStreak> saveStreak(GameStreak streak) async {
+    if (await _write(streak)) _onChanged?.call();
+    return streak;
+  }
+
+  @override
+  Future<bool> restoreStreak(GameStreak streak) => _write(streak);
+
+  /// Writes all four keys when any stored value differs; returns whether it
+  /// wrote.
+  Future<bool> _write(GameStreak streak) async {
+    final stored = await getStreak(streak.gameId);
+    final same =
+        _prefs.containsKey(_currentKey(streak.gameId)) &&
+        _prefs.containsKey(_freezeKey(streak.gameId)) &&
+        stored.current == streak.current &&
+        stored.longest == streak.longest &&
+        stored.lastClearedDateId == streak.lastClearedDateId &&
+        stored.freezeAvailable == streak.freezeAvailable;
+    if (same) return false;
     await _prefs.setInt(_currentKey(streak.gameId), streak.current);
     await _prefs.setInt(_longestKey(streak.gameId), streak.longest);
     final last = streak.lastClearedDateId;
@@ -34,6 +58,6 @@ class StreakRepositoryImpl implements StreakRepository {
       await _prefs.setString(_lastKey(streak.gameId), last);
     }
     await _prefs.setBool(_freezeKey(streak.gameId), streak.freezeAvailable);
-    return streak;
+    return true;
   }
 }

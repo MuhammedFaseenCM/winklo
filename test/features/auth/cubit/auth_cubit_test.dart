@@ -10,6 +10,7 @@ import 'package:winklo/domain/usecases/clear_notification_token.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/sync_fcm_token.dart';
+import 'package:winklo/domain/usecases/sync_progress.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/auth/cubit/auth_state.dart';
 
@@ -24,6 +25,8 @@ class _MockSyncFcmToken extends Mock implements SyncFcmToken {}
 class _MockClearNotificationToken extends Mock
     implements ClearNotificationToken {}
 
+class _MockSyncProgress extends Mock implements SyncProgress {}
+
 void main() {
   const user = AppUser(uid: 'u1', displayName: 'Ada');
 
@@ -32,6 +35,7 @@ void main() {
   late _MockSignOut signOut;
   late _MockSyncFcmToken syncFcmToken;
   late _MockClearNotificationToken clearNotificationToken;
+  late _MockSyncProgress syncProgress;
   late StreamController<AppUser?> controller;
 
   setUp(() {
@@ -40,6 +44,7 @@ void main() {
     signOut = _MockSignOut();
     syncFcmToken = _MockSyncFcmToken();
     clearNotificationToken = _MockClearNotificationToken();
+    syncProgress = _MockSyncProgress();
     controller = StreamController<AppUser?>.broadcast();
     when(() => auth.authStateChanges()).thenAnswer((_) => controller.stream);
     when(() => syncFcmToken(any())).thenAnswer((_) async {});
@@ -52,14 +57,18 @@ void main() {
     await controller.close();
   });
 
-  AuthCubit buildCubit({bool withSync = false, bool withClearToken = false}) =>
-      AuthCubit(
-        authRepository: auth,
-        signInWithGoogle: signIn,
-        signOut: signOut,
-        syncFcmToken: withSync ? syncFcmToken : null,
-        clearNotificationToken: withClearToken ? clearNotificationToken : null,
-      );
+  AuthCubit buildCubit({
+    bool withSync = false,
+    bool withClearToken = false,
+    bool withProgress = false,
+  }) => AuthCubit(
+    authRepository: auth,
+    signInWithGoogle: signIn,
+    signOut: signOut,
+    syncFcmToken: withSync ? syncFcmToken : null,
+    clearNotificationToken: withClearToken ? clearNotificationToken : null,
+    syncProgress: withProgress ? syncProgress : null,
+  );
 
   blocTest<AuthCubit, AuthState>(
     'emits signedIn when auth stream has a user',
@@ -155,6 +164,37 @@ void main() {
     verify: (_) {
       verifyInOrder([() => clearNotificationToken(uid: 'u1'), () => signOut()]);
     },
+  );
+
+  blocTest<AuthCubit, AuthState>(
+    'signOut first pushes pending progress while still authenticated',
+    build: () => buildCubit(withProgress: true),
+    setUp: () {
+      when(
+        () => syncProgress(pull: any(named: 'pull')),
+      ).thenAnswer((_) async => const SyncProgressResult());
+      when(() => signOut()).thenAnswer((_) async {});
+    },
+    seed: () => const AuthState(status: AuthStatus.signedIn, user: user),
+    act: (cubit) => cubit.signOut(),
+    expect: () => [const AuthState(status: AuthStatus.signedOut)],
+    verify: (_) {
+      verifyInOrder([() => syncProgress(pull: false), () => signOut()]);
+    },
+  );
+
+  blocTest<AuthCubit, AuthState>(
+    'a failing progress flush does not block signOut',
+    build: () => buildCubit(withProgress: true),
+    setUp: () {
+      when(
+        () => syncProgress(pull: any(named: 'pull')),
+      ).thenAnswer((_) async => throw StateError('offline'));
+      when(() => signOut()).thenAnswer((_) async {});
+    },
+    seed: () => const AuthState(status: AuthStatus.signedIn, user: user),
+    act: (cubit) => cubit.signOut(),
+    expect: () => [const AuthState(status: AuthStatus.signedOut)],
   );
 
   blocTest<AuthCubit, AuthState>(

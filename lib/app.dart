@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/lifecycle/app_open_lifecycle.dart';
+import 'core/lifecycle/progress_change_signal.dart';
+import 'core/lifecycle/progress_sync_lifecycle.dart';
 import 'core/router/app_router.dart';
 import 'core/strings/app_strings.dart';
 import 'core/theme/app_text_scale.dart';
@@ -14,6 +16,7 @@ import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/notification_repository.dart';
 import 'domain/usecases/handle_notification_tap.dart';
 import 'domain/usecases/record_app_open.dart';
+import 'domain/usecases/sync_progress.dart';
 import 'features/auth/cubit/auth_cubit.dart';
 
 class WinkloApp extends StatefulWidget {
@@ -28,12 +31,14 @@ class _WinkloAppState extends State<WinkloApp> {
   StreamSubscription<NotificationTap>? _tapSub;
   bool _tapListening = false;
   AppOpenLifecycle? _appOpenLifecycle;
+  ProgressSyncLifecycle? _progressSyncLifecycle;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _ensureTapListening();
     _ensureAppOpenLifecycle();
+    _ensureProgressSyncLifecycle();
   }
 
   void _ensureAppOpenLifecycle() {
@@ -43,6 +48,17 @@ class _WinkloAppState extends State<WinkloApp> {
       context.read<AuthRepository>(),
     );
     _appOpenLifecycle = lifecycle;
+    lifecycle.start();
+  }
+
+  void _ensureProgressSyncLifecycle() {
+    if (_progressSyncLifecycle != null) return;
+    final lifecycle = ProgressSyncLifecycle(
+      syncProgress: context.read<SyncProgress>(),
+      authRepository: context.read<AuthRepository>(),
+      localChanges: context.read<ProgressChangeSignal>().changes,
+    );
+    _progressSyncLifecycle = lifecycle;
     lifecycle.start();
   }
 
@@ -63,6 +79,8 @@ class _WinkloAppState extends State<WinkloApp> {
     unawaited(_tapSub?.cancel());
     _appOpenLifecycle?.dispose();
     _appOpenLifecycle = null;
+    _progressSyncLifecycle?.dispose();
+    _progressSyncLifecycle = null;
     super.dispose();
   }
 
@@ -72,7 +90,7 @@ class _WinkloAppState extends State<WinkloApp> {
       analytics: context.read<AnalyticsRepository>(),
       authCubit: context.read<AuthCubit>(),
     );
-    return MaterialApp.router(
+    final app = MaterialApp.router(
       title: AppStrings.appTitle,
       theme: buildAppTheme(),
       themeMode: ThemeMode.dark,
@@ -86,6 +104,13 @@ class _WinkloAppState extends State<WinkloApp> {
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: AppTextScale(child: child ?? const SizedBox.shrink()),
       ),
+    );
+    final progressSync = _progressSyncLifecycle;
+    if (progressSync == null) return app;
+    // Routes (Home) listen to `restored` to reload after a sync.
+    return RepositoryProvider<ProgressSyncLifecycle>.value(
+      value: progressSync,
+      child: app,
     );
   }
 }

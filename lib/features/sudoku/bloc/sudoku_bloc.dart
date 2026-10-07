@@ -6,6 +6,7 @@ import '../../../core/sfx/sfx_id.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
+import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/entities/sudoku_puzzle.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
@@ -500,6 +501,8 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       modeKey: 'sudoku_$playId',
       points: points,
       timeSeconds: elapsed,
+      usedHints: state.usedHintsThisRun,
+      hadMistakes: state.hadMistakesThisRun,
     );
 
     final streak = await recordDailyClear(
@@ -514,6 +517,10 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         usedHints: state.usedHintsThisRun,
         hadMistakes: state.hadMistakesThisRun,
         currentStreak: streak.current,
+        // The puzzle's day, not submit time (runs finished after midnight).
+        dayId: leaderboardDayId(state.day),
+        // Lets a successful submit mark this clear as posted for the sync.
+        playId: playId,
       );
     } catch (_) {
       // Best-effort remote sync; local score already saved.

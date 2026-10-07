@@ -4,6 +4,7 @@ import 'package:winklo/core/firebase/firebase_bootstrap.dart';
 import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/failures.dart';
+import 'package:winklo/domain/game_ids.dart';
 
 void main() {
   test('mapUserProfile reads name, photo, and avatar', () {
@@ -20,6 +21,14 @@ void main() {
 
   test('mapUserProfile returns null for a missing doc', () {
     expect(mapUserProfile('u1', null), isNull);
+  });
+
+  test('identity refresh covers every leaderboard game', () {
+    expect(leaderboardIdentityGameIds, [
+      GameIds.zip,
+      GameIds.pathWords,
+      GameIds.sudoku,
+    ]);
   });
 
   test('leaderboardIdentityPatch omits updatedAt', () {

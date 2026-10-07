@@ -96,6 +96,112 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Private per-user progress (owner-only). Clients write with
+    // set(merge: true), so request.resource.data is the merged doc and these
+    // checks validate the whole stored doc on create and update alike.
+    // Key whitelists must equal gameDayFirestoreKeys / streakFirestoreKeys in
+    // lib/data/repositories/progress_remote_repository_impl.dart.
+    function validOptionalNonNegativeInt(data, key) {
+      return !(key in data) || (data[key] is int && data[key] >= 0);
+    }
+
+    function validOptionalBool(data, key) {
+      return !(key in data) || data[key] is bool;
+    }
+
+    function validGameDay(dayKey) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'gameId', 'playId', 'timeSeconds', 'points', 'usedHints',
+          'hadMistakes', 'flagsKnown', 'hintsUsed', 'clearedAt', 'updatedAt'
+        ])
+        && data.gameId is string
+        && validGame(data.gameId)
+        && data.playId is string
+        && data.playId.matches('^[0-9]{8}([0-9]{4})?$')
+        && dayKey == data.gameId + '_' + data.playId
+        && validOptionalNonNegativeInt(data, 'timeSeconds')
+        && validOptionalNonNegativeInt(data, 'points')
+        && validOptionalBool(data, 'usedHints')
+        && validOptionalBool(data, 'hadMistakes')
+        && validOptionalBool(data, 'flagsKnown')
+        && data.hintsUsed is int
+        && data.hintsUsed >= 0
+        && data.hintsUsed <= 50
+        && (!('clearedAt' in data) || data.clearedAt is timestamp)
+        && data.updatedAt == request.time
+        && (resource == null || gameDayDoesNotRegress(data, resource.data));
+    }
+
+    // The client merges a read with its local copy before the merge write;
+    // that is not a transaction (and offline the read is the cache), so a
+    // stale write could regress another device's better result. Updates may
+    // only improve: a rejected write is rolled back and the next sync run
+    // re-merges against the server copy.
+    function gameDayDoesNotRegress(data, stored) {
+      return (!('timeSeconds' in stored)
+          || ('timeSeconds' in data && data.timeSeconds <= stored.timeSeconds))
+        && (!('points' in stored)
+          || ('points' in data && data.points >= stored.points))
+        && (!('hintsUsed' in stored) || data.hintsUsed >= stored.hintsUsed)
+        && (!('clearedAt' in stored)
+          || ('clearedAt' in data && data.clearedAt <= stored.clearedAt));
+    }
+
+    function validGameStreak(gameId) {
+      let data = request.resource.data;
+      return validGame(gameId)
+        && data.keys().hasOnly([
+          'current', 'longest', 'lastClearedDateId', 'freezeAvailable',
+          'updatedAt'
+        ])
+        && data.current is int
+        && data.current >= 0
+        && data.longest is int
+        && data.longest >= 0
+        && (data.lastClearedDateId == null
+          || (data.lastClearedDateId is string
+            && data.lastClearedDateId.matches('^[0-9]{8}$')))
+        && data.freezeAvailable is bool
+        && data.updatedAt == request.time
+        && (resource == null || gameStreakDoesNotRegress(data, resource.data));
+    }
+
+    // A streak may reset (current goes down), but never move back to an
+    // earlier last clear day or lose its longest; see gameDayDoesNotRegress.
+    function gameStreakDoesNotRegress(data, stored) {
+      return (!('longest' in stored) || data.longest >= stored.longest)
+        && (!('lastClearedDateId' in stored)
+          || stored.lastClearedDateId == null
+          || (data.lastClearedDateId != null
+            && data.lastClearedDateId >= stored.lastClearedDateId));
+    }
+
+    match /users/{uid}/game_days/{dayKey} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validGameDay(dayKey);
+      allow delete: if false;
+    }
+
+    match /users/{uid}/game_streaks/{gameId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validGameStreak(gameId);
+      allow delete: if false;
+    }
+
+    // Twins used by debug builds (`kDebugMode`), like `leaderboards_debug`.
+    match /users/{uid}/game_days_debug/{dayKey} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validGameDay(dayKey);
+      allow delete: if false;
+    }
+
+    match /users/{uid}/game_streaks_debug/{gameId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validGameStreak(gameId);
+      allow delete: if false;
+    }
+
     // Public read so the board loads even if the Auth ID token is still
     // refreshing; writes stay owner-only + improve-only.
     match /leaderboards/{gameId}/all_time/{uid} {

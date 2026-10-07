@@ -54,6 +54,13 @@ class _FakeHintQuota implements HintQuotaRepository {
     _remaining--;
     return _remaining;
   }
+
+  @override
+  int usedFor(String gameId, String playId) => 0;
+
+  @override
+  Future<bool> restoreUsed(String gameId, String playId, int used) async =>
+      false;
 }
 
 class _FakeClock {
@@ -190,6 +197,8 @@ void main() {
         usedHints: any(named: 'usedHints'),
         hadMistakes: any(named: 'hadMistakes'),
         currentStreak: any(named: 'currentStreak'),
+        dayId: any(named: 'dayId'),
+        playId: any(named: 'playId'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -303,6 +312,8 @@ void main() {
           modeKey: 'path_words_20260917',
           points: 940,
           timeSeconds: 12,
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
         ),
       ).thenAnswer((_) async => true);
       when(
@@ -433,6 +444,8 @@ void main() {
           modeKey: 'path_words_20260917',
           points: 940,
           timeSeconds: 12,
+          usedHints: false,
+          hadMistakes: false,
         ),
       ).called(1);
       verify(
@@ -442,6 +455,8 @@ void main() {
           usedHints: false,
           hadMistakes: false,
           currentStreak: 3,
+          dayId: '2026-09-17',
+          playId: '20260917',
         ),
       ).called(1);
       verify(
@@ -1417,6 +1432,8 @@ void main() {
           modeKey: 'path_words_20260917',
           points: 940,
           timeSeconds: 12,
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
         ),
       ).thenAnswer((_) async => true);
       when(
@@ -1705,6 +1722,8 @@ void main() {
           modeKey: any(named: 'modeKey'),
           points: any(named: 'points'),
           timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
         ),
       ).thenAnswer((_) async => true);
       when(

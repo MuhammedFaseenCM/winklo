@@ -8,9 +8,13 @@ class SubmitScore {
     required String modeKey,
     required int points,
     int? timeSeconds,
+    bool? usedHints,
+    bool? hadMistakes,
   }) => _repo.submitScore(
     modeKey: modeKey,
     points: points,
     timeSeconds: timeSeconds,
+    usedHints: usedHints,
+    hadMistakes: hadMistakes,
   );
 }

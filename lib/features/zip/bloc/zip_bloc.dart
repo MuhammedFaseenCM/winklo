@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
+import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
@@ -221,6 +222,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       modeKey: 'zip_${state.level.id}',
       points: points,
       timeSeconds: elapsed,
+      usedHints: state.usedHintsThisRun,
+      hadMistakes: false,
     );
 
     final streak = await recordDailyClear(
@@ -235,6 +238,10 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         usedHints: state.usedHintsThisRun,
         hadMistakes: false,
         currentStreak: streak.current,
+        // The puzzle's day, not submit time (runs finished after midnight).
+        dayId: leaderboardDayId(state.day),
+        // Lets a successful submit mark this clear as posted for the sync.
+        playId: playId,
       );
     } catch (_) {
       // Best-effort remote sync; local score already saved.

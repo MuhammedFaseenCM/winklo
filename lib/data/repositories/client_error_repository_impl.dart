@@ -65,9 +65,15 @@ String _clip(String value, int max) {
 }
 
 class ClientErrorRepositoryImpl implements ClientErrorRepository {
-  ClientErrorRepositoryImpl({this.firestore});
+  ClientErrorRepositoryImpl({
+    this.firestore,
+    this.writeTimeout = const Duration(seconds: 10),
+  });
 
   final FirebaseFirestore? firestore;
+
+  /// Bounds the wait for the server ack of one report.
+  final Duration writeTimeout;
 
   FirebaseFirestore? get _db {
     if (!FirebaseBootstrap.isReady) return null;
@@ -89,7 +95,9 @@ class ClientErrorRepositoryImpl implements ClientErrorRepository {
         locale: PlatformDispatcher.instance.locale.toLanguageTag(),
       );
       payload['createdAt'] = FieldValue.serverTimestamp();
-      await db.collection('client_errors').add(payload);
+      // Offline, a write future only completes on server ack (the doc stays
+      // queued by persistence); never let telemetry block its caller.
+      await db.collection('client_errors').add(payload).timeout(writeTimeout);
     } catch (e, st) {
       debugPrint('ClientErrorRepository report failed: $e');
       debugPrint('$st');

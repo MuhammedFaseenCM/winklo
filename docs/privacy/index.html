@@ -56,29 +56,37 @@
     <main>
       <p class="muted">Winklo · com.winklo.faseencm</p>
       <h1>Privacy Policy</h1>
-      <p class="muted">Last updated: 25 September 2026</p>
+      <p class="muted">Last updated: 7 October 2026</p>
 
       <p>
-        Winklo is a set of quick solo mini-games (Zip, Path Words, Word Match,
-        and Category Race). You sign in with Google to play Zip and Path Words
-        and to use the live leaderboard and cloud profile. This policy explains
+        Winklo is a set of quick daily solo puzzles (Zip, Path Words, and
+        Sudoku). You sign in with Google to play them and to use the live
+        leaderboard, cloud profile, and synced progress. This policy explains
         what is stored on your device and what is processed in the cloud.
       </p>
 
       <div class="card">
         <strong>Short version:</strong> We do not run ads and we do not sell
-        data. Google Sign-In is required for Zip, Path Words, leaderboard, and
-        profile. We use Google Firebase (Auth, Firestore, Analytics,
+        data. Google Sign-In is required for Zip, Path Words, Sudoku,
+        leaderboard, and profile. Your game progress is synced privately to
+        your account. We use Google Firebase (Auth, Firestore, Analytics,
         Crashlytics, Remote Config, Cloud Messaging) and Cloudflare (avatar
         upload Worker + R2) to run those features.
       </div>
 
       <h2>Information stored on your device</h2>
       <p>
-        Local preferences may include tutorial flags, notification schedules,
-        and cached puzzle data. Uninstalling Winklo or clearing app storage
-        removes local data. Cloud profile and leaderboard scores are separate
-        (see below).
+        Local preferences may include tutorial flags, sound settings,
+        notification schedules, unfinished puzzle runs, game progress, and
+        cached puzzle data. Uninstalling Winklo or clearing app storage removes
+        local data. Your cloud profile and leaderboard scores are separate (see
+        below). When you sign in again, your streaks and your daily results for
+        the current and previous day are restored from your synced progress;
+        older daily results stay stored with your account. If a different
+        Google account signs in on the same device, the previous account’s
+        local progress is removed from view; any of it that had not synced yet
+        is kept aside on the device and restored when that account signs in
+        there again.
       </p>
 
       <h2>Account and profile</h2>
@@ -87,8 +95,8 @@
         account tied to your Google identity. We store a Firebase user id
         (uid), display name, optional profile photo URL, and optional preset
         avatar id on <code>users/{uid}</code>. Display name and photo/avatar
-        may also appear on Zip and Path Words leaderboards visible to other
-        signed-in players in the app.
+        may also appear on Zip, Path Words, and Sudoku leaderboards visible to
+        other players in the app.
       </p>
       <p>
         You may choose a gallery photo. The app uses the system photo picker
@@ -105,16 +113,36 @@
 
       <h2>Gameplay scores</h2>
       <p>
-        Personal-best times for Zip and Path Words sync to Firestore
-        leaderboards (daily and all-time). Other players can see your display
-        name, avatar/photo, and time on those boards.
+        Personal-best times for Zip, Path Words, and Sudoku sync to Firestore
+        leaderboards (daily and all-time). Each leaderboard entry stores your
+        uid, display name, avatar/photo, best time, whether you used hints or
+        made mistakes on that run, your current streak, and when it was
+        updated. Other players can see these on those boards.
+      </p>
+
+      <h2>Synced game progress</h2>
+      <p>
+        So your streaks and current daily progress survive a reinstall or a
+        new device, Winklo stores
+        your game progress in Firestore under your account: for each daily
+        puzzle you play, your best time and points, whether you used hints or
+        made mistakes, how many hints you used that day, and when you cleared
+        it; and for each game, your current and longest streak, the day you
+        last cleared it, and whether a streak freeze is available. This
+        progress is private to your account: only you (signed in) can read or
+        change it, and it is not shown to other players. The app also uses it
+        to re-send a cleared puzzle’s time to the leaderboard if an earlier
+        submit failed.
       </p>
 
       <h2>Other network processing</h2>
       <ul>
         <li>
-          <strong>Cloud Firestore</strong> — puzzle catalogs and the user /
-          leaderboard data described above.
+          <strong>Cloud Firestore</strong> — puzzle catalogs, the user,
+          leaderboard, and synced progress data described above, a daily
+          app-open record (uid, first/last open time, platform), issue reports
+          you submit (with your uid, display name, avatar, and app version),
+          and app error reports.
         </li>
         <li>
           <strong>Firebase Analytics</strong> — product events (screens,
@@ -171,14 +199,15 @@
       <h2>Your choices and account deletion</h2>
       <p>
         You can sign out in Profile. You can stop using network features by
-        staying signed out (Zip and Path Words require sign-in). Analytics and
-        Crashlytics collection is required for the app’s current design (no
-        in-app opt-out toggle).
+        staying signed out (Zip, Path Words, and Sudoku require sign-in).
+        Analytics and Crashlytics collection is required for the app’s current
+        design (no in-app opt-out toggle).
       </p>
       <p>
         There is no in-app “delete account” button yet. To request deletion of
         your account and associated cloud data (profile, leaderboard entries,
-        and custom R2 avatar if any),
+        synced game progress, daily app-open records, issue reports, and custom
+        R2 avatar if any),
         <a href="https://github.com/MuhammedFaseenCM/winklo/issues"
           >open a GitHub issue</a
         >

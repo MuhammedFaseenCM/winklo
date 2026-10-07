@@ -32,4 +32,34 @@ void main() {
           repo.submitScore(modeKey: 'zip_daily', points: 900, timeSeconds: 12),
     ).called(1);
   });
+
+  test('forwards clean-run flags', () async {
+    when(
+      () => repo.submitScore(
+        modeKey: 'sudoku_20261007',
+        points: 700,
+        timeSeconds: 90,
+        usedHints: true,
+        hadMistakes: false,
+      ),
+    ).thenAnswer((_) async => true);
+
+    await usecase(
+      modeKey: 'sudoku_20261007',
+      points: 700,
+      timeSeconds: 90,
+      usedHints: true,
+      hadMistakes: false,
+    );
+
+    verify(
+      () => repo.submitScore(
+        modeKey: 'sudoku_20261007',
+        points: 700,
+        timeSeconds: 90,
+        usedHints: true,
+        hadMistakes: false,
+      ),
+    ).called(1);
+  });
 }

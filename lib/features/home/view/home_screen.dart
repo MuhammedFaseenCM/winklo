@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/config/static_assets_config.dart';
 import '../../../core/dev_flags.dart';
+import '../../../core/lifecycle/progress_sync_lifecycle.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
@@ -64,6 +65,7 @@ class _HomeView extends StatefulWidget {
 class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   GoRouter? _router;
   String? _lastPath;
+  StreamSubscription<void>? _restoredSub;
 
   @override
   void initState() {
@@ -86,6 +88,11 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Reload locks / bests / streaks after a sync restored remote progress.
+    // Nullable read: widget tests may not provide the lifecycle.
+    _restoredSub ??= context.read<ProgressSyncLifecycle?>()?.restored.listen(
+      (_) => _onProgressRestored(),
+    );
     final router = GoRouter.of(context);
     if (identical(_router, router)) return;
     _router?.routerDelegate.removeListener(_onRouteChanged);
@@ -96,9 +103,17 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    unawaited(_restoredSub?.cancel());
+    _restoredSub = null;
     _router?.routerDelegate.removeListener(_onRouteChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _onProgressRestored() {
+    if (!mounted) return;
+    final cubit = context.read<HomeCubit>();
+    if (!cubit.isClosed) unawaited(cubit.load());
   }
 
   void _onRouteChanged() {
@@ -692,10 +707,7 @@ class _DailyGameTile extends StatelessWidget {
 }
 
 class _TileLeaderboardButton extends StatelessWidget {
-  const _TileLeaderboardButton({
-    required this.accent,
-    required this.onPressed,
-  });
+  const _TileLeaderboardButton({required this.accent, required this.onPressed});
 
   final Color accent;
   final VoidCallback onPressed;

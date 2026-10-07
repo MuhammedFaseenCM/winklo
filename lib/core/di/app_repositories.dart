@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/config/avatar_upload_config.dart';
 import 'package:winklo/core/config/path_words_nouns_config.dart';
 import 'package:winklo/core/dev_flags.dart';
+import 'package:winklo/core/firebase/firebase_bootstrap.dart';
+import 'package:winklo/core/lifecycle/progress_change_signal.dart';
 import 'package:winklo/core/sfx/audioplayers_sfx_playback.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/data/clients/avatar/avatar_upload_client.dart';
@@ -24,6 +26,8 @@ import 'package:winklo/data/repositories/issue_report_repository_impl.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
 import 'package:winklo/data/repositories/profile_repository_impl.dart';
+import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
+import 'package:winklo/data/repositories/progress_remote_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
 import 'package:winklo/data/repositories/sfx_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
@@ -36,12 +40,15 @@ import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/category_repository.dart';
+import 'package:winklo/domain/repositories/client_error_repository.dart';
 import 'package:winklo/domain/repositories/hint_quota_repository.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
+import 'package:winklo/domain/repositories/progress_local_repository.dart';
+import 'package:winklo/domain/repositories/progress_remote_repository.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
 import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
@@ -65,6 +72,7 @@ import 'package:winklo/domain/usecases/handle_notification_tap.dart';
 import 'package:winklo/domain/usecases/initialize_notifications.dart';
 import 'package:winklo/domain/usecases/record_app_open.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
+import 'package:winklo/domain/usecases/report_client_error.dart';
 import 'package:winklo/domain/usecases/schedule_engagement_notifications.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
@@ -72,15 +80,29 @@ import 'package:winklo/domain/usecases/submit_issue_report.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/domain/usecases/sync_fcm_token.dart';
+import 'package:winklo/domain/usecases/sync_progress.dart';
 import 'package:winklo/domain/usecases/update_avatar.dart';
 import 'package:winklo/domain/usecases/update_display_name.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 
+/// [clientErrorRepository] is registered first when given so providers in this
+/// list (e.g. [SyncProgress]) can report handled errors; tests may omit it.
 List<SingleChildWidget> buildRepositoryProviders({
   required SharedPreferences prefs,
+  ClientErrorRepository? clientErrorRepository,
 }) {
   return [
+    if (clientErrorRepository != null)
+      RepositoryProvider<ClientErrorRepository>.value(
+        value: clientErrorRepository,
+      ),
     RepositoryProvider<SharedPreferences>.value(value: prefs),
+    // Local progress writes notify this; ProgressSyncLifecycle debounces a
+    // push-only sync from it.
+    RepositoryProvider<ProgressChangeSignal>(
+      create: (_) => ProgressChangeSignal(),
+      dispose: (signal) => signal.dispose(),
+    ),
     RepositoryProvider<SfxSettingsRepository>(
       create: (context) =>
           SfxSettingsRepositoryImpl(context.read<SharedPreferences>()),
@@ -170,10 +192,6 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) =>
           WatchLeaderboard(context.read<LeaderboardRepository>()),
     ),
-    RepositoryProvider<SubmitLeaderboardTime>(
-      create: (context) =>
-          SubmitLeaderboardTime(context.read<LeaderboardRepository>()),
-    ),
     RepositoryProvider<AppUpdateRepository>(
       create: (_) => AppUpdateRepositoryImpl(),
     ),
@@ -181,18 +199,55 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) => CheckAppUpdate(context.read<AppUpdateRepository>()),
     ),
     RepositoryProvider<ScoreRepository>(
-      create: (context) =>
-          ScoreRepositoryImpl(context.read<SharedPreferences>()),
+      create: (context) => ScoreRepositoryImpl(
+        context.read<SharedPreferences>(),
+        onChanged: context.read<ProgressChangeSignal>().notify,
+      ),
     ),
     RepositoryProvider<HintQuotaRepository>(
       create: (context) => HintQuotaRepositoryImpl(
         context.read<SharedPreferences>(),
         playPeriod: DevFlags.playPeriod,
+        onChanged: context.read<ProgressChangeSignal>().notify,
       ),
     ),
     RepositoryProvider<StreakRepository>(
+      create: (context) => StreakRepositoryImpl(
+        context.read<SharedPreferences>(),
+        onChanged: context.read<ProgressChangeSignal>().notify,
+      ),
+    ),
+    RepositoryProvider<ProgressLocalRepository>(
       create: (context) =>
-          StreakRepositoryImpl(context.read<SharedPreferences>()),
+          ProgressLocalRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<ProgressRemoteRepository>(
+      create: (_) => ProgressRemoteRepositoryImpl(),
+    ),
+    // After Score / ProgressLocal: a successful bloc submit records the sync's
+    // leaderboard marker so SyncProgress does not post the clear again.
+    RepositoryProvider<SubmitLeaderboardTime>(
+      create: (context) => SubmitLeaderboardTime(
+        context.read<LeaderboardRepository>(),
+        scores: context.read<ScoreRepository>(),
+        progress: context.read<ProgressLocalRepository>(),
+      ),
+    ),
+    RepositoryProvider<SyncProgress>(
+      create: (context) => SyncProgress(
+        auth: context.read<AuthRepository>(),
+        scores: context.read<ScoreRepository>(),
+        streaks: context.read<StreakRepository>(),
+        hintQuota: context.read<HintQuotaRepository>(),
+        local: context.read<ProgressLocalRepository>(),
+        remote: context.read<ProgressRemoteRepository>(),
+        leaderboard: context.read<LeaderboardRepository>(),
+        playPeriod: DevFlags.playPeriod,
+        reportClientError: clientErrorRepository == null
+            ? null
+            : ReportClientError(clientErrorRepository),
+        isRemoteAvailable: () => FirebaseBootstrap.isReady,
+      ),
     ),
     RepositoryProvider<TutorialRepository>(
       create: (context) =>

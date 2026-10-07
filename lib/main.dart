@@ -10,12 +10,12 @@ import 'core/errors/client_error_reporter.dart';
 import 'core/firebase/firebase_bootstrap.dart';
 import 'data/repositories/client_error_repository_impl.dart';
 import 'domain/repositories/auth_repository.dart';
-import 'domain/repositories/client_error_repository.dart';
 import 'domain/usecases/clear_notification_token.dart';
 import 'domain/usecases/initialize_notifications.dart';
 import 'domain/usecases/sign_in_with_google.dart';
 import 'domain/usecases/sign_out.dart';
 import 'domain/usecases/sync_fcm_token.dart';
+import 'domain/usecases/sync_progress.dart';
 import 'features/auth/cubit/auth_cubit.dart';
 
 Future<void> main() async {
@@ -44,9 +44,9 @@ Future<void> main() async {
   runApp(
     MultiRepositoryProvider(
       providers: [
-        ...buildRepositoryProviders(prefs: prefs),
-        RepositoryProvider<ClientErrorRepository>.value(
-          value: clientErrorRepository,
+        ...buildRepositoryProviders(
+          prefs: prefs,
+          clientErrorRepository: clientErrorRepository,
         ),
       ],
       child: BlocProvider(
@@ -56,6 +56,7 @@ Future<void> main() async {
           signOut: context.read<SignOut>(),
           syncFcmToken: context.read<SyncFcmToken>(),
           clearNotificationToken: context.read<ClearNotificationToken>(),
+          syncProgress: context.read<SyncProgress>(),
         ),
         child: const _BootstrapNotifications(child: WinkloApp()),
       ),
