@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/config/avatar_upload_config.dart';
 import 'package:winklo/core/config/path_words_nouns_config.dart';
 import 'package:winklo/core/dev_flags.dart';
+import 'package:winklo/core/sfx/audioplayers_sfx_playback.dart';
+import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/data/clients/avatar/avatar_upload_client.dart';
 import 'package:winklo/data/clients/avatar/r2_avatar_upload_client.dart';
 import 'package:winklo/data/clients/notification/firebase_notification_client.dart';
@@ -23,6 +25,7 @@ import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
 import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
+import 'package:winklo/data/repositories/sfx_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
 import 'package:winklo/data/repositories/tutorial_repository_impl.dart';
 import 'package:winklo/data/repositories/word_list_repository_impl.dart';
@@ -40,6 +43,7 @@ import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
+import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
 import 'package:winklo/domain/repositories/tutorial_repository.dart';
 import 'package:winklo/domain/repositories/word_list_repository.dart';
@@ -77,6 +81,16 @@ List<SingleChildWidget> buildRepositoryProviders({
 }) {
   return [
     RepositoryProvider<SharedPreferences>.value(value: prefs),
+    RepositoryProvider<SfxSettingsRepository>(
+      create: (context) =>
+          SfxSettingsRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<SfxService>(
+      create: (context) => SfxService(
+        settings: context.read<SfxSettingsRepository>(),
+        playClip: createAudioplayersPlayClip(),
+      ),
+    ),
     RepositoryProvider<AnalyticsRepository>(
       create: (_) => FirebaseAnalyticsRepositoryImpl(),
     ),
