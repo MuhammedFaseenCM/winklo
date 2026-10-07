@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/sfx/sfx_service.dart';
 import '../../../../core/strings/app_strings.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import 'profile_settings_list.dart';
 
 /// Decorative fake profile for the signed-out tease.
-class ProfileSignedOutMock extends StatelessWidget {
+class ProfileSignedOutMock extends StatefulWidget {
   const ProfileSignedOutMock({super.key});
 
+  @override
+  State<ProfileSignedOutMock> createState() => _ProfileSignedOutMockState();
+}
+
+class _ProfileSignedOutMockState extends State<ProfileSignedOutMock> {
   static const _mockName = 'Player';
 
   @override
   Widget build(BuildContext context) {
+    final sfx = context.read<SfxService>();
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -37,8 +45,14 @@ class ProfileSignedOutMock extends StatelessWidget {
             ).textTheme.labelLarge?.copyWith(color: ZipColors.inkSoft),
           ),
           const SizedBox(height: 28),
-          const ProfileSettingsList(
+          ProfileSettingsList(
             enabled: false,
+            sfxEnabled: sfx.isEnabled,
+            onSfxChanged: (value) async {
+              await sfx.setEnabled(value);
+              if (!mounted) return;
+              setState(() {});
+            },
             onPrivacy: _noop,
             onAbout: _noop,
             onReport: _noop,

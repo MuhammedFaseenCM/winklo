@@ -195,6 +195,7 @@ abstract final class AppStrings {
   static const profilePermissionDenied =
       'Photo access was denied. Enable it in Settings to upload an avatar.';
   static const profileEditDisplayName = 'Edit display name';
+  static const profileSoundEffects = 'Sound effects';
   static const profilePrivacyPolicy = 'Privacy policy';
   static const profileAboutGame = 'About the game';
   static const profileReportIssue = 'Report an issue';

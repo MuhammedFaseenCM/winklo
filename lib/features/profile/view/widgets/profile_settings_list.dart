@@ -11,6 +11,8 @@ class ProfileSettingsList extends StatelessWidget {
     required this.onReport,
     required this.onSignOut,
     this.enabled = true,
+    this.sfxEnabled,
+    this.onSfxChanged,
   });
 
   final VoidCallback onPrivacy;
@@ -20,6 +22,10 @@ class ProfileSettingsList extends StatelessWidget {
 
   /// Decorative rows (signed-out mock) ignore taps.
   final bool enabled;
+
+  /// Sound-effects mute; not gated by [enabled].
+  final bool? sfxEnabled;
+  final ValueChanged<bool>? onSfxChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +50,26 @@ class ProfileSettingsList extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (onSfxChanged != null) ...[
+              ListTile(
+                leading: const Icon(
+                  Icons.volume_up_outlined,
+                  color: ZipColors.teal,
+                ),
+                title: Text(
+                  AppStrings.profileSoundEffects,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: ZipColors.onInk,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                trailing: Switch.adaptive(
+                  value: sfxEnabled ?? true,
+                  onChanged: onSfxChanged,
+                ),
+              ),
+              const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
+            ],
             _SettingsRow(
               icon: Icons.privacy_tip_outlined,
               label: AppStrings.profilePrivacyPolicy,
