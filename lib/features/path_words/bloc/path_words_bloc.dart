@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/sfx/sfx_id.dart';
+import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/entities/in_progress_run.dart';
@@ -40,6 +42,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     Future<void> Function(Duration duration)? wait,
     this.celebrationDuration = const Duration(seconds: 2),
     this.playPeriod = PlayPeriod.daily,
+    this.sfx,
   }) : _now = now ?? DateTime.now,
        _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
        super(PathWordsState.initial((now ?? DateTime.now)())) {
@@ -65,6 +68,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   final InProgressRunRepository inProgressRuns;
   final Duration celebrationDuration;
   final Duration playPeriod;
+  final SfxService? sfx;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   String? _playId;
@@ -359,6 +363,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     );
     if (next == null) return;
 
+    final grew = next.length > state.activePath.length;
     emit(
       state.copyWith(
         status: PathWordsStatus.playing,
@@ -366,6 +371,9 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         hintFlashCell: null,
       ),
     );
+    if (grew) {
+      unawaited(sfx?.play(SfxId.tap) ?? Future<void>.value());
+    }
   }
 
   Future<void> _onPointerUp(
@@ -430,6 +438,15 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         ruleTip: tip,
       ),
     );
+
+    if (stroke.targetId != null) {
+      unawaited(sfx?.play(SfxId.success) ?? Future<void>.value());
+    } else if (failedAttempt) {
+      unawaited(sfx?.play(SfxId.reject) ?? Future<void>.value());
+    }
+    if (updatedCompleted.length >= puzzle.targets.length) {
+      unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());
+    }
 
     if (updatedCompleted.length >= puzzle.targets.length) {
       await _finish(emit);

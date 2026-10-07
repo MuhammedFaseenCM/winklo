@@ -1,4 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:winklo/core/sfx/sfx_id.dart';
+import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
@@ -35,6 +37,8 @@ class _MockGetBestPoints extends Mock implements GetBestPoints {}
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 
 class _MockAnalyticsRepository extends Mock implements AnalyticsRepository {}
+
+class _MockSfx extends Mock implements SfxService {}
 
 class _FakeHintQuota implements HintQuotaRepository {
   _FakeHintQuota(this._remaining);
@@ -148,6 +152,7 @@ void main() {
     Future<void> Function(Duration duration)? wait,
     Duration celebrationDuration = const Duration(seconds: 2),
     _MemoryInProgressRuns? drafts,
+    SfxService? sfx,
   }) {
     return PathWordsBloc(
       inProgressRuns: drafts ?? _MemoryInProgressRuns(),
@@ -162,6 +167,7 @@ void main() {
       now: now ?? (() => DateTime(2026, 9, 17, 0, 0, 0)),
       wait: wait,
       celebrationDuration: celebrationDuration,
+      sfx: sfx,
     );
   }
 
@@ -206,6 +212,7 @@ void main() {
       () => analytics.logGameReset(gameId: any(named: 'gameId')),
     ).thenAnswer((_) async {});
     registerFallbackValue(DateTime(2026, 9, 17));
+    registerFallbackValue(SfxId.tap);
   });
 
   blocTest<PathWordsBloc, PathWordsState>(
@@ -1606,5 +1613,132 @@ void main() {
           .having((s) => s.ruleTip, 'ruleTip', AppStrings.pathWordsTipMatchList)
           .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty),
     ],
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'pointer enter that grows the path plays tap',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      final sfx = _MockSfx();
+      when(() => sfx.play(any())).thenAnswer((_) async {});
+      return buildBloc(sfx: sfx);
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      await pumpEventQueue();
+    },
+    verify: (b) {
+      verify(() => b.sfx!.play(SfxId.tap)).called(1);
+      verifyNever(() => b.sfx!.play(SfxId.success));
+      verifyNever(() => b.sfx!.play(SfxId.reject));
+      verifyNever(() => b.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'finding a word plays success',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      final sfx = _MockSfx();
+      when(() => sfx.play(any())).thenAnswer((_) async {});
+      return buildBloc(sfx: sfx);
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+    },
+    verify: (b) {
+      verify(() => b.sfx!.play(SfxId.tap)).called(1);
+      verify(() => b.sfx!.play(SfxId.success)).called(1);
+      verifyNever(() => b.sfx!.play(SfxId.reject));
+      verifyNever(() => b.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'failed word attempt plays reject',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      final sfx = _MockSfx();
+      when(() => sfx.play(any())).thenAnswer((_) async {});
+      return buildBloc(sfx: sfx);
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(1, 0)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+    },
+    verify: (b) {
+      verify(() => b.sfx!.play(SfxId.tap)).called(1);
+      verify(() => b.sfx!.play(SfxId.reject)).called(1);
+      verifyNever(() => b.sfx!.play(SfxId.success));
+      verifyNever(() => b.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'clearing every target plays success then clear',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      when(
+        () => submitScore(
+          modeKey: any(named: 'modeKey'),
+          points: any(named: 'points'),
+          timeSeconds: any(named: 'timeSeconds'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => recordDailyClear(
+          gameId: any(named: 'gameId'),
+          dateId: any(named: 'dateId'),
+        ),
+      ).thenAnswer(
+        (_) async => const GameStreak(
+          gameId: GameIds.pathWords,
+          current: 1,
+          longest: 1,
+          lastClearedDateId: '20260917',
+        ),
+      );
+      final sfx = _MockSfx();
+      when(() => sfx.play(any())).thenAnswer((_) async {});
+      return buildBloc(sfx: sfx, wait: (_) async {});
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(1, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(1, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+    },
+    verify: (b) {
+      verify(() => b.sfx!.play(SfxId.tap)).called(2);
+      verify(() => b.sfx!.play(SfxId.success)).called(2);
+      verify(() => b.sfx!.play(SfxId.clear)).called(1);
+      verifyNever(() => b.sfx!.play(SfxId.reject));
+    },
   );
 }
