@@ -37,7 +37,15 @@ service cloud.firestore {
         'avatarId',
         'usedHints',
         'hadMistakes',
-      ]);
+        'currentStreak',
+      ]) && validCurrentStreak();
+    }
+
+    // Optional; older clients (<= 1.0.0+13) never write it.
+    function validCurrentStreak() {
+      return !request.resource.data.keys().hasAny(['currentStreak'])
+        || (request.resource.data.currentStreak is int
+          && request.resource.data.currentStreak >= 0);
     }
 
     function validCleanRunFlags() {
@@ -45,11 +53,13 @@ service cloud.firestore {
         && request.resource.data.hadMistakes is bool;
     }
 
-    // Identity refresh that does not change the recorded time.
+    // Identity / streak refresh that does not change the recorded time.
     function profileOnlyLeaderboardUpdate() {
       return request.resource.data.timeSeconds == resource.data.timeSeconds
+        && validCurrentStreak()
         && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['displayName', 'photoUrl', 'avatarId', 'updatedAt']);
+            .hasOnly(['displayName', 'photoUrl', 'avatarId', 'updatedAt',
+              'currentStreak']);
     }
 
     // users/{uid}.avatarId is an optional string (null clears a preset).
