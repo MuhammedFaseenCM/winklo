@@ -579,15 +579,25 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     await _persistDraft();
   }
 
-  void _onResumeRun(PathWordsResumeRun event, Emitter<PathWordsState> emit) {
+  Future<void> _onResumeRun(
+    PathWordsResumeRun event,
+    Emitter<PathWordsState> emit,
+  ) async {
     if (state.finished) return;
     if (state.status != PathWordsStatus.ready &&
         state.status != PathWordsStatus.playing) {
       return;
     }
+    final now = _now();
+    final currentPlayId = PlayPeriod.id(now, playPeriod);
+    final playId = _playId;
+    if (playId != null && playId != currentPlayId) {
+      await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
+      add(PathWordsEvent.started(date: now));
+      return;
+    }
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     if (clock.isRunning) return;
-    final now = _now();
     final resumed = clock.resume(at: now);
     _clock = resumed;
     emit(state.copyWith(elapsedMs: resumed.elapsedMs, resumedAt: now));

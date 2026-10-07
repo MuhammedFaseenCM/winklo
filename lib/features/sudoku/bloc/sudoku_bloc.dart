@@ -402,11 +402,21 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     await _persistDraft();
   }
 
-  void _onResumeRun(SudokuResumeRun event, Emitter<SudokuState> emit) {
+  Future<void> _onResumeRun(
+    SudokuResumeRun event,
+    Emitter<SudokuState> emit,
+  ) async {
     if (state.status != SudokuStatus.ready || state.finished) return;
+    final now = _now();
+    final currentPlayId = PlayPeriod.id(now, playPeriod);
+    final playId = _playId;
+    if (playId != null && playId != currentPlayId) {
+      await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
+      add(SudokuEvent.started(date: now));
+      return;
+    }
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     if (clock.isRunning) return;
-    final now = _now();
     final resumed = clock.resume(at: now);
     _clock = resumed;
     emit(state.copyWith(elapsedMs: resumed.elapsedMs, resumedAt: now));

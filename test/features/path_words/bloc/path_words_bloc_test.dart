@@ -109,7 +109,6 @@ PathWordsPuzzle _linePuzzle3({required DateTime day}) {
   );
 }
 
-
 class _MemoryInProgressRuns implements InProgressRunRepository {
   final Map<String, InProgressRun> runs = {};
 
@@ -127,10 +126,7 @@ class _MemoryInProgressRuns implements InProgressRunRepository {
   }
 
   @override
-  Future<void> clear({
-    required String gameId,
-    required String playId,
-  }) async {
+  Future<void> clear({required String gameId, required String playId}) async {
     runs.remove(_key(gameId, playId));
   }
 }
@@ -151,9 +147,10 @@ void main() {
     DateTime Function()? now,
     Future<void> Function(Duration duration)? wait,
     Duration celebrationDuration = const Duration(seconds: 2),
+    _MemoryInProgressRuns? drafts,
   }) {
     return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+      inProgressRuns: drafts ?? _MemoryInProgressRuns(),
       generateDailyPathWords: generateDaily,
       submitScore: submitScore,
       submitLeaderboardTime: submitLeaderboardTime,
@@ -218,7 +215,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -256,7 +253,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -318,7 +315,7 @@ void main() {
       ]);
 
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -451,7 +448,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -517,7 +514,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -570,7 +567,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -623,7 +620,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -685,7 +682,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -738,7 +735,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -779,7 +776,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -837,7 +834,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -912,7 +909,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -976,7 +973,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1051,7 +1048,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1106,7 +1103,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1168,7 +1165,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1210,7 +1207,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1258,7 +1255,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1314,7 +1311,7 @@ void main() {
       );
       final fixedNow = DateTime(2026, 9, 17, 0, 0, 0);
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1431,7 +1428,7 @@ void main() {
       ]);
 
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1528,6 +1525,39 @@ void main() {
     },
   );
 
+  test(
+    'resume after day rolls over starts next day and clears stale draft',
+    () async {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      final drafts = _MemoryInProgressRuns();
+      final day = DateTime(2026, 9, 17);
+      var now = day;
+      final bloc = buildBloc(now: () => now, drafts: drafts);
+      bloc.add(PathWordsEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+
+      now = day.add(const Duration(seconds: 5));
+      bloc.add(const PathWordsEvent.pauseRun());
+      await bloc.stream.firstWhere((s) => s.resumedAt == null);
+      expect(drafts.runs['${GameIds.pathWords}_20260917'], isNotNull);
+      expect(bloc.state.day, DateTime(2026, 9, 17));
+
+      now = DateTime(2026, 9, 18);
+      bloc.add(const PathWordsEvent.resumeRun());
+      await bloc.stream.firstWhere(
+        (s) =>
+            s.status == PathWordsStatus.ready && s.day == DateTime(2026, 9, 18),
+      );
+
+      expect(bloc.state.day, DateTime(2026, 9, 18));
+      expect(bloc.state.elapsedMs, 0);
+      expect(drafts.runs['${GameIds.pathWords}_20260917'], isNull);
+      await bloc.close();
+    },
+  );
+
   blocTest<PathWordsBloc, PathWordsState>(
     'failed same-length word attempt sets an off-board rule tip',
     build: () {
@@ -1535,7 +1565,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,

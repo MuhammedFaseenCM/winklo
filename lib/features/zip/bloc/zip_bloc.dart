@@ -270,11 +270,18 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     await _persistDraft();
   }
 
-  void _onResumeRun(ZipResumeRun event, Emitter<ZipState> emit) {
+  Future<void> _onResumeRun(ZipResumeRun event, Emitter<ZipState> emit) async {
     if (state.finished || state.status != ZipStatus.ready) return;
+    final now = _now();
+    final currentPlayId = PlayPeriod.id(now, playPeriod);
+    final playId = _playId;
+    if (playId != null && playId != currentPlayId) {
+      await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
+      add(ZipEvent.started(date: now));
+      return;
+    }
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     if (clock.isRunning) return;
-    final now = _now();
     final resumed = clock.resume(at: now);
     _clock = resumed;
     emit(state.copyWith(elapsedMs: resumed.elapsedMs, resumedAt: now));

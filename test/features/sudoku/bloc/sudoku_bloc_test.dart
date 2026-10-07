@@ -65,10 +65,7 @@ class _MemoryInProgressRuns implements InProgressRunRepository {
   }
 
   @override
-  Future<void> clear({
-    required String gameId,
-    required String playId,
-  }) async {
+  Future<void> clear({required String gameId, required String playId}) async {
     runs.remove(_key(gameId, playId));
   }
 }
@@ -522,6 +519,35 @@ void main() {
     expect(bloc.state.liveElapsedSeconds(now), 8);
     await bloc.close();
   });
+
+  test(
+    'resume after day rolls over starts next day and clears stale draft',
+    () async {
+      var now = day;
+      final drafts = _MemoryInProgressRuns();
+      final bloc = buildBloc(now: () => now, drafts: drafts);
+      bloc.add(SudokuEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+
+      now = day.add(const Duration(seconds: 5));
+      bloc.add(const SudokuEvent.pauseRun());
+      await bloc.stream.firstWhere((s) => !s.isClockRunning);
+      expect(drafts.runs['${GameIds.sudoku}_20260927'], isNotNull);
+      expect(bloc.state.day, DateTime(2026, 9, 27));
+
+      final nextDay = DateTime(2026, 9, 28);
+      now = nextDay;
+      bloc.add(const SudokuEvent.resumeRun());
+      await bloc.stream.firstWhere(
+        (s) => s.status == SudokuStatus.ready && s.day == DateTime(2026, 9, 28),
+      );
+
+      expect(bloc.state.day, DateTime(2026, 9, 28));
+      expect(bloc.state.elapsedMs, 0);
+      expect(drafts.runs['${GameIds.sudoku}_20260927'], isNull);
+      await bloc.close();
+    },
+  );
 
   blocTest<SudokuBloc, SudokuState>(
     'restores draft grid and elapsed on start',
