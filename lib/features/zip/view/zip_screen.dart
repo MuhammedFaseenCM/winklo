@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/dev_flags.dart';
+import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
@@ -41,6 +42,7 @@ class ZipScreen extends StatefulWidget {
 class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
   late final ZipBloc _bloc;
   late final HintQuotaRepository _hintQuota;
+  late final SfxService _sfx;
   ZipGame? _game;
   bool _tutorialPrompted = false;
   String? _ruleTip;
@@ -82,6 +84,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
         if (!mounted) return;
         setState(() => _ruleTip = _messageForTip(tip));
       },
+      onSfx: (id) => unawaited(_sfx.play(id)),
     );
     return true;
   }
@@ -102,6 +105,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _hintQuota = context.read<HintQuotaRepository>();
+    _sfx = context.read<SfxService>();
     _bloc = ZipBloc(
       submitScore: context.read<SubmitScore>(),
       submitLeaderboardTime: context.read<SubmitLeaderboardTime>(),

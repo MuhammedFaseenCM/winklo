@@ -5,6 +5,7 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/sfx/sfx_id.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
@@ -17,6 +18,7 @@ import 'zip_tip_sparks.dart';
 
 typedef ZipWinCallback = void Function();
 typedef ZipRuleTipCallback = void Function(ZipRuleTip tip);
+typedef ZipSfxCallback = void Function(SfxId id);
 
 class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   ZipGame({
@@ -25,6 +27,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     required this.onStatsChanged,
     this.onPathChanged,
     this.onRuleTip,
+    this.onSfx,
     this.readOnly = false,
     int initialHintsRemaining = HintQuotaRepository.cap,
     this._initialPath = const [],
@@ -36,6 +39,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   final void Function(int pathLength, int nextNumber) onStatsChanged;
   final void Function(List<Cell> path)? onPathChanged;
   final ZipRuleTipCallback? onRuleTip;
+  final ZipSfxCallback? onSfx;
   final bool readOnly;
   final PathValidator _validator;
   final List<Cell> _initialPath;
@@ -215,16 +219,23 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     }
 
     final extended = _validator.tryExtend(path: path, candidate: cell);
-    if (extended == null) return;
+    if (extended == null) {
+      // Drag sampling stays on the tip; that is not an illegal move.
+      if (path.isNotEmpty && cell == path.last) return;
+      onSfx?.call(SfxId.reject);
+      return;
+    }
 
     path
       ..clear()
       ..addAll(extended);
     _notifyStats();
+    onSfx?.call(SfxId.tap);
 
     if (_validator.isWon(path)) {
       _won = true;
       _celebrate = true;
+      onSfx?.call(SfxId.clear);
       onWin();
     }
   }
@@ -275,6 +286,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
         return true;
       }
       onRuleTip?.call(ZipRuleTip.startAtOne);
+      onSfx?.call(SfxId.reject);
       return false;
     }
 
