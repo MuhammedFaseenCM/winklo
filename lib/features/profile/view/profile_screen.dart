@@ -71,16 +71,52 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _SignedOutBody extends StatelessWidget {
+class _SignedOutBody extends StatefulWidget {
   const _SignedOutBody();
 
   @override
+  State<_SignedOutBody> createState() => _SignedOutBodyState();
+}
+
+class _SignedOutBodyState extends State<_SignedOutBody> {
+  @override
   Widget build(BuildContext context) {
+    final sfx = context.read<SfxService>();
     return BlurredMockEmptyBody(
       background: const ProfileSignedOutMock(),
       message: AppStrings.profileSignedOutBody,
-      actionLabel: AppStrings.signInWithGoogle,
-      onAction: () => showSignInSheet(context),
+      action: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(
+              Icons.volume_up_outlined,
+              color: ZipColors.teal,
+            ),
+            title: Text(
+              AppStrings.profileSoundEffects,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: ZipColors.onInk,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            trailing: Switch.adaptive(
+              value: sfx.isEnabled,
+              onChanged: (value) async {
+                await sfx.setEnabled(value);
+                if (!mounted) return;
+                setState(() {});
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: () => showSignInSheet(context),
+            child: const Text(AppStrings.signInWithGoogle),
+          ),
+        ],
+      ),
     );
   }
 }

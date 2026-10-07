@@ -50,6 +50,7 @@ void main() {
   late _MockSignOut signOut;
   late _MockProfileRepository profile;
   late MockAnalyticsRepository analytics;
+  late _MockSfxSettingsRepository sfxSettings;
   late SfxService sfx;
 
   setUp(() {
@@ -59,7 +60,7 @@ void main() {
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
     when(() => signOut()).thenAnswer((_) async {});
-    final sfxSettings = _MockSfxSettingsRepository();
+    sfxSettings = _MockSfxSettingsRepository();
     when(() => sfxSettings.isEnabled).thenReturn(true);
     when(() => sfxSettings.setEnabled(any())).thenAnswer((_) async {});
     sfx = SfxService(settings: sfxSettings);
@@ -263,6 +264,22 @@ void main() {
     expect(tiles.every((tile) => tile.onTap == null), isTrue);
     expect(find.text(AppStrings.profileSoundEffects), findsOneWidget);
     expect(find.byType(Switch), findsOneWidget);
+  });
+
+  testWidgets('signed-out foreground sound switch mutes SfxService', (
+    tester,
+  ) async {
+    await pumpProfile(tester);
+
+    expect(sfx.isEnabled, isTrue);
+    expect(find.text(AppStrings.profileSoundEffects), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    expect(sfx.isEnabled, isFalse);
+    verify(() => sfxSettings.setEnabled(false)).called(1);
   });
 
   testWidgets('report row opens the report screen', (tester) async {
