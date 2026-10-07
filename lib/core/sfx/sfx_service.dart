@@ -17,6 +17,10 @@ class SfxService {
   final DateTime Function() _now;
   final Duration rejectCooldown;
 
+  /// Tap/drag ticks (Zip path, Path Words trace) are muted for now; flip to
+  /// re-enable. Success, reject and clear still play.
+  static const tapSoundEnabled = false;
+
   bool _enabled;
   DateTime? _lastRejectAt;
 
@@ -29,6 +33,7 @@ class SfxService {
 
   Future<void> play(SfxId id) async {
     if (!_enabled) return;
+    if (id == SfxId.tap && !tapSoundEnabled) return;
     if (id == SfxId.reject) {
       final now = _now();
       final last = _lastRejectAt;

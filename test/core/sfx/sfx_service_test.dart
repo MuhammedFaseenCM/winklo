@@ -26,8 +26,15 @@ void main() {
   });
 
   test('play records when enabled', () async {
+    await sfx.play(SfxId.success);
+    expect(played, [SfxId.success]);
+  });
+
+  test('tap/drag ticks are muted while tapSoundEnabled is false', () async {
+    expect(SfxService.tapSoundEnabled, isFalse);
     await sfx.play(SfxId.tap);
-    expect(played, [SfxId.tap]);
+    await sfx.play(SfxId.clear);
+    expect(played, [SfxId.clear]);
   });
 
   test('play no-ops when muted', () async {
@@ -37,7 +44,7 @@ void main() {
       playClip: (id) async => played.add(id),
       now: () => fakeNow,
     );
-    await sfx.play(SfxId.tap);
+    await sfx.play(SfxId.success);
     expect(played, isEmpty);
   });
 
@@ -63,6 +70,6 @@ void main() {
       playClip: (_) async => throw StateError('boom'),
       now: () => fakeNow,
     );
-    await expectLater(sfx.play(SfxId.tap), completes);
+    await expectLater(sfx.play(SfxId.success), completes);
   });
 }
