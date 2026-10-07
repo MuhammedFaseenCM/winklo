@@ -9,18 +9,50 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
 
-  testWidgets('tapping sound effects switch calls onSfxChanged(false)', (
+  testWidgets(
+    'sound effects switch calls onSfxChanged(false) when other rows are disabled',
+    (tester) async {
+      bool? changedTo;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: ProfileSettingsList(
+              enabled: false,
+              sfxEnabled: true,
+              onSfxChanged: (value) => changedTo = value,
+              onPrivacy: () {},
+              onAbout: () {},
+              onReport: () {},
+              onSignOut: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text(AppStrings.profileSoundEffects), findsOneWidget);
+
+      final privacy = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, AppStrings.profilePrivacyPolicy),
+      );
+      expect(privacy.onTap, isNull);
+
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+
+      expect(changedTo, isFalse);
+    },
+  );
+
+  testWidgets('omits the sound effects row when onSfxChanged is null', (
     tester,
   ) async {
-    bool? changedTo;
-
     await tester.pumpWidget(
       MaterialApp(
         theme: buildAppTheme(),
         home: Scaffold(
           body: ProfileSettingsList(
-            sfxEnabled: true,
-            onSfxChanged: (value) => changedTo = value,
             onPrivacy: () {},
             onAbout: () {},
             onReport: () {},
@@ -30,11 +62,7 @@ void main() {
       ),
     );
 
-    expect(find.text(AppStrings.profileSoundEffects), findsOneWidget);
-
-    await tester.tap(find.byType(Switch));
-    await tester.pumpAndSettle();
-
-    expect(changedTo, isFalse);
+    expect(find.text(AppStrings.profileSoundEffects), findsNothing);
+    expect(find.byType(Switch), findsNothing);
   });
 }
