@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/dev_flags.dart';
+import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
@@ -66,6 +67,7 @@ class _SudokuScreenState extends State<SudokuScreen>
           generatePuzzle: ({required day}) =>
               context.read<GenerateDailySudoku>()(day: day),
           playPeriod: DevFlags.playPeriod,
+          sfx: context.read<SfxService>(),
         );
 
     if (widget.autoStart) {

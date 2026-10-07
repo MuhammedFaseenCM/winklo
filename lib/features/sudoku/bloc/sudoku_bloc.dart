@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/sfx/sfx_id.dart';
+import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/sudoku_puzzle.dart';
@@ -40,6 +42,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     Future<void> Function(Duration duration)? wait,
     this.celebrationDuration = const Duration(seconds: 2),
     this.playPeriod = PlayPeriod.daily,
+    this.sfx,
   }) : generatePuzzle =
            generatePuzzle ??
            (({required DateTime day}) => SudokuGenerator.generate(day: day)),
@@ -69,6 +72,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   final FutureOr<SudokuPuzzle> Function({required DateTime day}) generatePuzzle;
   final Duration celebrationDuration;
   final Duration playPeriod;
+  final SfxService? sfx;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   var _unitFlashGeneration = 0;
@@ -200,6 +204,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     final index = puzzle.indexOf(event.cell.row, event.cell.col);
     if (index < 0 || index >= puzzle.cellCount) return;
     emit(state.copyWith(selectedIndex: index, hintFlashIndex: null));
+    unawaited(sfx?.play(SfxId.tap) ?? Future<void>.value());
   }
 
   Future<void> _onDigitTapped(
@@ -271,6 +276,11 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         unitFlashIndices: unitFlash.cells,
         celebratedUnitIds: celebrated,
       ),
+    );
+
+    unawaited(
+      sfx?.play(errors.isEmpty ? SfxId.success : SfxId.reject) ??
+          Future<void>.value(),
     );
 
     if (SudokuRules.isSolved(result.grid, puzzle.solution)) {
@@ -466,6 +476,8 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         unitFlashIndices: const <int>{},
       ),
     );
+
+    unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());
 
     await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
 

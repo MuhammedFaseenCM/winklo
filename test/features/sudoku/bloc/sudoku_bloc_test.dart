@@ -1,6 +1,8 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:winklo/core/sfx/sfx_id.dart';
+import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
@@ -31,6 +33,8 @@ class _MockGetBestPoints extends Mock implements GetBestPoints {}
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 
 class _MockAnalyticsRepository extends Mock implements AnalyticsRepository {}
+
+class _MockSfx extends Mock implements SfxService {}
 
 class _FakeHintQuota implements HintQuotaRepository {
   _FakeHintQuota(this._remaining);
@@ -159,6 +163,7 @@ void main() {
     DateTime Function()? now,
     _FakeHintQuota? quota,
     _MemoryInProgressRuns? drafts,
+    SfxService? sfx,
   }) {
     return SudokuBloc(
       submitScore: submitScore,
@@ -175,7 +180,14 @@ void main() {
       now: now ?? () => day,
       wait: (_) async {},
       celebrationDuration: Duration.zero,
+      sfx: sfx,
     );
+  }
+
+  _MockSfx stubSfx() {
+    final sfx = _MockSfx();
+    when(() => sfx.play(any())).thenAnswer((_) async {});
+    return sfx;
   }
 
   setUp(() {
@@ -237,6 +249,7 @@ void main() {
     when(
       () => analytics.logGameReset(gameId: any(named: 'gameId')),
     ).thenAnswer((_) async {});
+    registerFallbackValue(SfxId.tap);
   });
 
   blocTest<SudokuBloc, SudokuState>(
@@ -581,5 +594,101 @@ void main() {
           .having((s) => s.elapsedMs, 'elapsedMs', 12000)
           .having((s) => s.hadMistakesThisRun, 'hadMistakes', isTrue),
     ],
+  );
+
+  blocTest<SudokuBloc, SudokuState>(
+    'selecting a cell plays tap',
+    build: () => buildBloc(sfx: stubSfx()),
+    act: (bloc) async {
+      bloc.add(SudokuEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+      bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+      await bloc.stream.firstWhere((s) => s.selectedIndex == 1);
+    },
+    verify: (bloc) {
+      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.success));
+      verifyNever(() => bloc.sfx!.play(SfxId.reject));
+      verifyNever(() => bloc.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<SudokuBloc, SudokuState>(
+    'clean digit place plays success',
+    build: () => buildBloc(
+      generatePuzzle: ({required DateTime day}) => _twoEmptyPuzzle(day: day),
+      sfx: stubSfx(),
+    ),
+    act: (bloc) async {
+      bloc.add(SudokuEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+      bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+      bloc.add(const SudokuEvent.digitTapped(2));
+      await bloc.stream.firstWhere((s) => s.grid[1] == 2);
+    },
+    verify: (bloc) {
+      expect(bloc.state.errorIndices, isEmpty);
+      expect(bloc.state.status, SudokuStatus.ready);
+      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
+      verify(() => bloc.sfx!.play(SfxId.success)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.reject));
+      verifyNever(() => bloc.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<SudokuBloc, SudokuState>(
+    'erroneous digit place plays reject',
+    build: () => buildBloc(sfx: stubSfx()),
+    act: (bloc) async {
+      bloc.add(SudokuEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+      bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+      bloc.add(const SudokuEvent.digitTapped(3));
+      await bloc.stream.firstWhere((s) => s.grid[1] == 3);
+    },
+    verify: (bloc) {
+      expect(bloc.state.errorIndices, {1});
+      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
+      verify(() => bloc.sfx!.play(SfxId.reject)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.success));
+      verifyNever(() => bloc.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<SudokuBloc, SudokuState>(
+    'solving the board plays success then clear once',
+    build: () => buildBloc(sfx: stubSfx()),
+    act: (bloc) async {
+      bloc.add(SudokuEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+      bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+      bloc.add(const SudokuEvent.digitTapped(2));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.navigating);
+    },
+    verify: (bloc) {
+      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
+      verify(() => bloc.sfx!.play(SfxId.success)).called(1);
+      verify(() => bloc.sfx!.play(SfxId.clear)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.reject));
+    },
+  );
+
+  blocTest<SudokuBloc, SudokuState>(
+    'notes mode stays silent',
+    build: () => buildBloc(sfx: stubSfx()),
+    act: (bloc) async {
+      bloc.add(SudokuEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+      bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+      bloc.add(const SudokuEvent.notesModeToggled());
+      bloc.add(const SudokuEvent.digitTapped(3));
+      await bloc.stream.firstWhere((s) => s.notes[1].contains(3));
+    },
+    verify: (bloc) {
+      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.success));
+      verifyNever(() => bloc.sfx!.play(SfxId.reject));
+      verifyNever(() => bloc.sfx!.play(SfxId.clear));
+    },
   );
 }
