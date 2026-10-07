@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:winklo/data/repositories/zip_level_repository_impl.dart';
+import 'package:winklo/domain/failures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -56,11 +57,11 @@ void main() {
     expect(levels.map((l) => l.order).toList(), [1, 2, 3]);
   });
 
-  test('fetchDailyLevel falls back to generator when firestore is null', () async {
+  test('fetchDailyLevel throws when firestore is null', () async {
     final repo = ZipLevelRepositoryImpl(firestore: null);
-    final level = await repo.fetchDailyLevel(DateTime(2026, 9, 29));
-    expect(level.id, 'daily_20260929');
-    expect(level.size, 6);
-    expect(level.maxNumber, 6);
+    await expectLater(
+      () => repo.fetchDailyLevel(DateTime(2026, 9, 29)),
+      throwsA(isA<DailyPuzzleUnavailable>()),
+    );
   });
 }

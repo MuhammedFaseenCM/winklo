@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/dev_flags.dart';
+import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
@@ -66,6 +67,7 @@ class _SudokuScreenState extends State<SudokuScreen>
           generatePuzzle: ({required day}) =>
               context.read<GenerateDailySudoku>()(day: day),
           playPeriod: DevFlags.playPeriod,
+          sfx: context.read<SfxService>(),
         );
 
     if (widget.autoStart) {
@@ -223,6 +225,8 @@ class _SudokuScreenState extends State<SudokuScreen>
             }
             final puzzle = state.puzzle;
             final isReview = state.status == SudokuStatus.locked;
+            final isFailed = state.status == SudokuStatus.failed;
+            final isLoading = state.status == SudokuStatus.loading;
             final isReadyToPlay =
                 !state.finished &&
                 state.status == SudokuStatus.ready &&
@@ -304,7 +308,45 @@ class _SudokuScreenState extends State<SudokuScreen>
                                   SizedBox(
                                     width: boardSide,
                                     height: boardSide,
-                                    child: game == null
+                                    child: isFailed
+                                        ? Padding(
+                                            padding: const EdgeInsets.all(18),
+                                            child: Center(
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    AppStrings.sudokuFailed,
+                                                    textAlign: TextAlign.center,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleMedium
+                                                        ?.copyWith(
+                                                          color:
+                                                              ZipColors.onInk,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 14),
+                                                  FilledButton.icon(
+                                                    onPressed: () => _bloc.add(
+                                                      SudokuEvent.started(
+                                                        date: widget.date,
+                                                      ),
+                                                    ),
+                                                    icon: const Icon(
+                                                      Icons.refresh_rounded,
+                                                    ),
+                                                    label: const Text(
+                                                      AppStrings.retry,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          )
+                                        : game == null || isLoading
                                         ? const Center(
                                             child: CircularProgressIndicator(),
                                           )

@@ -10,6 +10,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../../core/firebase/firebase_bootstrap.dart';
+import 'android_notification_display.dart';
 import 'firebase_messaging_background.dart';
 import 'notification_client.dart';
 import 'notification_message.dart';
@@ -36,19 +37,6 @@ class FirebaseNotificationClient implements NotificationClient {
   final _tokenRefreshController = StreamController<String>.broadcast();
 
   bool _initialized = false;
-
-  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-    'winklo_high_importance',
-    'Winklo',
-    description: 'Gameplay reminders and product updates.',
-    importance: Importance.high,
-  );
-
-  /// Status-bar icon (white silhouette drawable name, no `@drawable/`).
-  static const String _androidNotificationIcon = 'ic_stat_winklo';
-
-  /// Expanded notification large icon (must be a `@drawable/` name, not mipmap).
-  // static const String _androidLargeIcon = 'ic_launcher_foreground';
 
   @override
   Stream<NotificationMessage> get onForegroundMessage =>
@@ -134,7 +122,10 @@ class FirebaseNotificationClient implements NotificationClient {
   Future<void> _initializeLocalNotifications() async {
     // Prefer the white status-bar silhouette. Fall back to a drawable that is
     // always referenced from Android resources if release shrinking drops ours.
-    const icons = <String>[_androidNotificationIcon, 'ic_launcher_foreground'];
+    const icons = <String>[
+      AndroidNotificationDisplay.smallIcon,
+      'ic_launcher_foreground',
+    ];
     Object? lastError;
     for (final icon in icons) {
       try {
@@ -175,7 +166,7 @@ class FirebaseNotificationClient implements NotificationClient {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
-        ?.createNotificationChannel(_channel);
+        ?.createNotificationChannel(AndroidNotificationDisplay.channel);
   }
 
   String _encodePayload({
@@ -195,46 +186,44 @@ class FirebaseNotificationClient implements NotificationClient {
     });
   }
 
-  NotificationDetails _details() {
-    return NotificationDetails(
-      android: AndroidNotificationDetails(
-        _channel.id,
-        _channel.name,
-        channelDescription: _channel.description,
-        importance: Importance.high,
-        priority: Priority.high,
-        icon: _androidNotificationIcon,
-        // largeIcon: const DrawableResourceAndroidBitmap(_androidLargeIcon),
-      ),
-      iOS: const DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      ),
-    );
-  }
+  NotificationDetails _details() =>
+      AndroidNotificationDisplay.notificationDetails();
 
   void _showLocalNotificationFromRemote(RemoteMessage message) {
-    final notification = message.notification;
-    if (notification == null) return;
     if (!Platform.isAndroid) return;
 
-    final type = message.data['type'] ?? 'general';
+    final title =
+        message.notification?.title ?? _stringData(message.data, 'title');
+    final body =
+        message.notification?.body ?? _stringData(message.data, 'body');
+    if (title == null && body == null) return;
+
+    final type = _stringData(message.data, 'type') ?? 'general';
+    final id =
+        message.messageId?.hashCode ??
+        Object.hash(title, body, message.sentTime);
+
     unawaited(
       _localNotifications.show(
-        id: notification.hashCode,
-        title: notification.title,
-        body: notification.body,
+        id: id,
+        title: title,
+        body: body,
         notificationDetails: _details(),
         payload: _encodePayload(
-          title: notification.title ?? '',
-          body: notification.body ?? '',
+          title: title ?? '',
+          body: body ?? '',
           type: type,
           data: Map<String, dynamic>.from(message.data),
           id: message.messageId,
         ),
       ),
     );
+  }
+
+  String? _stringData(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    if (value is String && value.trim().isNotEmpty) return value;
+    return null;
   }
 
   @override

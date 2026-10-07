@@ -184,6 +184,7 @@ class _CelebrateAndClaimResults extends StatelessWidget {
         timeSeconds: args.timeSeconds,
         usedHints: args.usedHints ?? true,
         hadMistakes: args.hadMistakes ?? true,
+        currentStreak: args.currentStreak ?? 0,
       );
     } catch (_) {
       // Best-effort remote sync; signed-in UI still shows live board.
@@ -219,6 +220,7 @@ class _CelebrateAndClaimResults extends StatelessWidget {
                           timeSeconds: args.timeSeconds,
                           usedHints: args.usedHints,
                           hadMistakes: args.hadMistakes,
+                          currentStreak: args.currentStreak,
                         ),
                       ),
                     ],

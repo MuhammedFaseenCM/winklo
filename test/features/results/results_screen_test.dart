@@ -290,6 +290,7 @@ void main() {
         timeSeconds: any(named: 'timeSeconds'),
         usedHints: any(named: 'usedHints'),
         hadMistakes: any(named: 'hadMistakes'),
+        currentStreak: any(named: 'currentStreak'),
       ),
     ).thenAnswer((_) async {});
 
@@ -366,6 +367,7 @@ void main() {
         timeSeconds: 42,
         usedHints: true,
         hadMistakes: true,
+        currentStreak: 0,
       ),
     ).called(1);
 
@@ -475,6 +477,7 @@ void main() {
           timeSeconds: any(named: 'timeSeconds'),
           usedHints: any(named: 'usedHints'),
           hadMistakes: any(named: 'hadMistakes'),
+          currentStreak: any(named: 'currentStreak'),
         ),
       ).thenAnswer((_) async {});
 
@@ -531,6 +534,7 @@ void main() {
           timeSeconds: 42,
           usedHints: true,
           hadMistakes: true,
+          currentStreak: 0,
         ),
       ).called(1);
 

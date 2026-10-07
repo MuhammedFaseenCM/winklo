@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/sfx/sfx_id.dart';
+import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/sudoku_puzzle.dart';
@@ -40,6 +42,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     Future<void> Function(Duration duration)? wait,
     this.celebrationDuration = const Duration(seconds: 2),
     this.playPeriod = PlayPeriod.daily,
+    this.sfx,
   }) : generatePuzzle =
            generatePuzzle ??
            (({required DateTime day}) => SudokuGenerator.generate(day: day)),
@@ -69,6 +72,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   final FutureOr<SudokuPuzzle> Function({required DateTime day}) generatePuzzle;
   final Duration celebrationDuration;
   final Duration playPeriod;
+  final SfxService? sfx;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   var _unitFlashGeneration = 0;
@@ -108,6 +112,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         unitFlashIndices: const <int>{},
         celebratedUnitIds: const <String>{},
         finished: false,
+        errorMessage: null,
         points: null,
         timeSeconds: null,
         improved: null,
@@ -116,9 +121,19 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     );
     _clock = null;
 
-    final puzzle = await generatePuzzle(
-      day: PlayPeriod.bucket(seed, playPeriod),
-    );
+    late final SudokuPuzzle puzzle;
+    try {
+      puzzle = await generatePuzzle(day: PlayPeriod.bucket(seed, playPeriod));
+    } catch (_) {
+      if (emit.isDone) return;
+      emit(
+        state.copyWith(
+          status: SudokuStatus.failed,
+          errorMessage: AppStrings.sudokuFailed,
+        ),
+      );
+      return;
+    }
     if (emit.isDone) return;
 
     if (alreadyCleared) {
@@ -273,6 +288,10 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       ),
     );
 
+    if (unitFlash.unitIds.isNotEmpty) {
+      unawaited(sfx?.play(SfxId.success) ?? Future<void>.value());
+    }
+
     if (SudokuRules.isSolved(result.grid, puzzle.solution)) {
       await _finish(emit);
       return;
@@ -402,11 +421,21 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     await _persistDraft();
   }
 
-  void _onResumeRun(SudokuResumeRun event, Emitter<SudokuState> emit) {
+  Future<void> _onResumeRun(
+    SudokuResumeRun event,
+    Emitter<SudokuState> emit,
+  ) async {
     if (state.status != SudokuStatus.ready || state.finished) return;
+    final now = _now();
+    final currentPlayId = PlayPeriod.id(now, playPeriod);
+    final playId = _playId;
+    if (playId != null && playId != currentPlayId) {
+      await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
+      add(SudokuEvent.started(date: now));
+      return;
+    }
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     if (clock.isRunning) return;
-    final now = _now();
     final resumed = clock.resume(at: now);
     _clock = resumed;
     emit(state.copyWith(elapsedMs: resumed.elapsedMs, resumedAt: now));
@@ -457,6 +486,8 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       ),
     );
 
+    unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());
+
     await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
 
     await _wait(celebrationDuration);
@@ -471,23 +502,22 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       timeSeconds: elapsed,
     );
 
-    if (improved) {
-      try {
-        await submitLeaderboardTime(
-          gameId: GameIds.sudoku,
-          timeSeconds: elapsed,
-          usedHints: state.usedHintsThisRun,
-          hadMistakes: state.hadMistakesThisRun,
-        );
-      } catch (_) {
-        // Best-effort remote sync; local score already saved.
-      }
-    }
-
     final streak = await recordDailyClear(
       gameId: GameIds.sudoku,
       dateId: dateId,
     );
+
+    try {
+      await submitLeaderboardTime(
+        gameId: GameIds.sudoku,
+        timeSeconds: elapsed,
+        usedHints: state.usedHintsThisRun,
+        hadMistakes: state.hadMistakesThisRun,
+        currentStreak: streak.current,
+      );
+    } catch (_) {
+      // Best-effort remote sync; local score already saved.
+    }
 
     await analytics.logGameCompleted(
       gameId: GameIds.sudoku,

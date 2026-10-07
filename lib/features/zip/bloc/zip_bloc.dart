@@ -18,7 +18,6 @@ import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
-import '../logic/daily_puzzle_generator.dart';
 import 'zip_event.dart';
 import 'zip_state.dart';
 
@@ -40,13 +39,14 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     DateTime? now,
     DateTime Function()? clockNow,
     Future<void> Function(Duration duration)? wait,
-  }) : fetchDailyLevel =
+  }) : assert(
+         zipLevelRepository != null || fetchDailyLevel != null,
+         'ZipBloc requires zipLevelRepository or fetchDailyLevel',
+       ),
+       fetchDailyLevel =
            fetchDailyLevel ??
            ((date, {period = PlayPeriod.daily}) =>
-               (zipLevelRepository?.fetchDailyLevel(date, period: period) ??
-               Future.value(
-                 DailyPuzzleGenerator.forDate(date, period: period),
-               ))),
+               zipLevelRepository!.fetchDailyLevel(date, period: period)),
        _now = clockNow ?? (() => now ?? DateTime.now()),
        _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
        super(
@@ -100,7 +100,35 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     _playId = playId;
     _clock = null;
 
-    final level = await fetchDailyLevel(seed, period: playPeriod);
+    // Reset board while fetching so retries leave a failed screen cleanly.
+    if (state.status != ZipStatus.initial || state.day != day) {
+      emit(
+        ZipState(
+          day: day,
+          level: ZipLevel(
+            id: 'daily_$playId',
+            size: 1,
+            numbers: const {},
+            walls: const [],
+          ),
+          status: ZipStatus.initial,
+        ),
+      );
+    }
+
+    late final ZipLevel level;
+    try {
+      level = await fetchDailyLevel(seed, period: playPeriod);
+    } catch (_) {
+      if (emit.isDone) return;
+      emit(
+        state.copyWith(
+          status: ZipStatus.failed,
+          errorMessage: AppStrings.zipFailed,
+        ),
+      );
+      return;
+    }
     if (emit.isDone) return;
     final cleared =
         !ignoreDailyLock &&
@@ -195,23 +223,22 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       timeSeconds: elapsed,
     );
 
-    if (improved) {
-      try {
-        await submitLeaderboardTime(
-          gameId: GameIds.zip,
-          timeSeconds: elapsed,
-          usedHints: state.usedHintsThisRun,
-          hadMistakes: false,
-        );
-      } catch (_) {
-        // Best-effort remote sync; local score already saved.
-      }
-    }
-
     final streak = await recordDailyClear(
       gameId: GameIds.zip,
       dateId: StreakCalculator.dateId(state.day),
     );
+
+    try {
+      await submitLeaderboardTime(
+        gameId: GameIds.zip,
+        timeSeconds: elapsed,
+        usedHints: state.usedHintsThisRun,
+        hadMistakes: false,
+        currentStreak: streak.current,
+      );
+    } catch (_) {
+      // Best-effort remote sync; local score already saved.
+    }
 
     await analytics.logGameCompleted(
       gameId: GameIds.zip,
@@ -270,11 +297,18 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     await _persistDraft();
   }
 
-  void _onResumeRun(ZipResumeRun event, Emitter<ZipState> emit) {
+  Future<void> _onResumeRun(ZipResumeRun event, Emitter<ZipState> emit) async {
     if (state.finished || state.status != ZipStatus.ready) return;
+    final now = _now();
+    final currentPlayId = PlayPeriod.id(now, playPeriod);
+    final playId = _playId;
+    if (playId != null && playId != currentPlayId) {
+      await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
+      add(ZipEvent.started(date: now));
+      return;
+    }
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     if (clock.isRunning) return;
-    final now = _now();
     final resumed = clock.resume(at: now);
     _clock = resumed;
     emit(state.copyWith(elapsedMs: resumed.elapsedMs, resumedAt: now));

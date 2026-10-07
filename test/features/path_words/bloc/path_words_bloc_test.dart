@@ -1,4 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:winklo/core/sfx/sfx_id.dart';
+import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
@@ -35,6 +37,8 @@ class _MockGetBestPoints extends Mock implements GetBestPoints {}
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 
 class _MockAnalyticsRepository extends Mock implements AnalyticsRepository {}
+
+class _MockSfx extends Mock implements SfxService {}
 
 class _FakeHintQuota implements HintQuotaRepository {
   _FakeHintQuota(this._remaining);
@@ -109,7 +113,6 @@ PathWordsPuzzle _linePuzzle3({required DateTime day}) {
   );
 }
 
-
 class _MemoryInProgressRuns implements InProgressRunRepository {
   final Map<String, InProgressRun> runs = {};
 
@@ -127,10 +130,7 @@ class _MemoryInProgressRuns implements InProgressRunRepository {
   }
 
   @override
-  Future<void> clear({
-    required String gameId,
-    required String playId,
-  }) async {
+  Future<void> clear({required String gameId, required String playId}) async {
     runs.remove(_key(gameId, playId));
   }
 }
@@ -151,9 +151,11 @@ void main() {
     DateTime Function()? now,
     Future<void> Function(Duration duration)? wait,
     Duration celebrationDuration = const Duration(seconds: 2),
+    _MemoryInProgressRuns? drafts,
+    SfxService? sfx,
   }) {
     return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+      inProgressRuns: drafts ?? _MemoryInProgressRuns(),
       generateDailyPathWords: generateDaily,
       submitScore: submitScore,
       submitLeaderboardTime: submitLeaderboardTime,
@@ -165,6 +167,7 @@ void main() {
       now: now ?? (() => DateTime(2026, 9, 17, 0, 0, 0)),
       wait: wait,
       celebrationDuration: celebrationDuration,
+      sfx: sfx,
     );
   }
 
@@ -186,6 +189,7 @@ void main() {
         timeSeconds: any(named: 'timeSeconds'),
         usedHints: any(named: 'usedHints'),
         hadMistakes: any(named: 'hadMistakes'),
+        currentStreak: any(named: 'currentStreak'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -209,6 +213,7 @@ void main() {
       () => analytics.logGameReset(gameId: any(named: 'gameId')),
     ).thenAnswer((_) async {});
     registerFallbackValue(DateTime(2026, 9, 17));
+    registerFallbackValue(SfxId.tap);
   });
 
   blocTest<PathWordsBloc, PathWordsState>(
@@ -218,7 +223,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -256,7 +261,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -318,7 +323,7 @@ void main() {
       ]);
 
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -436,6 +441,7 @@ void main() {
           timeSeconds: 12,
           usedHints: false,
           hadMistakes: false,
+          currentStreak: 3,
         ),
       ).called(1);
       verify(
@@ -451,7 +457,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -517,7 +523,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -570,7 +576,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -623,7 +629,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -685,7 +691,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -738,7 +744,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -779,7 +785,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -837,7 +843,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -912,7 +918,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -976,7 +982,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1051,7 +1057,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1106,7 +1112,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1168,7 +1174,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1210,7 +1216,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1258,7 +1264,7 @@ void main() {
         (inv) async => _linePuzzle3(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1314,7 +1320,7 @@ void main() {
       );
       final fixedNow = DateTime(2026, 9, 17, 0, 0, 0);
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1431,7 +1437,7 @@ void main() {
       ]);
 
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1528,6 +1534,39 @@ void main() {
     },
   );
 
+  test(
+    'resume after day rolls over starts next day and clears stale draft',
+    () async {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      final drafts = _MemoryInProgressRuns();
+      final day = DateTime(2026, 9, 17);
+      var now = day;
+      final bloc = buildBloc(now: () => now, drafts: drafts);
+      bloc.add(PathWordsEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+
+      now = day.add(const Duration(seconds: 5));
+      bloc.add(const PathWordsEvent.pauseRun());
+      await bloc.stream.firstWhere((s) => s.resumedAt == null);
+      expect(drafts.runs['${GameIds.pathWords}_20260917'], isNotNull);
+      expect(bloc.state.day, DateTime(2026, 9, 17));
+
+      now = DateTime(2026, 9, 18);
+      bloc.add(const PathWordsEvent.resumeRun());
+      await bloc.stream.firstWhere(
+        (s) =>
+            s.status == PathWordsStatus.ready && s.day == DateTime(2026, 9, 18),
+      );
+
+      expect(bloc.state.day, DateTime(2026, 9, 18));
+      expect(bloc.state.elapsedMs, 0);
+      expect(drafts.runs['${GameIds.pathWords}_20260917'], isNull);
+      await bloc.close();
+    },
+  );
+
   blocTest<PathWordsBloc, PathWordsState>(
     'failed same-length word attempt sets an off-board rule tip',
     build: () {
@@ -1535,7 +1574,7 @@ void main() {
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
       return PathWordsBloc(
-      inProgressRuns: _MemoryInProgressRuns(),
+        inProgressRuns: _MemoryInProgressRuns(),
         generateDailyPathWords: generateDaily,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -1576,5 +1615,132 @@ void main() {
           .having((s) => s.ruleTip, 'ruleTip', AppStrings.pathWordsTipMatchList)
           .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty),
     ],
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'pointer enter that grows the path plays tap',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      final sfx = _MockSfx();
+      when(() => sfx.play(any())).thenAnswer((_) async {});
+      return buildBloc(sfx: sfx);
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      await pumpEventQueue();
+    },
+    verify: (b) {
+      verify(() => b.sfx!.play(SfxId.tap)).called(1);
+      verifyNever(() => b.sfx!.play(SfxId.success));
+      verifyNever(() => b.sfx!.play(SfxId.reject));
+      verifyNever(() => b.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'finding a word plays success',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      final sfx = _MockSfx();
+      when(() => sfx.play(any())).thenAnswer((_) async {});
+      return buildBloc(sfx: sfx);
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+    },
+    verify: (b) {
+      verify(() => b.sfx!.play(SfxId.tap)).called(1);
+      verify(() => b.sfx!.play(SfxId.success)).called(1);
+      verifyNever(() => b.sfx!.play(SfxId.reject));
+      verifyNever(() => b.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'failed word attempt stays silent for reject',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      final sfx = _MockSfx();
+      when(() => sfx.play(any())).thenAnswer((_) async {});
+      return buildBloc(sfx: sfx);
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(1, 0)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+    },
+    verify: (b) {
+      verify(() => b.sfx!.play(SfxId.tap)).called(1);
+      verifyNever(() => b.sfx!.play(SfxId.reject));
+      verifyNever(() => b.sfx!.play(SfxId.success));
+      verifyNever(() => b.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<PathWordsBloc, PathWordsState>(
+    'clearing every target plays success then clear',
+    build: () {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      when(
+        () => submitScore(
+          modeKey: any(named: 'modeKey'),
+          points: any(named: 'points'),
+          timeSeconds: any(named: 'timeSeconds'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => recordDailyClear(
+          gameId: any(named: 'gameId'),
+          dateId: any(named: 'dateId'),
+        ),
+      ).thenAnswer(
+        (_) async => const GameStreak(
+          gameId: GameIds.pathWords,
+          current: 1,
+          longest: 1,
+          lastClearedDateId: '20260917',
+        ),
+      );
+      final sfx = _MockSfx();
+      when(() => sfx.play(any())).thenAnswer((_) async {});
+      return buildBloc(sfx: sfx, wait: (_) async {});
+    },
+    act: (b) async {
+      b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+      b.add(const PathWordsEvent.pointerDown(Cell(1, 0)));
+      b.add(const PathWordsEvent.pointerEnter(Cell(1, 1)));
+      b.add(const PathWordsEvent.pointerUp());
+      await pumpEventQueue();
+    },
+    verify: (b) {
+      verify(() => b.sfx!.play(SfxId.tap)).called(2);
+      verify(() => b.sfx!.play(SfxId.success)).called(2);
+      verify(() => b.sfx!.play(SfxId.clear)).called(1);
+      verifyNever(() => b.sfx!.play(SfxId.reject));
+    },
   );
 }

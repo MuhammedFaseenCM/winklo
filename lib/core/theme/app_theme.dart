@@ -32,6 +32,9 @@ abstract final class ZipColors {
   static const emberSoft = Color(0xFF3A241C);
 
   static const success = Color(0xFF2DD4BF);
+
+  /// Profile sound-effects accent (same hue as [success]).
+  static const teal = success;
   static const successSoft = Color(0xFF134E4A);
 
   /// Path Words accent (sky, distinct from Zip ember).

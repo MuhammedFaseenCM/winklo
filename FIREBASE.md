@@ -253,7 +253,12 @@ leaderboards/{gameId}/daily/{yyyy-MM-dd}/entries/{uid}
 
 leaderboards_debug/{gameId}/all_time/{uid}    # debug builds (`kDebugMode`)
 leaderboards_debug/{gameId}/daily/{yyyy-MM-dd}/entries/{uid}
+
+daily_activity/{yyyy-MM-dd}/users/{uid}
+  uid, firstOpenAt, lastOpenAt, platform
 ```
+
+Signed-in clients create/update their own daily open doc (throttled in app); admins read for dashboard counts. Timestamps use `FieldValue.serverTimestamp()` (rules validate as `request.time`).
 
 `gameId` is only `zip` or `path_words`. Daily day keys are **device-local** `yyyy-MM-dd` (the player's phone calendar). Ranking: ascending `timeSeconds`, then ascending `updatedAt` (earlier submit wins ties). Client shows top 50. Debug builds (`flutter run`) read and write **only** `leaderboards_debug`; release and profile builds use `leaderboards`.
 
@@ -289,10 +294,11 @@ After deploy:
 3. Content collections (`zip_levels`, etc.) still refuse client writes.
 4. `users/{uid}` remains signed-in read / owner write. `avatarId` must be a string or null when present.
 5. Custom gallery photos: Worker accepts `PUT /v1/avatar` only with a valid Firebase ID token for that uid; object key `avatars/{uid}.jpg` on R2; JPEG, max 2 MiB. Public read via R2 `r2.dev` (no Firebase Storage rules).
+6. `daily_activity/{yyyy-MM-dd}/users/{uid}`: owner create/update and read of their own doc; admin read (counts). **Deploy** `firestore/firestore.rules` before relying on production open tracking (`firebase deploy --only firestore:rules`).
 
 ### Admin custom claims (panel foundation)
 
-Operators of the admin SPA use the same Firebase Auth project with a custom claim `{ admin: true }`. Firestore rules define `isAdmin()` (`request.auth.token.admin == true`) for later phases; **no admin collection reads are enabled yet** (issue report inbox is phase 2).
+Operators of the admin SPA use the same Firebase Auth project with a custom claim `{ admin: true }`. Firestore rules define `isAdmin()` (`request.auth.token.admin == true`). Admin reads are enabled for `client_errors` and `daily_activity/{yyyy-MM-dd}/users/{uid}` (the owner may also read their own daily activity doc). User-submitted `issue_reports` still have no client reads (inbox is phase 2).
 
 Admin console code lives in a **separate repo**: [MuhammedFaseenCM/winklo-admin](https://github.com/MuhammedFaseenCM/winklo-admin) (SPA + `workers/admin-api` + claim script).
 

@@ -23,12 +23,14 @@ class MiniLeaderboardPanel extends StatelessWidget {
     this.timeSeconds = 0,
     this.usedHints,
     this.hadMistakes,
+    this.currentStreak,
   });
 
   final String gameId;
   final int timeSeconds;
   final bool? usedHints;
   final bool? hadMistakes;
+  final int? currentStreak;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +45,7 @@ class MiniLeaderboardPanel extends StatelessWidget {
         timeSeconds: timeSeconds,
         usedHints: usedHints,
         hadMistakes: hadMistakes,
+        currentStreak: currentStreak,
       ),
     );
   }
@@ -54,12 +57,14 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
     required this.timeSeconds,
     this.usedHints,
     this.hadMistakes,
+    this.currentStreak,
   });
 
   final String gameId;
   final int timeSeconds;
   final bool? usedHints;
   final bool? hadMistakes;
+  final int? currentStreak;
 
   String _formatTime(int seconds) {
     final m = seconds ~/ 60;
@@ -77,6 +82,7 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
         timeSeconds: timeSeconds,
         usedHints: usedHints ?? true,
         hadMistakes: hadMistakes ?? true,
+        currentStreak: currentStreak ?? 0,
       );
     } catch (_) {
       // Best-effort remote sync; signed-in UI still shows live board.

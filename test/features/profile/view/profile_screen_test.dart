@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/app_user.dart';
@@ -13,6 +14,7 @@ import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
+import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_issue_report.dart';
@@ -35,6 +37,9 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 class _MockIssueReportRepository extends Mock
     implements IssueReportRepository {}
 
+class _MockSfxSettingsRepository extends Mock
+    implements SfxSettingsRepository {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
@@ -45,6 +50,8 @@ void main() {
   late _MockSignOut signOut;
   late _MockProfileRepository profile;
   late MockAnalyticsRepository analytics;
+  late _MockSfxSettingsRepository sfxSettings;
+  late SfxService sfx;
 
   setUp(() {
     auth = _MockAuthRepository();
@@ -53,7 +60,23 @@ void main() {
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
     when(() => signOut()).thenAnswer((_) async {});
+    sfxSettings = _MockSfxSettingsRepository();
+    when(() => sfxSettings.isEnabled).thenReturn(true);
+    when(() => sfxSettings.setEnabled(any())).thenAnswer((_) async {});
+    sfx = SfxService(settings: sfxSettings);
   });
+
+  List<RepositoryProvider<dynamic>> profileProviders() => [
+    RepositoryProvider<AuthRepository>.value(value: auth),
+    RepositoryProvider<ProfileRepository>.value(value: profile),
+    RepositoryProvider<UpdateDisplayName>.value(
+      value: UpdateDisplayName(profile),
+    ),
+    RepositoryProvider<UpdateAvatar>.value(value: UpdateAvatar(profile)),
+    RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+    RepositoryProvider<SignOut>.value(value: signOut),
+    RepositoryProvider<SfxService>.value(value: sfx),
+  ];
 
   Future<void> pumpProfile(WidgetTester tester, {AppUser? signedIn}) async {
     when(() => auth.currentUser).thenReturn(signedIn);
@@ -68,16 +91,7 @@ void main() {
 
     await tester.pumpWidget(
       MultiRepositoryProvider(
-        providers: [
-          RepositoryProvider<AuthRepository>.value(value: auth),
-          RepositoryProvider<ProfileRepository>.value(value: profile),
-          RepositoryProvider<UpdateDisplayName>.value(
-            value: UpdateDisplayName(profile),
-          ),
-          RepositoryProvider<UpdateAvatar>.value(value: UpdateAvatar(profile)),
-          RepositoryProvider<AnalyticsRepository>.value(value: analytics),
-          RepositoryProvider<SignOut>.value(value: signOut),
-        ],
+        providers: profileProviders(),
         child: BlocProvider(
           create: (_) => AuthCubit(
             authRepository: auth,
@@ -207,16 +221,7 @@ void main() {
 
     await tester.pumpWidget(
       MultiRepositoryProvider(
-        providers: [
-          RepositoryProvider<AuthRepository>.value(value: auth),
-          RepositoryProvider<ProfileRepository>.value(value: profile),
-          RepositoryProvider<UpdateDisplayName>.value(
-            value: UpdateDisplayName(profile),
-          ),
-          RepositoryProvider<UpdateAvatar>.value(value: UpdateAvatar(profile)),
-          RepositoryProvider<AnalyticsRepository>.value(value: analytics),
-          RepositoryProvider<SignOut>.value(value: signOut),
-        ],
+        providers: profileProviders(),
         child: BlocProvider(
           create: (_) => AuthCubit(
             authRepository: auth,
@@ -257,6 +262,24 @@ void main() {
     final tiles = tester.widgetList<ListTile>(find.byType(ListTile));
     expect(tiles, isNotEmpty);
     expect(tiles.every((tile) => tile.onTap == null), isTrue);
+    expect(find.text(AppStrings.profileSoundEffects), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+  });
+
+  testWidgets('signed-out foreground sound switch mutes SfxService', (
+    tester,
+  ) async {
+    await pumpProfile(tester);
+
+    expect(sfx.isEnabled, isTrue);
+    expect(find.text(AppStrings.profileSoundEffects), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    expect(sfx.isEnabled, isFalse);
+    verify(() => sfxSettings.setEnabled(false)).called(1);
   });
 
   testWidgets('report row opens the report screen', (tester) async {
@@ -288,14 +311,7 @@ void main() {
     await tester.pumpWidget(
       MultiRepositoryProvider(
         providers: [
-          RepositoryProvider<AuthRepository>.value(value: auth),
-          RepositoryProvider<ProfileRepository>.value(value: profile),
-          RepositoryProvider<UpdateDisplayName>.value(
-            value: UpdateDisplayName(profile),
-          ),
-          RepositoryProvider<UpdateAvatar>.value(value: UpdateAvatar(profile)),
-          RepositoryProvider<AnalyticsRepository>.value(value: analytics),
-          RepositoryProvider<SignOut>.value(value: signOut),
+          ...profileProviders(),
           RepositoryProvider<IssueReportRepository>.value(
             value: _MockIssueReportRepository(),
           ),

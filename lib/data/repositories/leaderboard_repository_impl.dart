@@ -39,6 +39,7 @@ List<LeaderboardEntry> mapLeaderboardRows(
     previousTime = timeSeconds;
     final usedHints = data['usedHints'];
     final hadMistakes = data['hadMistakes'];
+    final currentStreak = data['currentStreak'];
     entries.add(
       LeaderboardEntry(
         uid: row.id,
@@ -52,6 +53,7 @@ List<LeaderboardEntry> mapLeaderboardRows(
         rank: rank,
         usedHints: usedHints is bool ? usedHints : null,
         hadMistakes: hadMistakes is bool ? hadMistakes : null,
+        currentStreak: currentStreak is int ? currentStreak : null,
       ),
     );
   }
@@ -99,10 +101,7 @@ leaderboardSubmitIdentity({
 }
 
 class LeaderboardRepositoryImpl implements LeaderboardRepository {
-  LeaderboardRepositoryImpl({
-    this._firestore,
-    this._auth,
-  });
+  LeaderboardRepositoryImpl({this._firestore, this._auth});
 
   final FirebaseFirestore? _firestore;
   final FirebaseAuth? _auth;
@@ -177,6 +176,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     required int timeSeconds,
     required bool usedHints,
     required bool hadMistakes,
+    required int currentStreak,
   }) async {
     _assertGameId(gameId);
     if (timeSeconds <= 0) {
@@ -227,6 +227,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         timeSeconds: timeSeconds,
         usedHints: usedHints,
         hadMistakes: hadMistakes,
+        currentStreak: currentStreak,
         identity: identity,
       );
       await _writeImproveOnly(
@@ -234,6 +235,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         timeSeconds: timeSeconds,
         usedHints: usedHints,
         hadMistakes: hadMistakes,
+        currentStreak: currentStreak,
         identity: identity,
       );
     } catch (e, st) {
@@ -248,22 +250,22 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     required int timeSeconds,
     required bool usedHints,
     required bool hadMistakes,
+    required int currentStreak,
     ({String displayName, String? photoUrl, String? avatarId})? identity,
   }) async {
     await ref.firestore.runTransaction((tx) async {
       final snap = await tx.get(ref);
-      if (snap.exists) {
-        final existing = snap.data()?['timeSeconds'];
-        if (existing is int && timeSeconds >= existing) {
-          return;
-        }
+      final existing = snap.data()?['timeSeconds'];
+      final timeImproved =
+          !snap.exists || existing is! int || timeSeconds < existing;
+
+      final payload = <String, dynamic>{'currentStreak': currentStreak};
+      if (timeImproved) {
+        payload['timeSeconds'] = timeSeconds;
+        payload['updatedAt'] = FieldValue.serverTimestamp();
+        payload['usedHints'] = usedHints;
+        payload['hadMistakes'] = hadMistakes;
       }
-      final payload = <String, dynamic>{
-        'timeSeconds': timeSeconds,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'usedHints': usedHints,
-        'hadMistakes': hadMistakes,
-      };
       if (identity != null) {
         payload['displayName'] = identity.displayName;
         payload['photoUrl'] = identity.photoUrl;

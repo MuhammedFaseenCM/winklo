@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/sfx/sfx_id.dart';
+import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/entities/in_progress_run.dart';
@@ -40,6 +42,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     Future<void> Function(Duration duration)? wait,
     this.celebrationDuration = const Duration(seconds: 2),
     this.playPeriod = PlayPeriod.daily,
+    this.sfx,
   }) : _now = now ?? DateTime.now,
        _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
        super(PathWordsState.initial((now ?? DateTime.now)())) {
@@ -65,6 +68,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   final InProgressRunRepository inProgressRuns;
   final Duration celebrationDuration;
   final Duration playPeriod;
+  final SfxService? sfx;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   String? _playId;
@@ -193,9 +197,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         );
       }
       await analytics.logGameStarted(gameId: GameIds.pathWords);
-    } catch (e) {
+    } catch (_) {
       if (emit.isDone) return;
-      emit(state.copyWith(status: PathWordsStatus.failed, errorMessage: '$e'));
+      emit(
+        state.copyWith(
+          status: PathWordsStatus.failed,
+          errorMessage: AppStrings.pathWordsFailed,
+        ),
+      );
     }
   }
 
@@ -359,6 +368,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     );
     if (next == null) return;
 
+    final grew = next.length > state.activePath.length;
     emit(
       state.copyWith(
         status: PathWordsStatus.playing,
@@ -366,6 +376,9 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         hintFlashCell: null,
       ),
     );
+    if (grew) {
+      unawaited(sfx?.play(SfxId.tap) ?? Future<void>.value());
+    }
   }
 
   Future<void> _onPointerUp(
@@ -430,6 +443,13 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         ruleTip: tip,
       ),
     );
+
+    if (stroke.targetId != null) {
+      unawaited(sfx?.play(SfxId.success) ?? Future<void>.value());
+    }
+    if (updatedCompleted.length >= puzzle.targets.length) {
+      unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());
+    }
 
     if (updatedCompleted.length >= puzzle.targets.length) {
       await _finish(emit);
@@ -579,15 +599,25 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     await _persistDraft();
   }
 
-  void _onResumeRun(PathWordsResumeRun event, Emitter<PathWordsState> emit) {
+  Future<void> _onResumeRun(
+    PathWordsResumeRun event,
+    Emitter<PathWordsState> emit,
+  ) async {
     if (state.finished) return;
     if (state.status != PathWordsStatus.ready &&
         state.status != PathWordsStatus.playing) {
       return;
     }
+    final now = _now();
+    final currentPlayId = PlayPeriod.id(now, playPeriod);
+    final playId = _playId;
+    if (playId != null && playId != currentPlayId) {
+      await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
+      add(PathWordsEvent.started(date: now));
+      return;
+    }
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     if (clock.isRunning) return;
-    final now = _now();
     final resumed = clock.resume(at: now);
     _clock = resumed;
     emit(state.copyWith(elapsedMs: resumed.elapsedMs, resumedAt: now));
@@ -633,23 +663,22 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       timeSeconds: elapsed,
     );
 
-    if (improved) {
-      try {
-        await submitLeaderboardTime(
-          gameId: GameIds.pathWords,
-          timeSeconds: elapsed,
-          usedHints: state.usedHintsThisRun,
-          hadMistakes: false,
-        );
-      } catch (_) {
-        // Best-effort remote sync; local score already saved.
-      }
-    }
-
     final streak = await recordDailyClear(
       gameId: GameIds.pathWords,
       dateId: dateId,
     );
+
+    try {
+      await submitLeaderboardTime(
+        gameId: GameIds.pathWords,
+        timeSeconds: elapsed,
+        usedHints: state.usedHintsThisRun,
+        hadMistakes: false,
+        currentStreak: streak.current,
+      );
+    } catch (_) {
+      // Best-effort remote sync; local score already saved.
+    }
 
     await analytics.logGameCompleted(
       gameId: GameIds.pathWords,

@@ -40,10 +40,16 @@ sealed class HomeState with _$HomeState {
     DateTime now, {
     Duration period = PlayPeriod.daily,
   }) {
-    final level = DailyPuzzleGenerator.forDate(now, period: period);
+    final dateId = DailyPuzzleGenerator.dateId(now, period: period);
+    // Placeholder only — real Zip level is fetched from the backend in load().
     return HomeState(
-      dailyLevel: level,
-      dateId: DailyPuzzleGenerator.dateId(now, period: period),
+      dailyLevel: ZipLevel(
+        id: dateId,
+        size: 1,
+        numbers: const {},
+        walls: const [],
+      ),
+      dateId: dateId,
     );
   }
 }

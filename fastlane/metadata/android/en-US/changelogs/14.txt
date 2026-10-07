@@ -1,0 +1,7 @@
+What's new
+
+• Streak and best-time leaderboard polish
+• Clearer Android notification icons and display
+• Gameplay sound effects with mute in Profile
+• Updated Play Store screenshots and listing
+• Stability fixes across Zip, Path Words, and Sudoku

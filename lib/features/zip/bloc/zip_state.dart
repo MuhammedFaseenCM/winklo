@@ -8,7 +8,15 @@ import '../logic/daily_puzzle_generator.dart';
 
 part 'zip_state.freezed.dart';
 
-enum ZipStatus { initial, ready, celebrating, submitting, navigating, locked }
+enum ZipStatus {
+  initial,
+  ready,
+  celebrating,
+  submitting,
+  navigating,
+  locked,
+  failed,
+}
 
 @freezed
 sealed class ZipState with _$ZipState {
@@ -23,6 +31,7 @@ sealed class ZipState with _$ZipState {
     @Default(0) int elapsedMs,
     DateTime? resumedAt,
     @Default(<Cell>[]) List<Cell> path,
+    String? errorMessage,
     bool? improved,
     int? points,
     int? timeSeconds,
@@ -31,7 +40,13 @@ sealed class ZipState with _$ZipState {
 
   factory ZipState.initial(DateTime now, {Duration period = PlayPeriod.daily}) {
     final day = DateTime(now.year, now.month, now.day);
-    final level = DailyPuzzleGenerator.forDate(now, period: period);
+    // Placeholder only — real level always comes from the backend on start.
+    final level = ZipLevel(
+      id: DailyPuzzleGenerator.dateId(now, period: period),
+      size: 1,
+      numbers: const {},
+      walls: const [],
+    );
     return ZipState(day: day, level: level, status: ZipStatus.initial);
   }
 

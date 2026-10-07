@@ -1,16 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/domain/entities/sudoku_puzzle.dart';
+import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/usecases/generate_daily_sudoku.dart';
 
 void main() {
-  test('GenerateDailySudoku falls back to procedural generator when firestore is null', () async {
+  test('GenerateDailySudoku throws when firestore is null', () async {
     final usecase = GenerateDailySudoku(firestore: null);
-    final puzzle = await usecase(day: DateTime(2026, 9, 29));
-
-    expect(puzzle.size, 6);
-    expect(puzzle.given.length, 36);
-    expect(puzzle.solution.length, 36);
-    expect(puzzle.dateId, '20260929');
+    await expectLater(
+      () => usecase(day: DateTime(2026, 9, 29)),
+      throwsA(isA<DailyPuzzleUnavailable>()),
+    );
   });
 
   test('SudokuPuzzle fromJson and toJson roundtrip', () {

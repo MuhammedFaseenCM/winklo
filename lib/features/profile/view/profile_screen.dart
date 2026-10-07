@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
@@ -70,25 +71,66 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _SignedOutBody extends StatelessWidget {
+class _SignedOutBody extends StatefulWidget {
   const _SignedOutBody();
 
   @override
+  State<_SignedOutBody> createState() => _SignedOutBodyState();
+}
+
+class _SignedOutBodyState extends State<_SignedOutBody> {
+  @override
   Widget build(BuildContext context) {
+    final sfx = context.read<SfxService>();
     return BlurredMockEmptyBody(
       background: const ProfileSignedOutMock(),
       message: AppStrings.profileSignedOutBody,
-      actionLabel: AppStrings.signInWithGoogle,
-      onAction: () => showSignInSheet(context),
+      action: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(
+              Icons.volume_up_outlined,
+              color: ZipColors.teal,
+            ),
+            title: Text(
+              AppStrings.profileSoundEffects,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: ZipColors.onInk,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            trailing: Switch.adaptive(
+              value: sfx.isEnabled,
+              onChanged: (value) async {
+                await sfx.setEnabled(value);
+                if (!mounted) return;
+                setState(() {});
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: () => showSignInSheet(context),
+            child: const Text(AppStrings.signInWithGoogle),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _SignedInBody extends StatelessWidget {
+class _SignedInBody extends StatefulWidget {
   const _SignedInBody({required this.fallbackUser});
 
   final AppUser fallbackUser;
 
+  @override
+  State<_SignedInBody> createState() => _SignedInBodyState();
+}
+
+class _SignedInBodyState extends State<_SignedInBody> {
   Future<void> _openAvatarSheet(BuildContext context) {
     final cubit = context.read<ProfileCubit>();
     return showModalBottomSheet<void>(
@@ -128,7 +170,8 @@ class _SignedInBody extends StatelessWidget {
   }
 
   Future<void> _openReport(BuildContext context) async {
-    final user = context.read<ProfileCubit>().state.profile ?? fallbackUser;
+    final user =
+        context.read<ProfileCubit>().state.profile ?? widget.fallbackUser;
     if (!context.mounted) return;
     await context.push('/profile/report', extra: user);
   }
@@ -144,6 +187,7 @@ class _SignedInBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = AppLayout.of(context);
+    final sfx = context.read<SfxService>();
     return BlocListener<ProfileCubit, ProfileState>(
       listenWhen: (previous, next) =>
           next.status == ProfileStatus.failure &&
@@ -165,7 +209,7 @@ class _SignedInBody extends StatelessWidget {
           if (state.status == ProfileStatus.refreshing) {
             return const ProfileShimmer();
           }
-          final profile = state.profile ?? fallbackUser;
+          final profile = state.profile ?? widget.fallbackUser;
           return RefreshIndicator(
             color: ZipColors.ember,
             backgroundColor: ZipColors.wall,
@@ -269,6 +313,12 @@ class _SignedInBody extends StatelessWidget {
                   ),
                   SizedBox(height: layout.space(16)),
                   ProfileSettingsList(
+                    sfxEnabled: sfx.isEnabled,
+                    onSfxChanged: (value) async {
+                      await sfx.setEnabled(value);
+                      if (!mounted) return;
+                      setState(() {});
+                    },
                     onPrivacy: () => unawaited(_openPrivacy(context)),
                     onAbout: () => unawaited(showAboutGameDialog(context)),
                     onReport: () => unawaited(_openReport(context)),

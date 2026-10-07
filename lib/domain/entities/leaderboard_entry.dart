@@ -9,6 +9,7 @@ class LeaderboardEntry {
     this.avatarId,
     this.usedHints,
     this.hadMistakes,
+    this.currentStreak,
   });
 
   final String uid;
@@ -19,11 +20,15 @@ class LeaderboardEntry {
   final DateTime updatedAt;
   final int rank;
 
-  /// When explicitly `false`, the daily board may show a "No hint" chip.
+  /// When explicitly `false`, the daily board may show a "Hint-free" chip.
   /// Missing / null means unknown (legacy docs) — no chip.
   final bool? usedHints;
 
-  /// When explicitly `false`, Sudoku daily board may show a "No mistakes" chip.
+  /// When explicitly `false`, Sudoku daily board may show a "Flawless" chip.
   /// Missing / null means unknown (legacy docs) — no chip.
   final bool? hadMistakes;
+
+  /// Current game streak at last sync. Daily board shows a chip when `>= 2`.
+  /// Missing / null means unknown (legacy docs) — no chip.
+  final int? currentStreak;
 }

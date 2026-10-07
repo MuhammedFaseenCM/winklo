@@ -5,12 +5,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/config/avatar_upload_config.dart';
 import 'package:winklo/core/config/path_words_nouns_config.dart';
 import 'package:winklo/core/dev_flags.dart';
+import 'package:winklo/core/sfx/audioplayers_sfx_playback.dart';
+import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/data/clients/avatar/avatar_upload_client.dart';
 import 'package:winklo/data/clients/avatar/r2_avatar_upload_client.dart';
 import 'package:winklo/data/clients/notification/firebase_notification_client.dart';
 import 'package:winklo/data/clients/notification/notification_client.dart';
 import 'package:winklo/data/clients/path_words/http_path_words_nouns_client.dart';
 import 'package:winklo/data/clients/path_words/path_words_nouns_client.dart';
+import 'package:winklo/data/repositories/activity_repository_impl.dart';
 import 'package:winklo/data/repositories/app_update_repository_impl.dart';
 import 'package:winklo/data/repositories/auth_repository_impl.dart';
 import 'package:winklo/data/repositories/category_repository_impl.dart';
@@ -22,11 +25,13 @@ import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
 import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
+import 'package:winklo/data/repositories/sfx_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
 import 'package:winklo/data/repositories/tutorial_repository_impl.dart';
 import 'package:winklo/data/repositories/word_list_repository_impl.dart';
 import 'package:winklo/data/repositories/word_match_repository_impl.dart';
 import 'package:winklo/data/repositories/zip_level_repository_impl.dart';
+import 'package:winklo/domain/repositories/activity_repository.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
@@ -38,6 +43,7 @@ import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
+import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
 import 'package:winklo/domain/repositories/tutorial_repository.dart';
 import 'package:winklo/domain/repositories/word_list_repository.dart';
@@ -57,6 +63,7 @@ import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/domain/usecases/handle_notification_tap.dart';
 import 'package:winklo/domain/usecases/initialize_notifications.dart';
+import 'package:winklo/domain/usecases/record_app_open.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/schedule_engagement_notifications.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
@@ -74,6 +81,16 @@ List<SingleChildWidget> buildRepositoryProviders({
 }) {
   return [
     RepositoryProvider<SharedPreferences>.value(value: prefs),
+    RepositoryProvider<SfxSettingsRepository>(
+      create: (context) =>
+          SfxSettingsRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<SfxService>(
+      create: (context) => SfxService(
+        settings: context.read<SfxSettingsRepository>(),
+        playClip: createAudioplayersPlayClip(),
+      ),
+    ),
     RepositoryProvider<AnalyticsRepository>(
       create: (_) => FirebaseAnalyticsRepositoryImpl(),
     ),
@@ -105,6 +122,17 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (_) => HandleNotificationTap(),
     ),
     RepositoryProvider<AuthRepository>(create: (_) => AuthRepositoryImpl()),
+    RepositoryProvider<ActivityRepository>(
+      create: (context) =>
+          ActivityRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<RecordAppOpen>(
+      create: (context) => RecordAppOpen(
+        context.read<AuthRepository>(),
+        context.read<ActivityRepository>(),
+        context.read<AnalyticsRepository>(),
+      ),
+    ),
     RepositoryProvider<AvatarUploadClient>(
       create: (_) => R2AvatarUploadClient(baseUrl: AvatarUploadConfig.baseUrl),
     ),
@@ -223,10 +251,7 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) => FetchCategories(context.read<CategoryRepository>()),
     ),
     RepositoryProvider<GenerateDailyPathWords>(
-      create: (context) => GenerateDailyPathWords(
-        context.read<WordListRepository>(),
-        period: DevFlags.playPeriod,
-      ),
+      create: (_) => GenerateDailyPathWords(period: DevFlags.playPeriod),
     ),
     RepositoryProvider<GenerateDailySudoku>(
       create: (_) => GenerateDailySudoku(period: DevFlags.playPeriod),

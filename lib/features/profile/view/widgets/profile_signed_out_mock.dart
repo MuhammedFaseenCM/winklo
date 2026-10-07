@@ -6,6 +6,9 @@ import '../../../../core/widgets/user_avatar.dart';
 import 'profile_settings_list.dart';
 
 /// Decorative fake profile for the signed-out tease.
+///
+/// Sound effects live in the signed-out foreground (above the blur scrim);
+/// this mock omits the SFX row so a dead Switch is not shown under the blur.
 class ProfileSignedOutMock extends StatelessWidget {
   const ProfileSignedOutMock({super.key});
 
@@ -37,8 +40,9 @@ class ProfileSignedOutMock extends StatelessWidget {
             ).textTheme.labelLarge?.copyWith(color: ZipColors.inkSoft),
           ),
           const SizedBox(height: 28),
-          const ProfileSettingsList(
+          ProfileSettingsList(
             enabled: false,
+            onSfxChanged: null,
             onPrivacy: _noop,
             onAbout: _noop,
             onReport: _noop,
