@@ -22,7 +22,7 @@ class LeaderboardRow extends StatelessWidget {
   final String timeLabel;
   final bool isYou;
 
-  /// When true (daily board / mini board), show No hint / No mistakes chips.
+  /// When true (daily board / mini board), show clean-run / streak chips.
   final bool showCleanRunChips;
   final String? gameId;
 
@@ -51,6 +51,7 @@ class LeaderboardRow extends StatelessWidget {
         showCleanRunChips &&
         gameId == GameIds.sudoku &&
         entry.hadMistakes == false;
+    final streakDays = entry.currentStreak;
     final chips = <Widget>[
       if (isYou)
         _chip(
@@ -75,6 +76,14 @@ class LeaderboardRow extends StatelessWidget {
           foreground: const Color(0xFF9EC0FF),
           background: const Color(0xFF78AAFF).withValues(alpha: 0.16),
           border: const Color(0xFF9EC0FF).withValues(alpha: 0.35),
+        ),
+      if (showCleanRunChips && streakDays != null && streakDays >= 2)
+        _chip(
+          context,
+          label: AppStrings.streakLabel(streakDays),
+          foreground: const Color(0xFFFFC27A),
+          background: const Color(0xFFE8A05C).withValues(alpha: 0.18),
+          border: const Color(0xFFFFC27A).withValues(alpha: 0.35),
         ),
     ];
 

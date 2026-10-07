@@ -112,6 +112,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         unitFlashIndices: const <int>{},
         celebratedUnitIds: const <String>{},
         finished: false,
+        errorMessage: null,
         points: null,
         timeSeconds: null,
         improved: null,
@@ -120,9 +121,19 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     );
     _clock = null;
 
-    final puzzle = await generatePuzzle(
-      day: PlayPeriod.bucket(seed, playPeriod),
-    );
+    late final SudokuPuzzle puzzle;
+    try {
+      puzzle = await generatePuzzle(day: PlayPeriod.bucket(seed, playPeriod));
+    } catch (_) {
+      if (emit.isDone) return;
+      emit(
+        state.copyWith(
+          status: SudokuStatus.failed,
+          errorMessage: AppStrings.sudokuFailed,
+        ),
+      );
+      return;
+    }
     if (emit.isDone) return;
 
     if (alreadyCleared) {
@@ -491,23 +502,22 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       timeSeconds: elapsed,
     );
 
-    if (improved) {
-      try {
-        await submitLeaderboardTime(
-          gameId: GameIds.sudoku,
-          timeSeconds: elapsed,
-          usedHints: state.usedHintsThisRun,
-          hadMistakes: state.hadMistakesThisRun,
-        );
-      } catch (_) {
-        // Best-effort remote sync; local score already saved.
-      }
-    }
-
     final streak = await recordDailyClear(
       gameId: GameIds.sudoku,
       dateId: dateId,
     );
+
+    try {
+      await submitLeaderboardTime(
+        gameId: GameIds.sudoku,
+        timeSeconds: elapsed,
+        usedHints: state.usedHintsThisRun,
+        hadMistakes: state.hadMistakesThisRun,
+        currentStreak: streak.current,
+      );
+    } catch (_) {
+      // Best-effort remote sync; local score already saved.
+    }
 
     await analytics.logGameCompleted(
       gameId: GameIds.sudoku,

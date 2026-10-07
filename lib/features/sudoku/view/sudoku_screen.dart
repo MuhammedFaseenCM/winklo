@@ -225,6 +225,8 @@ class _SudokuScreenState extends State<SudokuScreen>
             }
             final puzzle = state.puzzle;
             final isReview = state.status == SudokuStatus.locked;
+            final isFailed = state.status == SudokuStatus.failed;
+            final isLoading = state.status == SudokuStatus.loading;
             final isReadyToPlay =
                 !state.finished &&
                 state.status == SudokuStatus.ready &&
@@ -306,7 +308,45 @@ class _SudokuScreenState extends State<SudokuScreen>
                                   SizedBox(
                                     width: boardSide,
                                     height: boardSide,
-                                    child: game == null
+                                    child: isFailed
+                                        ? Padding(
+                                            padding: const EdgeInsets.all(18),
+                                            child: Center(
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    AppStrings.sudokuFailed,
+                                                    textAlign: TextAlign.center,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleMedium
+                                                        ?.copyWith(
+                                                          color:
+                                                              ZipColors.onInk,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 14),
+                                                  FilledButton.icon(
+                                                    onPressed: () => _bloc.add(
+                                                      SudokuEvent.started(
+                                                        date: widget.date,
+                                                      ),
+                                                    ),
+                                                    icon: const Icon(
+                                                      Icons.refresh_rounded,
+                                                    ),
+                                                    label: const Text(
+                                                      AppStrings.retry,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          )
+                                        : game == null || isLoading
                                         ? const Center(
                                             child: CircularProgressIndicator(),
                                           )

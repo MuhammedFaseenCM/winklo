@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/repositories/analytics_repository.dart';
@@ -25,7 +26,7 @@ class HomeCubit extends Cubit<HomeState> {
     required this.checkAppUpdate,
     required this.appUpdateRepository,
     this.scheduleEngagementNotifications,
-    this.zipLevelRepository,
+    required this.zipLevelRepository,
     DateTime? now,
     this.playPeriod = PlayPeriod.daily,
   }) : _now = now,
@@ -40,7 +41,7 @@ class HomeCubit extends Cubit<HomeState> {
   final CheckAppUpdate checkAppUpdate;
   final AppUpdateRepository appUpdateRepository;
   final ScheduleEngagementNotifications? scheduleEngagementNotifications;
-  final ZipLevelRepository? zipLevelRepository;
+  final ZipLevelRepository zipLevelRepository;
   final DateTime? _now;
   final Duration playPeriod;
   Timer? _refreshTimer;
@@ -60,9 +61,20 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<void> load() async {
     final now = _clock;
-    final level = zipLevelRepository != null
-        ? await zipLevelRepository!.fetchDailyLevel(now, period: playPeriod)
-        : DailyPuzzleGenerator.forDate(now, period: playPeriod);
+    final expectedDateId = DailyPuzzleGenerator.dateId(now, period: playPeriod);
+    late final ZipLevel level;
+    try {
+      level = await zipLevelRepository.fetchDailyLevel(now, period: playPeriod);
+    } catch (_) {
+      // Home still shows streak/score tiles using the expected day id; games
+      // themselves refuse to start without a backend puzzle.
+      level = ZipLevel(
+        id: expectedDateId,
+        size: 1,
+        numbers: const {},
+        walls: const [],
+      );
+    }
     final zipKey = 'zip_${level.id}';
     final pathWordsKey = 'path_words_${PlayPeriod.id(now, playPeriod)}';
     final sudokuKey = 'sudoku_${PlayPeriod.id(now, playPeriod)}';

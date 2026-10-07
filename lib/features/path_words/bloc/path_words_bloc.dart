@@ -197,9 +197,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         );
       }
       await analytics.logGameStarted(gameId: GameIds.pathWords);
-    } catch (e) {
+    } catch (_) {
       if (emit.isDone) return;
-      emit(state.copyWith(status: PathWordsStatus.failed, errorMessage: '$e'));
+      emit(
+        state.copyWith(
+          status: PathWordsStatus.failed,
+          errorMessage: AppStrings.pathWordsFailed,
+        ),
+      );
     }
   }
 
@@ -658,23 +663,22 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       timeSeconds: elapsed,
     );
 
-    if (improved) {
-      try {
-        await submitLeaderboardTime(
-          gameId: GameIds.pathWords,
-          timeSeconds: elapsed,
-          usedHints: state.usedHintsThisRun,
-          hadMistakes: false,
-        );
-      } catch (_) {
-        // Best-effort remote sync; local score already saved.
-      }
-    }
-
     final streak = await recordDailyClear(
       gameId: GameIds.pathWords,
       dateId: dateId,
     );
+
+    try {
+      await submitLeaderboardTime(
+        gameId: GameIds.pathWords,
+        timeSeconds: elapsed,
+        usedHints: state.usedHintsThisRun,
+        hadMistakes: false,
+        currentStreak: streak.current,
+      );
+    } catch (_) {
+      // Best-effort remote sync; local score already saved.
+    }
 
     await analytics.logGameCompleted(
       gameId: GameIds.pathWords,

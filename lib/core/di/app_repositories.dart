@@ -251,10 +251,7 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) => FetchCategories(context.read<CategoryRepository>()),
     ),
     RepositoryProvider<GenerateDailyPathWords>(
-      create: (context) => GenerateDailyPathWords(
-        context.read<WordListRepository>(),
-        period: DevFlags.playPeriod,
-      ),
+      create: (_) => GenerateDailyPathWords(period: DevFlags.playPeriod),
     ),
     RepositoryProvider<GenerateDailySudoku>(
       create: (_) => GenerateDailySudoku(period: DevFlags.playPeriod),

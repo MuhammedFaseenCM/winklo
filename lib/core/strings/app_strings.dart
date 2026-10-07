@@ -25,6 +25,7 @@ abstract final class AppStrings {
   static const zipTipVisitInOrder = 'Visit the numbers in order';
   static const zipClearedTitle = 'Puzzle cleared!';
   static const zipLoading = 'Building today’s puzzle…';
+  static const zipFailed = 'Could not load today’s puzzle.';
   static const playAgain = 'Play again';
   static const result = 'Result';
   static const comeBackTomorrow = 'Come back tomorrow';
@@ -83,6 +84,8 @@ abstract final class AppStrings {
       'Fill every empty cell with 1–6 so each row, column, and 2×3 box has every digit once. Wrong entries are rejected. Notes are unlimited; you get 3 hints per day.';
   static const sudokuHowToPlayGotIt = 'Got it';
   static const sudokuClearedTitle = 'Puzzle cleared!';
+  static const sudokuLoading = 'Building today’s puzzle…';
+  static const sudokuFailed = 'Could not load today’s puzzle.';
   static const sudokuDifficultyEasy = 'Easy';
   static const sudokuDifficultyMedium = 'Medium';
   static const sudokuDifficultyHard = 'Hard';
@@ -158,8 +161,8 @@ abstract final class AppStrings {
   static const seeFullLeaderboard = 'See full leaderboard';
   static const leaderboardGapEllipsis = '…';
   static const youLabel = 'You';
-  static const leaderboardNoHintChip = 'No hint';
-  static const leaderboardNoMistakesChip = 'No mistakes';
+  static const leaderboardNoHintChip = 'Hint-free';
+  static const leaderboardNoMistakesChip = 'Flawless';
 
   /// Compact game-tab label (full title stays [pathWordsTitle]).
   static const pathWordsTab = 'Path';

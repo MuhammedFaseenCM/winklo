@@ -3,6 +3,7 @@ import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
+import 'package:winklo/domain/entities/zip_level.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
@@ -14,6 +15,7 @@ import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/features/zip/bloc/zip_bloc.dart';
 import 'package:winklo/features/zip/bloc/zip_event.dart';
 import 'package:winklo/features/zip/bloc/zip_state.dart';
+import 'package:winklo/features/zip/logic/daily_puzzle_generator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -73,6 +75,7 @@ void main() {
         timeSeconds: any(named: 'timeSeconds'),
         usedHints: any(named: 'usedHints'),
         hadMistakes: any(named: 'hadMistakes'),
+        currentStreak: any(named: 'currentStreak'),
       ),
     ).thenAnswer((_) async {});
   });
@@ -82,6 +85,8 @@ void main() {
     DateTime Function()? clockNow,
     Future<void> Function(Duration duration)? wait,
     _MemoryInProgressRuns? drafts,
+    Future<ZipLevel> Function(DateTime date, {Duration period})?
+    fetchDailyLevel,
   }) {
     return ZipBloc(
       inProgressRuns: drafts ?? _MemoryInProgressRuns(),
@@ -94,6 +99,10 @@ void main() {
       now: now ?? DateTime.utc(2026, 9, 13),
       clockNow: clockNow,
       wait: wait,
+      fetchDailyLevel:
+          fetchDailyLevel ??
+          ((date, {period = PlayPeriod.daily}) async =>
+              DailyPuzzleGenerator.forDate(date, period: period)),
     );
   }
 
@@ -147,6 +156,7 @@ void main() {
           timeSeconds: 12,
           usedHints: false,
           hadMistakes: false,
+          currentStreak: 3,
         ),
       ).called(1);
       await bloc.close();
@@ -158,6 +168,9 @@ void main() {
     build: buildBloc,
     act: (b) => b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 14))),
     expect: () => [
+      isA<ZipState>()
+          .having((s) => s.level.id, 'level.id', 'daily_20260914')
+          .having((s) => s.status, 'status', ZipStatus.initial),
       isA<ZipState>()
           .having((s) => s.level.id, 'level.id', 'daily_20260914')
           .having((s) => s.status, 'status', ZipStatus.ready),
@@ -197,8 +210,24 @@ void main() {
     expect: () => [
       isA<ZipState>()
           .having((s) => s.level.id, 'level.id', 'daily_20260914')
+          .having((s) => s.status, 'status', ZipStatus.initial),
+      isA<ZipState>()
+          .having((s) => s.level.id, 'level.id', 'daily_20260914')
           .having((s) => s.status, 'status', ZipStatus.locked)
           .having((s) => s.finished, 'finished', isTrue),
+    ],
+  );
+
+  blocTest<ZipBloc, ZipState>(
+    'ZipStarted fails when daily level fetch throws',
+    build: () => buildBloc(
+      fetchDailyLevel: (date, {period = PlayPeriod.daily}) async {
+        throw StateError('backend down');
+      },
+    ),
+    act: (b) => b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13))),
+    expect: () => [
+      isA<ZipState>().having((s) => s.status, 'status', ZipStatus.failed),
     ],
   );
 
@@ -264,6 +293,8 @@ void main() {
         analytics: analytics,
         now: DateTime(2026, 9, 20, 14, 31, 40),
         playPeriod: PlayPeriod.minute,
+        fetchDailyLevel: (date, {period = PlayPeriod.daily}) async =>
+            DailyPuzzleGenerator.forDate(date, period: period),
       );
     },
     expect: () => <ZipState>[],

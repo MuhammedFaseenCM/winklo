@@ -189,6 +189,7 @@ void main() {
         timeSeconds: any(named: 'timeSeconds'),
         usedHints: any(named: 'usedHints'),
         hadMistakes: any(named: 'hadMistakes'),
+        currentStreak: any(named: 'currentStreak'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -440,6 +441,7 @@ void main() {
           timeSeconds: 12,
           usedHints: false,
           hadMistakes: false,
+          currentStreak: 3,
         ),
       ).called(1);
       verify(

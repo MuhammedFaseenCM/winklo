@@ -93,6 +93,9 @@ def main() -> int:
       "shortDescription": _read("short_description.txt"),
       "fullDescription": _read("full_description.txt"),
   }
+  video_path = METADATA / "video.txt"
+  if video_path.is_file():
+    listing["video"] = video_path.read_text(encoding="utf-8").strip()
   _execute_with_retry(
       service.edits().listings().update(
           packageName=PACKAGE_NAME,
@@ -102,6 +105,8 @@ def main() -> int:
       )
   )
   print(f"Updated {LANGUAGE} listing: {listing['title']}")
+  if "video" in listing:
+    print(f"Promo video: {listing['video']}")
 
   icon = IMAGES / "icon.png"
   feature = IMAGES / "featureGraphic.png"

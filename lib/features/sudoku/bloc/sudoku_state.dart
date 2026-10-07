@@ -13,6 +13,7 @@ enum SudokuStatus {
   submitting,
   navigating,
   locked,
+  failed,
 }
 
 @freezed
@@ -39,6 +40,7 @@ sealed class SudokuState with _$SudokuState {
     @Default(<int>{}) Set<int> unitFlashIndices,
     @Default(<String>{}) Set<String> celebratedUnitIds,
     @Default(false) bool finished,
+    String? errorMessage,
     int? points,
     int? timeSeconds,
     bool? improved,

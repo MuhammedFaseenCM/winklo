@@ -4,12 +4,14 @@ import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
+import 'package:winklo/domain/repositories/zip_level_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/features/home/cubit/home_cubit.dart';
 import 'package:winklo/features/home/cubit/home_state.dart';
+import 'package:winklo/features/zip/logic/daily_puzzle_generator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -25,6 +27,8 @@ class _MockCheckAppUpdate extends Mock implements CheckAppUpdate {}
 
 class _MockAppUpdateRepository extends Mock implements AppUpdateRepository {}
 
+class _MockZipLevelRepository extends Mock implements ZipLevelRepository {}
+
 void main() {
   late _MockGetBestPoints pts;
   late _MockGetBestTimeSeconds time;
@@ -32,6 +36,12 @@ void main() {
   late MockAnalyticsRepository analytics;
   late _MockCheckAppUpdate checkAppUpdate;
   late _MockAppUpdateRepository appUpdateRepository;
+  late _MockZipLevelRepository zipLevels;
+
+  setUpAll(() {
+    registerFallbackValue(Duration.zero);
+    registerFallbackValue(DateTime(2026, 9, 13));
+  });
 
   setUp(() {
     pts = _MockGetBestPoints();
@@ -40,6 +50,7 @@ void main() {
     analytics = MockAnalyticsRepository();
     checkAppUpdate = _MockCheckAppUpdate();
     appUpdateRepository = _MockAppUpdateRepository();
+    zipLevels = _MockZipLevelRepository();
     stubAnalytics(analytics);
     when(
       () => checkAppUpdate(),
@@ -47,6 +58,14 @@ void main() {
     when(
       () => appUpdateRepository.openStore(any()),
     ).thenAnswer((_) async => true);
+    when(
+      () => zipLevels.fetchDailyLevel(any(), period: any(named: 'period')),
+    ).thenAnswer((inv) async {
+      final date = inv.positionalArguments[0] as DateTime;
+      final period =
+          inv.namedArguments[#period] as Duration? ?? PlayPeriod.daily;
+      return DailyPuzzleGenerator.forDate(date, period: period);
+    });
   });
 
   HomeCubit buildCubit({
@@ -60,6 +79,7 @@ void main() {
       analytics: analytics,
       checkAppUpdate: checkAppUpdate,
       appUpdateRepository: appUpdateRepository,
+      zipLevelRepository: zipLevels,
       now: now ?? DateTime.utc(2026, 9, 13),
       playPeriod: playPeriod,
     );

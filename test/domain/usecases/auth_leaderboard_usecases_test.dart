@@ -98,6 +98,7 @@ void main() {
           timeSeconds: 42,
           usedHints: false,
           hadMistakes: false,
+          currentStreak: 4,
         ),
       ).thenAnswer((_) async {});
 
@@ -106,6 +107,7 @@ void main() {
         timeSeconds: 42,
         usedHints: false,
         hadMistakes: false,
+        currentStreak: 4,
       );
       verify(
         () => repo.submitBestTime(
@@ -113,6 +115,7 @@ void main() {
           timeSeconds: 42,
           usedHints: false,
           hadMistakes: false,
+          currentStreak: 4,
         ),
       ).called(1);
     });

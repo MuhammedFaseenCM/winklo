@@ -6,10 +6,7 @@ Start at 1. Fill every cell. Finish on the last number. Move up, down, left, or 
 PATH WORDS
 Trace every word across the grid. Lift your finger anytime and keep going from the last cell. A new puzzle each day.
 
-WORD MATCH
-Match related words against the clock.
-
-CATEGORY RACE
-Name as many words as you can in a category.
+SUDOKU
+Fill every cell with 1–6. No repeats in any row, column, or region. A new puzzle each day.
 
 Keep a streak, beat your best time, and come back tomorrow for a new puzzle.

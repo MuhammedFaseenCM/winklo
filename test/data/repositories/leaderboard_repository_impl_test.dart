@@ -45,7 +45,7 @@ void main() {
       expect(entries.single.avatarId, 'preset_03');
     });
 
-    test('parses usedHints and hadMistakes', () {
+    test('parses usedHints, hadMistakes, and currentStreak', () {
       final entries = mapLeaderboardRows([
         (
           id: 'a',
@@ -54,14 +54,17 @@ void main() {
             'displayName': 'Ada',
             'usedHints': false,
             'hadMistakes': true,
+            'currentStreak': 7,
           },
         ),
         (id: 'b', data: {'timeSeconds': 15, 'displayName': 'Bob'}),
       ]);
       expect(entries[0].usedHints, isFalse);
       expect(entries[0].hadMistakes, isTrue);
+      expect(entries[0].currentStreak, 7);
       expect(entries[1].usedHints, isNull);
       expect(entries[1].hadMistakes, isNull);
+      expect(entries[1].currentStreak, isNull);
     });
 
     test('falls back to Player when displayName missing', () {
@@ -132,6 +135,7 @@ void main() {
           timeSeconds: 10,
           usedHints: false,
           hadMistakes: false,
+          currentStreak: 2,
         ),
         throwsA(isA<Failure>()),
       );
@@ -146,6 +150,7 @@ void main() {
           timeSeconds: 0,
           usedHints: false,
           hadMistakes: false,
+          currentStreak: 2,
         ),
         throwsA(isA<Failure>()),
       );

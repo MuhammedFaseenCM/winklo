@@ -26,12 +26,14 @@ class RecordAppOpen {
 
     final resolvedPlatform = platform ?? 'other';
     try {
-      await _activity.recordOpen(
+      final wrote = await _activity.recordOpen(
         uid: user.uid,
         dayId: leaderboardDayId(at),
         platform: resolvedPlatform,
         at: at,
       );
+      // Skip throttle + FA when Firestore was unavailable (retry on next ping).
+      if (!wrote) return;
       await _activity.markRecorded(at);
       await _analytics.logAppOpen(platform: resolvedPlatform);
     } catch (_) {

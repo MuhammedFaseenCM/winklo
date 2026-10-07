@@ -33,16 +33,17 @@ void main() {
       FirebaseBootstrap.isReady = wasReady;
     });
 
-    test('recordOpen no-ops when Firebase is not ready', () async {
+    test('recordOpen returns false when Firebase is not ready', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final repo = ActivityRepositoryImpl(prefs);
-      await repo.recordOpen(
+      final wrote = await repo.recordOpen(
         uid: 'u1',
         dayId: '2026-10-05',
         platform: 'android',
         at: DateTime(2026, 10, 5),
       );
+      expect(wrote, isFalse);
     });
   });
 }

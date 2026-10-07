@@ -63,7 +63,9 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
   }
 
   bool _ensureGame(ZipState state) {
-    if (state.status == ZipStatus.initial) return false;
+    if (state.status == ZipStatus.initial || state.status == ZipStatus.failed) {
+      return false;
+    }
     final current = _game;
     if (current != null && identical(current.level, state.level)) return false;
     final remaining = _hintQuota.remaining(GameIds.zip);
@@ -93,7 +95,9 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
 
   void _maybeShowTutorial(ZipState state) {
     if (_tutorialPrompted) return;
-    if (state.status == ZipStatus.initial) return;
+    if (state.status == ZipStatus.initial || state.status == ZipStatus.failed) {
+      return;
+    }
     if (state.status == ZipStatus.locked || state.finished) return;
     _tutorialPrompted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -182,14 +186,16 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
         ],
         child: BlocBuilder<ZipBloc, ZipState>(
           builder: (context, state) {
-            if (state.status != ZipStatus.initial) {
+            if (state.status != ZipStatus.initial &&
+                state.status != ZipStatus.failed) {
               _ensureGame(state);
             }
             final finished = state.finished;
             final game = _game;
             final isReview = state.status == ZipStatus.locked;
             final isLoading = state.status == ZipStatus.initial;
-            final canPlay = !isLoading && !finished && !isReview;
+            final isFailed = state.status == ZipStatus.failed;
+            final canPlay = !isLoading && !isFailed && !finished && !isReview;
             final canUndo = canPlay && (game?.path.isNotEmpty ?? false);
             final canHint = canPlay && (game?.canHint ?? false);
 
@@ -243,6 +249,38 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                           child: Semantics(
                             label: AppStrings.zipLoading,
                             child: const ZipShimmer(),
+                          ),
+                        )
+                      else if (isFailed)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    AppStrings.zipFailed,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: ZipColors.onInk,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  FilledButton.icon(
+                                    onPressed: () => _bloc.add(
+                                      ZipEvent.started(date: widget.date),
+                                    ),
+                                    icon: const Icon(Icons.refresh_rounded),
+                                    label: const Text(AppStrings.retry),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         )
                       else ...[

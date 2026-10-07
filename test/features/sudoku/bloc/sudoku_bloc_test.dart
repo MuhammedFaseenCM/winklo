@@ -164,6 +164,22 @@ SudokuPuzzle _twoEmptyPuzzle({required DateTime day}) {
   );
 }
 
+/// Extra empties in the same row, column, and box as index 1 so placing
+/// one correct digit there does not complete any unit.
+SudokuPuzzle _noUnitCompletePuzzle({required DateTime day}) {
+  final puzzle = _almostSolvedPuzzle(day: day);
+  final given = List<int>.from(puzzle.given);
+  given[2] = 0; // (0,2) same row + box
+  given[7] = 0; // (1,1) same column + box
+  return SudokuPuzzle(
+    id: puzzle.id,
+    dateId: puzzle.dateId,
+    given: given,
+    solution: puzzle.solution,
+    difficulty: puzzle.difficulty,
+  );
+}
+
 void main() {
   late _MockSubmitScore submitScore;
   late _MockSubmitLeaderboardTime submitLeaderboardTime;
@@ -231,6 +247,7 @@ void main() {
         timeSeconds: any(named: 'timeSeconds'),
         usedHints: any(named: 'usedHints'),
         hadMistakes: any(named: 'hadMistakes'),
+        currentStreak: any(named: 'currentStreak'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -364,6 +381,7 @@ void main() {
           timeSeconds: 10,
           usedHints: false,
           hadMistakes: false,
+          currentStreak: 1,
         ),
       ).called(1);
       verify(

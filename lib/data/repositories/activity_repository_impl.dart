@@ -32,14 +32,14 @@ class ActivityRepositoryImpl implements ActivityRepository {
   }
 
   @override
-  Future<void> recordOpen({
+  Future<bool> recordOpen({
     required String uid,
     required String dayId,
     required String platform,
     required DateTime at,
   }) async {
     final db = _db;
-    if (db == null) return;
+    if (db == null) return false;
     final ref = db
         .collection('daily_activity')
         .doc(dayId)
@@ -60,6 +60,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
           'platform': platform,
         });
       }
+      return true;
     } catch (e, st) {
       debugPrint('Activity recordOpen failed: $e');
       debugPrint('$st');

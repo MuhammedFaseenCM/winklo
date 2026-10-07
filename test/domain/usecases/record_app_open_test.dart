@@ -31,9 +31,10 @@ void main() {
         platform: any(named: 'platform'),
         at: any(named: 'at'),
       ),
+    ).thenAnswer((_) async => true);
+    when(
+      () => analytics.logAppOpen(platform: any(named: 'platform')),
     ).thenAnswer((_) async {});
-    when(() => analytics.logAppOpen(platform: any(named: 'platform')))
-        .thenAnswer((_) async {});
   });
 
   test('no-ops when signed out', () async {
@@ -50,9 +51,9 @@ void main() {
   });
 
   test('records open and analytics when signed in', () async {
-    when(() => auth.currentUser).thenReturn(
-      const AppUser(uid: 'u1', displayName: 'A'),
-    );
+    when(
+      () => auth.currentUser,
+    ).thenReturn(const AppUser(uid: 'u1', displayName: 'A'));
     when(() => activity.lastRecordedAt()).thenReturn(null);
 
     final now = DateTime(2026, 10, 5, 12, 0);
@@ -71,12 +72,13 @@ void main() {
   });
 
   test('skips when within 5 minute throttle', () async {
-    when(() => auth.currentUser).thenReturn(
-      const AppUser(uid: 'u1', displayName: 'A'),
-    );
+    when(
+      () => auth.currentUser,
+    ).thenReturn(const AppUser(uid: 'u1', displayName: 'A'));
     final now = DateTime(2026, 10, 5, 12, 0);
-    when(() => activity.lastRecordedAt())
-        .thenReturn(now.subtract(const Duration(minutes: 2)));
+    when(
+      () => activity.lastRecordedAt(),
+    ).thenReturn(now.subtract(const Duration(minutes: 2)));
 
     await usecase(now: now, platform: 'android');
 
@@ -88,5 +90,27 @@ void main() {
         at: any(named: 'at'),
       ),
     );
+    verifyNever(() => activity.markRecorded(any()));
+    verifyNever(() => analytics.logAppOpen(platform: any(named: 'platform')));
+  });
+
+  test('does not throttle or log FA when Firestore write is skipped', () async {
+    when(
+      () => auth.currentUser,
+    ).thenReturn(const AppUser(uid: 'u1', displayName: 'A'));
+    when(() => activity.lastRecordedAt()).thenReturn(null);
+    when(
+      () => activity.recordOpen(
+        uid: any(named: 'uid'),
+        dayId: any(named: 'dayId'),
+        platform: any(named: 'platform'),
+        at: any(named: 'at'),
+      ),
+    ).thenAnswer((_) async => false);
+
+    await usecase(now: DateTime(2026, 10, 5, 12), platform: 'ios');
+
+    verifyNever(() => activity.markRecorded(any()));
+    verifyNever(() => analytics.logAppOpen(platform: any(named: 'platform')));
   });
 }

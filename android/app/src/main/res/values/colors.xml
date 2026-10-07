@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#0F172A</color>
+    <!-- Notification small-icon accent (ZipColors.ember). -->
+    <color name="notification_accent">#FF6B2C</color>
 </resources>

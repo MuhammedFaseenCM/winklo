@@ -6,16 +6,21 @@ import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/features/leaderboard/view/widgets/leaderboard_row.dart';
 
-LeaderboardEntry entry(int rank, {bool? usedHints, bool? hadMistakes}) =>
-    LeaderboardEntry(
-      uid: 'u$rank',
-      displayName: 'Player $rank',
-      timeSeconds: 30,
-      updatedAt: DateTime.utc(2026, 9, 24),
-      rank: rank,
-      usedHints: usedHints,
-      hadMistakes: hadMistakes,
-    );
+LeaderboardEntry entry(
+  int rank, {
+  bool? usedHints,
+  bool? hadMistakes,
+  int? currentStreak,
+}) => LeaderboardEntry(
+  uid: 'u$rank',
+  displayName: 'Player $rank',
+  timeSeconds: 30,
+  updatedAt: DateTime.utc(2026, 9, 24),
+  rank: rank,
+  usedHints: usedHints,
+  hadMistakes: hadMistakes,
+  currentStreak: currentStreak,
+);
 
 void main() {
   testWidgets('rank 1 shows gold medal asset, not numeral', (tester) async {
@@ -119,7 +124,12 @@ void main() {
         theme: buildAppTheme(),
         home: Scaffold(
           body: LeaderboardRow(
-            entry: entry(4, usedHints: false, hadMistakes: false),
+            entry: entry(
+              4,
+              usedHints: false,
+              hadMistakes: false,
+              currentStreak: 5,
+            ),
             timeLabel: '0:40',
             isYou: false,
             showCleanRunChips: false,
@@ -130,6 +140,43 @@ void main() {
     );
     expect(find.text(AppStrings.leaderboardNoHintChip), findsNothing);
     expect(find.text(AppStrings.leaderboardNoMistakesChip), findsNothing);
+    expect(find.text(AppStrings.streakLabel(5)), findsNothing);
+  });
+
+  testWidgets('streak chip shows when currentStreak >= 2', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: LeaderboardRow(
+            entry: entry(4, currentStreak: 3),
+            timeLabel: '0:40',
+            isYou: false,
+            showCleanRunChips: true,
+            gameId: GameIds.zip,
+          ),
+        ),
+      ),
+    );
+    expect(find.text(AppStrings.streakLabel(3)), findsOneWidget);
+  });
+
+  testWidgets('streak chip hidden when currentStreak is 1', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: LeaderboardRow(
+            entry: entry(4, currentStreak: 1),
+            timeLabel: '0:40',
+            isYou: false,
+            showCleanRunChips: true,
+            gameId: GameIds.zip,
+          ),
+        ),
+      ),
+    );
+    expect(find.text(AppStrings.streakLabel(1)), findsNothing);
   });
 
   testWidgets('long name keeps full width; chips sit on second line', (

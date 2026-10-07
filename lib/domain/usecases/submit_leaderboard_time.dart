@@ -9,10 +9,12 @@ class SubmitLeaderboardTime {
     required int timeSeconds,
     required bool usedHints,
     required bool hadMistakes,
+    required int currentStreak,
   }) => _repo.submitBestTime(
     gameId: gameId,
     timeSeconds: timeSeconds,
     usedHints: usedHints,
     hadMistakes: hadMistakes,
+    currentStreak: currentStreak,
   );
 }
