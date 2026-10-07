@@ -1667,7 +1667,7 @@ void main() {
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
-    'failed word attempt plays reject',
+    'failed word attempt stays silent for reject',
     build: () {
       when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
@@ -1686,7 +1686,7 @@ void main() {
     },
     verify: (b) {
       verify(() => b.sfx!.play(SfxId.tap)).called(1);
-      verify(() => b.sfx!.play(SfxId.reject)).called(1);
+      verifyNever(() => b.sfx!.play(SfxId.reject));
       verifyNever(() => b.sfx!.play(SfxId.success));
       verifyNever(() => b.sfx!.play(SfxId.clear));
     },

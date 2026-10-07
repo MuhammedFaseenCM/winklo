@@ -134,6 +134,23 @@ SudokuPuzzle _noCoachPuzzle({required DateTime day}) {
   );
 }
 
+
+/// Extra empties in the same row, column, and box as index 1 so placing
+/// one correct digit there does not complete any unit.
+SudokuPuzzle _noUnitCompletePuzzle({required DateTime day}) {
+  final puzzle = _almostSolvedPuzzle(day: day);
+  final given = List<int>.from(puzzle.given);
+  given[2] = 0; // (0,2) same row + box
+  given[7] = 0; // (1,1) same column + box
+  return SudokuPuzzle(
+    id: puzzle.id,
+    dateId: puzzle.dateId,
+    given: given,
+    solution: puzzle.solution,
+    difficulty: puzzle.difficulty,
+  );
+}
+
 SudokuPuzzle _twoEmptyPuzzle({required DateTime day}) {
   final puzzle = _almostSolvedPuzzle(day: day);
   final given = List<int>.from(puzzle.given);
@@ -597,7 +614,7 @@ void main() {
   );
 
   blocTest<SudokuBloc, SudokuState>(
-    'selecting a cell plays tap',
+    'selecting a cell stays silent',
     build: () => buildBloc(sfx: stubSfx()),
     act: (bloc) async {
       bloc.add(SudokuEvent.started(date: day));
@@ -606,7 +623,7 @@ void main() {
       await bloc.stream.firstWhere((s) => s.selectedIndex == 1);
     },
     verify: (bloc) {
-      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.tap));
       verifyNever(() => bloc.sfx!.play(SfxId.success));
       verifyNever(() => bloc.sfx!.play(SfxId.reject));
       verifyNever(() => bloc.sfx!.play(SfxId.clear));
@@ -614,7 +631,32 @@ void main() {
   );
 
   blocTest<SudokuBloc, SudokuState>(
-    'clean digit place plays success',
+    'digit place that does not complete a unit stays silent',
+    build: () => buildBloc(
+      generatePuzzle: ({required DateTime day}) =>
+          _noUnitCompletePuzzle(day: day),
+      sfx: stubSfx(),
+    ),
+    act: (bloc) async {
+      bloc.add(SudokuEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+      bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+      bloc.add(const SudokuEvent.digitTapped(2));
+      await bloc.stream.firstWhere((s) => s.grid[1] == 2);
+    },
+    verify: (bloc) {
+      expect(bloc.state.errorIndices, isEmpty);
+      expect(bloc.state.status, SudokuStatus.ready);
+      expect(bloc.state.celebratedUnitIds, isEmpty);
+      verifyNever(() => bloc.sfx!.play(SfxId.tap));
+      verifyNever(() => bloc.sfx!.play(SfxId.success));
+      verifyNever(() => bloc.sfx!.play(SfxId.reject));
+      verifyNever(() => bloc.sfx!.play(SfxId.clear));
+    },
+  );
+
+  blocTest<SudokuBloc, SudokuState>(
+    'completing a unit plays success',
     build: () => buildBloc(
       generatePuzzle: ({required DateTime day}) => _twoEmptyPuzzle(day: day),
       sfx: stubSfx(),
@@ -629,15 +671,16 @@ void main() {
     verify: (bloc) {
       expect(bloc.state.errorIndices, isEmpty);
       expect(bloc.state.status, SudokuStatus.ready);
-      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
+      expect(bloc.state.celebratedUnitIds, isNotEmpty);
       verify(() => bloc.sfx!.play(SfxId.success)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.tap));
       verifyNever(() => bloc.sfx!.play(SfxId.reject));
       verifyNever(() => bloc.sfx!.play(SfxId.clear));
     },
   );
 
   blocTest<SudokuBloc, SudokuState>(
-    'erroneous digit place plays reject',
+    'erroneous digit place stays silent',
     build: () => buildBloc(sfx: stubSfx()),
     act: (bloc) async {
       bloc.add(SudokuEvent.started(date: day));
@@ -648,15 +691,15 @@ void main() {
     },
     verify: (bloc) {
       expect(bloc.state.errorIndices, {1});
-      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
-      verify(() => bloc.sfx!.play(SfxId.reject)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.tap));
+      verifyNever(() => bloc.sfx!.play(SfxId.reject));
       verifyNever(() => bloc.sfx!.play(SfxId.success));
       verifyNever(() => bloc.sfx!.play(SfxId.clear));
     },
   );
 
   blocTest<SudokuBloc, SudokuState>(
-    'solving the board plays success then clear once',
+    'solving the board plays success then clear',
     build: () => buildBloc(sfx: stubSfx()),
     act: (bloc) async {
       bloc.add(SudokuEvent.started(date: day));
@@ -666,9 +709,9 @@ void main() {
       await bloc.stream.firstWhere((s) => s.status == SudokuStatus.navigating);
     },
     verify: (bloc) {
-      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
       verify(() => bloc.sfx!.play(SfxId.success)).called(1);
       verify(() => bloc.sfx!.play(SfxId.clear)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.tap));
       verifyNever(() => bloc.sfx!.play(SfxId.reject));
     },
   );
@@ -685,7 +728,7 @@ void main() {
       await bloc.stream.firstWhere((s) => s.notes[1].contains(3));
     },
     verify: (bloc) {
-      verify(() => bloc.sfx!.play(SfxId.tap)).called(1);
+      verifyNever(() => bloc.sfx!.play(SfxId.tap));
       verifyNever(() => bloc.sfx!.play(SfxId.success));
       verifyNever(() => bloc.sfx!.play(SfxId.reject));
       verifyNever(() => bloc.sfx!.play(SfxId.clear));

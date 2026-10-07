@@ -45,7 +45,7 @@ void main() {
     expect(game.path, const [Cell(0, 0), Cell(0, 1)]);
   });
 
-  test('an illegal extend plays reject', () {
+  test('an illegal extend stays silent', () {
     final (:game, :played, events: _) = harness(
       walls: const [Wall(Cell(0, 0), Cell(0, 1))],
     );
@@ -54,7 +54,7 @@ void main() {
     played.clear();
     game.extendTo(const Cell(0, 1));
 
-    expect(played, [SfxId.reject]);
+    expect(played, isEmpty);
     expect(game.path, const [Cell(0, 0)]);
   });
 
@@ -81,12 +81,12 @@ void main() {
     expect(events, ['tap', 'tap', 'tap', 'tap', 'clear', 'win']);
   });
 
-  test('starting away from 1 plays reject', () {
+  test('starting away from 1 stays silent', () {
     final (:game, :played, events: _) = harness();
 
     expect(game.beginStrokeAt(const Cell(1, 0)), isFalse);
 
-    expect(played, [SfxId.reject]);
+    expect(played, isEmpty);
     expect(game.path, isEmpty);
   });
 

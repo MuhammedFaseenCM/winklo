@@ -220,12 +220,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
 
     final before = path.length;
     final extended = _validator.tryExtend(path: path, candidate: cell);
-    if (extended == null) {
-      // Drag sampling stays on the tip; that is not an illegal move.
-      if (path.isNotEmpty && cell == path.last) return;
-      onSfx?.call(SfxId.reject);
-      return;
-    }
+    if (extended == null) return;
 
     path
       ..clear()
@@ -289,7 +284,6 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
         return true;
       }
       onRuleTip?.call(ZipRuleTip.startAtOne);
-      onSfx?.call(SfxId.reject);
       return false;
     }
 

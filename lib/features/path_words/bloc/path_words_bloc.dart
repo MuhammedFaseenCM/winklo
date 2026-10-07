@@ -441,8 +441,6 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
 
     if (stroke.targetId != null) {
       unawaited(sfx?.play(SfxId.success) ?? Future<void>.value());
-    } else if (failedAttempt) {
-      unawaited(sfx?.play(SfxId.reject) ?? Future<void>.value());
     }
     if (updatedCompleted.length >= puzzle.targets.length) {
       unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());

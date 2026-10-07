@@ -204,7 +204,6 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     final index = puzzle.indexOf(event.cell.row, event.cell.col);
     if (index < 0 || index >= puzzle.cellCount) return;
     emit(state.copyWith(selectedIndex: index, hintFlashIndex: null));
-    unawaited(sfx?.play(SfxId.tap) ?? Future<void>.value());
   }
 
   Future<void> _onDigitTapped(
@@ -278,10 +277,9 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       ),
     );
 
-    unawaited(
-      sfx?.play(errors.isEmpty ? SfxId.success : SfxId.reject) ??
-          Future<void>.value(),
-    );
+    if (unitFlash.unitIds.isNotEmpty) {
+      unawaited(sfx?.play(SfxId.success) ?? Future<void>.value());
+    }
 
     if (SudokuRules.isSolved(result.grid, puzzle.solution)) {
       await _finish(emit);
