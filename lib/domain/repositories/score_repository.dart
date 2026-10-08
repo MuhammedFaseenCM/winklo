@@ -8,9 +8,14 @@ abstract class ScoreRepository {
   /// (legacy clears, untimed modes).
   ClearMeta? getClearMeta(String modeKey);
 
+  /// Game-specific encoding of the board of the run behind
+  /// [getBestTimeSeconds] (Zip: the drawn path); null when unknown.
+  String? getClearBoard(String modeKey);
+
   /// Improve-only. When both [usedHints] and [hadMistakes] are given with a
   /// [timeSeconds], they are stored as [ClearMeta] if this submit sets a new
-  /// best time or the best time has no meta yet.
+  /// best time or the best time has no meta yet. [board] follows the same
+  /// rule.
   ///
   /// Returns whether points or time improved.
   Future<bool> submitScore({
@@ -19,11 +24,14 @@ abstract class ScoreRepository {
     int? timeSeconds,
     bool? usedHints,
     bool? hadMistakes,
+    String? board,
   });
 
   /// Improve-only restore from another copy (e.g. remote progress): points
   /// max, time min. [meta] follows the time: it is stored when [timeSeconds]
-  /// becomes the best or equals a best that has no meta yet.
+  /// becomes the best or equals a best that has no meta yet. [board] is
+  /// stored when [timeSeconds] becomes or equals the best (the restored copy
+  /// wins ties).
   ///
   /// Returns whether anything local changed.
   Future<bool> restoreBest({
@@ -31,5 +39,6 @@ abstract class ScoreRepository {
     int? points,
     int? timeSeconds,
     ClearMeta? meta,
+    String? board,
   });
 }

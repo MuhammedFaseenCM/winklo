@@ -20,6 +20,7 @@ void main() {
     flagsKnown: false,
     hintsUsed: 2,
     clearedAt: clearedAt,
+    board: '0,0;0,1',
   );
 
   const fullStreak = GameStreak(
@@ -102,6 +103,24 @@ void main() {
       expect(payload.containsKey('timeSeconds'), isFalse);
       expect(payload.containsKey('points'), isFalse);
     });
+  });
+
+  test('gameDayToFirestore leaves out a board longer than the rules allow', () {
+    final payload = gameDayToFirestore(
+      fullDay.copyWith(board: 'x' * (maxBoardLength + 1)),
+    );
+    expect(payload.containsKey('board'), isFalse);
+  });
+
+  test('gameDayFromFirestore reads a malformed board as absent', () {
+    for (final bad in [42, '', 'x' * (maxBoardLength + 1)]) {
+      final day = gameDayFromFirestore(
+        {'board': bad, 'timeSeconds': 10},
+        gameId: GameIds.zip,
+        playId: '20261007',
+      );
+      expect(day?.board, isNull, reason: '$bad');
+    }
   });
 
   group('gameDayFromFirestore', () {

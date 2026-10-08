@@ -15,6 +15,7 @@ GameDayRecord _day({
   bool? flagsKnown,
   int hintsUsed = 0,
   DateTime? clearedAt,
+  String? board,
   String gameId = GameIds.zip,
   String playId = '20261007',
 }) => GameDayRecord(
@@ -27,6 +28,7 @@ GameDayRecord _day({
   flagsKnown: flagsKnown,
   hintsUsed: hintsUsed,
   clearedAt: clearedAt,
+  board: board,
 );
 
 GameStreak _streak({
@@ -234,6 +236,42 @@ void main() {
       );
       expect(merged.gameId, GameIds.sudoku);
       expect(merged.playId, '20261006');
+    });
+
+    test('board comes from the faster side', () {
+      final merged = mergeGameDay(
+        _day(time: 30, board: 'local'),
+        _day(time: 20, board: 'remote'),
+      );
+      expect(merged.board, 'remote');
+
+      final kept = mergeGameDay(
+        _day(time: 10, board: 'local'),
+        _day(time: 20, board: 'remote'),
+      );
+      expect(kept.board, 'local');
+    });
+
+    test('faster side without a board drops the slower board', () {
+      final merged = mergeGameDay(
+        _day(time: 10),
+        _day(time: 20, board: 'remote'),
+      );
+      expect(merged.board, isNull);
+    });
+
+    test('time tie prefers the remote board, then local', () {
+      expect(
+        mergeGameDay(
+          _day(time: 10, board: 'local'),
+          _day(time: 10, board: 'remote'),
+        ).board,
+        'remote',
+      );
+      expect(
+        mergeGameDay(_day(time: 10, board: 'local'), _day(time: 10)).board,
+        'local',
+      );
     });
 
     test('is idempotent', () {
@@ -550,6 +588,7 @@ void main() {
         base.copyWith(hadMistakes: true),
         base.copyWith(flagsKnown: false),
         base.copyWith(hintsUsed: 2),
+        base.copyWith(board: '0,0'),
         _day(
           points: 900,
           usedHints: false,

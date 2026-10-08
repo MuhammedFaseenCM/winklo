@@ -13,7 +13,10 @@ final _playIdPattern = RegExp(r'^[0-9]{8}([0-9]{4})?$');
 ///
 /// Time = min, points = max, hintsUsed = max, clearedAt = earliest. Clean-run
 /// flags come from the side whose time won; on a tie the side with
-/// `flagsKnown == true` wins, then [local]. Ids are taken from [local].
+/// `flagsKnown == true` wins, then [local]. The board also follows the time;
+/// on a tie [remote]'s wins when it has one (the rules only let a stored board
+/// change with a better time, so the first board pushed stays). Ids are taken
+/// from [local].
 GameDayRecord mergeGameDay(GameDayRecord local, GameDayRecord? remote) {
   if (remote == null) return local;
 
@@ -30,7 +33,18 @@ GameDayRecord mergeGameDay(GameDayRecord local, GameDayRecord? remote) {
         ? local.hintsUsed
         : remote.hintsUsed,
     clearedAt: _earliest(local.clearedAt, remote.clearedAt),
+    board: _boardWinner(local, remote).board,
   );
+}
+
+GameDayRecord _boardWinner(GameDayRecord local, GameDayRecord remote) {
+  final lt = local.timeSeconds;
+  final rt = remote.timeSeconds;
+  if (lt == null && rt == null) return local;
+  if (lt == null) return remote;
+  if (rt == null) return local;
+  if (lt != rt) return lt < rt ? local : remote;
+  return remote.board == null ? local : remote;
 }
 
 GameDayRecord _flagsWinner(GameDayRecord local, GameDayRecord remote) {
@@ -158,6 +172,7 @@ String daySignature(GameDayRecord record) {
     'm=${_boolSig(record.hadMistakes)}',
     'k=${_boolSig(record.flagsKnown)}',
     'u=${record.hintsUsed}',
+    'b=${record.board ?? '-'}',
   ].join('|');
 }
 

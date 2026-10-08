@@ -308,4 +308,110 @@ void main() {
       expect(calls, 0);
     });
   });
+
+  group('clear board', () {
+    test('is stored with the first clear and kept on a worse time', () async {
+      final (repo, _) = await build();
+
+      await repo.submitScore(
+        modeKey: 'zip_x',
+        points: 900,
+        timeSeconds: 20,
+        board: 'a',
+      );
+      await repo.submitScore(
+        modeKey: 'zip_x',
+        points: 800,
+        timeSeconds: 30,
+        board: 'b',
+      );
+
+      expect(repo.getClearBoard('zip_x'), 'a');
+    });
+
+    test(
+      'follows a better time and is dropped by one without a board',
+      () async {
+        final (repo, _) = await build();
+        await repo.submitScore(
+          modeKey: 'zip_x',
+          points: 900,
+          timeSeconds: 20,
+          board: 'a',
+        );
+
+        await repo.submitScore(
+          modeKey: 'zip_x',
+          points: 950,
+          timeSeconds: 10,
+          board: 'b',
+        );
+        expect(repo.getClearBoard('zip_x'), 'b');
+
+        await repo.submitScore(modeKey: 'zip_x', points: 990, timeSeconds: 5);
+        expect(repo.getClearBoard('zip_x'), isNull);
+      },
+    );
+
+    test('a board-only submit signals a change', () async {
+      SharedPreferences.setMockInitialValues({'best_time_zip_x': 20});
+      final prefs = await SharedPreferences.getInstance();
+      var changes = 0;
+      final repo = ScoreRepositoryImpl(prefs, onChanged: () => changes++);
+
+      await repo.submitScore(
+        modeKey: 'zip_x',
+        points: 0,
+        timeSeconds: 20,
+        board: 'a',
+      );
+
+      expect(repo.getClearBoard('zip_x'), 'a');
+      expect(changes, 1);
+    });
+
+    test('restore fills a missing board for the same time', () async {
+      final (repo, _) = await build({'best_time_zip_x': 20});
+
+      final changed = await repo.restoreBest(
+        modeKey: 'zip_x',
+        timeSeconds: 20,
+        board: 'remote',
+      );
+
+      expect(changed, isTrue);
+      expect(repo.getClearBoard('zip_x'), 'remote');
+    });
+
+    test('restore replaces the board on a time tie', () async {
+      final (repo, _) = await build({
+        'best_time_zip_x': 20,
+        'clear_board_zip_x': 'local',
+      });
+
+      await repo.restoreBest(
+        modeKey: 'zip_x',
+        timeSeconds: 20,
+        board: 'remote',
+      );
+
+      expect(repo.getClearBoard('zip_x'), 'remote');
+    });
+
+    test('restore of a worse time keeps the local board', () async {
+      final (repo, _) = await build({
+        'best_time_zip_x': 20,
+        'clear_board_zip_x': 'local',
+      });
+
+      final changed = await repo.restoreBest(
+        modeKey: 'zip_x',
+        timeSeconds: 30,
+        board: 'remote',
+      );
+
+      expect(changed, isFalse);
+      expect(repo.getClearBoard('zip_x'), 'local');
+    });
+  });
 }

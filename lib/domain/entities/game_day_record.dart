@@ -13,6 +13,7 @@ class GameDayRecord {
     this.flagsKnown,
     this.hintsUsed = 0,
     this.clearedAt,
+    this.board,
   });
 
   final String gameId;
@@ -38,6 +39,10 @@ class GameDayRecord {
   /// First time the clear reached the remote copy.
   final DateTime? clearedAt;
 
+  /// Game-specific encoding of the board of the run behind [timeSeconds]
+  /// (Zip: the drawn path); null when unknown.
+  final String? board;
+
   bool get cleared => timeSeconds != null;
 
   GameDayRecord copyWith({
@@ -50,6 +55,7 @@ class GameDayRecord {
     bool? flagsKnown,
     int? hintsUsed,
     DateTime? clearedAt,
+    String? board,
   }) {
     return GameDayRecord(
       gameId: gameId ?? this.gameId,
@@ -61,6 +67,7 @@ class GameDayRecord {
       flagsKnown: flagsKnown ?? this.flagsKnown,
       hintsUsed: hintsUsed ?? this.hintsUsed,
       clearedAt: clearedAt ?? this.clearedAt,
+      board: board ?? this.board,
     );
   }
 
@@ -75,7 +82,8 @@ class GameDayRecord {
       other.hadMistakes == hadMistakes &&
       other.flagsKnown == flagsKnown &&
       other.hintsUsed == hintsUsed &&
-      other.clearedAt == clearedAt;
+      other.clearedAt == clearedAt &&
+      other.board == board;
 
   @override
   int get hashCode => Object.hash(
@@ -88,11 +96,13 @@ class GameDayRecord {
     flagsKnown,
     hintsUsed,
     clearedAt,
+    board,
   );
 
   @override
   String toString() =>
       'GameDayRecord($gameId, $playId, time: $timeSeconds, points: $points, '
       'usedHints: $usedHints, hadMistakes: $hadMistakes, '
-      'flagsKnown: $flagsKnown, hintsUsed: $hintsUsed, clearedAt: $clearedAt)';
+      'flagsKnown: $flagsKnown, hintsUsed: $hintsUsed, clearedAt: $clearedAt, '
+      'board: $board)';
 }

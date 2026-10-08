@@ -17,6 +17,9 @@ final _dateIdPattern = RegExp(r'^[0-9]{8}$');
 /// Upper bound the rules accept for `hintsUsed`.
 const _maxHintsUsed = 50;
 
+/// Upper bound the rules accept for the length of `board`.
+const maxBoardLength = 1024;
+
 /// Every key the client may write on `users/{uid}/game_days/{dayKey}`.
 ///
 /// Must match the rules' key whitelist exactly (see the `currentStreak`
@@ -31,6 +34,7 @@ const gameDayFirestoreKeys = {
   'flagsKnown',
   'hintsUsed',
   'clearedAt',
+  'board',
   'updatedAt',
 };
 
@@ -61,6 +65,7 @@ Map<String, dynamic> gameDayToFirestore(GameDayRecord record) {
     'flagsKnown': ?record.flagsKnown,
     'hintsUsed': hintsUsed,
     if (record.clearedAt case final at?) 'clearedAt': Timestamp.fromDate(at),
+    if (record.board case final b? when b.length <= maxBoardLength) 'board': b,
     'updatedAt': FieldValue.serverTimestamp(),
   };
 }
@@ -83,6 +88,7 @@ GameDayRecord? gameDayFromFirestore(
     flagsKnown: _boolOrNull(data['flagsKnown']),
     hintsUsed: _nonNegativeInt(data['hintsUsed']) ?? 0,
     clearedAt: _dateOrNull(data['clearedAt']),
+    board: _boardOrNull(data['board']),
   );
 }
 
@@ -139,6 +145,11 @@ int? _nonNegativeInt(Object? value) {
 }
 
 bool? _boolOrNull(Object? value) => value is bool ? value : null;
+
+String? _boardOrNull(Object? value) =>
+    value is String && value.isNotEmpty && value.length <= maxBoardLength
+    ? value
+    : null;
 
 DateTime? _dateOrNull(Object? value) {
   if (value is Timestamp) return value.toDate();

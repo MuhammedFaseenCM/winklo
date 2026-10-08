@@ -20,6 +20,7 @@ import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
+import '../../../domain/usecases/get_clear_board.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
@@ -118,6 +119,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
       recordDailyClear: context.read<RecordDailyClear>(),
       getBestPoints: context.read<GetBestPoints>(),
       getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
+      getClearBoard: context.read<GetClearBoard>(),
       analytics: context.read<AnalyticsRepository>(),
       inProgressRuns: context.read<InProgressRunRepository>(),
       zipLevelRepository: context.read<ZipLevelRepository>(),

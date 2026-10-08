@@ -67,11 +67,18 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   Future<void> onLoad() async {
     await super.onLoad();
     _layout();
-    if (readOnly && level.solution.isNotEmpty) {
-      path.addAll(level.solution);
-      _won = true;
-      onStatsChanged(path.length, level.maxNumber);
-      return;
+    if (readOnly) {
+      // Review shows the player's own winning path; any valid one wins, so
+      // it often differs from the generator's solution.
+      final review = _validator.isWon(_initialPath)
+          ? _initialPath
+          : level.solution;
+      if (review.isNotEmpty) {
+        path.addAll(review);
+        _won = true;
+        onStatsChanged(path.length, level.maxNumber);
+        return;
+      }
     }
     if (_initialPath.isNotEmpty) {
       path.addAll(_initialPath);

@@ -365,6 +365,47 @@ void main() {
       expect(prefs.getString('sync_day_zip_$_today'), isNotNull);
     });
 
+    test('remote zip board is restored for the review', () async {
+      remoteDays['zip_$_today'] = const GameDayRecord(
+        gameId: 'zip',
+        playId: _today,
+        timeSeconds: 41,
+        points: 800,
+        usedHints: false,
+        hadMistakes: false,
+        flagsKnown: true,
+        board: '0,0;0,1',
+      );
+      await build(initial: {'progress_owner_uid': _uid});
+
+      await sync();
+
+      expect(prefs.getString('clear_board_zip_daily_$_today'), '0,0;0,1');
+      verifyNever(
+        () => remote.saveDay(
+          uid: any(named: 'uid'),
+          record: any(named: 'record'),
+        ),
+      );
+    });
+
+    test('local zip board is pushed with the clear', () async {
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 40,
+          'best_pts_zip_daily_$_today': 800,
+          'clear_meta_zip_daily_$_today':
+              '{"usedHints":false,"hadMistakes":false}',
+          'clear_board_zip_daily_$_today': '1,1;1,0',
+        },
+      );
+
+      await sync();
+
+      expect(savedDays().single.board, '1,1;1,0');
+    });
+
     test('remote legacy flags are not stored as known meta', () async {
       remoteDays['path_words_$_today'] = const GameDayRecord(
         gameId: 'path_words',

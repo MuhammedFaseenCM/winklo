@@ -259,7 +259,7 @@ daily_activity/{yyyy-MM-dd}/users/{uid}
 
 users/{uid}/game_days/{gameId}_{playId}       # private progress (owner-only)
   gameId, playId, timeSeconds?, points?, usedHints?, hadMistakes?,
-  flagsKnown?, hintsUsed, clearedAt?, updatedAt
+  flagsKnown?, hintsUsed, clearedAt?, board?, updatedAt
 users/{uid}/game_streaks/{gameId}
   current, longest, lastClearedDateId, freezeAvailable, updatedAt
 
@@ -301,6 +301,7 @@ SharedPreferences stays the source the UI reads; `SyncProgress` reconciles it wi
 - `playId` is `YYYYMMDD` (release) or `YYYYMMDDHHmm` (debug minute period); the doc id must be `{gameId}_{playId}`.
 - `timeSeconds` / `points` / `usedHints` / `hadMistakes` are present only for cleared days. `flagsKnown: false` marks flags derived for clears made before progress sync existed (`usedHints` = any hint used that day; `hadMistakes` = false for Zip / Path Words, true for Sudoku).
 - `hintsUsed` is the hint quota consumed that day (0..50). `clearedAt` is when the clear was first pushed.
+- `board` is the game-specific board of the best-time run (Zip: the drawn path as `row,col` cells joined by `;`), so the review of a cleared puzzle shows the player's own solution on any device. Any valid Zip path wins, so it often differs from the level's generated `solution`.
 - Debug builds read and write only the `_debug` twins.
 - **Every key the client writes must be in the rules whitelist** (lesson from the `currentStreak` incident). The whitelists equal `gameDayFirestoreKeys` / `streakFirestoreKeys` in `lib/data/repositories/progress_remote_repository_impl.dart`, and a unit test pins the client payload to those sets. Change all three together, and **deploy rules before shipping** the build that writes a new key. `test/firestore/rules_key_whitelist_test.dart` reads `firestore/firestore.rules` and fails when a rules whitelist (game days, streaks, leaderboard) drifts from the client key set.
 
@@ -315,7 +316,7 @@ After deploy:
 5. Custom gallery photos: Worker accepts `PUT /v1/avatar` only with a valid Firebase ID token for that uid; object key `avatars/{uid}.jpg` on R2; JPEG, max 2 MiB. Public read via R2 `r2.dev` (no Firebase Storage rules).
 6. `daily_activity/{yyyy-MM-dd}/users/{uid}`: owner create/update and read of their own doc; admin read (counts). **Deploy** `firestore/firestore.rules` before relying on production open tracking (`firebase deploy --only firestore:rules`).
 7. `users/{uid}/game_days/{dayKey}` and `users/{uid}/game_streaks/{gameId}` (and the `_debug` twins): **only the owner** can read, create or update; other signed-in users and signed-out clients are rejected; delete is always rejected.
-8. Game day writes: keys only from the whitelist; `gameId` in `zip` / `path_words` / `sudoku`; `playId` matches `^[0-9]{8}([0-9]{4})?$`; doc id equals `gameId + '_' + playId`; `hintsUsed` int 0..50; `timeSeconds` / `points` int ≥ 0 when present; `usedHints` / `hadMistakes` / `flagsKnown` bool when present; `clearedAt` timestamp when present; `updatedAt == request.time`. Merge writes are validated against the **merged** doc. Updates may only improve: `timeSeconds` never rises, `points` / `hintsUsed` never drop, `clearedAt` never moves later or disappears (a stale merge write from a cached read is rejected and re-merged on the next sync).
+8. Game day writes: keys only from the whitelist; `gameId` in `zip` / `path_words` / `sudoku`; `playId` matches `^[0-9]{8}([0-9]{4})?$`; doc id equals `gameId + '_' + playId`; `hintsUsed` int 0..50; `timeSeconds` / `points` int ≥ 0 when present; `usedHints` / `hadMistakes` / `flagsKnown` bool when present; `clearedAt` timestamp when present; `board` non-empty string of at most 1024 chars, only alongside `timeSeconds`; `updatedAt == request.time`. Merge writes are validated against the **merged** doc. Updates may only improve: `timeSeconds` never rises, `points` / `hintsUsed` never drop, `clearedAt` never moves later or disappears, `board` only changes with a strictly better `timeSeconds` (a stale merge write from a cached read is rejected and re-merged on the next sync).
 9. Streak writes: path `gameId` is a valid game; keys only `current`, `longest`, `lastClearedDateId`, `freezeAvailable`, `updatedAt`; `current` / `longest` int ≥ 0; `lastClearedDateId` null or an 8-digit string; `freezeAvailable` bool; `updatedAt == request.time`. Updates never lower `longest` and never move `lastClearedDateId` earlier or back to null (`current` may reset to 0).
 10. Compile check before deploy: `firebase deploy --only firestore:rules --dry-run --project brain-zip-app`. Rules must be live **before** a build that writes new paths or keys ships.
 
@@ -336,7 +337,7 @@ FCM announcements can be sent from the [winklo-admin](https://github.com/Muhamme
 
 ### Data Safety / privacy (Auth)
 
-Leaderboards (Zip, Path Words, Sudoku) store **uid, displayName, photoUrl, avatarId, timeSeconds, updatedAt, usedHints, hadMistakes, currentStreak**; these are publicly readable. Private progress docs (owner-only) store per-day **best time, points, usedHints, hadMistakes, flagsKnown, hintsUsed, clearedAt** and per-game **streak counters** (`current`, `longest`, `lastClearedDateId`, `freezeAvailable`). `daily_activity` stores uid, first/last open time and platform; `issue_reports` store the submitted text plus uid, displayName, photoUrl, avatarId, app version/build and platform. Custom photos live on **Cloudflare R2** (public `r2.dev` URLs). Play Data Safety declares this gameplay data under **App interactions** (`PSL_USER_INTERACTION`) for **App functionality** and **Analytics**, collected not shared (`play/data_safety.csv`). Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
+Leaderboards (Zip, Path Words, Sudoku) store **uid, displayName, photoUrl, avatarId, timeSeconds, updatedAt, usedHints, hadMistakes, currentStreak**; these are publicly readable. Private progress docs (owner-only) store per-day **best time, points, usedHints, hadMistakes, flagsKnown, hintsUsed, clearedAt, board (Zip drawn path)** and per-game **streak counters** (`current`, `longest`, `lastClearedDateId`, `freezeAvailable`). `daily_activity` stores uid, first/last open time and platform; `issue_reports` store the submitted text plus uid, displayName, photoUrl, avatarId, app version/build and platform. Custom photos live on **Cloudflare R2** (public `r2.dev` URLs). Play Data Safety declares this gameplay data under **App interactions** (`PSL_USER_INTERACTION`) for **App functionality** and **Analytics**, collected not shared (`play/data_safety.csv`). Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
 
 ## 8. Profile photos (Cloudflare R2 + Worker)
 

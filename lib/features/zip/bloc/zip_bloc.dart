@@ -15,10 +15,12 @@ import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
+import '../../../domain/usecases/get_clear_board.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
+import '../logic/zip_board_codec.dart';
 import 'zip_event.dart';
 import 'zip_state.dart';
 
@@ -29,6 +31,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     required this.recordDailyClear,
     required this.getBestPoints,
     required this.getBestTimeSeconds,
+    required this.getClearBoard,
     required this.analytics,
     required this.inProgressRuns,
     ZipLevelRepository? zipLevelRepository,
@@ -70,6 +73,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   final RecordDailyClear recordDailyClear;
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
+  final GetClearBoard getClearBoard;
   final AnalyticsRepository analytics;
   final InProgressRunRepository inProgressRuns;
   final Future<ZipLevel> Function(DateTime date, {Duration period})
@@ -141,12 +145,18 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
 
     if (cleared) {
       await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
+      if (emit.isDone) return;
       emit(
         ZipState(
           day: day,
           level: level,
           status: ZipStatus.locked,
           finished: true,
+          // The player's own winning path; the game falls back to the
+          // level's solution when it is missing (clears before it was stored).
+          path:
+              ZipBoardCodec.decode(getClearBoard('zip_${level.id}')) ??
+              const [],
         ),
       );
       return;
@@ -224,6 +234,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       timeSeconds: elapsed,
       usedHints: state.usedHintsThisRun,
       hadMistakes: false,
+      board: ZipBoardCodec.encode(state.path),
     );
 
     final streak = await recordDailyClear(

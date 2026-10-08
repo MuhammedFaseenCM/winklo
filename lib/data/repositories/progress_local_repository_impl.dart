@@ -5,11 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/repositories/progress_local_repository.dart';
 
-/// Prefixes of every per-user progress key on the device: scores, clear meta,
-/// streaks, hint quota, run drafts and sync markers.
+/// Prefixes of every per-user progress key on the device: scores, clear meta
+/// and boards, streaks, hint quota, run drafts and sync markers.
 const userProgressKeyPrefixes = [
   'best_',
   'clear_meta_',
+  'clear_board_',
   'streak_',
   'hints_used_',
   'in_progress_',

@@ -8,6 +8,7 @@ import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
+import 'package:winklo/domain/usecases/get_clear_board.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
@@ -15,6 +16,7 @@ import 'package:winklo/features/zip/bloc/zip_bloc.dart';
 import 'package:winklo/features/zip/bloc/zip_event.dart';
 import 'package:winklo/features/zip/bloc/zip_state.dart';
 import 'package:winklo/features/zip/logic/daily_puzzle_generator.dart';
+import 'package:winklo/features/zip/logic/zip_board_codec.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -30,6 +32,8 @@ class _MockRecordDailyClear extends Mock implements RecordDailyClear {}
 class _MockGetBestPoints extends Mock implements GetBestPoints {}
 
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
+
+class _MockGetClearBoard extends Mock implements GetClearBoard {}
 
 class _MemoryInProgressRuns implements InProgressRunRepository {
   final Map<String, InProgressRun> runs = {};
@@ -56,6 +60,7 @@ void main() {
   late _MockRecordDailyClear recordDailyClear;
   late _MockGetBestPoints getBestPoints;
   late _MockGetBestTimeSeconds getBestTimeSeconds;
+  late _MockGetClearBoard getClearBoard;
   late MockAnalyticsRepository analytics;
 
   setUp(() {
@@ -64,10 +69,12 @@ void main() {
     recordDailyClear = _MockRecordDailyClear();
     getBestPoints = _MockGetBestPoints();
     getBestTimeSeconds = _MockGetBestTimeSeconds();
+    getClearBoard = _MockGetClearBoard();
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
+    when(() => getClearBoard(any())).thenReturn(null);
     when(
       () => submitLeaderboardTime(
         gameId: any(named: 'gameId'),
@@ -96,6 +103,7 @@ void main() {
       recordDailyClear: recordDailyClear,
       getBestPoints: getBestPoints,
       getBestTimeSeconds: getBestTimeSeconds,
+      getClearBoard: getClearBoard,
       analytics: analytics,
       now: now ?? DateTime.utc(2026, 9, 13),
       clockNow: clockNow,
@@ -117,6 +125,7 @@ void main() {
           timeSeconds: any(named: 'timeSeconds'),
           usedHints: any(named: 'usedHints'),
           hadMistakes: any(named: 'hadMistakes'),
+          board: any(named: 'board'),
         ),
       ).thenAnswer((_) async => true);
       when(
@@ -152,6 +161,7 @@ void main() {
           timeSeconds: any(named: 'timeSeconds'),
           usedHints: true,
           hadMistakes: false,
+          board: any(named: 'board'),
         ),
       ).called(1);
       verify(
@@ -179,6 +189,7 @@ void main() {
           timeSeconds: 12,
           usedHints: any(named: 'usedHints'),
           hadMistakes: any(named: 'hadMistakes'),
+          board: any(named: 'board'),
         ),
       ).thenAnswer((_) async => true);
       when(
@@ -215,6 +226,7 @@ void main() {
           timeSeconds: 12,
           usedHints: false,
           hadMistakes: false,
+          board: any(named: 'board'),
         ),
       ).called(1);
       verify(
@@ -359,6 +371,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        getClearBoard: getClearBoard,
         analytics: analytics,
         now: DateTime(2026, 9, 20, 14, 31, 40),
         playPeriod: PlayPeriod.minute,
@@ -390,6 +403,7 @@ void main() {
           timeSeconds: any(named: 'timeSeconds'),
           usedHints: any(named: 'usedHints'),
           hadMistakes: any(named: 'hadMistakes'),
+          board: any(named: 'board'),
         ),
       );
       await bloc.close();
@@ -447,6 +461,7 @@ void main() {
         timeSeconds: any(named: 'timeSeconds'),
         usedHints: any(named: 'usedHints'),
         hadMistakes: any(named: 'hadMistakes'),
+        board: any(named: 'board'),
       ),
     ).thenAnswer((_) async => true);
     when(
@@ -473,6 +488,82 @@ void main() {
     bloc.add(const ZipEvent.completed());
     await bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
     expect(drafts.runs.isEmpty, isTrue);
+    await bloc.close();
+  });
+
+  test('ZipStarted locked review carries the saved winning path', () async {
+    const saved = [Cell(0, 0), Cell(0, 1), Cell(1, 1)];
+    when(() => getBestPoints('zip_daily_20260914')).thenReturn(800);
+    when(
+      () => getClearBoard('zip_daily_20260914'),
+    ).thenReturn(ZipBoardCodec.encode(saved));
+    final bloc = buildBloc();
+
+    bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 14)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.locked);
+
+    expect(bloc.state.path, saved);
+    await bloc.close();
+  });
+
+  test('ZipStarted locked review without a saved path has none', () async {
+    when(() => getBestPoints('zip_daily_20260914')).thenReturn(800);
+    final bloc = buildBloc();
+
+    bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 14)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.locked);
+
+    expect(bloc.state.path, isEmpty);
+    await bloc.close();
+  });
+
+  test('ZipCompleted stores the drawn path as the clear board', () async {
+    when(
+      () => submitScore(
+        modeKey: any(named: 'modeKey'),
+        points: any(named: 'points'),
+        timeSeconds: any(named: 'timeSeconds'),
+        usedHints: any(named: 'usedHints'),
+        hadMistakes: any(named: 'hadMistakes'),
+        board: any(named: 'board'),
+      ),
+    ).thenAnswer((_) async => true);
+    when(
+      () => recordDailyClear(
+        gameId: any(named: 'gameId'),
+        dateId: any(named: 'dateId'),
+      ),
+    ).thenAnswer(
+      (_) async => const GameStreak(
+        gameId: GameIds.zip,
+        current: 1,
+        longest: 1,
+        lastClearedDateId: '20260913',
+      ),
+    );
+    const drawn = [Cell(2, 2), Cell(2, 1), Cell(1, 1)];
+
+    final bloc = buildBloc(
+      clockNow: () => DateTime.utc(2026, 9, 13),
+      wait: (_) async {},
+    );
+    bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
+    bloc.add(const ZipEvent.pathChanged(path: drawn));
+    await bloc.stream.firstWhere((s) => s.path.length == drawn.length);
+    bloc.add(const ZipEvent.completed());
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
+
+    verify(
+      () => submitScore(
+        modeKey: 'zip_daily_20260913',
+        points: any(named: 'points'),
+        timeSeconds: any(named: 'timeSeconds'),
+        usedHints: any(named: 'usedHints'),
+        hadMistakes: any(named: 'hadMistakes'),
+        board: '2,2;2,1;1,1',
+      ),
+    ).called(1);
     await bloc.close();
   });
 }

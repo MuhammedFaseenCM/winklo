@@ -16,6 +16,7 @@ class ScoreRepositoryImpl implements ScoreRepository {
 
   static const _prefix = 'best_';
   static const _metaPrefix = 'clear_meta_';
+  static const _boardPrefix = 'clear_board_';
 
   @override
   int getBestPoints(String modeKey) =>
@@ -37,12 +38,17 @@ class ScoreRepositoryImpl implements ScoreRepository {
   }
 
   @override
+  String? getClearBoard(String modeKey) =>
+      _prefs.getString('$_boardPrefix$modeKey');
+
+  @override
   Future<bool> submitScore({
     required String modeKey,
     required int points,
     int? timeSeconds,
     bool? usedHints,
     bool? hadMistakes,
+    String? board,
   }) async {
     final pointsImproved = await _improvePoints(modeKey, points);
     final timeImproved = await _improveTime(modeKey, timeSeconds);
@@ -54,7 +60,15 @@ class ScoreRepositoryImpl implements ScoreRepository {
           ? ClearMeta(usedHints: usedHints, hadMistakes: hadMistakes)
           : null,
     );
-    if (pointsImproved || timeImproved || metaChanged) _onChanged?.call();
+    final boardChanged = await _syncBoard(
+      modeKey,
+      timeSeconds: timeSeconds,
+      timeImproved: timeImproved,
+      board: board,
+    );
+    if (pointsImproved || timeImproved || metaChanged || boardChanged) {
+      _onChanged?.call();
+    }
     return pointsImproved || timeImproved;
   }
 
@@ -64,6 +78,7 @@ class ScoreRepositoryImpl implements ScoreRepository {
     int? points,
     int? timeSeconds,
     ClearMeta? meta,
+    String? board,
   }) async {
     final pointsImproved =
         points != null && await _improvePoints(modeKey, points);
@@ -74,7 +89,14 @@ class ScoreRepositoryImpl implements ScoreRepository {
       timeImproved: timeImproved,
       meta: meta,
     );
-    return pointsImproved || timeImproved || metaChanged;
+    final boardChanged = await _syncBoard(
+      modeKey,
+      timeSeconds: timeSeconds,
+      timeImproved: timeImproved,
+      board: board,
+      replaceOnTie: true,
+    );
+    return pointsImproved || timeImproved || metaChanged || boardChanged;
   }
 
   Future<bool> _improvePoints(String modeKey, int points) async {
@@ -113,6 +135,33 @@ class ScoreRepositoryImpl implements ScoreRepository {
     if (!timeImproved && !fillsMissing) return false;
     if (current == meta) return false;
     await _prefs.setString(key, jsonEncode(meta.toJson()));
+    return true;
+  }
+
+  /// Same rule as [_syncMeta]: the board belongs to the best-time run. With
+  /// [replaceOnTie] (restores) a [board] for a time equal to the best also
+  /// replaces the stored one, so a device adopts the remote copy's board,
+  /// which the rules keep fixed for that time.
+  Future<bool> _syncBoard(
+    String modeKey, {
+    required int? timeSeconds,
+    required bool timeImproved,
+    required String? board,
+    bool replaceOnTie = false,
+  }) async {
+    if (timeSeconds == null) return false;
+    final key = '$_boardPrefix$modeKey';
+    final current = getClearBoard(modeKey);
+    if (board == null) {
+      if (!timeImproved || current == null) return false;
+      await _prefs.remove(key);
+      return true;
+    }
+    final tiesBest = getBestTimeSeconds(modeKey) == timeSeconds;
+    final fillsMissing = tiesBest && (current == null || replaceOnTie);
+    if (!timeImproved && !fillsMissing) return false;
+    if (current == board) return false;
+    await _prefs.setString(key, board);
     return true;
   }
 }

@@ -447,15 +447,16 @@ class _Run {
     );
     if (time == null) return record;
 
+    final cleared = record.copyWith(board: _s._scores.getClearBoard(modeKey));
     final meta = _s._scores.getClearMeta(modeKey);
     if (meta != null) {
-      return record.copyWith(
+      return cleared.copyWith(
         usedHints: meta.usedHints,
         hadMistakes: meta.hadMistakes,
         flagsKnown: true,
       );
     }
-    return _withLegacyFlags(record);
+    return _withLegacyFlags(cleared);
   }
 
   /// Cleared records without real flags get the conservative legacy guess
@@ -486,6 +487,7 @@ class _Run {
               hadMistakes: merged.hadMistakes!,
             )
           : null,
+      board: merged.board,
     );
     final hintsChanged = await _s._hintQuota.restoreUsed(
       merged.gameId,

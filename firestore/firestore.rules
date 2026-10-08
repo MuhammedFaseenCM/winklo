@@ -113,7 +113,8 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasOnly([
           'gameId', 'playId', 'timeSeconds', 'points', 'usedHints',
-          'hadMistakes', 'flagsKnown', 'hintsUsed', 'clearedAt', 'updatedAt'
+          'hadMistakes', 'flagsKnown', 'hintsUsed', 'clearedAt', 'board',
+          'updatedAt'
         ])
         && data.gameId is string
         && validGame(data.gameId)
@@ -129,6 +130,11 @@ service cloud.firestore {
         && data.hintsUsed >= 0
         && data.hintsUsed <= 50
         && (!('clearedAt' in data) || data.clearedAt is timestamp)
+        && (!('board' in data)
+          || (data.board is string
+            && data.board.size() > 0
+            && data.board.size() <= 1024
+            && 'timeSeconds' in data))
         && data.updatedAt == request.time
         && (resource == null || gameDayDoesNotRegress(data, resource.data));
     }
@@ -145,7 +151,13 @@ service cloud.firestore {
           || ('points' in data && data.points >= stored.points))
         && (!('hintsUsed' in stored) || data.hintsUsed >= stored.hintsUsed)
         && (!('clearedAt' in stored)
-          || ('clearedAt' in data && data.clearedAt <= stored.clearedAt));
+          || ('clearedAt' in data && data.clearedAt <= stored.clearedAt))
+        // The board belongs to the best-time run: it only changes with a
+        // strictly better time.
+        && (!('board' in stored)
+          || ('board' in data && data.board == stored.board)
+          || ('timeSeconds' in data && 'timeSeconds' in stored
+            && data.timeSeconds < stored.timeSeconds));
     }
 
     function validGameStreak(gameId) {
