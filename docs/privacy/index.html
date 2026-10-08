@@ -18,25 +18,54 @@
         background: var(--ink);
         color: var(--on-ink);
         font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
-        line-height: 1.6;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
       }
       main {
         max-width: 42rem;
         margin: 0 auto;
-        padding: 2.5rem 1.25rem 4rem;
+        padding: 2.75rem 1.35rem 4.5rem;
+      }
+      .brand {
+        margin: 0 0 0.35rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--ember);
       }
       h1 {
-        font-size: 2rem;
-        letter-spacing: -0.03em;
-        margin-bottom: 0.25rem;
+        font-size: clamp(1.85rem, 4vw, 2.25rem);
+        letter-spacing: -0.035em;
+        line-height: 1.15;
+        margin: 0 0 0.4rem;
+      }
+      .updated {
+        margin: 0 0 1.5rem;
+        font-size: 0.9rem;
       }
       h2 {
-        font-size: 1.15rem;
-        margin-top: 2rem;
+        font-size: 1.12rem;
+        letter-spacing: -0.02em;
+        margin: 2.15rem 0 0.7rem;
+        padding-left: 0.7rem;
+        border-left: 3px solid var(--ember);
       }
       p,
       li {
         color: var(--on-ink);
+      }
+      p {
+        margin: 0 0 0.9rem;
+      }
+      ul {
+        margin: 0 0 0.9rem;
+        padding-left: 1.2rem;
+      }
+      li {
+        margin-bottom: 0.45rem;
+      }
+      li:last-child {
+        margin-bottom: 0;
       }
       .muted {
         color: var(--muted);
@@ -44,32 +73,43 @@
       a {
         color: var(--ember);
       }
+      a:hover {
+        text-decoration-thickness: 2px;
+      }
+      code {
+        font-size: 0.92em;
+        color: #cbd5e1;
+      }
       .card {
         background: var(--wall);
-        border-radius: 1rem;
-        padding: 1rem 1.15rem;
-        margin: 1.25rem 0;
+        border-radius: 0.9rem;
+        border-left: 3px solid var(--ember);
+        padding: 1.05rem 1.2rem;
+        margin: 1.35rem 0 0.25rem;
+      }
+      .card strong {
+        display: inline;
       }
     </style>
   </head>
   <body>
     <main>
-      <p class="muted">Winklo · com.winklo.faseencm</p>
+      <p class="brand">Winklo</p>
       <h1>Privacy Policy</h1>
-      <p class="muted">Last updated: 7 October 2026</p>
+      <p class="muted updated">Last updated: 8 October 2026</p>
 
       <p>
-        Winklo is a set of quick daily solo puzzles (Zip, Path Words, and
-        Sudoku). You sign in with Google to play them and to use the live
-        leaderboard, cloud profile, and synced progress. This policy explains
-        what is stored on your device and what is processed in the cloud.
+        Winklo is a set of quick daily solo puzzles — Zip, Path Words, and
+        Sudoku. You sign in with Google to play, use the live leaderboard, keep
+        a cloud profile, and sync progress. This policy explains what stays on
+        your device and what is processed in the cloud.
       </p>
 
       <div class="card">
         <strong>Short version:</strong> We do not run ads and we do not sell
-        data. Google Sign-In is required for Zip, Path Words, Sudoku,
-        leaderboard, and profile. Your game progress is synced privately to
-        your account. We use Google Firebase (Auth, Firestore, Analytics,
+        data. Google Sign-In is required for Zip, Path Words, Sudoku, the
+        leaderboard, and profile. Your game progress syncs privately to your
+        account. We use Google Firebase (Auth, Firestore, Analytics,
         Crashlytics, Remote Config, Cloud Messaging) and Cloudflare (avatar
         upload Worker + R2) to run those features.
       </div>
@@ -80,13 +120,15 @@
         notification schedules, unfinished puzzle runs, game progress, and
         cached puzzle data. Uninstalling Winklo or clearing app storage removes
         local data. Your cloud profile and leaderboard scores are separate (see
-        below). When you sign in again, your streaks and your daily results for
-        the current and previous day are restored from your synced progress;
-        older daily results stay stored with your account. If a different
-        Google account signs in on the same device, the previous account’s
-        local progress is removed from view; any of it that had not synced yet
-        is kept aside on the device and restored when that account signs in
-        there again.
+        below).
+      </p>
+      <p>
+        When you sign in again, your streaks and your daily results for the
+        current and previous day are restored from synced progress; older daily
+        results stay with your account. If a different Google account signs in
+        on the same device, the previous account’s local progress is removed
+        from view. Any of it that had not synced yet is kept aside on the
+        device and restored when that account signs in there again.
       </p>
 
       <h2>Account and profile</h2>
@@ -94,21 +136,21 @@
         When you sign in with Google, Firebase Authentication creates an
         account tied to your Google identity. We store a Firebase user id
         (uid), display name, optional profile photo URL, and optional preset
-        avatar id on <code>users/{uid}</code>. Display name and photo/avatar
-        may also appear on Zip, Path Words, and Sudoku leaderboards visible to
-        other players in the app.
+        avatar id on <code>users/{uid}</code>. Your display name and
+        photo/avatar may appear on Zip, Path Words, and Sudoku leaderboards
+        visible to other players in the app.
       </p>
       <p>
         You may choose a gallery photo. The app uses the system photo picker
         (no broad photo-library permission). The image is uploaded as JPEG to
-        our Cloudflare Worker and stored on Cloudflare R2 at a public URL
-        (for example on <code>r2.dev</code>). Preset avatars are bundled in
-        the app and do not upload a photo.
+        our Cloudflare Worker and stored on Cloudflare R2 at a public URL (for
+        example on <code>r2.dev</code>). Preset avatars are bundled in the app
+        and do not upload a photo.
       </p>
       <p>
         An FCM device token may be stored on your user document so we can send
-        topic messages (for example announcements and app updates). The app
-        may also schedule local notifications on the device.
+        topic messages (for example announcements and app updates). The app may
+        also schedule local notifications on the device.
       </p>
 
       <h2>Gameplay scores</h2>
@@ -122,33 +164,32 @@
 
       <h2>Synced game progress</h2>
       <p>
-        So your streaks and current daily progress survive a reinstall or a
-        new device, Winklo stores
-        your game progress in Firestore under your account: for each daily
-        puzzle you play, your best time and points, whether you used hints or
-        made mistakes, how many hints you used that day, and when you cleared
-        it; and for each game, your current and longest streak, the day you
-        last cleared it, and whether a streak freeze is available. This
-        progress is private to your account: only you (signed in) can read or
-        change it, and it is not shown to other players. The app also uses it
-        to re-send a cleared puzzle’s time to the leaderboard if an earlier
-        submit failed.
+        So streaks and current daily progress survive a reinstall or a new
+        device, Winklo stores your game progress in Firestore under your
+        account: for each daily puzzle you play, your best time and points,
+        whether you used hints or made mistakes, how many hints you used that
+        day, and when you cleared it; and for each game, your current and
+        longest streak, the day you last cleared it, and whether a streak
+        freeze is available. This progress is private to your account — only
+        you (signed in) can read or change it, and it is not shown to other
+        players. The app also uses it to re-send a cleared puzzle’s time to the
+        leaderboard if an earlier submit failed.
       </p>
 
       <h2>Other network processing</h2>
       <ul>
         <li>
-          <strong>Cloud Firestore</strong> — puzzle catalogs, the user,
-          leaderboard, and synced progress data described above, a daily
-          app-open record (uid, first/last open time, platform), issue reports
-          you submit (with your uid, display name, avatar, and app version),
+          <strong>Cloud Firestore</strong> — puzzle catalogs; the user,
+          leaderboard, and synced progress data described above; a daily
+          app-open record (uid, first/last open time, platform); issue reports
+          you submit (with your uid, display name, avatar, and app version);
           and app error reports.
         </li>
         <li>
-          <strong>Firebase Analytics</strong> — product events (screens,
-          games started/completed, hints, tutorials, and similar). Events may
-          include gameplay metadata and device/installation identifiers from
-          Google’s SDKs.
+          <strong>Firebase Analytics</strong> — product events (screens, games
+          started/completed, hints, tutorials, and similar). Events may include
+          gameplay metadata and device/installation identifiers from Google’s
+          SDKs.
         </li>
         <li>
           <strong>Firebase Crashlytics</strong> — crash logs from release
