@@ -30,12 +30,12 @@ Winklo is a daily solo-puzzle app for Android, built with Flutter and Flame. Eve
 
 All three load the day's puzzle from Firestore (`zip_levels`, `path_words_levels`, `sudoku_levels`, doc id `daily_YYYYMMDD` for the phone's local date). The puzzles come from the separate [winklo-admin](https://github.com/MuhammedFaseenCM/winklo-admin) repo. Since 9 October a Worker cron there fills any missing day from UTC today to two days ahead: AI picks each board's size and difficulty (and writes the Path Words board), the generators build the Zip and Sudoku boards, and validators check every board. A board saved by hand in the admin CMS is locked, so the cron never overwrites it.
 
-The clock pauses when you leave a game and the run is saved on the phone, so it survives the app being closed on the same day. Players are ranked by time only.
+The clock pauses when you leave a game and the run is saved on the phone, so it survives the app being closed on the same day, and a game left open over midnight can still be finished for its own day. Players are ranked by time only.
 
 ### Around the games
 
 - **Home:** a tile per game with "Play today's …" or "Result", the current streak, "Streak protected" while a freeze covers a missed day, and a leaderboard shortcut. Remote Config drives a soft update banner on Home and a full-screen forced update.
-- **Results:** the clear time counting up, a "New personal best" badge (currently shown after every daily clear; see [Fix first](#fix-first)), a streak badge, and a mini daily leaderboard (the top 3 plus the two players above and below you).
+- **Results:** the clear time counting up, a "New personal best" badge when the time beats every earlier day, a streak badge, and a mini daily leaderboard (the top 3 plus the two players above and below you).
 - **Leaderboards:** per game, daily and all-time (Remote Config `showAllTimeLeaderboard` can hide all-time), readable without signing in. Top 50 by time, updating live, with medals for the top 3. Daily rows add "Hint-free", "Flawless" (Sudoku), streak (2+ days) and "You" chips.
 - **Streaks:** one per game. A single freeze covers one missed day, once.
 - **Profile:** a preset or uploaded avatar, display name, sound effects toggle, privacy policy, report an issue, about (app version) and sign out.
@@ -81,10 +81,12 @@ All four are done in code. Items 2–4 take effect only once deployed: `firebase
 
 #### Gameplay and fairness
 
-5. **Reset wipes the clean-run flags.** Reset sets `usedHintsThisRun` (and Sudoku's `hadMistakesThisRun`) back to false in all three games, while the clock and the hint quota carry on. In Zip, reset is the everyday Clear button, so using hints and then clearing earns "Hint-free"; in Sudoku a reset also earns "Flawless". The timer spec treats a reset as the same run, and the chips spec calls the flags "sticky". Keep the flags for the whole run and save them with the draft; the hint quota can't stand in for them (see 8). *Where:* the reset handlers in `zip_bloc.dart`, `path_words_bloc.dart` and `sudoku_bloc.dart`. **S**
-6. **"New personal best" shows after every daily clear.** Bests are stored per day (`zip_daily_<date>`, `path_words_<date>`, `sudoku_<date>`), and a daily can be cleared only once, so the first clear always beats "no best yet". Keep a best per game across days and compare against that; Home can then show it too. *Where:* the `submitScore` calls in the three blocs, `ScoreRepositoryImpl`. **S**
-7. **Sudoku hints don't notice mistakes.** The hint coach reasons from the player's grid and never looks at the solution. Since free entry, a wrong digit can make a hint teach a wrong step, and it still uses up a hint. Point out the mistake first (for example "Check row 3"). *Where:* `SudokuHintCoach`, `_onHint` in `sudoku_bloc.dart`. **S**
-8. **Runs paused overnight are thrown away.** If you leave a game before midnight and come back after it, the saved run is discarded and the new day's puzzle loads, so yesterday's clear (and maybe the streak) is lost; a run kept on screen past midnight still counts for its own day. Hints are counted per calendar day, so a run that crosses midnight gets three fresh hints and spends tomorrow's. Let a paused run finish for its own day (or warn first), and count hints per `playId`. *Where:* the `_onResumeRun` handlers, `hint_quota_repository_impl.dart`. **S–M**
+All four are done.
+
+5. **Done: a reset keeps the clean-run flags.** Reset (Clear in Zip) still clears the board, but `usedHintsThisRun`, Sudoku's `hadMistakesThisRun`, the clock and the hints spent all carry on, so a run that used hints can't earn "Hint-free" (or "Flawless") back. The flags were already saved with the draft.
+6. **Done: "New personal best" means beating earlier days.** `IsNewPersonalBest` compares the clear with the best time on every earlier daily of that game stored on the phone (`ScoreRepository.getBestDailyTimeSeconds`), so a first clear or a slower day no longer shows the badge. The Home quick win can reuse it for a lifetime best.
+7. **Done: Sudoku hints point out mistakes first.** If a filled cell disagrees with the solution, the hint shades that row and says one of its digits is wrong (it costs a hint, like any other), and clears once the row is fixed. Only then does the coach teach a step.
+8. **Done: a run left open over midnight finishes for its own day.** Coming back to a paused run the next day resumes it instead of discarding it, and it still posts to that day's board and streak. Only a run older than that gives way to today's puzzle. Hints are now counted per run (`HintQuotaRepository` takes the run's `playId`), so crossing midnight no longer brings three fresh hints or spends tomorrow's. A run whose app was closed overnight still starts fresh, since Home opens today's puzzle.
 
 #### Reliability
 
@@ -114,7 +116,7 @@ All four are done in code. Items 2–4 take effect only once deployed: `firebase
 
 ### Quick wins: the data is already there
 
-1. **Show the longest streak and freezes on Home.** `HomeCubit` already loads the longest streak and whether a freeze is available, but the tiles only show the current streak and "Streak protected". The "best time" it loads is just today's time; a real best needs the per-game best from Fix first 6, and `AppStrings.bestTimeLabel` is waiting for it. **S**
+1. **Show the longest streak and freezes on Home.** `HomeCubit` already loads the longest streak and whether a freeze is available, but the tiles only show the current streak and "Streak protected". The "best time" it loads is just today's time; `ScoreRepository.getBestDailyTimeSeconds` (Fix first 6) now gives a lifetime best, and `AppStrings.bestTimeLabel` is waiting for it. **S**
 2. **Countdown to the next puzzle.** Show "New puzzle in 6h 12m" on cleared tiles and on Results. Home reloads when you come back to it, but not at midnight while it stays open (only the debug minute mode has a timer), so add a rollover timer. *Builds on:* `PlayPeriod`. **S**
 3. **Share your result.** Add a spoiler-free share text on Results, for example `Winklo Zip · 9 Oct · ⏱ 1:12 · 🔥 5 · Hint-free`, with the landing-page link. Sharing is how daily puzzles spread, and the app has no share option anywhere. An image card or a replay of the Zip path can come later. *Builds on:* the Results data, clean-run flags and streaks. Needs `share_plus`. **S**
 4. **Show your result in review mode.** Reopening a cleared game shows only the board (Sudoku adds "come back tomorrow"). Add a header such as "Cleared in 1:12 · #4 today · Hint-free" with a link to the full board. *Builds on:* the best time and flags in `ScoreRepository`, and the player's leaderboard entry. **S**
@@ -154,7 +156,7 @@ All four are done in code. Items 2–4 take effect only once deployed: `firebase
 - **Your rank beyond the top 50.** The board loads only the top 50, and your own row is pinned only when it's among them. A Firestore `count()` of faster times gives "You're #132 of 1,204". The app gives tied times the same rank with no gap (1, 2, 2, 3), while counting gives 1, 2, 2, 4, so pick one. **S–M**
 - **Percentile on Results.** "Faster than 78% of today's players", from the same counts. Two post-game specs deferred a "you'd be #N" teaser for guests. **S**
 - **Past days' boards.** The repository and use case already take a `dayId`; the cubit never passes one. Add a date picker to the daily board. **S–M**
-- **Hint-free filter.** Entries already store `usedHints` (for the best-time run), so a toggle can rank only clean runs. It needs a composite index, and Fix first 5 so the flag can be trusted. **S–M**
+- **Hint-free filter.** Entries already store `usedHints` (for the best-time run), so a toggle can rank only clean runs. It needs a composite index; since Fix first 5 the flag can be trusted. **S–M**
 - **Weekly board.** Rank by total or average time across the week's clears, with a Worker cron adding up the daily boards (Spark has no Cloud Functions). **M–L**
 - **Tap a player.** Open a small card with their avatar, name and streak, all of which are already on the entry. The rules now limit names and photos (Fix first 4), but the streak on an entry still can't be checked. **S**
 - **Report a player.** Names and uploaded photos are shown to every player, with no way to report or hide one, and the avatar Worker checks only the declared type and the size. Google Play's user-generated content policy expects in-app reporting and blocking. Add "Report" to leaderboard rows, check the JPEG bytes in the Worker, and keep a way to reset a name or photo. **S–M**
