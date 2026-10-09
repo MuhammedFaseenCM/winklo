@@ -17,6 +17,8 @@ Winklo is a daily solo-puzzle app for Android, built with Flutter and Flame. Eve
 
 ## What's in the app today
 
+This describes the code in this repo. The released build doesn't have all of it yet; see [Project status](#project-status).
+
 ### The three daily games
 
 | | Zip | Path Words | Sudoku |
@@ -28,7 +30,7 @@ Winklo is a daily solo-puzzle app for Android, built with Flutter and Flame. Eve
 | **First run** | Animated tutorial and rule tips | Animated tutorial and a tip | Nothing; a **?** button opens "How to play" text |
 | **After clearing** | Read-only review of the path you drew (older clears show the stored solution) | Review of the found words | Review of the solved grid |
 
-All three load the day's puzzle from Firestore (`zip_levels`, `path_words_levels`, `sudoku_levels`, doc id `daily_YYYYMMDD` for the phone's local date). The puzzles come from the separate [winklo-admin](https://github.com/MuhammedFaseenCM/winklo-admin) repo. Since 9 October a Worker cron there fills any missing day from UTC today to two days ahead: AI picks each board's size and difficulty (and writes the Path Words board), the generators build the Zip and Sudoku boards, and validators check every board. A board saved by hand in the admin CMS is locked, so the cron never overwrites it.
+All three load the day's puzzle from Firestore (`zip_levels`, `path_words_levels`, `sudoku_levels`, doc id `daily_YYYYMMDD` for the phone's local date). The puzzles come from the separate [winklo-admin](https://github.com/MuhammedFaseenCM/winklo-admin) repo, where a Worker cron fills any missing day from UTC today to two days ahead. Since 10 October it makes only hard puzzles, starting with 11 October's: Zip 8×8, Sudoku 6×6, and 6×6 Path Words boards built in code from words the AI suggests (or from a built-in list). Validators check every board, and the cron only creates missing days, so a day's board is never replaced. A board saved by hand in the admin CMS is locked, so the cron never overwrites it.
 
 The clock pauses when you leave a game and the run is saved on the phone, so it survives the app being closed on the same day, and a game left open over midnight can still be finished for its own day. Players are ranked by time only.
 
@@ -38,25 +40,47 @@ The clock pauses when you leave a game and the run is saved on the phone, so it 
 - **Results:** the clear time counting up, a "New personal best" badge when the time beats every earlier day, a streak badge, and a mini daily leaderboard (the top 3 plus the two players above and below you).
 - **Leaderboards:** per game, daily and all-time (Remote Config `showAllTimeLeaderboard` can hide all-time), readable without signing in. Top 50 by time, updating live, with medals for the top 3. Daily rows add "Hint-free", "Flawless" (Sudoku), streak (2+ days) and "You" chips.
 - **Streaks:** one per game. A single freeze covers one missed day, once.
-- **Profile:** a preset or uploaded avatar, display name, sound effects toggle, privacy policy, report an issue, about (app version) and sign out.
+- **Profile:** a preset or uploaded avatar, display name, sound effects toggle, privacy policy, report an issue, about (app version), sign out and delete account.
 - **Accounts and sync:** Google sign-in is required to play. Best times, clean-run flags, hint use, streaks and Zip paths sync to `users/{uid}` (today's and yesterday's results on each sync) and backfill the leaderboards. The sync isn't in a released build yet; see [Project status](#project-status).
-- **Account deletion:** a web page where players sign in with Google, and the account-deletion Worker deletes their account and data straight away. In the app, Profile → Delete account signs out and opens that page in the browser.
+- **Account deletion:** a web page where players sign in with Google, and the account-deletion Worker deletes their account and data straight away. From 1.0.0+15, Profile → Delete account in the app signs out and opens that page in the browser.
 - **Notifications:** local reminders at 08:00 ("puzzles are ready") and 20:00 ("streak at risk"), plus the FCM topics `announcements` and `app_updates`.
 - **Hidden legacy games:** Word Match and Category Race are still in `lib/features/` and have routes. Nothing in the UI links to them, though a notification tap can still open them.
 
 ## Project status
 
-As of 2026-10-10 (`8637d00`):
+As of 10 October 2026. The released build is 1.0.0+14, in closed testing since 7 October.
 
 - **Checks:** `flutter analyze` reports only infos (no warnings or errors), and every test passes. CI (`.github/workflows/ci.yml`) runs both, plus the Workers' type checks and tests, on every push to `master` and every pull request.
-- **Releases:** 1.0.0+14 has been in closed testing since 7 October. `master` adds progress sync with leaderboard backfill, the Zip path review, the redrawn icon and muted tap sounds, none of it released yet. The deployed Firestore rules already match `firestore/firestore.rules`, including the Zip `board` field, so they don't block 1.0.0+15.
-- **Landed since the first roadmap:** account deletion on the web (the page on both hosts, the Worker, the rules, the privacy policy and the Data safety answers) and daily puzzle auto-generation in winklo-admin.
-- **Puzzle generation is running on its fallbacks:** every generated puzzle so far says `paramsSource: local`, so the AI isn't being used, and Path Words gets the small fallback board (see [Fix first](#fix-first)). Sudoku boards come out 6×6 with 2×3 boxes, and Zip boards include a `solution`.
 - **Server side:** Firebase is on the free Spark plan, so there are no Cloud Functions; server work runs in Cloudflare Workers.
+
+### Done and live
+
+- **Account deletion on the web** (9 October): the page on both hosts, the account-deletion Worker, the rules, the privacy policy and the Data safety answers.
+- **Daily puzzle auto-generation** in winklo-admin (9 October), **hard only since 10 October** ([Fix first 12](#auto-generated-puzzles)). From 11 October every daily is an 8×8 Zip, a 6×6 Sudoku and a 6×6 Path Words board with a few blank cells; 10 October and earlier keep their easier boards. Zip boards include a `solution`, which hints need.
+
+### In progress: shipping what's finished
+
+Fix first 1–11 and 17–19 are done and tested on three branches, each started from the one before: `fix/privacy-play-policy` (1–4), `fix/gameplay-fairness` (5–8) and `fix/reliability-and-tooling` (9–11 and 17–19). `master` also has work that isn't released: progress sync with leaderboard backfill, the Zip path review, the redrawn icon and muted tap sounds. The steps, in order:
+
+- [x] Deploy the hard daily puzzles (winklo-admin `38c7055`) and rebuild the 11 October boards with them.
+- [ ] Merge the three branches into `master`, in the order above. This also republishes the website from `docs/`: the landing page, the privacy policy and the delete-account page.
+- [ ] Deploy the Firestore rules for Fix first 3–4 with `firebase deploy --only firestore:rules`. Production still runs the old rules, which let any signed-in player read any profile. They can go out before the release: 1.0.0+14 already stamps `updatedAt` with the server time, as the new rules require.
+- [ ] Deploy the account-deletion Worker for Fix first 2 (`npm run deploy` in `workers/account-deletion`). Until then, deleting an account leaves the player's daily leaderboard entries, app-open records and error reports behind.
+- [ ] Release 1.0.0+15 with `master`'s work and the app side of Fix first 1–11 and 17: bump `version` in `pubspec.yaml`, add `fastlane/metadata/android/en-US/changelogs/15.txt`, then build and upload.
+- [ ] In Play Console, paste the updated App access and account-deletion answers from `play/app_content_answers.txt` (Sudoku needs sign-in too, and the app now has Delete account), and check the store listing against `play/store-media/README.md`.
+- [ ] Change the GitHub repo description, which still says "Daily Zip path-puzzle game…". Only the repo owner can.
+
+Also in progress, in winklo-admin: a redesign of the admin console, on branch `feat/ember-glass-redesign`.
+
+### Pending
+
+- **[Fix first](#fix-first) 13–16**, all small: reject Sudoku shapes the app can't play, keep a replaced board from mixing up saved runs, stop hand-made Path Words boards from rejecting a correct trace, and update Sudoku's "How to play".
+- **Daily puzzle follow-ups in winklo-admin**, listed after [Fix first 15](#auto-generated-puzzles): the AI's suggested words aren't reaching the boards yet, the admin's Path Words generator can still fall back to the old boards, nothing stops an edit to a day that's already live, and two type errors remain.
+- **The rest of the [feature roadmap](#feature-roadmap)**; [Suggested order](#suggested-order) says where to start.
 
 ## Feature roadmap
 
-This roadmap was first written against `489ecff` (2026-10-09) and re-checked claim by claim against `8637d00` (2026-10-10). **Nothing in this section is built yet.** Each idea notes what already exists that makes it cheaper, and gives a rough size: **S** is a day or less, **M** is 2–5 days, **L** is one to two weeks or more.
+This roadmap was first written against `489ecff` (2026-10-09) and re-checked claim by claim against `8637d00` (2026-10-10). **Apart from the Fix first items marked Done, nothing in this section is built yet.** Each idea notes what already exists that makes it cheaper, and gives a rough size: **S** is a day or less, **M** is 2–5 days, **L** is one to two weeks or more.
 
 How the ideas were chosen:
 
@@ -68,11 +92,11 @@ Jump to: [Fix first](#fix-first) · [Quick wins](#quick-wins-the-data-is-already
 
 ### Fix first
 
-These are bugs and mismatches found in the code. Most are small and worth landing before new features, starting with the privacy and Play policy group.
+These are bugs and mismatches found in the code. Most are small and worth landing before new features, starting with the privacy and Play policy group. Items marked **Done** are finished in code; [Project status](#project-status) tracks what has shipped.
 
 #### Privacy and Play policy
 
-All four are done in code. Items 2–4 take effect only once deployed: `firebase deploy --only firestore:rules`, and `npm run deploy` in `workers/account-deletion`.
+All four are done. Item 1 reaches players in 1.0.0+15, and items 2–4 take effect once deployed: `npm run deploy` in `workers/account-deletion` (2) and `firebase deploy --only firestore:rules` (3–4).
 
 1. **Done: "Delete account" in the app.** Google Play requires an in-app path to account deletion. Profile → Delete account confirms, signs the app out (so this phone can't sync the account's progress back after the wipe), then opens `/delete-account/` in the browser, since Google sign-in doesn't work in the privacy WebView.
 2. **Done: the deletion Worker deletes everything.** It lists the day documents with `showMissing` (the app writes `…/daily/{dayId}/entries/{uid}` and `daily_activity/{dayId}/users/{uid}` without ever creating the day documents, so a plain list found none), deletes `client_errors` too, and deletes in `batchWrite` calls of 100 to stay well inside the Workers Free plan's 50 subrequests. The Auth user goes last, only after everything else is gone, and anything short of a complete deletion is reported as an error the player can retry. The privacy policy and the deletion page now mention the `deletion_requests` record (uid, email, time, result).
@@ -81,7 +105,7 @@ All four are done in code. Items 2–4 take effect only once deployed: `firebase
 
 #### Gameplay and fairness
 
-All four are done.
+All four are done, and reach players in 1.0.0+15.
 
 5. **Done: a reset keeps the clean-run flags.** Reset (Clear in Zip) still clears the board, but `usedHintsThisRun`, Sudoku's `hadMistakesThisRun`, the clock and the hints spent all carry on, so a run that used hints can't earn "Hint-free" (or "Flawless") back. The flags were already saved with the draft.
 6. **Done: "New personal best" means beating earlier days.** `IsNewPersonalBest` compares the clear with the best time on every earlier daily of that game stored on the phone (`ScoreRepository.getBestDailyTimeSeconds`), so a first clear or a slower day no longer shows the badge. The Home quick win can reuse it for a lifetime best.
@@ -90,18 +114,31 @@ All four are done.
 
 #### Reliability
 
+All three are done, and reach players in 1.0.0+15.
+
 9. **Done: the streak reminder no longer skips the day it matters.** With every game cleared, the 20:00 reminder now moves to tomorrow evening instead of being cancelled, so it still comes on a day the app isn't opened. It's a one-off: the notifications plugin fires a daily repeat at the next matching time, which would be tonight.
 10. **Done: daily puzzles wait for slow connections.** All three loaders give the server 8 seconds (`dailyPuzzleServerTimeout`), then use the copy cached on the phone (`getDocPreferringServer` in `lib/core/firebase/firestore_read.dart`). They still fail when the puzzle was never cached.
 11. **Done: phone photos work as avatars.** The picker scales photos to at most 512 px and re-encodes them as JPEG at quality 85, far below the 2 MiB limit, and a file that is still too large gets a clear message instead of "Could not update profile."
 
 #### Auto-generated puzzles
 
-12. **Fixed in winklo-admin (branch `feat/hard-daily-puzzles`, not deployed yet): daily puzzles are hard only.** Every daily puzzle is now the hardest tier ('hard', shown as Hard in the app) at the largest size the app plays: Zip 8×8, Sudoku 6×6 with 8–9 givens, and Path Words 6×6. Path Words boards are built in code: one random path through all 36 cells, cut into five or six 5–6 letter words with 3–6 blank cells scattered between them. Blanks never touch each other and every word touches at least two others, so no word stands alone; every word turns, and each can be traced only one way. The AI now only suggests unrelated, letter-sharing words (it couldn't reliably write whole boards), with a built-in list of about 300 words as the fallback. Generation takes a few milliseconds. To ship: merge to `main` (CI deploys the Worker), then delete the unlocked auto-generated docs for the coming days so the cron rebuilds them.
+Item 12 is live. Items 13–15 aren't started, and neither are the follow-ups after them.
+
+12. **Done, live since 10 October: daily puzzles are hard only.** Every daily from 11 October is the hardest tier ('hard', shown as Hard in the app) at the largest size the app plays: Zip 8×8, Sudoku 6×6 with 8–9 givens, and Path Words 6×6. Path Words boards are built in code: one random path through all 36 cells, cut into five or six 5–6 letter words with 3–6 blank cells scattered between them. Blanks never touch each other and every word touches at least two others, so no word stands alone; every word turns, and each can be traced only one way. The AI now only suggests unrelated, letter-sharing words (it couldn't reliably write whole boards), with a built-in list of about 300 words as the fallback. Generation takes a few milliseconds. It shipped from winklo-admin `38c7055`, and the 11 October boards were rebuilt with it. The cron also writes each day create-only now, so two overlapping runs can't give one day two different boards.
 13. **Reject board shapes the app can't play.** The app accepts any size from Firestore. A 9×9 Sudoku renders but can never be finished (the keypad stops at 6), a 4×4 one accepts 5 and 6, and unexpected box sizes break hints. The generator could pick 9×9 about a third of the time; since item 12 it only makes 6×6 with 2×3 boxes. The app should still show a clear error for any other shape. *Where:* `SudokuPuzzle.fromJson`, the winklo-admin generator. **S**
-14. **Replacing a board mid-day mixes up saved runs.** The admin lock exists so ops can swap out a bad board, but saved runs are keyed by game and day only: Zip restores the old path without re-checking it, Sudoku keeps the old digits and Path Words keeps the old found words. Save a board fingerprint with each run and drop runs that don't match. (Times from both boards still share that day's leaderboard.) *Where:* `in_progress_run_repository_impl.dart` and the restore code in the three blocs. **S–M**
+14. **Replacing a board mid-day mixes up saved runs.** The admin lock exists so ops can swap out a bad board, but saved runs are keyed by game and day only: Zip restores the old path without re-checking it, Sudoku keeps the old digits and Path Words keeps the old found words. Save a board fingerprint with each run and drop runs that don't match. (Times from both boards still share that day's leaderboard.) Because the app uses the phone's date, a day goes live at the first midnight on Earth (10:00 UTC the day before, at UTC+14) and stays open until 12:00 UTC the day after, so only replace a board before it goes live. *Where:* `in_progress_run_repository_impl.dart` and the restore code in the three blocs. **S–M**
 15. **Path Words accepts only the stored route for each word.** A trace must match the target's `path` cell by cell, and nothing checks that a word can be traced only one way. On a generated board where a word fits two routes, a correct-looking trace is rejected. Since item 12 the generator rejects such boards; hand-made ones can still have them. *Where:* `PathWordsRules.completedTarget`, the winklo-admin validator. **S**
 
+Follow-ups in winklo-admin:
+
+- **The AI's words aren't reaching the boards yet.** The first hard Path Words boards say `boardSource: local`: none of the AI's suggested words were used, so every word came from the built-in list. Check the `admin-api` Worker's logs and its Workers AI usage. **S**
+- **The admin's Path Words Generate button can still make the old boards.** It asks the Worker for a board, but if that call fails it quietly falls back to the old in-browser generator (`generatePathWords`), whose boards can be small, easy, or leave a word on its own. **S**
+- **Block edits to a day that's already live.** The CMS can still save over a daily that players can open, which splits its leaderboard and mixes up saved runs (item 14). Lock each day from 10:00 UTC the day before. **S**
+- **Type check before deploying.** `path_words_validate.ts` has two type errors on `main` (`colorIndex` may be undefined), and the deploy workflow doesn't run `tsc`. **S**
+
 #### Copy and tooling
+
+Items 17–19 are done: 17 reaches players in 1.0.0+15, and 18 and 19 take effect once merged into `master` (plus the repo description, by hand). Item 16 isn't started.
 
 16. **Sudoku's "How to play" is out of date and easy to miss.** It still says "Wrong entries are rejected", but free entry shipped in build 13, and it only opens from the **?** button. *Where:* `AppStrings.sudokuHowToPlayBody`. **S**
 17. **Done: the 08:00 reminder names all three games.** "Play Zip, Path Words and Sudoku to keep your streaks going."
@@ -126,13 +163,13 @@ All four are done.
 - **Replay your path.** Since `489ecff` the saved path of your best-time run keeps the order you drew the cells in, so review can animate it being drawn. It would also make a good share clip. **S**
 - **Feedback at each number.** Play a soft sound and haptic when the path reaches the next number. (Reject sounds for illegal moves were removed on purpose in `6d243ae`.) **S**
 - **Compare with the setter's path.** Add a review toggle that overlays the stored `solution`, since many boards have more than one answer. **S**
-- **Difficulty ramp.** Easier boards early in the week and harder ones at the weekend (bigger grid, fewer numbers, more walls). The auto-generator already lets AI pick each Zip board's size and difficulty, so the ramp is a rule in winklo-admin. A difficulty badge like Sudoku's needs a `difficulty` field on `ZipLevel`, which the app doesn't read today. **S–M**
+- **Even harder weekends.** Since 10 October every daily is the hardest tier (Fix first 12), and the rules for all three games sit in one function in winklo-admin (`dailyPuzzleParams`). Zip is already at the largest size the app plays (8×8), so weekend boards would get harder through fewer numbers and more walls. **S–M**
 - **Make sure every level has a `solution`.** Hints are disabled when it's missing. Generated boards include one, but the sample level in `FIREBASE.md` doesn't, so check any board made by hand. **S** (content check)
 
 #### Path Words
 
 - **Lock found words.** Undo removes the last stroke even when it was a correct word, and a test ("undo of a found word unlocks that word") locks that behaviour in. Only wrong strokes should be undoable. **S**
-- **Daily theme.** Make each day's words share a theme that's revealed when you clear the puzzle ("Today: kitchen tools"). Boards are now written by AI in the winklo-admin cron, so the theme can come from the same prompt. (The `path-words-nouns` Worker only produces random nouns, and the app never calls it.) **M**
+- **Daily theme.** Make each day's words share a theme that's revealed when you clear the puzzle ("Today: kitchen tools"). The winklo-admin cron already asks the AI for each day's words, so the theme can come from the same prompt, though today it asks for unrelated words on purpose, since a theme makes the words easier to guess. (The `path-words-nouns` Worker only produces random nouns, and the app never calls it.) **M**
 - **Word definitions.** After clearing, tap a found word to see a one-line definition, cached the same way as the noun pool. **M**
 - **Bonus words.** Count real words that aren't targets as bonus finds. This needs a bigger dictionary than the bundled `en_words.txt` (2,482 words, which no code reads today). **M**
 
@@ -176,7 +213,7 @@ All four are done.
 
 - **Archive.** Let players play any past day's puzzle. Past dailies stay in Firestore under their `daily_YYYYMMDD` ids as long as winklo-admin keeps them. The game screens take a `date`, but the routes never pass one, and the games aren't ready for it: Zip's clock stays at 0 when given a date, Path Words and Sudoku jump to today's puzzle on resume, and a past clear would post to that day's board, reset the streak and spend today's hints. Archive runs need their own mode that skips streaks and boards (and can keep its own best time). **M–L**
 - **Practice mode.** Offer endless offline puzzles from the generators already in the repo (`DailyPuzzleGenerator`, `PathWordsGenerator`, `SudokuGenerator`), whose generation code only tests use today. No leaderboard or streak. **M**
-- **Weekend specials.** A bigger or themed board on Saturday and Sunday for each game (see the Zip difficulty ramp and the Sudoku 9×9 idea). **M–L**
+- **Weekend specials.** A bigger or themed board on Saturday and Sunday for each game (see Zip's even harder weekends and the Sudoku 9×9 idea). **M–L**
 - **Offline safety net.** If Firestore can't be reached and today's puzzle isn't cached, the game shows an error with Retry. The auto-generator keeps UTC today + 2 days published, so the app can prefetch tomorrow's puzzle while online (Home only warms today's Zip). Since Fix first 10, a slow connection falls back to that cached copy. **S–M**
 - **Word Match and Category Race.** Both still work and are routed, but the Flow spec lists reviving them as dailies as a non-goal. Only bring them back as bonus games, with the same polish as the dailies. **L**
 
@@ -211,15 +248,15 @@ These aren't features, but they affect how cheap the ideas above are:
 ### Already designed elsewhere
 
 - **Flow**, a fourth daily game (draw non-crossing paths between matching pairs), has an approved spec and plan in `docs/superpowers/` but no code. It's out of scope here because it's a new game.
-- **Account deletion** (spec and plan dated 2026-10-09) is built and live: the page, the Worker, the rules and the policy updates. Its spec left the in-app button out of v1; it was added afterwards (Fix first 1), along with the Worker fixes in Fix first 2.
-- **Daily puzzle auto-generation** (spec and plan dated 2026-10-09) is built in winklo-admin and needed no app changes. It changes some of the ideas above: the Zip difficulty ramp becomes a generator rule, and the generators now exist twice (see [Housekeeping](#housekeeping)).
+- **Account deletion** (spec and plan dated 2026-10-09) is built and live: the page, the Worker, the rules and the policy updates. Its spec left the in-app button out of v1; it was added afterwards (Fix first 1), along with the Worker fixes in Fix first 2, and both are waiting to ship (see [Project status](#project-status)).
+- **Daily puzzle auto-generation** (spec and plan dated 2026-10-09) is built in winklo-admin and needed no app changes. Since 10 October it makes hard puzzles only (the spec's "hard only" update). It changes some of the ideas above: difficulty is now a generator rule, and the generators exist twice (see [Housekeeping](#housekeeping)).
 - Ideas the specs deferred are folded into the sections above: profile stats, "you'd be #N", per-type notification toggles, in-app updates and the banner snooze, 9×9 and practice Sudoku, anti-cheat, iOS and localization.
 
 ### Suggested order
 
 | Phase | Ideas | Why |
 |---|---|---|
-| **Now** (one to two weeks, mostly S) | Everything in [Fix first](#fix-first), privacy and Play policy first; the longest streak and countdown on Home; sharing; the review header; "play the next game"; haptics; the analytics gaps | Closes the Play-policy and privacy gaps, makes the chips and personal bests honest, and makes later changes measurable |
+| **Now** (one to two weeks, mostly S) | Ship the finished [Fix first](#fix-first) items (the checklist in [Project status](#project-status)), then Fix first 13–16 and the winklo-admin follow-ups; the longest streak and countdown on Home; sharing; the review header; "play the next game"; haptics; the analytics gaps | Closes the Play-policy and privacy gaps, makes the chips and personal bests honest, and makes later changes measurable |
 | **Next** (2–4 weeks, mostly M) | Fair play and reporting players; Sudoku undo and highlighting; earning freezes back; smarter reminders and a settings screen; rank beyond the top 50 and percentile; past days' boards; the stats screen | Protects the leaderboard, strengthens the daily habit and gives players more reasons to come back |
 | **Later** (mostly L) | Archive; practice mode; achievements; weekend specials; home-screen widget; App Links; friends leagues; screen-reader support for the boards; iOS; other languages | Bigger bets, once the core loop can be measured |
 
