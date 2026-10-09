@@ -8,6 +8,7 @@ import '../../domain/entities/leaderboard_period.dart';
 import '../../domain/failures.dart';
 import '../../domain/game_ids.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
+import '../leaderboard_identity.dart';
 import '../leaderboard_root.dart';
 
 const _allowedGameIds = {GameIds.zip, GameIds.pathWords, GameIds.sudoku};
@@ -124,8 +125,11 @@ resolveLeaderboardIdentity({
             : null)
       : authPhotoUrl;
   final avatar = profile?['avatarId'];
-  final avatarId = avatar is String && avatar.isNotEmpty ? avatar : null;
-  return (displayName: displayName, photoUrl: photoUrl, avatarId: avatarId);
+  return (
+    displayName: leaderboardDisplayName(displayName),
+    photoUrl: leaderboardPhotoUrl(photoUrl),
+    avatarId: leaderboardAvatarId(avatar is String ? avatar : null),
+  );
 }
 
 /// Identity to merge on leaderboard improve writes, or null when [profileDocumentRead]

@@ -38,7 +38,45 @@ service cloud.firestore {
         'usedHints',
         'hadMistakes',
         'currentStreak',
-      ]) && validCurrentStreak();
+      ]) && validCurrentStreak()
+        && validLeaderboardIdentity()
+        && validLeaderboardUpdatedAt();
+    }
+
+    // Leaderboard identity is public, so keep it small, and point photos only
+    // at Google account photos or our R2 avatars: any other host would see the
+    // IP address of everyone who opens the board. The client trims names to
+    // 40 characters and drops other photo URLs; the host pattern must match
+    // leaderboardPhotoHostsPattern in lib/data/leaderboard_identity.dart
+    // (test/firestore/rules_leaderboard_identity_test.dart pins both).
+    function validLeaderboardIdentity() {
+      let data = request.resource.data;
+      return (!('displayName' in data)
+          || (data.displayName is string
+            && data.displayName.size() > 0
+            && data.displayName.size() <= 120))
+        && (!('photoUrl' in data)
+          || data.photoUrl == null
+          || (data.photoUrl is string
+            && data.photoUrl.size() <= 2048
+            && data.photoUrl.matches('^https://([a-z0-9-]+[.]googleusercontent[.]com|pub-94fd8286c7fa4508a0e988821039d2a8[.]r2[.]dev/avatars)/.*$')))
+        && (!('avatarId' in data)
+          || data.avatarId == null
+          || (data.avatarId is string && data.avatarId.size() <= 64));
+    }
+
+    // updatedAt breaks ties between equal times, so it is either the server
+    // time of this write or left as it was (identity refreshes omit it).
+    function validLeaderboardUpdatedAt() {
+      let data = request.resource.data;
+      return ('updatedAt' in data && data.updatedAt == request.time)
+        || (resource != null
+          && 'updatedAt' in resource.data
+          && 'updatedAt' in data
+          && data.updatedAt == resource.data.updatedAt)
+        || (resource != null
+          && !('updatedAt' in resource.data)
+          && !('updatedAt' in data));
     }
 
     // Optional; older clients (<= 1.0.0+13) never write it.
@@ -57,6 +95,8 @@ service cloud.firestore {
     function profileOnlyLeaderboardUpdate() {
       return request.resource.data.timeSeconds == resource.data.timeSeconds
         && validCurrentStreak()
+        && validLeaderboardIdentity()
+        && validLeaderboardUpdatedAt()
         && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['displayName', 'photoUrl', 'avatarId', 'updatedAt',
               'currentStreak']);

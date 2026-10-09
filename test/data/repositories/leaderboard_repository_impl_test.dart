@@ -99,6 +99,21 @@ void main() {
     expect(identity.avatarId, 'preset_01');
   });
 
+  test('resolveLeaderboardIdentity keeps values inside the rules', () {
+    final google = resolveLeaderboardIdentity(
+      authDisplayName: 'A' * 60,
+      authPhotoUrl: 'https://lh3.googleusercontent.com/a/photo=s96-c',
+    );
+    expect(google.displayName, 'A' * 40);
+    expect(google.photoUrl, 'https://lh3.googleusercontent.com/a/photo=s96-c');
+
+    final elsewhere = resolveLeaderboardIdentity(
+      authDisplayName: 'Ada',
+      authPhotoUrl: 'https://example.com/g.jpg',
+    );
+    expect(elsewhere.photoUrl, isNull);
+  });
+
   group('leaderboardSubmitIdentity', () {
     test('returns null when profile document was not read', () {
       expect(

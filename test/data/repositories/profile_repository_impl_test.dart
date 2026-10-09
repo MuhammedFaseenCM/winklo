@@ -36,14 +36,28 @@ void main() {
       const AppUser(
         uid: 'u1',
         displayName: 'Ada',
-        photoUrl: 'https://example.com/a.jpg',
+        photoUrl: 'https://lh3.googleusercontent.com/a/photo=s96-c',
         avatarId: 'preset_01',
       ),
     );
     expect(patch.keys, ['displayName', 'photoUrl', 'avatarId']);
     expect(patch.containsKey('updatedAt'), isFalse);
-    expect(patch['photoUrl'], 'https://example.com/a.jpg');
+    expect(
+      patch['photoUrl'],
+      'https://lh3.googleusercontent.com/a/photo=s96-c',
+    );
     expect(patch['avatarId'], 'preset_01');
+  });
+
+  test('leaderboardIdentityPatch drops a photo host the rules reject', () {
+    final patch = leaderboardIdentityPatch(
+      const AppUser(
+        uid: 'u1',
+        displayName: 'Ada',
+        photoUrl: 'https://example.com/a.jpg',
+      ),
+    );
+    expect(patch['photoUrl'], isA<FieldValue>());
   });
 
   test('leaderboardIdentityPatch clears null photo and avatar', () {

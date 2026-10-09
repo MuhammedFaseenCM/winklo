@@ -314,7 +314,7 @@ SharedPreferences stays the source the UI reads; `SyncProgress` reconciles it wi
 After deploy:
 
 1. Anyone can **read** Zip / Path Words / Sudoku leaderboard docs; signed-out clients still cannot write.
-2. Signed-in user can create/update **only** their own score docs; worsening a time is rejected. A profile-only update (same `timeSeconds`, only `displayName` / `photoUrl` / `avatarId` / `updatedAt` / `currentStreak`) is allowed. A submit with `usedHints` / `hadMistakes` (bool) and `currentStreak` (int ≥ 0) is accepted.
+2. Signed-in user can create/update **only** their own score docs; worsening a time is rejected. A profile-only update (same `timeSeconds`, only `displayName` / `photoUrl` / `avatarId` / `updatedAt` / `currentStreak`) is allowed. A submit with `usedHints` / `hadMistakes` (bool) and `currentStreak` (int ≥ 0) is accepted. `updatedAt` (the tie-breaker) must be the write's server time or unchanged; `displayName` is a non-empty string of at most 120 chars; `photoUrl` is null or an `https` URL on `*.googleusercontent.com` or the avatar bucket's `r2.dev` host under `/avatars/`; `avatarId` is null or at most 64 chars. The client trims names to 40 chars and drops other photo URLs (`lib/data/leaderboard_identity.dart`).
 3. Content collections (`zip_levels`, etc.) still refuse client writes.
 4. `users/{uid}` is owner read / owner write (admins can read too): it holds the device's `fcmToken`, so other players can't read it. `avatarId` must be a string or null when present.
 5. Custom gallery photos: Worker accepts `PUT /v1/avatar` only with a valid Firebase ID token for that uid; object key `avatars/{uid}.jpg` on R2; JPEG, max 2 MiB. Public read via R2 `r2.dev` (no Firebase Storage rules).

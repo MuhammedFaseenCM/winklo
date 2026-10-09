@@ -9,6 +9,7 @@ import '../../domain/entities/leaderboard_period.dart';
 import '../../domain/failures.dart';
 import '../../domain/game_ids.dart';
 import '../../domain/repositories/profile_repository.dart';
+import '../leaderboard_identity.dart';
 import '../leaderboard_root.dart';
 
 const _profileUnavailable = Failure(
@@ -24,11 +25,12 @@ const leaderboardIdentityGameIds = [
 
 /// Identity fields copied onto existing leaderboard docs.
 /// Omits `updatedAt` so tie-break order stays on the score submit time.
-/// Null photo/avatar become deletes so presets clear a custom photo cleanly.
+/// Null photo/avatar become deletes so presets clear a custom photo cleanly;
+/// values the rules would reject (see `leaderboard_identity.dart`) do too.
 Map<String, dynamic> leaderboardIdentityPatch(AppUser user) => {
-  'displayName': user.displayName,
-  'photoUrl': user.photoUrl ?? FieldValue.delete(),
-  'avatarId': user.avatarId ?? FieldValue.delete(),
+  'displayName': leaderboardDisplayName(user.displayName),
+  'photoUrl': leaderboardPhotoUrl(user.photoUrl) ?? FieldValue.delete(),
+  'avatarId': leaderboardAvatarId(user.avatarId) ?? FieldValue.delete(),
 };
 
 /// Maps a `users/{uid}` document. Returns null when [data] is null.
