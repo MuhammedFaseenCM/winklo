@@ -169,12 +169,15 @@
       <p>We remove:</p>
       <ul>
         <li>Your profile and synced game progress</li>
-        <li>Your leaderboard entries</li>
+        <li>Your leaderboard entries, daily and all-time</li>
+        <li>Your daily app-open records and app error reports</li>
         <li>Issue reports you submitted</li>
         <li>Your custom avatar (if any)</li>
         <li>Your Firebase Authentication account for Winklo</li>
       </ul>
       <p class="muted">
+        We keep a short record of the request (your user ID, email address, the
+        time and whether it succeeded) as proof that it was carried out.
         Historical Google Analytics and Crashlytics events may remain with Google
         under their retention policies; we do not store those as user-owned
         documents you can browse in the app.
@@ -259,6 +262,18 @@
       // Task 7: replace REPLACE with your Cloudflare account subdomain after deploy.
       const WORKER_BASE =
         'https://winklo-account-deletion.winklo.workers.dev';
+
+      // The Worker deletes the sign-in account last, so after any failure the
+      // same account can sign in again and retry.
+      const ERROR_MESSAGES = {
+        delete_failed:
+          'Some of your data could not be deleted yet, so your account is still there. Please try again. If it keeps failing, open a GitHub issue.',
+        unauthorized: 'Your sign-in has expired. Sign in again and retry.',
+        origin_not_allowed:
+          "Account deletion only works from Winklo's own website.",
+        misconfigured:
+          'Account deletion is temporarily unavailable. Please try again later.',
+      };
 
       const app = initializeApp(FIREBASE_CONFIG);
       const auth = getAuth(app);
@@ -379,11 +394,11 @@
             showDone();
             return;
           }
-          const detail =
-            body && typeof body.error === 'string'
-              ? body.error
-              : `Request failed (${res.status})`;
-          showError(detail);
+          const code = body && typeof body.error === 'string' ? body.error : null;
+          showError(
+            (code && ERROR_MESSAGES[code]) ||
+              `Request failed (${code ?? res.status}). Please try again.`,
+          );
         } catch (err) {
           const msg =
             err && typeof err === 'object' && 'message' in err

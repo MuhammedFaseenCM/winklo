@@ -27,6 +27,18 @@ export function summarizeStatus(
   return 'partial';
 }
 
+function appendError(current: string | null, next: string): string {
+  return current ? `${current}; ${next}` : next;
+}
+
+/**
+ * Wipes the player's Firestore data and avatar, then deletes their Auth user.
+ *
+ * The Auth user goes last and only once everything else is gone: while it
+ * exists the player can sign in again and retry, which a deleted account
+ * can't. So the request succeeds only when every step does; anything less is
+ * reported as `delete_failed` and is safe to retry.
+ */
 export async function runDeleteAccount(opts: {
   env: Env;
   uid: string;
@@ -35,15 +47,8 @@ export async function runDeleteAccount(opts: {
   const { env, uid, email } = opts;
   const requestedAt = new Date().toISOString();
   const steps: DeletionSteps = { firestore: false, r2: false, auth: false };
-  const softWarnings: string[] = [];
   let errorMessage: string | null = null;
-
-  try {
-    await env.AVATARS.delete(avatarObjectKey(uid));
-    steps.r2 = true;
-  } catch {
-    steps.r2 = false;
-  }
+  const projectId = env.FIREBASE_PROJECT_ID;
 
   let accessToken: string | null = null;
   try {
@@ -53,42 +58,32 @@ export async function runDeleteAccount(opts: {
     errorMessage = e instanceof Error ? e.message : 'token_failed';
   }
 
-  const projectId = env.FIREBASE_PROJECT_ID;
-
   if (accessToken) {
-    const wipeResult = await wipeUserFirestore({
-      projectId,
-      accessToken,
-      uid,
-    });
-    steps.firestore = wipeResult.ok;
-    if (!wipeResult.ok) {
-      errorMessage = wipeResult.errorMessage ?? 'firestore_wipe_failed';
-    } else {
-      if (wipeResult.softWarnings?.length) {
-        softWarnings.push(...wipeResult.softWarnings);
-      }
+    const wipe = await wipeUserFirestore({ projectId, accessToken, uid });
+    steps.firestore = wipe.ok;
+    if (!wipe.ok) errorMessage = appendError(errorMessage, wipe.errorMessage);
+  }
 
-      try {
-        await deleteAuthUser({ projectId, accessToken, uid });
-        steps.auth = true;
-      } catch (e) {
-        steps.auth = false;
-        const msg = e instanceof Error ? e.message : 'auth_delete_failed';
-        errorMessage = errorMessage ? `${errorMessage}; ${msg}` : msg;
-      }
+  try {
+    await env.AVATARS.delete(avatarObjectKey(uid));
+    steps.r2 = true;
+  } catch {
+    errorMessage = appendError(errorMessage, 'r2_delete_failed');
+  }
+
+  if (accessToken && steps.firestore && steps.r2) {
+    try {
+      await deleteAuthUser({ projectId, accessToken, uid });
+      steps.auth = true;
+    } catch (e) {
+      errorMessage = appendError(
+        errorMessage,
+        e instanceof Error ? e.message : 'auth_delete_failed',
+      );
     }
   }
 
-  let status = summarizeStatus(steps);
-  if (softWarnings.length > 0 && status === 'completed') {
-    status = 'partial';
-  }
-  if (softWarnings.length > 0 && errorMessage === null) {
-    errorMessage = softWarnings.join(', ');
-  }
-
-  const completedAt = new Date().toISOString();
+  const status = summarizeStatus(steps);
 
   if (accessToken) {
     try {
@@ -98,7 +93,7 @@ export async function runDeleteAccount(opts: {
         uid,
         email,
         requestedAt,
-        completedAt,
+        completedAt: new Date().toISOString(),
         status,
         steps,
         errorMessage,
@@ -108,7 +103,7 @@ export async function runDeleteAccount(opts: {
     }
   }
 
-  if (status === 'failed') {
+  if (status !== 'completed') {
     return { httpStatus: 500, body: { error: 'delete_failed' } };
   }
   return { httpStatus: 200, body: { ok: true } };

@@ -11,15 +11,24 @@ const USER_SUBCOLLECTIONS = [
 
 const LEADERBOARD_ROOTS = ['leaderboards', 'leaderboards_debug'] as const;
 
-const LIST_PAGE_SIZE = 300;
-const DAILY_ACTIVITY_PAGE_SIZE = 100;
-const DAILY_ACTIVITY_MAX_PAGES = 60;
+/** Top-level collections whose docs name their owner in a `uid` field. */
+export const UID_FIELD_COLLECTIONS = ['issue_reports', 'client_errors'] as const;
 
-export type WipeResult = {
-  ok: boolean;
-  errorMessage?: string;
-  softWarnings?: string[];
-};
+const LIST_PAGE_SIZE = 300;
+const QUERY_PAGE_SIZE = 300;
+
+/**
+ * Deletes per `batchWrite` call. Each call is one Worker subrequest (the Free
+ * plan allows 50 per request), so the wipe makes a few dozen calls at most.
+ */
+export const DELETE_BATCH_SIZE = 100;
+
+/** Firebase uids are short alphanumeric strings; anything else is refused. */
+const UID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+
+export type WipeResult =
+  | { ok: true; deleted: number }
+  | { ok: false; errorMessage: string };
 
 export type LeaderboardRoot = (typeof LEADERBOARD_ROOTS)[number];
 
@@ -33,7 +42,7 @@ export function allTimeLeaderboardPath(
   game: string,
   uid: string,
 ): string {
-  return `${documentsBase(projectId)}/${root}/${game}/all_time/${encodeURIComponent(uid)}`;
+  return `${documentsBase(projectId)}/${root}/${game}/all_time/${uid}`;
 }
 
 export function dailyEntryPath(
@@ -43,62 +52,40 @@ export function dailyEntryPath(
   dayId: string,
   uid: string,
 ): string {
-  return `${documentsBase(projectId)}/${root}/${game}/daily/${dayId}/entries/${encodeURIComponent(uid)}`;
+  return `${documentsBase(projectId)}/${root}/${game}/daily/${dayId}/entries/${uid}`;
 }
 
-function dailyActivityUserPath(
+export function dailyActivityUserPath(
   projectId: string,
   dayId: string,
   uid: string,
 ): string {
-  return `${documentsBase(projectId)}/daily_activity/${dayId}/users/${encodeURIComponent(uid)}`;
+  return `${documentsBase(projectId)}/daily_activity/${dayId}/users/${uid}`;
 }
 
-async function deleteDocument(
-  accessToken: string,
-  resourcePath: string,
-): Promise<void> {
-  const res = await fetch(`${FIRESTORE_API}/${resourcePath}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (res.status === 404) return;
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`firestore_delete_failed:${res.status}:${text.slice(0, 300)}`);
-  }
-}
-
-type ListDocumentNamesResult = {
-  names: string[];
-  hitPageCap: boolean;
-};
-
-async function listDocumentNames(
+/**
+ * Names of every doc in [collectionPath].
+ *
+ * With [showMissing], also the "missing" docs that exist only as parents of a
+ * subcollection. The app writes `leaderboards/{game}/daily/{dayId}/entries/{uid}`
+ * and `daily_activity/{dayId}/users/{uid}` without ever creating the day docs,
+ * so a plain list of those day collections returns nothing.
+ */
+export async function listDocumentNames(
   accessToken: string,
   collectionPath: string,
-  pageSize: number,
-  maxPages?: number,
-): Promise<ListDocumentNamesResult> {
+  options: { showMissing?: boolean } = {},
+): Promise<string[]> {
   const names: string[] = [];
   let pageToken: string | undefined;
-  let pages = 0;
-  let hitPageCap = false;
-
   do {
-    if (maxPages !== undefined && pages >= maxPages) {
-      if (pageToken) hitPageCap = true;
-      break;
-    }
-    pages += 1;
-
-    const qs = new URLSearchParams({ pageSize: String(pageSize) });
+    const qs = new URLSearchParams({ pageSize: String(LIST_PAGE_SIZE) });
+    if (options.showMissing) qs.set('showMissing', 'true');
     if (pageToken) qs.set('pageToken', pageToken);
-    const url = `${FIRESTORE_API}/${collectionPath}?${qs.toString()}`;
-    const res = await fetch(url, {
+    const res = await fetch(`${FIRESTORE_API}/${collectionPath}?${qs}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (res.status === 404) return { names, hitPageCap };
+    if (res.status === 404) return names;
     const text = await res.text();
     if (!res.ok) {
       throw new Error(`firestore_list_failed:${res.status}:${text.slice(0, 300)}`);
@@ -112,75 +99,20 @@ async function listDocumentNames(
     }
     pageToken = json.nextPageToken;
   } while (pageToken);
-
-  return { names, hitPageCap };
+  return names;
 }
 
 function docIdFromResourceName(name: string): string {
   return name.split('/').pop() ?? name;
 }
 
-async function deleteAllInCollection(
-  accessToken: string,
-  collectionPath: string,
-): Promise<void> {
-  const { names } = await listDocumentNames(
-    accessToken,
-    collectionPath,
-    LIST_PAGE_SIZE,
-  );
-  for (const name of names) {
-    await deleteDocument(accessToken, name);
-  }
-}
-
-async function deleteUserSubcollections(
-  accessToken: string,
-  projectId: string,
-  uid: string,
-): Promise<void> {
-  const userPath = userDocPath(projectId, uid);
-  for (const sub of USER_SUBCOLLECTIONS) {
-    await deleteAllInCollection(accessToken, `${userPath}/${sub}`);
-  }
-}
-
-async function wipeLeaderboards(
-  accessToken: string,
-  projectId: string,
-  uid: string,
-): Promise<void> {
-  const base = documentsBase(projectId);
-  for (const root of LEADERBOARD_ROOTS) {
-    for (const game of LEADERBOARD_GAMES) {
-      await deleteDocument(
-        accessToken,
-        allTimeLeaderboardPath(projectId, root, game, uid),
-      );
-
-      const dailyCol = `${base}/${root}/${game}/daily`;
-      const { names: dayDocNames } = await listDocumentNames(
-        accessToken,
-        dailyCol,
-        LIST_PAGE_SIZE,
-      );
-      for (const dayName of dayDocNames) {
-        const dayId = docIdFromResourceName(dayName);
-        await deleteDocument(
-          accessToken,
-          dailyEntryPath(projectId, root, game, dayId, uid),
-        );
-      }
-    }
-  }
-}
-
-export function issueReportsStructuredQuery(
+export function uidStructuredQuery(
+  collectionId: string,
   uid: string,
   startAfterDocName?: string,
 ): Record<string, unknown> {
   const structuredQuery: Record<string, unknown> = {
-    from: [{ collectionId: 'issue_reports' }],
+    from: [{ collectionId }],
     where: {
       fieldFilter: {
         field: { fieldPath: 'uid' },
@@ -189,7 +121,7 @@ export function issueReportsStructuredQuery(
       },
     },
     orderBy: [{ field: { fieldPath: '__name__' }, direction: 'ASCENDING' }],
-    limit: LIST_PAGE_SIZE,
+    limit: QUERY_PAGE_SIZE,
   };
   if (startAfterDocName) {
     structuredQuery.startAt = {
@@ -200,14 +132,16 @@ export function issueReportsStructuredQuery(
   return structuredQuery;
 }
 
-async function deleteIssueReportsForUid(
+/** Names of the docs in top-level [collectionId] whose `uid` is [uid]. */
+async function queryNamesByUid(
   accessToken: string,
   projectId: string,
+  collectionId: string,
   uid: string,
-): Promise<void> {
+): Promise<string[]> {
   const url = `${FIRESTORE_API}/${documentsBase(projectId)}:runQuery`;
+  const names: string[] = [];
   let startAfterDocName: string | undefined;
-
   for (;;) {
     const res = await fetch(url, {
       method: 'POST',
@@ -216,57 +150,110 @@ async function deleteIssueReportsForUid(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        structuredQuery: issueReportsStructuredQuery(uid, startAfterDocName),
+        structuredQuery: uidStructuredQuery(collectionId, uid, startAfterDocName),
       }),
     });
     const text = await res.text();
     if (!res.ok) {
       throw new Error(`firestore_query_failed:${res.status}:${text.slice(0, 300)}`);
     }
-    const rows = JSON.parse(text) as Array<{
-      document?: { name: string };
-    }>;
-
+    const rows = JSON.parse(text) as Array<{ document?: { name: string } }>;
     let matched = 0;
-    let lastDocName: string | undefined;
     for (const row of rows) {
       const name = row.document?.name;
       if (!name) continue;
-      await deleteDocument(accessToken, name);
-      lastDocName = name;
+      names.push(name);
+      startAfterDocName = name;
       matched += 1;
     }
-
-    if (matched < LIST_PAGE_SIZE || !lastDocName) break;
-    startAfterDocName = lastDocName;
+    if (matched < QUERY_PAGE_SIZE) return names;
   }
 }
 
-async function wipeDailyActivityBestEffort(
+/** Every doc that holds [uid]'s data. Deleting a doc that doesn't exist is a no-op. */
+export async function collectUserDocNames(opts: {
+  projectId: string;
+  accessToken: string;
+  uid: string;
+}): Promise<string[]> {
+  const { projectId, accessToken, uid } = opts;
+  const base = documentsBase(projectId);
+  const names = new Set<string>();
+
+  const userPath = userDocPath(projectId, uid);
+  for (const sub of USER_SUBCOLLECTIONS) {
+    for (const name of await listDocumentNames(accessToken, `${userPath}/${sub}`)) {
+      names.add(name);
+    }
+  }
+  names.add(userPath);
+
+  for (const root of LEADERBOARD_ROOTS) {
+    for (const game of LEADERBOARD_GAMES) {
+      names.add(allTimeLeaderboardPath(projectId, root, game, uid));
+      const days = await listDocumentNames(
+        accessToken,
+        `${base}/${root}/${game}/daily`,
+        { showMissing: true },
+      );
+      for (const day of days) {
+        names.add(
+          dailyEntryPath(projectId, root, game, docIdFromResourceName(day), uid),
+        );
+      }
+    }
+  }
+
+  const activityDays = await listDocumentNames(
+    accessToken,
+    `${base}/daily_activity`,
+    { showMissing: true },
+  );
+  for (const day of activityDays) {
+    names.add(dailyActivityUserPath(projectId, docIdFromResourceName(day), uid));
+  }
+
+  for (const collectionId of UID_FIELD_COLLECTIONS) {
+    for (const name of await queryNamesByUid(
+      accessToken,
+      projectId,
+      collectionId,
+      uid,
+    )) {
+      names.add(name);
+    }
+  }
+
+  return [...names];
+}
+
+/** Deletes [names] in `batchWrite` calls of [DELETE_BATCH_SIZE]; throws if any delete fails. */
+export async function batchDelete(
   accessToken: string,
   projectId: string,
-  uid: string,
-): Promise<string[]> {
-  try {
-    const col = `${documentsBase(projectId)}/daily_activity`;
-    const { names: dayNames, hitPageCap } = await listDocumentNames(
-      accessToken,
-      col,
-      DAILY_ACTIVITY_PAGE_SIZE,
-      DAILY_ACTIVITY_MAX_PAGES,
-    );
-    for (const dayName of dayNames) {
-      const dayId = docIdFromResourceName(dayName);
-      await deleteDocument(
-        accessToken,
-        dailyActivityUserPath(projectId, dayId, uid),
-      );
+  names: string[],
+): Promise<void> {
+  const url = `${FIRESTORE_API}/${documentsBase(projectId)}:batchWrite`;
+  for (let i = 0; i < names.length; i += DELETE_BATCH_SIZE) {
+    const chunk = names.slice(i, i + DELETE_BATCH_SIZE);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ writes: chunk.map((name) => ({ delete: name })) }),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`firestore_batch_failed:${res.status}:${text.slice(0, 300)}`);
     }
-    const warnings: string[] = [];
-    if (hitPageCap) warnings.push('daily_activity_page_cap');
-    return warnings;
-  } catch {
-    return ['daily_activity_partial'];
+    // batchWrite isn't atomic: each write reports its own status.
+    const json = JSON.parse(text) as { status?: Array<{ code?: number }> };
+    const failed = (json.status ?? []).filter((s) => (s.code ?? 0) !== 0);
+    if (failed.length > 0) {
+      throw new Error(`firestore_delete_failed:${failed.length}_of_${chunk.length}`);
+    }
   }
 }
 
@@ -275,55 +262,17 @@ export async function wipeUserFirestore(opts: {
   accessToken: string;
   uid: string;
 }): Promise<WipeResult> {
-  const softWarnings: string[] = [];
-
-  try {
-    await deleteUserSubcollections(
-      opts.accessToken,
-      opts.projectId,
-      opts.uid,
-    );
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'user_subcollections_failed';
-    return { ok: false, errorMessage: msg };
+  if (!UID_PATTERN.test(opts.uid)) {
+    return { ok: false, errorMessage: 'invalid_uid' };
   }
-
   try {
-    await deleteDocument(
-      opts.accessToken,
-      userDocPath(opts.projectId, opts.uid),
-    );
+    const names = await collectUserDocNames(opts);
+    await batchDelete(opts.accessToken, opts.projectId, names);
+    return { ok: true, deleted: names.length };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'user_doc_delete_failed';
-    return { ok: false, errorMessage: msg };
+    return {
+      ok: false,
+      errorMessage: e instanceof Error ? e.message : 'firestore_wipe_failed',
+    };
   }
-
-  try {
-    await wipeLeaderboards(opts.accessToken, opts.projectId, opts.uid);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'leaderboards_wipe_failed';
-    return { ok: false, errorMessage: msg };
-  }
-
-  try {
-    await deleteIssueReportsForUid(
-      opts.accessToken,
-      opts.projectId,
-      opts.uid,
-    );
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'issue_reports_delete_failed';
-    return { ok: false, errorMessage: msg };
-  }
-
-  const dailyWarnings = await wipeDailyActivityBestEffort(
-    opts.accessToken,
-    opts.projectId,
-    opts.uid,
-  );
-  softWarnings.push(...dailyWarnings);
-
-  return softWarnings.length > 0
-    ? { ok: true, softWarnings }
-    : { ok: true };
 }
