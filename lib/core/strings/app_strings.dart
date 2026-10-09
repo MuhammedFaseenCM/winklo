@@ -207,6 +207,8 @@ abstract final class AppStrings {
   static const profileChoosePhoto = 'Choose from photos';
   static const profilePresets = 'Presets';
   static const profileSaveFailed = 'Could not save profile. Try again.';
+  static const profilePhotoTooLarge =
+      'That photo is too large to upload (2 MB at most). Try another one.';
   static const profileUploadFailed = 'Could not upload photo. Try again.';
   static const profilePermissionDenied =
       'Photo access was denied. Enable it in Settings to upload an avatar.';

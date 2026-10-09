@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/data/clients/avatar/r2_avatar_upload_client.dart';
 import 'package:winklo/domain/failures.dart';
 
@@ -48,5 +49,30 @@ void main() {
       () => client.uploadJpeg(idToken: 'tok', bytes: [1]),
       throwsA(isA<Failure>()),
     );
+  });
+
+  test('a photo over 2 MiB fails with a clear message, before HTTP', () async {
+    var called = false;
+    final client = R2AvatarUploadClient(
+      baseUrl: 'https://avatar.example',
+      httpClient: MockClient((_) async {
+        called = true;
+        return http.Response('{}', 200);
+      }),
+    );
+    await expectLater(
+      () => client.uploadJpeg(
+        idToken: 'tok',
+        bytes: List<int>.filled(2 * 1024 * 1024 + 1, 0),
+      ),
+      throwsA(
+        isA<Failure>().having(
+          (f) => f.message,
+          'message',
+          AppStrings.profilePhotoTooLarge,
+        ),
+      ),
+    );
+    expect(called, isFalse);
   });
 }

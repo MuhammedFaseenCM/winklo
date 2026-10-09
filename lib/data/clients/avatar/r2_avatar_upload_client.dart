@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../../core/strings/app_strings.dart';
 import '../../../domain/failures.dart';
 import 'avatar_upload_client.dart';
 
@@ -23,8 +24,12 @@ class R2AvatarUploadClient implements AvatarUploadClient {
     if (root.isEmpty) {
       throw const Failure('Avatar upload is not configured.');
     }
-    if (bytes.isEmpty || bytes.length > _maxBytes) {
+    if (bytes.isEmpty) {
       throw const Failure('Could not update profile.');
+    }
+    // The Worker refuses anything larger; say why instead of a generic error.
+    if (bytes.length > _maxBytes) {
+      throw const Failure(AppStrings.profilePhotoTooLarge);
     }
 
     final uri = Uri.parse('$root/v1/avatar');

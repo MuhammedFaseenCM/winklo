@@ -12,6 +12,12 @@ import '../../../../domain/avatars/avatar_catalog.dart';
 import '../../cubit/profile_cubit.dart';
 import '../../cubit/profile_state.dart';
 
+/// Longest side, in pixels, of a picked avatar photo.
+const avatarPickMaxSide = 512.0;
+
+/// JPEG quality of a picked avatar photo.
+const avatarPickQuality = 85;
+
 class AvatarEditSheet extends StatelessWidget {
   const AvatarEditSheet({super.key, this.imagePicker});
 
@@ -118,7 +124,15 @@ class AvatarEditSheet extends StatelessWidget {
   Future<void> _pickPhoto(BuildContext context) async {
     final picker = imagePicker ?? ImagePicker();
     try {
-      final file = await picker.pickImage(source: ImageSource.gallery);
+      // Avatars show at most ~128 dp; scaling and re-encoding here keeps a
+      // camera photo far below the upload limit (2 MiB) instead of
+      // rejecting it.
+      final file = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: avatarPickMaxSide,
+        maxHeight: avatarPickMaxSide,
+        imageQuality: avatarPickQuality,
+      );
       if (file == null || !context.mounted) return;
       final bytes = await file.readAsBytes();
       if (!context.mounted) return;

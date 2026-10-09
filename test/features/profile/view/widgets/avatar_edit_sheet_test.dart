@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
@@ -14,6 +15,8 @@ import 'package:winklo/features/profile/cubit/profile_cubit.dart';
 import 'package:winklo/features/profile/view/widgets/avatar_edit_sheet.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockImagePicker extends Mock implements ImagePicker {}
 
 /// Network presets use CachedNetworkImage + progress placeholders, so
 /// [WidgetTester.pumpAndSettle] never completes. Advance a fixed duration.
@@ -119,5 +122,47 @@ void main() {
       find.byType(UserAvatar),
       findsNWidgets(AvatarCatalog.presetIds.length),
     );
+  });
+
+  testWidgets('picks a resized, compressed photo', (tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final picker = _MockImagePicker();
+    when(
+      () => picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: any(named: 'maxWidth'),
+        maxHeight: any(named: 'maxHeight'),
+        imageQuality: any(named: 'imageQuality'),
+      ),
+    ).thenAnswer((_) async => null);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: BlocProvider(
+          create: (_) => ProfileCubit(
+            profileRepository: profile,
+            updateDisplayName: UpdateDisplayName(profile),
+            updateAvatar: UpdateAvatar(profile),
+            uid: user.uid,
+          ),
+          child: Scaffold(body: AvatarEditSheet(imagePicker: picker)),
+        ),
+      ),
+    );
+    await _pumpSheet(tester);
+
+    await tester.tap(find.text(AppStrings.profileChoosePhoto));
+    await tester.pump();
+
+    verify(
+      () => picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: avatarPickMaxSide,
+        maxHeight: avatarPickMaxSide,
+        imageQuality: avatarPickQuality,
+      ),
+    ).called(1);
   });
 }
