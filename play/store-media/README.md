@@ -8,7 +8,7 @@ Winklo ships **three daily games**:
 |---|---|---|
 | **Zip** | Draw one line through numbered cells 1 → N and fill every cell | Ember `#FF6B2C` |
 | **Path Words** | Trace hidden words across a letter grid | Sky `#38BDF8` |
-| **Sudoku** | Classic 9×9 Sudoku, clean and calm | Teal `#2DD4BF` |
+| **Sudoku** | Classic 6×6 Sudoku (2×3 boxes), clean and calm | Teal `#2DD4BF` |
 
 Shared hooks: a new puzzle every day, daily streaks 🔥, a daily leaderboard with **No hint** / **No mistakes** clean-run chips, beat-your-best-time, and pause anytime (your run is saved).
 
@@ -94,7 +94,7 @@ Winklo is three beautiful daily puzzle games, about one minute each:
   cell of the grid. Signature look: a neon ember-to-pink gradient path.
 - PATH WORDS: trace hidden words through a letter grid; each found word lights up
   in its own jewel color (sapphire, emerald, amber, ruby).
-- SUDOKU: a calm, clean, modern 9×9 Sudoku with soft teal highlights.
+- SUDOKU: a calm, clean, modern 6×6 Sudoku (2×3 boxes) with soft teal highlights.
 New puzzles every day, daily streaks 🔥, a daily leaderboard with "No hint" and
 "No mistakes" badges, beat-your-best-time, pause anytime.
 
@@ -126,7 +126,7 @@ HARD RULES
 - Canvas 1080 × 1920 px, 9:16, 60 px safe margins.
 - Spell all text exactly as given. Do not add any other words.
 - Puzzles must look plausible: numbers in sequence, real English words on tiles,
-  no repeated digits in any Sudoku row, column or 3×3 box, no gibberish.
+  no repeated digits in any Sudoku row, column or 2×3 box, no gibberish.
 - Never write "#1", "Best", "Free", "Top", ratings, prices, awards, or store
   badges.
 - One idea, one focal point, generous negative space per slide.
@@ -171,10 +171,10 @@ the letters of the word being traced. Gentle depth of field.
 ```
 Slide 4. Headline: "Sudoku, beautifully calm" (glow "calm", teal).
 Subline: "Clean grid. Play at your pace."
-Scene: a 9×9 Sudoku board of translucent glass cells floating at a gentle
+Scene: a 6×6 Sudoku board of translucent glass cells floating at a gentle
 isometric angle, with soft teal light glowing from beneath. Only a sparse set of
-digits is shown (about 25, valid: no repeats in any row, column or 3×3 box).
-One digit "7" lifts out of the board, glowing teal, about to drop into its
+digits is shown (about 14 of 1–6, valid: no repeats in any row, column or 2×3
+box). One digit "4" lifts out of the board, glowing teal, about to drop into its
 cell. The ember line glides along the board's outer edge. Serene, spa-like
 mood, lots of breathing room.
 ```
@@ -301,7 +301,7 @@ smoky glass. Slow orbit camera, shallow depth of field. 3 seconds.
 
 **V4 — Sudoku calm**
 ```
-A 9×9 board of translucent glass cells floats at a gentle isometric angle over
+A 6×6 board of translucent glass cells floats at a gentle isometric angle over
 dark space, lit softly from beneath in teal. A single glowing teal glass cube
 descends slowly and settles into an empty cell with a soft ripple of light; then
 the whole row glows teal for a moment and fades. Serene, slow, spa-like. Cells
@@ -375,5 +375,5 @@ No other text, no badges.
 - [ ] Screenshots are 1080 × 1920, ≤ 8 MB, named `01-…` to `06-…`.
 - [ ] Old `phoneScreenshots/*.png` replaced. The lime-green edge in the old `02-zip.png` / `03-path-words.png` is gone.
 - [ ] Video on YouTube, Public or Unlisted, ads off, not age-restricted.
-- [ ] `short_description.txt` and `full_description.txt` updated to list the three games (they still mention Word Match and Category Race).
+- [x] `short_description.txt` and `full_description.txt` list the three games.
 - [ ] Feature graphic regenerated to match the new style.

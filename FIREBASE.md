@@ -1,7 +1,6 @@
 # Firebase setup (Winklo)
 
-The app works **without** Firebase using local seed JSON under `assets/`.  
-Connect Firebase when you want to edit words/levels remotely, and for Analytics / Crashlytics / Auth / leaderboards.
+The daily games need Firebase: Zip, Path Words and Sudoku load each day's puzzle from Firestore (written by winklo-admin), and playing requires Google sign-in. Without a working Firebase config the app still starts, but the games show "Could not load today's puzzle", and Analytics / Crashlytics do nothing.
 
 ## 1. Create project
 
@@ -110,11 +109,10 @@ Doc ids use the **player’s local calendar** date (`YYYYMMDD`). Publish today a
 }
 ```
 
-You can copy fields from files in:
+The bundled samples are legacy and not read by the daily games:
 
-- `assets/zip/levels/`
-- `assets/word_match/decks/`
-- `assets/words/categories/`
+- `assets/zip/levels/`: the old level-based Zip
+- `assets/word_match/decks/`, `assets/words/categories/`: the hidden Word Match and Category Race games
 
 ### `issue_reports/{reportId}`
 
@@ -159,9 +157,8 @@ Packages: `firebase_analytics`, `firebase_crashlytics`.
 ## 5. Behavior
 
 - On launch, the app tries `Firebase.initializeApp()`
-- If that fails (no config yet), it uses asset seeds and shows a home banner
-- If Firebase works but a collection is empty, it also falls back to assets
-- Firestore offline persistence is enabled for solo play after first sync
+- If that fails (no config yet), the daily games can't load a puzzle and show an error with Retry; there is no asset fallback
+- Daily puzzle reads wait up to 8 seconds for the server, then use the copy Firestore cached on the device (offline persistence is on)
 - Analytics / Crashlytics no-op safely when Firebase is not ready
 
 ## 6. Remote Config (force update)

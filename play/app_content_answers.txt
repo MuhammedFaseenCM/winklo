@@ -3,8 +3,8 @@ Privacy policy URL:
 https://muhammedfaseencm.github.io/winklo/privacy/
 
 Sign in / App access:
-All features available with any Google account. Zip and Path Words require
-Google Sign-In. Reviewers and closed testers should use their own Google
+All features available with any Google account. Zip, Path Words and Sudoku
+require Google Sign-In. Reviewers and closed testers should use their own Google
 account. No special login credentials are required.
 
 Ads:

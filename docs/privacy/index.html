@@ -142,10 +142,11 @@
       </p>
       <p>
         You may choose a gallery photo. The app uses the system photo picker
-        (no broad photo-library permission). The image is uploaded as JPEG to
-        our Cloudflare Worker and stored on Cloudflare R2 at a public URL (for
-        example on <code>r2.dev</code>). Preset avatars are bundled in the app
-        and do not upload a photo.
+        (no broad photo-library permission). The image is resized on your
+        device, uploaded as JPEG to our Cloudflare Worker and stored on
+        Cloudflare R2 at a public URL (for example on <code>r2.dev</code>).
+        Preset avatars are images we host on Cloudflare R2; choosing one
+        uploads nothing.
       </p>
       <p>
         An FCM device token may be stored on your user document so we can send
@@ -199,10 +200,6 @@
         <li>
           <strong>Firebase Remote Config</strong> — operator settings such as
           minimum app version / build for update prompts.
-        </li>
-        <li>
-          <strong>Path Words noun pool</strong> — the app may fetch a shared
-          daily word list from our Cloudflare Worker.
         </li>
       </ul>
       <p>
