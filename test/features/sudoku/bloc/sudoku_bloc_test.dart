@@ -521,7 +521,7 @@ void main() {
   );
 
   blocTest<SudokuBloc, SudokuState>(
-    'reset after hint consume keeps depleted quota',
+    'reset after hint consume keeps depleted quota and usedHintsThisRun',
     build: () => buildBloc(quota: _FakeHintQuota(3)),
     act: (bloc) async {
       bloc.add(SudokuEvent.started(date: day));
@@ -534,9 +534,27 @@ void main() {
       expect(bloc.state.hintsRemaining, 2);
       expect(bloc.state.activeCoachHint, isNull);
       expect(bloc.state.grid[1], 0);
-      expect(bloc.state.usedHintsThisRun, isFalse);
+      // The reset is part of the same run; it can't earn "Hint-free" back.
+      expect(bloc.state.usedHintsThisRun, isTrue);
     },
   );
+
+  test('reset keeps hadMistakesThisRun', () async {
+    final bloc = buildBloc(
+      generatePuzzle: ({required DateTime day}) => _twoEmptyPuzzle(day: day),
+    );
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+    // Row 0 has one gap (solution 2); a 3 fills it wrongly.
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.digitTapped(3));
+    await bloc.stream.firstWhere((s) => s.hadMistakesThisRun);
+    bloc.add(const SudokuEvent.reset());
+    await bloc.stream.firstWhere((s) => s.grid[1] == 0);
+
+    expect(bloc.state.hadMistakesThisRun, isTrue);
+    await bloc.close();
+  });
 
   blocTest<SudokuBloc, SudokuState>(
     'dismissHint clears coach and banner',

@@ -558,6 +558,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     await _persistDraft();
   }
 
+  /// Clears the board but not the run: the clock, the hints spent and the
+  /// clean-run flag carry on, so a reset can't earn "Hint-free" back.
   void _onReset(PathWordsReset event, Emitter<PathWordsState> emit) {
     if (state.finished) return;
     if (state.status != PathWordsStatus.ready &&
@@ -577,7 +579,6 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         hintFlashCell: null,
         errorMessage: null,
         ruleTip: null,
-        usedHintsThisRun: false,
         finished: false,
         points: null,
         timeSeconds: null,

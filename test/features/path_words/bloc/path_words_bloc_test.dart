@@ -1622,6 +1622,29 @@ void main() {
     },
   );
 
+  test('reset clears the board but keeps usedHintsThisRun', () async {
+    when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+      (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+    );
+    final drafts = _MemoryInProgressRuns();
+    final bloc = buildBloc(drafts: drafts);
+    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+    await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+
+    bloc.add(const PathWordsEvent.hint());
+    await bloc.stream.firstWhere((s) => s.usedHintsThisRun);
+    bloc.add(const PathWordsEvent.reset());
+    await bloc.stream.firstWhere((s) => s.hintRevealLength == 0);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(bloc.state.usedHintsThisRun, isTrue);
+    expect(
+      drafts.runs['${GameIds.pathWords}_20260917']?.usedHintsThisRun,
+      isTrue,
+    );
+    await bloc.close();
+  });
+
   blocTest<PathWordsBloc, PathWordsState>(
     'failed same-length word attempt sets an off-board rule tip',
     build: () {

@@ -303,8 +303,10 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     );
   }
 
+  /// Clears the path but not the run: the clock, the hints spent and the
+  /// clean-run flag carry on, so Clear can't earn "Hint-free" back.
   Future<void> _onReset(ZipReset event, Emitter<ZipState> emit) async {
-    emit(state.copyWith(usedHintsThisRun: false, path: const []));
+    emit(state.copyWith(path: const []));
     await _persistDraft();
     await analytics.logGameReset(gameId: GameIds.zip);
   }

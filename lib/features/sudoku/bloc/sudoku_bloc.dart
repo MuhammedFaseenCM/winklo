@@ -380,6 +380,9 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     emit(state.copyWith(activeCoachHint: null, showNoSimpleHint: false));
   }
 
+  /// Clears the board but not the run: the clock, the hints spent and the
+  /// clean-run flags carry on, so a reset can't earn "Hint-free" or
+  /// "Flawless" back.
   void _onReset(SudokuReset event, Emitter<SudokuState> emit) {
     if (!_canPlay) return;
     final puzzle = state.puzzle;
@@ -396,8 +399,6 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         hintsRemaining: hintQuota.remaining(GameIds.sudoku, _runPlayId),
         activeCoachHint: null,
         showNoSimpleHint: false,
-        usedHintsThisRun: false,
-        hadMistakesThisRun: false,
         unitFlashIndices: const <int>{},
         celebratedUnitIds: const <String>{},
         finished: false,

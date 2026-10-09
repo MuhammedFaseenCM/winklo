@@ -339,26 +339,26 @@ void main() {
     },
   );
 
-  blocTest<ZipBloc, ZipState>(
-    'ZipReset clears usedHintsThisRun',
-    build: buildBloc,
-    act: (b) {
-      b.add(const ZipEvent.hint(hintsRemaining: 2));
-      b.add(const ZipEvent.reset());
-    },
-    expect: () => [
-      isA<ZipState>().having(
-        (s) => s.usedHintsThisRun,
-        'usedHintsThisRun',
-        isTrue,
-      ),
-      isA<ZipState>().having(
-        (s) => s.usedHintsThisRun,
-        'usedHintsThisRun',
-        isFalse,
-      ),
-    ],
-  );
+  test('ZipReset clears the path but keeps usedHintsThisRun', () async {
+    final drafts = _MemoryInProgressRuns();
+    final bloc = buildBloc(
+      now: DateTime(2026, 9, 13),
+      drafts: drafts,
+      wait: (_) async {},
+    );
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
+    bloc.add(ZipEvent.pathChanged(path: [const Cell(0, 0)]));
+    bloc.add(const ZipEvent.hint(hintsRemaining: 2));
+    bloc.add(const ZipEvent.reset());
+    await bloc.stream.firstWhere((s) => s.usedHintsThisRun && s.path.isEmpty);
+    await Future<void>.delayed(Duration.zero);
+
+    // Clear is the everyday reset in Zip; it must not earn "Hint-free" back.
+    expect(bloc.state.usedHintsThisRun, isTrue);
+    expect(drafts.runs['${GameIds.zip}_20260913']?.usedHintsThisRun, isTrue);
+    await bloc.close();
+  });
 
   blocTest<ZipBloc, ZipState>(
     'minute play period uses a new lock key each minute',
