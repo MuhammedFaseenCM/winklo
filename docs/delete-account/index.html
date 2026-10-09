@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Delete your Winklo account</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #0f172a;
+        --on-ink: #f8fafc;
+        --muted: #94a3b8;
+        --ember: #ff6b2c;
+        --wall: #1e293b;
+      }
+      body {
+        margin: 0;
+        background: var(--ink);
+        color: var(--on-ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 42rem;
+        margin: 0 auto;
+        padding: 2.75rem 1.35rem 4.5rem;
+      }
+      .brand {
+        margin: 0 0 0.35rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--ember);
+      }
+      h1 {
+        font-size: clamp(1.85rem, 4vw, 2.25rem);
+        letter-spacing: -0.035em;
+        line-height: 1.15;
+        margin: 0 0 1rem;
+      }
+      p {
+        margin: 0 0 0.9rem;
+        color: var(--on-ink);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      a {
+        color: var(--ember);
+      }
+      a:hover {
+        text-decoration-thickness: 2px;
+      }
+      .card {
+        background: var(--wall);
+        border-radius: 0.9rem;
+        border-left: 3px solid var(--ember);
+        padding: 1.05rem 1.2rem;
+        margin: 1.35rem 0;
+      }
+      .panel[hidden] {
+        display: none !important;
+      }
+      .meta {
+        font-size: 0.92rem;
+        margin: 0 0 1rem;
+      }
+      .meta dt {
+        color: var(--muted);
+        font-weight: 500;
+        margin: 0.35rem 0 0.15rem;
+      }
+      .meta dd {
+        margin: 0;
+        word-break: break-all;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.88rem;
+      }
+      label.check {
+        display: flex;
+        gap: 0.65rem;
+        align-items: flex-start;
+        margin: 1rem 0;
+        cursor: pointer;
+        font-size: 0.95rem;
+      }
+      label.check input {
+        margin-top: 0.25rem;
+        accent-color: var(--ember);
+      }
+      .field {
+        margin: 0.85rem 0 1.1rem;
+      }
+      .field label {
+        display: block;
+        font-size: 0.88rem;
+        color: var(--muted);
+        margin-bottom: 0.35rem;
+      }
+      .field input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.65rem 0.75rem;
+        border-radius: 0.5rem;
+        border: 1px solid #334155;
+        background: var(--ink);
+        color: var(--on-ink);
+        font-size: 1rem;
+      }
+      .field input[type="text"]:focus {
+        outline: 2px solid var(--ember);
+        outline-offset: 1px;
+      }
+      button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.15rem;
+        border-radius: 0.55rem;
+        border: none;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      button.primary {
+        background: var(--ember);
+        color: #0f172a;
+      }
+      button.primary:hover:not(:disabled) {
+        filter: brightness(1.06);
+      }
+      button.danger {
+        background: #dc2626;
+        color: #fff;
+        width: 100%;
+      }
+      button.danger:hover:not(:disabled) {
+        filter: brightness(1.08);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .status-ok {
+        color: #86efac;
+      }
+      .status-err {
+        color: #fca5a5;
+      }
+      footer {
+        margin-top: 2.5rem;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="brand">Winklo</p>
+      <h1>Delete your Winklo account</h1>
+
+      <p>
+        This permanently deletes your Winklo account and cloud data tied to your
+        Google sign-in. Deletion is <strong>immediate</strong> after you confirm
+        below — there is no grace period or undo.
+      </p>
+      <p>We remove:</p>
+      <ul>
+        <li>Your profile and synced game progress</li>
+        <li>Your leaderboard entries</li>
+        <li>Issue reports you submitted</li>
+        <li>Your custom avatar (if any)</li>
+        <li>Your Firebase Authentication account for Winklo</li>
+      </ul>
+      <p class="muted">
+        Historical Google Analytics and Crashlytics events may remain with Google
+        under their retention policies; we do not store those as user-owned
+        documents you can browse in the app.
+      </p>
+
+      <div id="signed-out" class="panel card">
+        <p style="margin-bottom: 1rem">
+          Sign in with the same Google account you use in the Winklo app to
+          continue.
+        </p>
+        <button type="button" class="primary" id="btn-sign-in">
+          Continue with Google
+        </button>
+      </div>
+
+      <div id="signed-in" class="panel card" hidden>
+        <p><strong>Signed in</strong></p>
+        <dl class="meta">
+          <dt>Email</dt>
+          <dd id="user-email">—</dd>
+          <dt>User ID</dt>
+          <dd id="user-uid">—</dd>
+        </dl>
+        <label class="check">
+          <input type="checkbox" id="confirm-check" />
+          <span>I understand this cannot be undone.</span>
+        </label>
+        <div class="field">
+          <label for="confirm-text">Type DELETE to enable deletion</label>
+          <input
+            type="text"
+            id="confirm-text"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Type DELETE"
+          />
+        </div>
+        <button type="button" class="danger" id="btn-delete" disabled>
+          Delete my account
+        </button>
+      </div>
+
+      <div id="done" class="panel card" hidden>
+        <p class="status-ok">
+          <strong>Account deleted.</strong> You can close this page. If you open
+          Winklo again, sign in will create a new account with no restored data.
+        </p>
+      </div>
+
+      <div id="error" class="panel card" hidden>
+        <p class="status-err" id="error-message">
+          Something went wrong. Please try again or contact support via GitHub
+          issues.
+        </p>
+        <button type="button" class="primary" id="btn-retry">Try again</button>
+      </div>
+
+      <footer>
+        <a href="../privacy/">Privacy policy</a>
+      </footer>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+      import {
+        getAuth,
+        GoogleAuthProvider,
+        onAuthStateChanged,
+        signInWithPopup,
+      } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+
+      // Web app from Firebase project brain-zip-app (console: "Winklo Admin").
+      const FIREBASE_CONFIG = {
+        apiKey: 'AIzaSyCINzqIpBqip2LbWDg0u-NhkCw0O138phQ',
+        authDomain: 'brain-zip-app.firebaseapp.com',
+        projectId: 'brain-zip-app',
+        storageBucket: 'brain-zip-app.firebasestorage.app',
+        messagingSenderId: '43073222004',
+        appId: '1:43073222004:web:a5c78b07190f4bf206a821',
+      };
+
+      // Task 7: replace REPLACE with your Cloudflare account subdomain after deploy.
+      const WORKER_BASE =
+        'https://winklo-account-deletion.winklo.workers.dev';
+
+      const app = initializeApp(FIREBASE_CONFIG);
+      const auth = getAuth(app);
+      const provider = new GoogleAuthProvider();
+
+      const signedOut = document.getElementById('signed-out');
+      const signedIn = document.getElementById('signed-in');
+      const donePanel = document.getElementById('done');
+      const errorPanel = document.getElementById('error');
+      const errorMessage = document.getElementById('error-message');
+      const btnSignIn = document.getElementById('btn-sign-in');
+      const btnDelete = document.getElementById('btn-delete');
+      const btnRetry = document.getElementById('btn-retry');
+      const confirmCheck = document.getElementById('confirm-check');
+      const confirmText = document.getElementById('confirm-text');
+      const userEmailEl = document.getElementById('user-email');
+      const userUidEl = document.getElementById('user-uid');
+
+      /** @type {import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js').User | null} */
+      let currentUser = null;
+      let deletionComplete = false;
+      let showingError = false;
+
+      function hideAllPanels() {
+        signedOut.hidden = true;
+        signedIn.hidden = true;
+        donePanel.hidden = true;
+        errorPanel.hidden = true;
+      }
+
+      function showSignedOut() {
+        hideAllPanels();
+        showingError = false;
+        signedOut.hidden = false;
+      }
+
+      function showSignedIn(user) {
+        hideAllPanels();
+        showingError = false;
+        currentUser = user;
+        userEmailEl.textContent = user.email ?? '(no email on account)';
+        userUidEl.textContent = user.uid;
+        confirmCheck.checked = false;
+        confirmText.value = '';
+        updateDeleteEnabled();
+        signedIn.hidden = false;
+      }
+
+      function showDone() {
+        hideAllPanels();
+        deletionComplete = true;
+        showingError = false;
+        donePanel.hidden = false;
+      }
+
+      function showError(message) {
+        hideAllPanels();
+        showingError = true;
+        errorMessage.textContent = message;
+        errorPanel.hidden = false;
+      }
+
+      function updateDeleteEnabled() {
+        const ok =
+          confirmCheck.checked && confirmText.value.trim() === 'DELETE';
+        btnDelete.disabled = !ok;
+      }
+
+      confirmCheck.addEventListener('change', updateDeleteEnabled);
+      confirmText.addEventListener('input', updateDeleteEnabled);
+
+      btnSignIn.addEventListener('click', async () => {
+        btnSignIn.disabled = true;
+        try {
+          await signInWithPopup(auth, provider);
+        } catch (err) {
+          const msg =
+            err && typeof err === 'object' && 'message' in err
+              ? String(err.message)
+              : 'Sign-in failed.';
+          showError(msg);
+        } finally {
+          btnSignIn.disabled = false;
+        }
+      });
+
+      btnRetry.addEventListener('click', () => {
+        if (currentUser) {
+          showSignedIn(currentUser);
+        } else {
+          showSignedOut();
+        }
+      });
+
+      btnDelete.addEventListener('click', async () => {
+        if (!currentUser || btnDelete.disabled) return;
+        btnDelete.disabled = true;
+        const label = btnDelete.textContent;
+        btnDelete.textContent = 'Deleting…';
+        try {
+          const idToken = await currentUser.getIdToken();
+          const res = await fetch(`${WORKER_BASE}/v1/delete-account`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ confirm: 'DELETE' }),
+          });
+          let body = null;
+          try {
+            body = await res.json();
+          } catch {
+            body = null;
+          }
+          if (res.ok) {
+            currentUser = null;
+            showDone();
+            return;
+          }
+          const detail =
+            body && typeof body.error === 'string'
+              ? body.error
+              : `Request failed (${res.status})`;
+          showError(detail);
+        } catch (err) {
+          const msg =
+            err && typeof err === 'object' && 'message' in err
+              ? String(err.message)
+              : 'Network error. Try again.';
+          showError(msg);
+        } finally {
+          btnDelete.textContent = label;
+          updateDeleteEnabled();
+        }
+      });
+
+      onAuthStateChanged(auth, (user) => {
+        if (deletionComplete) return;
+        if (user) {
+          showingError = false;
+          showSignedIn(user);
+        } else if (!showingError) {
+          showSignedOut();
+        }
+      });
+    </script>
+  </body>
+</html>

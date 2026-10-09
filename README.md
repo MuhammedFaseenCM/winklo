@@ -60,7 +60,7 @@ These are bugs and mismatches found during the analysis. All are small and worth
 2. **Sudoku's "How to play" is out of date.** It still says "Wrong entries are rejected", but free entry shipped in build 13. *Where:* `AppStrings.sudokuHowToPlayBody`. **S**
 3. **The 08:00 reminder leaves out Sudoku.** Its text reads "Play Zip and Path Words to keep your streak going." *Where:* `AppStrings.notifDailyReadyBody`. **S**
 4. **Most phone photos can't be used as avatars.** The picker doesn't resize or compress, and the upload Worker rejects anything over 2 MiB, which most camera photos exceed. Pass `maxWidth` and `imageQuality` to `pickImage`, or crop to a square first. *Where:* `avatar_edit_sheet.dart`, `r2_avatar_upload_client.dart`. **S**
-5. **Account deletion only works through a GitHub issue.** Google Play expects apps that create accounts to offer a deletion request inside the app as well as on the web. The Firestore rules block deleting `users/{uid}`, so this needs a small server-side step (a Worker or Cloud Function) that removes the user's docs, leaderboard rows and R2 avatar. **M**
+5. **Account deletion is on the web, not in the app yet.** Users can delete at [winklo.pages.dev/delete-account/](https://winklo.pages.dev/delete-account/) (Google Sign-In, immediate wipe via the account-deletion Worker). Optional follow-up: add a Profile entry point in the app for Play’s in-app expectation. **S**
 6. **Public copy has drifted from the app.** **S**
    - The landing page promises Undo, but Sudoku has none (or build it; see [Sudoku](#sudoku)).
    - `play/store-media/README.md` says "Classic 9×9 Sudoku"; the game is 6×6.

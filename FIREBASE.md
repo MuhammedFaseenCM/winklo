@@ -131,6 +131,10 @@ Deploy rules before relying on production writes:
 firebase deploy --only firestore:rules
 ```
 
+### `deletion_requests/{id}`
+
+Worker-only audit trail for account deletion (written by the account-deletion Worker via Admin SDK). Firestore rules deny all client read and write; only server-side Admin access applies.
+
 ## 4. Analytics + Crashlytics
 
 Packages: `firebase_analytics`, `firebase_crashlytics`.

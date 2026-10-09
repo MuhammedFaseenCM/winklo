@@ -29,7 +29,9 @@ Data safety: upload via Play API (play/data_safety.csv + upload_data_safety.py)
 - Leaderboard entries (Zip, Path Words, Sudoku) show name/photo, best time,
   hint/mistake flags and current streak to other players in the app
 - Encrypted in transit: Yes
-- Account deletion: request via GitHub issues (see privacy policy); no in-app delete yet
+- Account/data deletion: https://winklo.pages.dev/delete-account/ — Google
+  Sign-In on the web page, immediate wipe; GitHub issue fallback (privacy
+  policy). No in-app delete button yet.
 
 Government apps: No
 Financial features: No
