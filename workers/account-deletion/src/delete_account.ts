@@ -64,17 +64,19 @@ export async function runDeleteAccount(opts: {
     steps.firestore = wipeResult.ok;
     if (!wipeResult.ok) {
       errorMessage = wipeResult.errorMessage ?? 'firestore_wipe_failed';
-    } else if (wipeResult.softWarnings?.length) {
-      softWarnings.push(...wipeResult.softWarnings);
-    }
+    } else {
+      if (wipeResult.softWarnings?.length) {
+        softWarnings.push(...wipeResult.softWarnings);
+      }
 
-    try {
-      await deleteAuthUser({ projectId, accessToken, uid });
-      steps.auth = true;
-    } catch (e) {
-      steps.auth = false;
-      const msg = e instanceof Error ? e.message : 'auth_delete_failed';
-      errorMessage = errorMessage ? `${errorMessage}; ${msg}` : msg;
+      try {
+        await deleteAuthUser({ projectId, accessToken, uid });
+        steps.auth = true;
+      } catch (e) {
+        steps.auth = false;
+        const msg = e instanceof Error ? e.message : 'auth_delete_failed';
+        errorMessage = errorMessage ? `${errorMessage}; ${msg}` : msg;
+      }
     }
   }
 
