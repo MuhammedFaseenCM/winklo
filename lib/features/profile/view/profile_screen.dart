@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_urls.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
@@ -13,6 +14,7 @@ import '../../../core/widgets/user_avatar.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/app_user.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/external_link_repository.dart';
 import '../../../domain/repositories/profile_repository.dart';
 import '../../../domain/usecases/update_avatar.dart';
 import '../../../domain/usecases/update_display_name.dart';
@@ -23,6 +25,7 @@ import '../cubit/profile_cubit.dart';
 import '../cubit/profile_state.dart';
 import 'widgets/about_game_dialog.dart';
 import 'widgets/avatar_edit_sheet.dart';
+import 'widgets/delete_account_confirm_dialog.dart';
 import 'widgets/name_edit_sheet.dart';
 import 'widgets/profile_settings_list.dart';
 import 'widgets/profile_shimmer.dart';
@@ -184,6 +187,26 @@ class _SignedInBodyState extends State<_SignedInBody> {
     await context.read<AuthCubit>().signOut();
   }
 
+  /// Play requires an in-app path to account deletion. The deletion itself
+  /// happens on the web page, which needs a real browser for Google sign-in.
+  /// Signing out first stops this phone from syncing the account's progress
+  /// back after the wipe (its ID token stays valid for up to an hour).
+  Future<void> _deleteAccount(BuildContext context) async {
+    final confirmed = await showDeleteAccountConfirmDialog(context);
+    if (!confirmed || !context.mounted) return;
+    final links = context.read<ExternalLinkRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+    await context.read<AnalyticsRepository>().logProfileDeleteAccountOpened();
+    if (!context.mounted) return;
+    await context.read<AuthCubit>().signOut();
+    final opened = await links.open(Uri.parse(AppUrls.accountDeletion));
+    if (!opened) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text(AppStrings.deleteAccountOpenFailed)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final layout = AppLayout.of(context);
@@ -323,6 +346,7 @@ class _SignedInBodyState extends State<_SignedInBody> {
                     onAbout: () => unawaited(showAboutGameDialog(context)),
                     onReport: () => unawaited(_openReport(context)),
                     onSignOut: () => unawaited(_signOut(context)),
+                    onDeleteAccount: () => unawaited(_deleteAccount(context)),
                   ),
                 ],
               ),

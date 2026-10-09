@@ -152,6 +152,17 @@ abstract final class AppStrings {
   static const signOutConfirmBody =
       'You’ll need to sign in again to play. You can still view the live leaderboard signed out.';
   static const signOutConfirmCancel = 'Cancel';
+  static const signOutConfirmNote =
+      'Your streaks & stats stay safe in the cloud.';
+  static const deleteAccount = 'Delete account';
+  static const deleteAccountConfirmTitle = 'Delete your account?';
+  static const deleteAccountConfirmBody =
+      'You’ll finish on our website: sign in there with the same Google account and confirm. Your profile, leaderboard entries and synced progress are deleted for good.';
+  static const deleteAccountConfirmNote =
+      'We’ll sign you out here first, then open the page in your browser.';
+  static const deleteAccountConfirmContinue = 'Continue';
+  static const deleteAccountOpenFailed =
+      'Couldn’t open your browser. Visit winklo.pages.dev/delete-account to delete your account.';
   static const leaderboardTitle = 'Leaderboard';
   static const leaderboardDaily = 'Daily';
   static const leaderboardAllTime = 'All-time';

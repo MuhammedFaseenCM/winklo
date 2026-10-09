@@ -10,6 +10,7 @@ class ProfileSettingsList extends StatelessWidget {
     required this.onAbout,
     required this.onReport,
     required this.onSignOut,
+    required this.onDeleteAccount,
     this.enabled = true,
     this.sfxEnabled,
     this.onSfxChanged,
@@ -19,6 +20,7 @@ class ProfileSettingsList extends StatelessWidget {
   final VoidCallback onAbout;
   final VoidCallback onReport;
   final VoidCallback onSignOut;
+  final VoidCallback onDeleteAccount;
 
   /// Decorative rows (signed-out mock) ignore taps.
   final bool enabled;
@@ -97,6 +99,13 @@ class ProfileSettingsList extends StatelessWidget {
               foreground: error,
               showChevron: false,
               onTap: enabled ? onSignOut : null,
+            ),
+            const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
+            _SettingsRow(
+              icon: Icons.person_remove_outlined,
+              label: AppStrings.deleteAccount,
+              foreground: error,
+              onTap: enabled ? onDeleteAccount : null,
             ),
           ],
         ),

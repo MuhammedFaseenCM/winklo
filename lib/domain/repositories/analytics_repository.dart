@@ -40,5 +40,7 @@ abstract class AnalyticsRepository {
 
   Future<void> logProfileSignOut();
 
+  Future<void> logProfileDeleteAccountOpened();
+
   Future<void> logAppOpen({String? platform});
 }

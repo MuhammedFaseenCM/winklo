@@ -17,6 +17,7 @@ import 'package:winklo/data/clients/path_words/http_path_words_nouns_client.dart
 import 'package:winklo/data/clients/path_words/path_words_nouns_client.dart';
 import 'package:winklo/data/repositories/activity_repository_impl.dart';
 import 'package:winklo/data/repositories/app_update_repository_impl.dart';
+import 'package:winklo/data/repositories/external_link_repository_impl.dart';
 import 'package:winklo/data/repositories/auth_repository_impl.dart';
 import 'package:winklo/data/repositories/category_repository_impl.dart';
 import 'package:winklo/data/repositories/firebase_analytics_repository_impl.dart';
@@ -38,6 +39,7 @@ import 'package:winklo/data/repositories/zip_level_repository_impl.dart';
 import 'package:winklo/domain/repositories/activity_repository.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
+import 'package:winklo/domain/repositories/external_link_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/category_repository.dart';
 import 'package:winklo/domain/repositories/client_error_repository.dart';
@@ -195,6 +197,9 @@ List<SingleChildWidget> buildRepositoryProviders({
     ),
     RepositoryProvider<AppUpdateRepository>(
       create: (_) => AppUpdateRepositoryImpl(),
+    ),
+    RepositoryProvider<ExternalLinkRepository>(
+      create: (_) => ExternalLinkRepositoryImpl(),
     ),
     RepositoryProvider<CheckAppUpdate>(
       create: (context) => CheckAppUpdate(context.read<AppUpdateRepository>()),

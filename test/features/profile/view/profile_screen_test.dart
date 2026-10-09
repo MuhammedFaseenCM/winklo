@@ -6,12 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:winklo/core/constants/app_urls.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/repositories/external_link_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
@@ -40,6 +42,9 @@ class _MockIssueReportRepository extends Mock
 class _MockSfxSettingsRepository extends Mock
     implements SfxSettingsRepository {}
 
+class _MockExternalLinkRepository extends Mock
+    implements ExternalLinkRepository {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
@@ -52,8 +57,14 @@ void main() {
   late MockAnalyticsRepository analytics;
   late _MockSfxSettingsRepository sfxSettings;
   late SfxService sfx;
+  late _MockExternalLinkRepository links;
+  final deletionPage = Uri.parse(AppUrls.accountDeletion);
+
+  setUpAll(() => registerFallbackValue(Uri()));
 
   setUp(() {
+    links = _MockExternalLinkRepository();
+    when(() => links.open(deletionPage)).thenAnswer((_) async => true);
     auth = _MockAuthRepository();
     signOut = _MockSignOut();
     profile = _MockProfileRepository();
@@ -76,6 +87,7 @@ void main() {
     RepositoryProvider<AnalyticsRepository>.value(value: analytics),
     RepositoryProvider<SignOut>.value(value: signOut),
     RepositoryProvider<SfxService>.value(value: sfx),
+    RepositoryProvider<ExternalLinkRepository>.value(value: links),
   ];
 
   Future<void> pumpProfile(WidgetTester tester, {AppUser? signedIn}) async {
@@ -122,6 +134,7 @@ void main() {
     expect(find.text(AppStrings.profileAboutGame), findsOneWidget);
     expect(find.text(AppStrings.profileReportIssue), findsOneWidget);
     expect(find.text(AppStrings.signOut), findsOneWidget);
+    expect(find.text(AppStrings.deleteAccount), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
 
     final logout = tester.widget<ListTile>(
@@ -210,6 +223,60 @@ void main() {
     verifyNever(() => analytics.logProfileSignOut());
     verifyNever(() => signOut());
     expect(find.text('Ada'), findsOneWidget);
+  });
+
+  Future<void> openDeleteAccountDialog(WidgetTester tester) async {
+    final row = find.text(AppStrings.deleteAccount);
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.deleteAccountConfirmTitle), findsOneWidget);
+  }
+
+  testWidgets('delete account signs out first, then opens the deletion page', (
+    tester,
+  ) async {
+    await pumpProfile(tester, signedIn: user);
+    await openDeleteAccountDialog(tester);
+    verifyNever(() => signOut());
+
+    await tester.tap(
+      find.widgetWithText(TextButton, AppStrings.deleteAccountConfirmContinue),
+    );
+    await tester.pumpAndSettle();
+
+    verifyInOrder([
+      () => analytics.logProfileDeleteAccountOpened(),
+      () => signOut(),
+      () => links.open(deletionPage),
+    ]);
+    expect(find.text(AppStrings.deleteAccountOpenFailed), findsNothing);
+  });
+
+  testWidgets('canceling delete account does nothing', (tester) async {
+    await pumpProfile(tester, signedIn: user);
+    await openDeleteAccountDialog(tester);
+
+    await tester.tap(find.text(AppStrings.signOutConfirmCancel));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => analytics.logProfileDeleteAccountOpened());
+    verifyNever(() => signOut());
+    verifyNever(() => links.open(any()));
+  });
+
+  testWidgets('says where to go when the browser cannot open', (tester) async {
+    when(() => links.open(deletionPage)).thenAnswer((_) async => false);
+    await pumpProfile(tester, signedIn: user);
+    await openDeleteAccountDialog(tester);
+
+    await tester.tap(
+      find.widgetWithText(TextButton, AppStrings.deleteAccountConfirmContinue),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.deleteAccountOpenFailed), findsOneWidget);
   });
 
   testWidgets('auth unknown shows ProfileShimmer not sign-in CTA', (

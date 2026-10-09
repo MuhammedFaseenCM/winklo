@@ -26,6 +26,7 @@ void main() {
               onAbout: () {},
               onReport: () {},
               onSignOut: () {},
+              onDeleteAccount: () {},
             ),
           ),
         ),
@@ -37,6 +38,10 @@ void main() {
         find.widgetWithText(ListTile, AppStrings.profilePrivacyPolicy),
       );
       expect(privacy.onTap, isNull);
+      final delete = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, AppStrings.deleteAccount),
+      );
+      expect(delete.onTap, isNull);
 
       await tester.tap(find.byType(Switch));
       await tester.pump();
@@ -57,6 +62,7 @@ void main() {
             onAbout: () {},
             onReport: () {},
             onSignOut: () {},
+            onDeleteAccount: () {},
           ),
         ),
       ),
@@ -64,5 +70,31 @@ void main() {
 
     expect(find.text(AppStrings.profileSoundEffects), findsNothing);
     expect(find.byType(Switch), findsNothing);
+  });
+
+  testWidgets('delete account row calls onDeleteAccount', (tester) async {
+    var deleteTaps = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProfileSettingsList(
+              onPrivacy: () {},
+              onAbout: () {},
+              onReport: () {},
+              onSignOut: () {},
+              onDeleteAccount: () => deleteTaps++,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text(AppStrings.deleteAccount));
+    await tester.pump();
+
+    expect(deleteTaps, 1);
   });
 }

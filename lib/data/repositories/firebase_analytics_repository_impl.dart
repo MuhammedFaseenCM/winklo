@@ -157,6 +157,11 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
   }
 
   @override
+  Future<void> logProfileDeleteAccountOpened() {
+    return _safe((a) => a.logEvent(name: 'profile_delete_account_opened'));
+  }
+
+  @override
   Future<void> logAppOpen({String? platform}) {
     return _safe((a) {
       final parameters = <String, Object>{};

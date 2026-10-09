@@ -47,6 +47,7 @@ class ProfileSignedOutMock extends StatelessWidget {
             onAbout: _noop,
             onReport: _noop,
             onSignOut: _noop,
+            onDeleteAccount: _noop,
           ),
         ],
       ),

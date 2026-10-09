@@ -50,4 +50,7 @@ void stubAnalytics(MockAnalyticsRepository analytics) {
   when(() => analytics.logProfileReportOpened()).thenAnswer((_) async {});
   when(() => analytics.logProfileReportSubmitted()).thenAnswer((_) async {});
   when(() => analytics.logProfileSignOut()).thenAnswer((_) async {});
+  when(
+    () => analytics.logProfileDeleteAccountOpened(),
+  ).thenAnswer((_) async {});
 }

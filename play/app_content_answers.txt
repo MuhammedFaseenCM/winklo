@@ -31,7 +31,7 @@ Data safety: upload via Play API (play/data_safety.csv + upload_data_safety.py)
 - Encrypted in transit: Yes
 - Account/data deletion: https://winklo.pages.dev/delete-account/ — Google
   Sign-In on the web page, immediate wipe; GitHub issue fallback (privacy
-  policy). No in-app delete button yet.
+  policy). In the app: Profile → Delete account opens that page.
 
 Government apps: No
 Financial features: No
