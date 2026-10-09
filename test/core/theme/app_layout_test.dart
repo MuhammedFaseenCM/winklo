@@ -20,8 +20,8 @@ void main() {
     );
 
     expect(layout.isCompact, isTrue);
-    expect(layout.pagePadding.left, lessThan(24));
-    expect(layout.sectionGap, lessThan(28));
+    expect(layout.pagePadding.left, lessThan(20));
+    expect(layout.sectionGap, lessThan(12));
     expect(layout.tileArtSize, lessThan(64));
   });
 
@@ -40,7 +40,7 @@ void main() {
     );
 
     expect(layout.isCompact, isFalse);
-    expect(layout.pagePadding.left, closeTo(24, 0.01));
-    expect(layout.sectionGap, closeTo(28, 0.01));
+    expect(layout.pagePadding.left, closeTo(20, 0.01));
+    expect(layout.sectionGap, closeTo(12, 0.01));
   });
 }

@@ -4,6 +4,7 @@ import '../entities/sudoku_difficulty.dart';
 import '../entities/sudoku_puzzle.dart';
 import '../play_period.dart';
 import '../streak_calculator.dart';
+import '../stable_seed.dart';
 
 /// Seeded daily 6×6 Sudoku generator (boxes 2×3).
 abstract final class SudokuGenerator {
@@ -85,7 +86,7 @@ abstract final class SudokuGenerator {
   }) {
     final bucket = PlayPeriod.bucket(day, period);
     final dateId = PlayPeriod.id(bucket, period);
-    final seed = Object.hash(dateId, generatorVersion);
+    final seed = stableSeed('$dateId:$generatorVersion');
     final rng = Random(seed);
     final difficulty = difficultyForDate(bucket);
     final band = clueBand(difficulty);

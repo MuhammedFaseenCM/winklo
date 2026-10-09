@@ -3,6 +3,7 @@ import 'dart:math';
 import '../entities/cell.dart';
 import '../entities/path_words_puzzle.dart';
 import '../play_period.dart';
+import '../stable_seed.dart';
 
 abstract final class PathWordsGenerator {
   static const generatorVersion = 6;
@@ -21,7 +22,7 @@ abstract final class PathWordsGenerator {
     final bucket = PlayPeriod.bucket(local, period);
     final dateId = PlayPeriod.id(bucket, period);
     final localDay = DateTime(bucket.year, bucket.month, bucket.day);
-    final seed = Object.hash(dateId, generatorVersion);
+    final seed = stableSeed('$dateId:$generatorVersion');
     final rng = Random(seed);
 
     final normalizedWords =

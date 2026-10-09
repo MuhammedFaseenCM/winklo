@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: Flutter analyze and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.44.1
+          cache: true
+
+      - run: flutter pub get
+
+      # Infos don't fail the build; warnings and errors do.
+      - run: flutter analyze --no-fatal-infos
+
+      - run: flutter test
+
+  workers:
+    name: Worker ${{ matrix.worker }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [account-deletion, avatar-upload, path-words-nouns]
+    defaults:
+      run:
+        working-directory: workers/${{ matrix.worker }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workers/${{ matrix.worker }}/package-lock.json
+
+      - run: npm ci
+
+      - run: npx tsc --noEmit -p .
+
+      - run: npm test

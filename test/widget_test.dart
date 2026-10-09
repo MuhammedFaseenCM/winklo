@@ -15,6 +15,9 @@ import 'package:winklo/domain/streak_calculator.dart';
 
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/domain/entities/app_user.dart';
+import 'package:winklo/domain/entities/cell.dart';
+import 'package:winklo/domain/entities/path_words_puzzle.dart';
+import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
@@ -26,14 +29,39 @@ class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
 
 class _MockSignOut extends Mock implements SignOut {}
 
+/// Daily puzzles come only from Firestore, which tests don't have.
+class _FixedPathWords extends GenerateDailyPathWords {
+  @override
+  Future<PathWordsPuzzle> call({required DateTime day}) async {
+    return PathWordsPuzzle(
+      id: 'daily_test',
+      day: day,
+      size: 2,
+      letters: const ['a', 'b', 'c', 'd'],
+      targets: const [
+        PathWordsTarget(
+          id: 't0',
+          word: 'ab',
+          start: Cell(0, 0),
+          path: [Cell(0, 0), Cell(0, 1)],
+          colorIndex: 0,
+        ),
+      ],
+    );
+  }
+}
+
 Widget _buildTestApp(SharedPreferences prefs, {AppUser? authUser}) {
-  final baseProviders = buildRepositoryProviders(prefs: prefs);
+  final baseProviders = [
+    ...buildRepositoryProviders(prefs: prefs),
+    RepositoryProvider<GenerateDailyPathWords>.value(value: _FixedPathWords()),
+  ];
   if (authUser != null) {
     final mockAuth = _MockAuthRepository();
     when(() => mockAuth.currentUser).thenReturn(authUser);
-    when(() => mockAuth.authStateChanges()).thenAnswer(
-      (_) => Stream.value(authUser),
-    );
+    when(
+      () => mockAuth.authStateChanges(),
+    ).thenAnswer((_) => Stream.value(authUser));
     return MultiRepositoryProvider(
       providers: [
         ...baseProviders,
@@ -128,10 +156,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
 
     expect(find.text(AppStrings.streakLabel(3)), findsOneWidget);
-    expect(
-      find.textContaining(AppStrings.longestStreakLabel(5)),
-      findsNothing,
-    );
+    expect(find.textContaining(AppStrings.longestStreakLabel(5)), findsNothing);
     expect(find.text(AppStrings.cleared), findsNothing);
     expect(find.text(AppStrings.result), findsOneWidget);
     expect(find.text(AppStrings.comeBackTomorrow), findsNothing);
