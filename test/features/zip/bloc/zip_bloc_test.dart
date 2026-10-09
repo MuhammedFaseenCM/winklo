@@ -410,34 +410,52 @@ void main() {
     },
   );
 
-  test(
-    'resume after day rolls over starts next day and clears stale draft',
-    () async {
-      final drafts = _MemoryInProgressRuns();
-      var now = DateTime(2026, 9, 13);
-      final bloc = buildBloc(
-        now: DateTime(2026, 9, 13),
-        clockNow: () => now,
-        drafts: drafts,
-        wait: (_) async {},
-      );
-      bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
-      await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
-      bloc.add(ZipEvent.pathChanged(path: [const Cell(0, 0)]));
-      await Future<void>.delayed(Duration.zero);
-      now = DateTime(2026, 9, 13, 0, 0, 5);
-      bloc.add(const ZipEvent.pauseRun());
-      await bloc.stream.firstWhere((s) => s.resumedAt == null);
-      expect(drafts.runs['${GameIds.zip}_20260913'], isNotNull);
-      expect(bloc.state.day, DateTime(2026, 9, 13));
+  Future<(ZipBloc, _MemoryInProgressRuns, void Function(DateTime))>
+  pausedRunOn13th() async {
+    final drafts = _MemoryInProgressRuns();
+    var now = DateTime(2026, 9, 13);
+    final bloc = buildBloc(
+      now: DateTime(2026, 9, 13),
+      clockNow: () => now,
+      drafts: drafts,
+      wait: (_) async {},
+    );
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
+    bloc.add(ZipEvent.pathChanged(path: [const Cell(0, 0)]));
+    await Future<void>.delayed(Duration.zero);
+    now = DateTime(2026, 9, 13, 23, 59, 50);
+    bloc.add(const ZipEvent.pauseRun());
+    await bloc.stream.firstWhere((s) => s.resumedAt == null);
+    expect(drafts.runs['${GameIds.zip}_20260913'], isNotNull);
+    return (bloc, drafts, (DateTime at) => now = at);
+  }
 
-      now = DateTime(2026, 9, 14);
+  test('resume after midnight keeps the run for its own day', () async {
+    final (bloc, drafts, setNow) = await pausedRunOn13th();
+
+    setNow(DateTime(2026, 9, 14, 0, 5));
+    bloc.add(const ZipEvent.resumeRun());
+    await bloc.stream.firstWhere((s) => s.resumedAt != null);
+
+    expect(bloc.state.day, DateTime(2026, 9, 13));
+    expect(bloc.state.path, [const Cell(0, 0)]);
+    expect(bloc.playId, '20260913');
+    expect(drafts.runs['${GameIds.zip}_20260913'], isNotNull);
+    await bloc.close();
+  });
+
+  test(
+    'resume two days later starts the current day and clears the stale draft',
+    () async {
+      final (bloc, drafts, setNow) = await pausedRunOn13th();
+
+      setNow(DateTime(2026, 9, 15));
       bloc.add(const ZipEvent.resumeRun());
       await bloc.stream.firstWhere(
-        (s) => s.status == ZipStatus.ready && s.day == DateTime(2026, 9, 14),
+        (s) => s.status == ZipStatus.ready && s.day == DateTime(2026, 9, 15),
       );
 
-      expect(bloc.state.day, DateTime(2026, 9, 14));
       expect(bloc.state.elapsedMs, 0);
       expect(bloc.state.path, isEmpty);
       expect(drafts.runs['${GameIds.zip}_20260913'], isNull);

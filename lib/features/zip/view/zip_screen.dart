@@ -69,7 +69,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
     }
     final current = _game;
     if (current != null && identical(current.level, state.level)) return false;
-    final remaining = _hintQuota.remaining(GameIds.zip);
+    final remaining = _hintQuota.remaining(GameIds.zip, _bloc.playId);
     _game = ZipGame(
       level: state.level,
       initialHintsRemaining: remaining,
@@ -235,7 +235,10 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                         game?.clearPath();
                                         if (game != null) {
                                           game.hintsRemaining = _hintQuota
-                                              .remaining(GameIds.zip);
+                                              .remaining(
+                                                GameIds.zip,
+                                                _bloc.playId,
+                                              );
                                         }
                                         _bloc.add(const ZipEvent.reset());
                                         setState(() => _ruleTip = null);
@@ -359,7 +362,10 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                             }
                                             final before = game.hintsRemaining;
                                             final remaining = await _hintQuota
-                                                .tryConsume(GameIds.zip);
+                                                .tryConsume(
+                                                  GameIds.zip,
+                                                  _bloc.playId,
+                                                );
                                             if (remaining >= before) {
                                               return;
                                             }

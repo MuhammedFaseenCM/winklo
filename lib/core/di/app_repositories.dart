@@ -213,7 +213,6 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<HintQuotaRepository>(
       create: (context) => HintQuotaRepositoryImpl(
         context.read<SharedPreferences>(),
-        playPeriod: DevFlags.playPeriod,
         onChanged: context.read<ProgressChangeSignal>().notify,
       ),
     ),

@@ -45,11 +45,18 @@ class _FakeHintQuota implements HintQuotaRepository {
 
   int _remaining;
 
-  @override
-  int remaining(String gameId) => _remaining;
+  /// Play periods the bloc read or spent hints for, in order.
+  final playIds = <String>[];
 
   @override
-  Future<int> tryConsume(String gameId) async {
+  int remaining(String gameId, String playId) {
+    playIds.add(playId);
+    return _remaining;
+  }
+
+  @override
+  Future<int> tryConsume(String gameId, String playId) async {
+    playIds.add(playId);
     if (_remaining <= 0) return 0;
     _remaining--;
     return _remaining;
@@ -1551,33 +1558,64 @@ void main() {
     },
   );
 
+  Future<(PathWordsBloc, _MemoryInProgressRuns, void Function(DateTime))>
+  pausedRunOn17th() async {
+    when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+      (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+    );
+    final drafts = _MemoryInProgressRuns();
+    final day = DateTime(2026, 9, 17);
+    var now = day;
+    final bloc = buildBloc(now: () => now, drafts: drafts);
+    bloc.add(PathWordsEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+
+    now = DateTime(2026, 9, 17, 23, 59, 50);
+    bloc.add(const PathWordsEvent.pauseRun());
+    await bloc.stream.firstWhere((s) => s.resumedAt == null);
+    expect(drafts.runs['${GameIds.pathWords}_20260917'], isNotNull);
+    return (bloc, drafts, (DateTime at) => now = at);
+  }
+
+  test('resume after midnight keeps the run for its own day', () async {
+    final (bloc, drafts, setNow) = await pausedRunOn17th();
+
+    setNow(DateTime(2026, 9, 18, 0, 5));
+    bloc.add(const PathWordsEvent.resumeRun());
+    await bloc.stream.firstWhere((s) => s.resumedAt != null);
+
+    expect(bloc.state.day, DateTime(2026, 9, 17));
+    expect(drafts.runs['${GameIds.pathWords}_20260917'], isNotNull);
+    await bloc.close();
+  });
+
+  test('a hint after midnight spends the run\'s own day quota', () async {
+    final (bloc, _, setNow) = await pausedRunOn17th();
+    setNow(DateTime(2026, 9, 18, 0, 5));
+    bloc.add(const PathWordsEvent.resumeRun());
+    await bloc.stream.firstWhere((s) => s.resumedAt != null);
+    hintQuota.playIds.clear();
+
+    bloc.add(const PathWordsEvent.hint());
+    await bloc.stream.firstWhere((s) => s.usedHintsThisRun);
+
+    expect(hintQuota.playIds, everyElement('20260917'));
+    expect(hintQuota.playIds, isNotEmpty);
+    await bloc.close();
+  });
+
   test(
-    'resume after day rolls over starts next day and clears stale draft',
+    'resume two days later starts the current day and clears the stale draft',
     () async {
-      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
-        (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
-      );
-      final drafts = _MemoryInProgressRuns();
-      final day = DateTime(2026, 9, 17);
-      var now = day;
-      final bloc = buildBloc(now: () => now, drafts: drafts);
-      bloc.add(PathWordsEvent.started(date: day));
-      await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+      final (bloc, drafts, setNow) = await pausedRunOn17th();
 
-      now = day.add(const Duration(seconds: 5));
-      bloc.add(const PathWordsEvent.pauseRun());
-      await bloc.stream.firstWhere((s) => s.resumedAt == null);
-      expect(drafts.runs['${GameIds.pathWords}_20260917'], isNotNull);
-      expect(bloc.state.day, DateTime(2026, 9, 17));
-
-      now = DateTime(2026, 9, 18);
+      setNow(DateTime(2026, 9, 19));
       bloc.add(const PathWordsEvent.resumeRun());
       await bloc.stream.firstWhere(
         (s) =>
-            s.status == PathWordsStatus.ready && s.day == DateTime(2026, 9, 18),
+            s.status == PathWordsStatus.ready && s.day == DateTime(2026, 9, 19),
       );
 
-      expect(bloc.state.day, DateTime(2026, 9, 18));
       expect(bloc.state.elapsedMs, 0);
       expect(drafts.runs['${GameIds.pathWords}_20260917'], isNull);
       await bloc.close();

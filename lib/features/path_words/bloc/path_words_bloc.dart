@@ -10,6 +10,7 @@ import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/entities/path_words_puzzle.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/logic/run_rollover.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/path_words/path_words_rules.dart';
@@ -75,6 +76,9 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   String? _playId;
   PlayRunClock? _clock;
 
+  /// Period of the run on screen; hints count against it, not the clock.
+  String get _runPlayId => _playId ?? PlayPeriod.id(state.day, playPeriod);
+
   Future<void> _onStarted(
     PathWordsStarted event,
     Emitter<PathWordsState> emit,
@@ -93,7 +97,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         activePath: const [],
         placedPaths: const [],
         completedTargetIds: const {},
-        hintsRemaining: hintQuota.remaining(GameIds.pathWords),
+        hintsRemaining: hintQuota.remaining(GameIds.pathWords, _runPlayId),
         hintRevealLength: 0,
         usedHintsThisRun: false,
         elapsedMs: 0,
@@ -156,7 +160,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
             puzzle: puzzle,
             elapsedMs: draft.elapsedMs,
             resumedAt: now,
-            hintsRemaining: hintQuota.remaining(GameIds.pathWords),
+            hintsRemaining: hintQuota.remaining(GameIds.pathWords, _runPlayId),
             hintRevealLength: restored.hintRevealLength,
             usedHintsThisRun: draft.usedHintsThisRun,
             activePath: restored.activePath,
@@ -180,7 +184,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
             puzzle: puzzle,
             elapsedMs: 0,
             resumedAt: now,
-            hintsRemaining: hintQuota.remaining(GameIds.pathWords),
+            hintsRemaining: hintQuota.remaining(GameIds.pathWords, _runPlayId),
             hintRevealLength: 0,
             usedHintsThisRun: false,
             activePath: const [],
@@ -507,7 +511,10 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     if (state.hintsRemaining <= 0) return;
 
     if (PathWordsRules.hasIncorrectStroke(state.placedPaths)) {
-      final remaining = await hintQuota.tryConsume(GameIds.pathWords);
+      final remaining = await hintQuota.tryConsume(
+        GameIds.pathWords,
+        _runPlayId,
+      );
       emit(
         state.copyWith(
           placedPaths: PathWordsRules.withoutIncorrect(state.placedPaths),
@@ -535,7 +542,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       return;
     }
 
-    final remaining = await hintQuota.tryConsume(GameIds.pathWords);
+    final remaining = await hintQuota.tryConsume(GameIds.pathWords, _runPlayId);
     emit(
       state.copyWith(
         hintsRemaining: remaining,
@@ -565,7 +572,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         activePath: const [],
         placedPaths: const [],
         completedTargetIds: const {},
-        hintsRemaining: hintQuota.remaining(GameIds.pathWords),
+        hintsRemaining: hintQuota.remaining(GameIds.pathWords, _runPlayId),
         hintRevealLength: 0,
         hintFlashCell: null,
         errorMessage: null,
@@ -610,9 +617,10 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       return;
     }
     final now = _now();
-    final currentPlayId = PlayPeriod.id(now, playPeriod);
     final playId = _playId;
-    if (playId != null && playId != currentPlayId) {
+    // A run left open over midnight finishes for its own day; one older than
+    // that gives way to today's puzzle.
+    if (playId != null && !canFinishRun(playId, now, playPeriod)) {
       await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
       add(PathWordsEvent.started(date: now));
       return;

@@ -78,11 +78,7 @@ void main() {
       auth: auth,
       scores: ScoreRepositoryImpl(prefs),
       streaks: StreakRepositoryImpl(prefs),
-      hintQuota: HintQuotaRepositoryImpl(
-        prefs,
-        playPeriod: period,
-        now: () => clock,
-      ),
+      hintQuota: HintQuotaRepositoryImpl(prefs),
       local: local,
       remote: remote,
       leaderboard: leaderboard,

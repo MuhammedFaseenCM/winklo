@@ -7,6 +7,7 @@ import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/logic/run_rollover.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
@@ -85,6 +86,10 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   final Future<void> Function(Duration duration) _wait;
   PlayRunClock? _clock;
   String? _playId;
+
+  /// Period of the run on screen. The screen spends hints against it, so a
+  /// run left open over midnight keeps its own quota.
+  String get playId => _playId ?? PlayPeriod.id(state.day, playPeriod);
 
   static ZipState _initialState(DateTime now, {required Duration playPeriod}) {
     return ZipState.initial(now, period: playPeriod);
@@ -318,9 +323,10 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   Future<void> _onResumeRun(ZipResumeRun event, Emitter<ZipState> emit) async {
     if (state.finished || state.status != ZipStatus.ready) return;
     final now = _now();
-    final currentPlayId = PlayPeriod.id(now, playPeriod);
     final playId = _playId;
-    if (playId != null && playId != currentPlayId) {
+    // A run left open over midnight finishes for its own day; one older than
+    // that gives way to today's puzzle.
+    if (playId != null && !canFinishRun(playId, now, playPeriod)) {
       await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
       add(ZipEvent.started(date: now));
       return;

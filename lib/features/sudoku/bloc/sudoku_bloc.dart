@@ -9,6 +9,7 @@ import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/entities/sudoku_puzzle.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/logic/run_rollover.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
@@ -80,6 +81,9 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   static const _unitFlashDuration = Duration(milliseconds: 600);
   String? _playId;
   PlayRunClock? _clock;
+
+  /// Period of the run on screen; hints count against it, not the clock.
+  String get _runPlayId => _playId ?? PlayPeriod.id(state.day, playPeriod);
 
   Future<void> _onStarted(
     SudokuStarted event,
@@ -172,7 +176,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           resumedAt: now,
           selectedIndex: null,
           finished: false,
-          hintsRemaining: hintQuota.remaining(GameIds.sudoku),
+          hintsRemaining: hintQuota.remaining(GameIds.sudoku, playId),
           activeCoachHint: null,
           showNoSimpleHint: false,
           usedHintsThisRun: draft.usedHintsThisRun,
@@ -198,7 +202,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           selectedIndex: null,
           notesMode: false,
           finished: false,
-          hintsRemaining: hintQuota.remaining(GameIds.sudoku),
+          hintsRemaining: hintQuota.remaining(GameIds.sudoku, playId),
           activeCoachHint: null,
           showNoSimpleHint: false,
           usedHintsThisRun: false,
@@ -354,7 +358,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       return;
     }
 
-    final remaining = await hintQuota.tryConsume(GameIds.sudoku);
+    final remaining = await hintQuota.tryConsume(GameIds.sudoku, _runPlayId);
     emit(
       state.copyWith(
         hintsRemaining: remaining,
@@ -389,7 +393,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         notesMode: false,
         hintFlashIndex: null,
         errorIndices: const <int>{},
-        hintsRemaining: hintQuota.remaining(GameIds.sudoku),
+        hintsRemaining: hintQuota.remaining(GameIds.sudoku, _runPlayId),
         activeCoachHint: null,
         showNoSimpleHint: false,
         usedHintsThisRun: false,
@@ -428,9 +432,10 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   ) async {
     if (state.status != SudokuStatus.ready || state.finished) return;
     final now = _now();
-    final currentPlayId = PlayPeriod.id(now, playPeriod);
     final playId = _playId;
-    if (playId != null && playId != currentPlayId) {
+    // A run left open over midnight finishes for its own day; one older than
+    // that gives way to today's puzzle.
+    if (playId != null && !canFinishRun(playId, now, playPeriod)) {
       await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
       add(SudokuEvent.started(date: now));
       return;

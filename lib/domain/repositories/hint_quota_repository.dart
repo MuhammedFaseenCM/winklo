@@ -1,11 +1,15 @@
 abstract class HintQuotaRepository {
   static const int cap = 3;
 
-  int remaining(String gameId);
+  /// Hints left for [gameId] in the run of period [playId].
+  ///
+  /// Keyed by the run's period rather than the clock, so a run that crosses
+  /// midnight keeps its own quota instead of getting a fresh one.
+  int remaining(String gameId, String playId);
 
-  /// Decrements used count for the current play period when remaining > 0.
+  /// Spends one hint for [gameId] in period [playId] when any are left.
   /// Returns remaining after the attempt (0 if already exhausted).
-  Future<int> tryConsume(String gameId);
+  Future<int> tryConsume(String gameId, String playId);
 
   /// Hints consumed for [gameId] in the period [playId].
   int usedFor(String gameId, String playId);

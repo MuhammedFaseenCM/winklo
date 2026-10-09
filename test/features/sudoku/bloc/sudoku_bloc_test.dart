@@ -41,11 +41,18 @@ class _FakeHintQuota implements HintQuotaRepository {
 
   int _remaining;
 
-  @override
-  int remaining(String gameId) => _remaining;
+  /// Play periods the bloc read or spent hints for, in order.
+  final playIds = <String>[];
 
   @override
-  Future<int> tryConsume(String gameId) async {
+  int remaining(String gameId, String playId) {
+    playIds.add(playId);
+    return _remaining;
+  }
+
+  @override
+  Future<int> tryConsume(String gameId, String playId) async {
+    playIds.add(playId);
     if (_remaining <= 0) return 0;
     _remaining--;
     return _remaining;
@@ -612,29 +619,52 @@ void main() {
     await bloc.close();
   });
 
+  Future<(SudokuBloc, _MemoryInProgressRuns, void Function(DateTime))>
+  pausedRunOn27th() async {
+    var now = day;
+    final drafts = _MemoryInProgressRuns();
+    final bloc = buildBloc(
+      now: () => now,
+      drafts: drafts,
+      generatePuzzle: ({required DateTime day}) => _twoEmptyPuzzle(day: day),
+    );
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+
+    now = DateTime(2026, 9, 27, 23, 59, 50);
+    bloc.add(const SudokuEvent.pauseRun());
+    await bloc.stream.firstWhere((s) => !s.isClockRunning);
+    expect(drafts.runs['${GameIds.sudoku}_20260927'], isNotNull);
+    return (bloc, drafts, (DateTime at) => now = at);
+  }
+
+  test('resume after midnight keeps the run and its hint quota', () async {
+    final (bloc, drafts, setNow) = await pausedRunOn27th();
+
+    setNow(DateTime(2026, 9, 28, 0, 5));
+    bloc.add(const SudokuEvent.resumeRun());
+    await bloc.stream.firstWhere((s) => s.isClockRunning);
+    expect(bloc.state.day, DateTime(2026, 9, 27));
+    expect(drafts.runs['${GameIds.sudoku}_20260927'], isNotNull);
+
+    hintQuota.playIds.clear();
+    bloc.add(const SudokuEvent.hint());
+    await bloc.stream.firstWhere((s) => s.activeCoachHint != null);
+    expect(hintQuota.playIds, ['20260927']);
+    await bloc.close();
+  });
+
   test(
-    'resume after day rolls over starts next day and clears stale draft',
+    'resume two days later starts the current day and clears the stale draft',
     () async {
-      var now = day;
-      final drafts = _MemoryInProgressRuns();
-      final bloc = buildBloc(now: () => now, drafts: drafts);
-      bloc.add(SudokuEvent.started(date: day));
-      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+      final (bloc, drafts, setNow) = await pausedRunOn27th();
 
-      now = day.add(const Duration(seconds: 5));
-      bloc.add(const SudokuEvent.pauseRun());
-      await bloc.stream.firstWhere((s) => !s.isClockRunning);
-      expect(drafts.runs['${GameIds.sudoku}_20260927'], isNotNull);
-      expect(bloc.state.day, DateTime(2026, 9, 27));
-
-      final nextDay = DateTime(2026, 9, 28);
-      now = nextDay;
+      setNow(DateTime(2026, 9, 29));
       bloc.add(const SudokuEvent.resumeRun());
       await bloc.stream.firstWhere(
-        (s) => s.status == SudokuStatus.ready && s.day == DateTime(2026, 9, 28),
+        (s) => s.status == SudokuStatus.ready && s.day == DateTime(2026, 9, 29),
       );
 
-      expect(bloc.state.day, DateTime(2026, 9, 28));
       expect(bloc.state.elapsedMs, 0);
       expect(drafts.runs['${GameIds.sudoku}_20260927'], isNull);
       await bloc.close();
