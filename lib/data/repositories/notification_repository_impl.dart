@@ -175,26 +175,32 @@ class NotificationRepositoryImpl implements NotificationRepository {
       await _client.cancelNotification(
         NotificationTypes.scheduleIdStreakAtRisk,
       );
-      final scheduleStreak =
+      final atRiskTonight =
           EngagementNotificationSchedule.shouldScheduleStreakAtRisk(
             zipClearedToday: zipClearedToday,
             pathWordsClearedToday: pathWordsClearedToday,
             sudokuClearedToday: sudokuClearedToday,
           );
-      if (scheduleStreak) {
-        final streakWhen = EngagementNotificationSchedule.nextDailyAtHour(
-          NotificationTypes.streakAtRiskHour,
-        );
-        await _client.scheduleNotification(
-          id: NotificationTypes.scheduleIdStreakAtRisk,
-          title: streakAtRiskTitle,
-          body: streakAtRiskBody,
-          when: streakWhen,
-          type: NotificationTypes.streakAtRisk,
-          data: {'route': '/'},
-          repeatsDaily: true,
-        );
-      }
+      // With every game cleared nothing is at risk tonight, but the streak
+      // is tomorrow, and only opening the app reschedules this; so remind
+      // tomorrow evening rather than not at all. That one is a one-off: a
+      // daily repeat can't start tomorrow (the plugin fires a repeat at the
+      // next matching time, which would be tonight).
+      await _client.scheduleNotification(
+        id: NotificationTypes.scheduleIdStreakAtRisk,
+        title: streakAtRiskTitle,
+        body: streakAtRiskBody,
+        when: atRiskTonight
+            ? EngagementNotificationSchedule.nextDailyAtHour(
+                NotificationTypes.streakAtRiskHour,
+              )
+            : EngagementNotificationSchedule.tomorrowAtHour(
+                NotificationTypes.streakAtRiskHour,
+              ),
+        type: NotificationTypes.streakAtRisk,
+        data: {'route': '/'},
+        repeatsDaily: atRiskTonight,
+      );
     } catch (e) {
       debugPrint('refreshEngagementSchedules failed: $e');
     }

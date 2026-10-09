@@ -16,6 +16,24 @@ void main() {
     });
   });
 
+  group('EngagementNotificationSchedule.tomorrowAtHour', () {
+    test('is the next day even before the hour', () {
+      final now = DateTime(2026, 9, 24, 7, 30);
+      expect(
+        EngagementNotificationSchedule.tomorrowAtHour(20, now: now),
+        DateTime(2026, 9, 25, 20),
+      );
+    });
+
+    test('rolls over the end of a month', () {
+      final now = DateTime(2026, 9, 30, 23, 59);
+      expect(
+        EngagementNotificationSchedule.tomorrowAtHour(20, now: now),
+        DateTime(2026, 10, 1, 20),
+      );
+    });
+  });
+
   group('shouldScheduleStreakAtRisk', () {
     test('true when any game uncleared', () {
       expect(

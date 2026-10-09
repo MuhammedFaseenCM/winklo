@@ -10,6 +10,12 @@ abstract final class EngagementNotificationSchedule {
     return local;
   }
 
+  /// The day after [now] at [hour]:00 (local).
+  static DateTime tomorrowAtHour(int hour, {DateTime? now}) {
+    final clock = now ?? DateTime.now();
+    return DateTime(clock.year, clock.month, clock.day + 1, hour);
+  }
+
   /// Whether to schedule streak-at-risk for today/tonight.
   /// True when at least one enabled game is still uncleared today.
   static bool shouldScheduleStreakAtRisk({
