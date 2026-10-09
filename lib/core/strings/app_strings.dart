@@ -183,7 +183,7 @@ abstract final class AppStrings {
   // Notifications
   static const notifDailyReadyTitle = 'Today’s puzzles are ready';
   static const notifDailyReadyBody =
-      'Play Zip and Path Words to keep your streak going.';
+      'Play Zip, Path Words and Sudoku to keep your streaks going.';
   static const notifStreakAtRiskTitle = 'Streak at risk';
   static const notifStreakAtRiskBody =
       'You haven’t finished today’s puzzles yet. Play before midnight.';
