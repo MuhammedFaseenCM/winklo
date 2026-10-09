@@ -90,8 +90,10 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Profiles hold each phone's push token (fcmToken), so only the owner (or
+    // an admin) reads them. Leaderboard docs carry the public name and photo.
     match /users/{uid} {
-      allow read: if isSignedIn();
+      allow read: if isOwner(uid) || isAdmin();
       allow create, update: if isOwner(uid) && validUserAvatarId();
       allow delete: if false;
     }
