@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:winklo/core/firebase/firebase_bootstrap.dart';
+import 'package:winklo/core/firebase/firestore_read.dart';
 import 'package:winklo/domain/entities/sudoku_puzzle.dart';
 import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/play_period.dart';
@@ -26,17 +27,10 @@ class GenerateDailySudoku {
     }
 
     try {
-      var doc = await firestore
-          .collection('sudoku_levels')
-          .doc('daily_$dateId')
-          .get(const GetOptions(source: Source.serverAndCache))
-          .timeout(const Duration(seconds: 2));
+      final levels = firestore.collection('sudoku_levels');
+      var doc = await getDocPreferringServer(levels.doc('daily_$dateId'));
       if (!doc.exists) {
-        doc = await firestore
-            .collection('sudoku_levels')
-            .doc('sudoku_$dateId')
-            .get(const GetOptions(source: Source.serverAndCache))
-            .timeout(const Duration(seconds: 2));
+        doc = await getDocPreferringServer(levels.doc('sudoku_$dateId'));
       }
       if (doc.exists && doc.data() != null) {
         return SudokuPuzzle.fromJson(doc.data()!, id: doc.id);

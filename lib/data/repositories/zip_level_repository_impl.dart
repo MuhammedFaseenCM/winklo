@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:winklo/core/firebase/firebase_bootstrap.dart';
+import 'package:winklo/core/firebase/firestore_read.dart';
 import 'package:winklo/domain/entities/zip_level.dart';
 import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/play_period.dart';
@@ -38,11 +39,9 @@ class ZipLevelRepositoryImpl implements ZipLevelRepository {
       throw const DailyPuzzleUnavailable('Firebase is not ready');
     }
     try {
-      final doc = await firestore
-          .collection('zip_levels')
-          .doc(id)
-          .get(const GetOptions(source: Source.serverAndCache))
-          .timeout(const Duration(seconds: 2));
+      final doc = await getDocPreferringServer(
+        firestore.collection('zip_levels').doc(id),
+      );
       if (doc.exists && doc.data() != null) {
         return ZipLevel.fromJson(doc.data()!, id: doc.id);
       }
