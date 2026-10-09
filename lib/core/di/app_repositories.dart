@@ -69,6 +69,7 @@ import 'package:winklo/domain/usecases/fetch_word_match_decks.dart';
 import 'package:winklo/domain/usecases/fetch_zip_levels.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
+import 'package:winklo/domain/usecases/is_new_personal_best.dart';
 import 'package:winklo/domain/usecases/get_clear_board.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/domain/usecases/handle_notification_tap.dart';
@@ -289,6 +290,9 @@ List<SingleChildWidget> buildRepositoryProviders({
     ),
     RepositoryProvider<GetBestTimeSeconds>(
       create: (context) => GetBestTimeSeconds(context.read<ScoreRepository>()),
+    ),
+    RepositoryProvider<IsNewPersonalBest>(
+      create: (context) => IsNewPersonalBest(context.read<ScoreRepository>()),
     ),
     RepositoryProvider<GetClearBoard>(
       create: (context) => GetClearBoard(context.read<ScoreRepository>()),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:winklo/domain/entities/clear_meta.dart';
+import 'package:winklo/domain/logic/progress_merge.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,6 +41,27 @@ class ScoreRepositoryImpl implements ScoreRepository {
   @override
   String? getClearBoard(String modeKey) =>
       _prefs.getString('$_boardPrefix$modeKey');
+
+  static final _playIdPattern = RegExp(r'^[0-9]{8}([0-9]{4})?$');
+
+  @override
+  int? getBestDailyTimeSeconds(String gameId, {String? excludingPlayId}) {
+    // Daily bests are stored per period under modeKeyFor(gameId, playId).
+    final prefix = '${_prefix}time_${modeKeyFor(gameId, '')}';
+    int? best;
+    for (final key in _prefs.getKeys()) {
+      if (!key.startsWith(prefix)) continue;
+      final playId = key.substring(prefix.length);
+      if (playId == excludingPlayId || !_playIdPattern.hasMatch(playId)) {
+        continue;
+      }
+      final time = _prefs.getInt(key);
+      if (time != null && time > 0 && (best == null || time < best)) {
+        best = time;
+      }
+    }
+    return best;
+  }
 
   @override
   Future<bool> submitScore({

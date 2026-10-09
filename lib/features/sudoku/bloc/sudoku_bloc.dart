@@ -22,6 +22,7 @@ import '../../../domain/sudoku/sudoku_rules.dart';
 import '../../../domain/sudoku/sudoku_scoring.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
+import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
@@ -36,6 +37,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     required this.recordDailyClear,
     required this.getBestPoints,
     required this.getBestTimeSeconds,
+    required this.isNewPersonalBest,
     required this.analytics,
     required this.hintQuota,
     required this.inProgressRuns,
@@ -68,6 +70,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   final RecordDailyClear recordDailyClear;
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
+  final IsNewPersonalBest isNewPersonalBest;
   final AnalyticsRepository analytics;
   final HintQuotaRepository hintQuota;
   final InProgressRunRepository inProgressRuns;
@@ -503,7 +506,12 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     emit(state.copyWith(status: SudokuStatus.submitting));
 
     final dateId = StreakCalculator.dateId(state.day);
-    final improved = await submitScore(
+    final improved = isNewPersonalBest(
+      gameId: GameIds.sudoku,
+      playId: playId,
+      timeSeconds: elapsed,
+    );
+    await submitScore(
       modeKey: 'sudoku_$playId',
       points: points,
       timeSeconds: elapsed,

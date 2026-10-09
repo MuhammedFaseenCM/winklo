@@ -14,6 +14,7 @@ import 'package:winklo/domain/repositories/hint_quota_repository.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
+import 'package:winklo/domain/usecases/is_new_personal_best.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
@@ -31,6 +32,8 @@ class _MockRecordDailyClear extends Mock implements RecordDailyClear {}
 class _MockGetBestPoints extends Mock implements GetBestPoints {}
 
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
+
+class _MockIsNewPersonalBest extends Mock implements IsNewPersonalBest {}
 
 class _MockAnalyticsRepository extends Mock implements AnalyticsRepository {}
 
@@ -183,6 +186,7 @@ void main() {
   late _MockRecordDailyClear recordDailyClear;
   late _MockGetBestPoints getBestPoints;
   late _MockGetBestTimeSeconds getBestTimeSeconds;
+  late _MockIsNewPersonalBest isNewPersonalBest;
   late _MockAnalyticsRepository analytics;
   late _FakeHintQuota hintQuota;
   late _MemoryInProgressRuns inProgressRuns;
@@ -201,6 +205,7 @@ void main() {
       recordDailyClear: recordDailyClear,
       getBestPoints: getBestPoints,
       getBestTimeSeconds: getBestTimeSeconds,
+      isNewPersonalBest: isNewPersonalBest,
       analytics: analytics,
       hintQuota: quota ?? hintQuota,
       inProgressRuns: drafts ?? inProgressRuns,
@@ -226,11 +231,19 @@ void main() {
     recordDailyClear = _MockRecordDailyClear();
     getBestPoints = _MockGetBestPoints();
     getBestTimeSeconds = _MockGetBestTimeSeconds();
+    isNewPersonalBest = _MockIsNewPersonalBest();
     analytics = _MockAnalyticsRepository();
     hintQuota = _FakeHintQuota(3);
     inProgressRuns = _MemoryInProgressRuns();
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
+    when(
+      () => isNewPersonalBest(
+        gameId: any(named: 'gameId'),
+        playId: any(named: 'playId'),
+        timeSeconds: any(named: 'timeSeconds'),
+      ),
+    ).thenReturn(false);
     when(
       () => submitScore(
         modeKey: any(named: 'modeKey'),
@@ -555,6 +568,31 @@ void main() {
     expect(bloc.state.hadMistakesThisRun, isTrue);
     await bloc.close();
   });
+
+  test(
+    'completion is a new personal best only when it beats earlier days',
+    () async {
+      when(
+        () => isNewPersonalBest(
+          gameId: GameIds.sudoku,
+          playId: '20260927',
+          timeSeconds: 0,
+        ),
+      ).thenReturn(true);
+      final bloc = buildBloc();
+      bloc.add(SudokuEvent.started(date: day));
+      await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+      bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+      bloc.add(const SudokuEvent.digitTapped(2));
+      final done = await bloc.stream.firstWhere(
+        (s) => s.status == SudokuStatus.navigating,
+      );
+
+      expect(done.improved, isTrue);
+      expect(done.resultsExtra?.improved, isTrue);
+      await bloc.close();
+    },
+  );
 
   blocTest<SudokuBloc, SudokuState>(
     'dismissHint clears coach and banner',

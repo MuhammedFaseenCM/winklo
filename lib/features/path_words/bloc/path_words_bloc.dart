@@ -22,6 +22,7 @@ import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
+import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
@@ -37,6 +38,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     required this.recordDailyClear,
     required this.getBestPoints,
     required this.getBestTimeSeconds,
+    required this.isNewPersonalBest,
     required this.analytics,
     required this.hintQuota,
     required this.inProgressRuns,
@@ -65,6 +67,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   final RecordDailyClear recordDailyClear;
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
+  final IsNewPersonalBest isNewPersonalBest;
   final AnalyticsRepository analytics;
   final HintQuotaRepository hintQuota;
   final InProgressRunRepository inProgressRuns;
@@ -667,7 +670,12 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     emit(state.copyWith(status: PathWordsStatus.submitting));
 
     final dateId = StreakCalculator.dateId(state.day);
-    final improved = await submitScore(
+    final improved = isNewPersonalBest(
+      gameId: GameIds.pathWords,
+      playId: playId,
+      timeSeconds: elapsed,
+    );
+    await submitScore(
       modeKey: 'path_words_$playId',
       points: points,
       timeSeconds: elapsed,

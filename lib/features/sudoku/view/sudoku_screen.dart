@@ -20,6 +20,7 @@ import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/usecases/generate_daily_sudoku.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
+import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
@@ -61,6 +62,7 @@ class _SudokuScreenState extends State<SudokuScreen>
           recordDailyClear: context.read<RecordDailyClear>(),
           getBestPoints: context.read<GetBestPoints>(),
           getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
+          isNewPersonalBest: context.read<IsNewPersonalBest>(),
           analytics: context.read<AnalyticsRepository>(),
           hintQuota: context.read<HintQuotaRepository>(),
           inProgressRuns: context.read<InProgressRunRepository>(),

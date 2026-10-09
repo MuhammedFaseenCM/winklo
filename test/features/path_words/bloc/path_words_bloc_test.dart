@@ -13,6 +13,7 @@ import 'package:winklo/domain/entities/in_progress_run.dart';
 import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
+import 'package:winklo/domain/usecases/is_new_personal_best.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
@@ -35,6 +36,8 @@ class _MockRecordDailyClear extends Mock implements RecordDailyClear {}
 class _MockGetBestPoints extends Mock implements GetBestPoints {}
 
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
+
+class _MockIsNewPersonalBest extends Mock implements IsNewPersonalBest {}
 
 class _MockAnalyticsRepository extends Mock implements AnalyticsRepository {}
 
@@ -156,6 +159,7 @@ void main() {
   late _MockRecordDailyClear recordDailyClear;
   late _MockGetBestPoints getBestPoints;
   late _MockGetBestTimeSeconds getBestTimeSeconds;
+  late _MockIsNewPersonalBest isNewPersonalBest;
   late _MockAnalyticsRepository analytics;
   late _FakeHintQuota hintQuota;
   late List<Duration> waited;
@@ -176,6 +180,7 @@ void main() {
       recordDailyClear: recordDailyClear,
       getBestPoints: getBestPoints,
       getBestTimeSeconds: getBestTimeSeconds,
+      isNewPersonalBest: isNewPersonalBest,
       analytics: analytics,
       hintQuota: quota ?? hintQuota,
       now: now ?? (() => DateTime(2026, 9, 17, 0, 0, 0)),
@@ -192,11 +197,19 @@ void main() {
     recordDailyClear = _MockRecordDailyClear();
     getBestPoints = _MockGetBestPoints();
     getBestTimeSeconds = _MockGetBestTimeSeconds();
+    isNewPersonalBest = _MockIsNewPersonalBest();
     analytics = _MockAnalyticsRepository();
     hintQuota = _FakeHintQuota(3);
     waited = <Duration>[];
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
+    when(
+      () => isNewPersonalBest(
+        gameId: any(named: 'gameId'),
+        playId: any(named: 'playId'),
+        timeSeconds: any(named: 'timeSeconds'),
+      ),
+    ).thenReturn(false);
     when(
       () => submitLeaderboardTime(
         gameId: any(named: 'gameId'),
@@ -246,6 +259,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -284,6 +298,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -323,6 +338,14 @@ void main() {
           hadMistakes: any(named: 'hadMistakes'),
         ),
       ).thenAnswer((_) async => true);
+      // Faster than every earlier daily: a new personal best.
+      when(
+        () => isNewPersonalBest(
+          gameId: GameIds.pathWords,
+          playId: '20260917',
+          timeSeconds: 12,
+        ),
+      ).thenReturn(true);
       when(
         () => recordDailyClear(gameId: GameIds.pathWords, dateId: '20260917'),
       ).thenAnswer(
@@ -348,6 +371,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: clock.call,
@@ -486,6 +510,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -552,6 +577,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -605,6 +631,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -658,6 +685,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -720,6 +748,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -773,6 +802,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -814,6 +844,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -872,6 +903,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -947,6 +979,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -1011,6 +1044,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -1086,6 +1120,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -1141,6 +1176,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -1203,6 +1239,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -1245,6 +1282,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -1293,6 +1331,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),
@@ -1349,6 +1388,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => fixedNow,
@@ -1468,6 +1508,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: clock.call,
@@ -1659,6 +1700,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         analytics: analytics,
         hintQuota: hintQuota,
         now: () => DateTime(2026, 9, 17, 0, 0, 0),

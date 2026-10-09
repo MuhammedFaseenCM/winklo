@@ -8,6 +8,7 @@ import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
+import 'package:winklo/domain/usecases/is_new_personal_best.dart';
 import 'package:winklo/domain/usecases/get_clear_board.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
@@ -32,6 +33,8 @@ class _MockRecordDailyClear extends Mock implements RecordDailyClear {}
 class _MockGetBestPoints extends Mock implements GetBestPoints {}
 
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
+
+class _MockIsNewPersonalBest extends Mock implements IsNewPersonalBest {}
 
 class _MockGetClearBoard extends Mock implements GetClearBoard {}
 
@@ -60,6 +63,7 @@ void main() {
   late _MockRecordDailyClear recordDailyClear;
   late _MockGetBestPoints getBestPoints;
   late _MockGetBestTimeSeconds getBestTimeSeconds;
+  late _MockIsNewPersonalBest isNewPersonalBest;
   late _MockGetClearBoard getClearBoard;
   late MockAnalyticsRepository analytics;
 
@@ -69,11 +73,19 @@ void main() {
     recordDailyClear = _MockRecordDailyClear();
     getBestPoints = _MockGetBestPoints();
     getBestTimeSeconds = _MockGetBestTimeSeconds();
+    isNewPersonalBest = _MockIsNewPersonalBest();
     getClearBoard = _MockGetClearBoard();
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
+    when(
+      () => isNewPersonalBest(
+        gameId: any(named: 'gameId'),
+        playId: any(named: 'playId'),
+        timeSeconds: any(named: 'timeSeconds'),
+      ),
+    ).thenReturn(false);
     when(() => getClearBoard(any())).thenReturn(null);
     when(
       () => submitLeaderboardTime(
@@ -103,6 +115,7 @@ void main() {
       recordDailyClear: recordDailyClear,
       getBestPoints: getBestPoints,
       getBestTimeSeconds: getBestTimeSeconds,
+      isNewPersonalBest: isNewPersonalBest,
       getClearBoard: getClearBoard,
       analytics: analytics,
       now: now ?? DateTime.utc(2026, 9, 13),
@@ -371,6 +384,7 @@ void main() {
         recordDailyClear: recordDailyClear,
         getBestPoints: getBestPoints,
         getBestTimeSeconds: getBestTimeSeconds,
+        isNewPersonalBest: isNewPersonalBest,
         getClearBoard: getClearBoard,
         analytics: analytics,
         now: DateTime(2026, 9, 20, 14, 31, 40),
@@ -508,6 +522,60 @@ void main() {
     expect(drafts.runs.isEmpty, isTrue);
     await bloc.close();
   });
+
+  test(
+    'completion is a new personal best only when it beats earlier days',
+    () async {
+      var now = DateTime.utc(2026, 9, 13);
+      final bloc = buildBloc(
+        now: DateTime.utc(2026, 9, 13),
+        clockNow: () => now,
+        wait: (_) async {},
+      );
+      when(
+        () => submitScore(
+          modeKey: any(named: 'modeKey'),
+          points: any(named: 'points'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          board: any(named: 'board'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => recordDailyClear(
+          gameId: any(named: 'gameId'),
+          dateId: any(named: 'dateId'),
+        ),
+      ).thenAnswer(
+        (_) async => const GameStreak(
+          gameId: GameIds.zip,
+          current: 1,
+          longest: 1,
+          freezeAvailable: true,
+        ),
+      );
+      when(
+        () => isNewPersonalBest(
+          gameId: GameIds.zip,
+          playId: '20260913',
+          timeSeconds: 5,
+        ),
+      ).thenReturn(true);
+
+      bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
+      await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
+      now = DateTime.utc(2026, 9, 13, 0, 0, 5);
+      bloc.add(const ZipEvent.completed());
+      final done = await bloc.stream.firstWhere(
+        (s) => s.status == ZipStatus.navigating,
+      );
+
+      expect(done.improved, isTrue);
+      expect(done.resultsExtra?.improved, isTrue);
+      await bloc.close();
+    },
+  );
 
   test('ZipStarted locked review carries the saved winning path', () async {
     const saved = [Cell(0, 0), Cell(0, 1), Cell(1, 1)];

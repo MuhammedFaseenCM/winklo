@@ -414,4 +414,41 @@ void main() {
       expect(repo.getClearBoard('zip_x'), 'local');
     });
   });
+
+  group('getBestDailyTimeSeconds', () {
+    test('takes the best of that game\'s dailies, skipping a period', () async {
+      final (repo, _) = await build({
+        'best_time_zip_daily_20261001': 95,
+        'best_time_zip_daily_20261002': 61,
+        'best_time_zip_daily_20261003': 70,
+        'best_time_path_words_20261002': 12,
+        'best_time_zip_level_1': 5, // not a daily
+      });
+      expect(repo.getBestDailyTimeSeconds('zip'), 61);
+      expect(
+        repo.getBestDailyTimeSeconds('zip', excludingPlayId: '20261002'),
+        70,
+      );
+      expect(repo.getBestDailyTimeSeconds('path_words'), 12);
+    });
+
+    test('null when the game has no daily best', () async {
+      final (repo, _) = await build({'best_time_zip_daily_20261001': 95});
+      expect(repo.getBestDailyTimeSeconds('sudoku'), isNull);
+      expect(
+        repo.getBestDailyTimeSeconds('zip', excludingPlayId: '20261001'),
+        isNull,
+      );
+    });
+
+    test('sees a best submitted earlier', () async {
+      final (repo, _) = await build();
+      await repo.submitScore(
+        modeKey: 'sudoku_20261001',
+        points: 900,
+        timeSeconds: 80,
+      );
+      expect(repo.getBestDailyTimeSeconds('sudoku'), 80);
+    });
+  });
 }

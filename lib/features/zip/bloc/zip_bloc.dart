@@ -17,6 +17,7 @@ import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_clear_board.dart';
+import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
@@ -33,6 +34,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     required this.getBestPoints,
     required this.getBestTimeSeconds,
     required this.getClearBoard,
+    required this.isNewPersonalBest,
     required this.analytics,
     required this.inProgressRuns,
     ZipLevelRepository? zipLevelRepository,
@@ -75,6 +77,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
   final GetClearBoard getClearBoard;
+  final IsNewPersonalBest isNewPersonalBest;
   final AnalyticsRepository analytics;
   final InProgressRunRepository inProgressRuns;
   final Future<ZipLevel> Function(DateTime date, {Duration period})
@@ -233,7 +236,12 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
 
     emit(state.copyWith(status: ZipStatus.submitting));
 
-    final improved = await submitScore(
+    final improved = isNewPersonalBest(
+      gameId: GameIds.zip,
+      playId: playId,
+      timeSeconds: elapsed,
+    );
+    await submitScore(
       modeKey: 'zip_${state.level.id}',
       points: points,
       timeSeconds: elapsed,
