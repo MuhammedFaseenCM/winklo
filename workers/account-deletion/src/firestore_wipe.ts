@@ -69,18 +69,27 @@ async function deleteDocument(
   }
 }
 
+type ListDocumentNamesResult = {
+  names: string[];
+  hitPageCap: boolean;
+};
+
 async function listDocumentNames(
   accessToken: string,
   collectionPath: string,
   pageSize: number,
   maxPages?: number,
-): Promise<string[]> {
+): Promise<ListDocumentNamesResult> {
   const names: string[] = [];
   let pageToken: string | undefined;
   let pages = 0;
+  let hitPageCap = false;
 
   do {
-    if (maxPages !== undefined && pages >= maxPages) break;
+    if (maxPages !== undefined && pages >= maxPages) {
+      if (pageToken) hitPageCap = true;
+      break;
+    }
     pages += 1;
 
     const qs = new URLSearchParams({ pageSize: String(pageSize) });
@@ -89,7 +98,7 @@ async function listDocumentNames(
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (res.status === 404) return names;
+    if (res.status === 404) return { names, hitPageCap };
     const text = await res.text();
     if (!res.ok) {
       throw new Error(`firestore_list_failed:${res.status}:${text.slice(0, 300)}`);
@@ -104,7 +113,7 @@ async function listDocumentNames(
     pageToken = json.nextPageToken;
   } while (pageToken);
 
-  return names;
+  return { names, hitPageCap };
 }
 
 function docIdFromResourceName(name: string): string {
@@ -115,7 +124,7 @@ async function deleteAllInCollection(
   accessToken: string,
   collectionPath: string,
 ): Promise<void> {
-  const names = await listDocumentNames(
+  const { names } = await listDocumentNames(
     accessToken,
     collectionPath,
     LIST_PAGE_SIZE,
@@ -150,7 +159,7 @@ async function wipeLeaderboards(
       );
 
       const dailyCol = `${base}/${root}/${game}/daily`;
-      const dayDocNames = await listDocumentNames(
+      const { names: dayDocNames } = await listDocumentNames(
         accessToken,
         dailyCol,
         LIST_PAGE_SIZE,
@@ -166,42 +175,70 @@ async function wipeLeaderboards(
   }
 }
 
+export function issueReportsStructuredQuery(
+  uid: string,
+  startAfterDocName?: string,
+): Record<string, unknown> {
+  const structuredQuery: Record<string, unknown> = {
+    from: [{ collectionId: 'issue_reports' }],
+    where: {
+      fieldFilter: {
+        field: { fieldPath: 'uid' },
+        op: 'EQUAL',
+        value: { stringValue: uid },
+      },
+    },
+    orderBy: [{ field: { fieldPath: '__name__' }, direction: 'ASCENDING' }],
+    limit: LIST_PAGE_SIZE,
+  };
+  if (startAfterDocName) {
+    structuredQuery.startAt = {
+      values: [{ referenceValue: startAfterDocName }],
+      before: false,
+    };
+  }
+  return structuredQuery;
+}
+
 async function deleteIssueReportsForUid(
   accessToken: string,
   projectId: string,
   uid: string,
 ): Promise<void> {
   const url = `${FIRESTORE_API}/${documentsBase(projectId)}:runQuery`;
-  const body = {
-    structuredQuery: {
-      from: [{ collectionId: 'issue_reports' }],
-      where: {
-        fieldFilter: {
-          field: { fieldPath: 'uid' },
-          op: 'EQUAL',
-          value: { stringValue: uid },
-        },
+  let startAfterDocName: string | undefined;
+
+  for (;;) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
       },
-    },
-  };
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`firestore_query_failed:${res.status}:${text.slice(0, 300)}`);
-  }
-  const rows = JSON.parse(text) as Array<{
-    document?: { name: string };
-  }>;
-  for (const row of rows) {
-    const name = row.document?.name;
-    if (name) await deleteDocument(accessToken, name);
+      body: JSON.stringify({
+        structuredQuery: issueReportsStructuredQuery(uid, startAfterDocName),
+      }),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`firestore_query_failed:${res.status}:${text.slice(0, 300)}`);
+    }
+    const rows = JSON.parse(text) as Array<{
+      document?: { name: string };
+    }>;
+
+    let matched = 0;
+    let lastDocName: string | undefined;
+    for (const row of rows) {
+      const name = row.document?.name;
+      if (!name) continue;
+      await deleteDocument(accessToken, name);
+      lastDocName = name;
+      matched += 1;
+    }
+
+    if (matched < LIST_PAGE_SIZE || !lastDocName) break;
+    startAfterDocName = lastDocName;
   }
 }
 
@@ -209,10 +246,10 @@ async function wipeDailyActivityBestEffort(
   accessToken: string,
   projectId: string,
   uid: string,
-): Promise<string | null> {
+): Promise<string[]> {
   try {
     const col = `${documentsBase(projectId)}/daily_activity`;
-    const dayNames = await listDocumentNames(
+    const { names: dayNames, hitPageCap } = await listDocumentNames(
       accessToken,
       col,
       DAILY_ACTIVITY_PAGE_SIZE,
@@ -225,9 +262,11 @@ async function wipeDailyActivityBestEffort(
         dailyActivityUserPath(projectId, dayId, uid),
       );
     }
-    return null;
+    const warnings: string[] = [];
+    if (hitPageCap) warnings.push('daily_activity_page_cap');
+    return warnings;
   } catch {
-    return 'daily_activity_partial';
+    return ['daily_activity_partial'];
   }
 }
 
@@ -277,12 +316,12 @@ export async function wipeUserFirestore(opts: {
     return { ok: false, errorMessage: msg };
   }
 
-  const dailyWarning = await wipeDailyActivityBestEffort(
+  const dailyWarnings = await wipeDailyActivityBestEffort(
     opts.accessToken,
     opts.projectId,
     opts.uid,
   );
-  if (dailyWarning) softWarnings.push(dailyWarning);
+  softWarnings.push(...dailyWarnings);
 
   return softWarnings.length > 0
     ? { ok: true, softWarnings }
