@@ -6,6 +6,9 @@ enum SudokuHintTechnique {
   lastRemainingRow,
   lastRemainingCol,
   nakedSingle,
+
+  /// A digit in [SudokuCoachHint.row] disagrees with the solution.
+  mistakeInRow,
 }
 
 class SudokuCoachHint {
@@ -15,17 +18,78 @@ class SudokuCoachHint {
     required this.digit,
     required this.evidenceIndices,
     required this.excludedIndices,
+    this.row,
   });
 
   final SudokuHintTechnique technique;
-  final int targetIndex;
+
+  /// The cell the hint fills in; null for [SudokuHintTechnique.mistakeInRow],
+  /// which points at a whole row.
+  final int? targetIndex;
   final int digit;
   final Set<int> evidenceIndices;
   final Set<int> excludedIndices;
+
+  /// Zero-based row of a [SudokuHintTechnique.mistakeInRow] hint.
+  final int? row;
 }
 
 abstract final class SudokuHintCoach {
   SudokuHintCoach._();
+
+  /// A hint pointing at the row of a filled cell that disagrees with the
+  /// solution (the selected cell's first, if it is one), or null when every
+  /// filled cell is right.
+  ///
+  /// [find] reasons from the player's grid, so with a wrong digit on the board
+  /// it could teach a wrong step; point out the mistake first.
+  static SudokuCoachHint? findMistake({
+    required SudokuPuzzle puzzle,
+    required List<int> grid,
+    int? preferredIndex,
+  }) {
+    int? wrong;
+    if (preferredIndex != null && _isWrong(puzzle, grid, preferredIndex)) {
+      wrong = preferredIndex;
+    }
+    for (var i = 0; wrong == null && i < grid.length; i++) {
+      if (_isWrong(puzzle, grid, i)) wrong = i;
+    }
+    if (wrong == null) return null;
+    final row = wrong ~/ puzzle.size;
+    return SudokuCoachHint(
+      technique: SudokuHintTechnique.mistakeInRow,
+      targetIndex: null,
+      digit: 0,
+      row: row,
+      evidenceIndices: {
+        for (var col = 0; col < puzzle.size; col++) puzzle.indexOf(row, col),
+      },
+      excludedIndices: const {},
+    );
+  }
+
+  /// Whether [grid] has done what [hint] asked: the target holds the digit,
+  /// or (for a mistake) the row no longer holds a wrong digit.
+  static bool isResolved(
+    SudokuCoachHint hint, {
+    required SudokuPuzzle puzzle,
+    required List<int> grid,
+  }) {
+    if (hint.technique == SudokuHintTechnique.mistakeInRow) {
+      return !hint.evidenceIndices.any((i) => _isWrong(puzzle, grid, i));
+    }
+    final target = hint.targetIndex;
+    return target != null && target < grid.length && grid[target] == hint.digit;
+  }
+
+  static bool _isWrong(SudokuPuzzle puzzle, List<int> grid, int index) {
+    if (index < 0 || index >= grid.length) return false;
+    if (index >= puzzle.solution.length) return false;
+    return !SudokuRules.isGiven(puzzle, index) &&
+        grid[index] != 0 &&
+        grid[index] != puzzle.solution[index];
+  }
 
   static SudokuCoachHint? find({
     required SudokuPuzzle puzzle,

@@ -279,8 +279,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     final coach = state.activeCoachHint;
     final clearedCoach =
         coach != null &&
-        selected == coach.targetIndex &&
-        event.digit == coach.digit;
+        SudokuHintCoach.isResolved(coach, puzzle: puzzle, grid: result.grid);
 
     emit(
       state.copyWith(
@@ -321,6 +320,10 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       notes: state.notes,
       index: selected,
     );
+    final coach = state.activeCoachHint;
+    final clearedCoach =
+        coach != null &&
+        SudokuHintCoach.isResolved(coach, puzzle: puzzle, grid: erased.grid);
     emit(
       state.copyWith(
         grid: erased.grid,
@@ -330,6 +333,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           grid: erased.grid,
         ),
         hintFlashIndex: null,
+        activeCoachHint: clearedCoach ? null : coach,
         unitFlashIndices: const <int>{},
       ),
     );
@@ -351,11 +355,19 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     final puzzle = state.puzzle;
     if (puzzle == null) return;
 
-    final coach = SudokuHintCoach.find(
-      puzzle: puzzle,
-      grid: state.grid,
-      preferredIndex: state.selectedIndex,
-    );
+    // A wrong digit would make the coach reason from a broken grid, so point
+    // at the mistake before teaching anything.
+    final coach =
+        SudokuHintCoach.findMistake(
+          puzzle: puzzle,
+          grid: state.grid,
+          preferredIndex: state.selectedIndex,
+        ) ??
+        SudokuHintCoach.find(
+          puzzle: puzzle,
+          grid: state.grid,
+          preferredIndex: state.selectedIndex,
+        );
     if (coach == null) {
       emit(state.copyWith(showNoSimpleHint: true, activeCoachHint: null));
       return;
@@ -367,7 +379,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         hintsRemaining: remaining,
         activeCoachHint: coach,
         showNoSimpleHint: false,
-        selectedIndex: coach.targetIndex,
+        selectedIndex: coach.targetIndex ?? state.selectedIndex,
         hintFlashIndex: null,
         usedHintsThisRun: true,
       ),

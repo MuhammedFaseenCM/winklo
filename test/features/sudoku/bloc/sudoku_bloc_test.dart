@@ -11,6 +11,7 @@ import 'package:winklo/domain/entities/sudoku_puzzle.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/hint_quota_repository.dart';
+import 'package:winklo/domain/sudoku/sudoku_hint_coach.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
@@ -566,6 +567,38 @@ void main() {
     await bloc.stream.firstWhere((s) => s.grid[1] == 0);
 
     expect(bloc.state.hadMistakesThisRun, isTrue);
+    await bloc.close();
+  });
+
+  test('hint points at the row of a wrong digit before teaching', () async {
+    final bloc = buildBloc(
+      generatePuzzle: ({required DateTime day}) => _twoEmptyPuzzle(day: day),
+    );
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.digitTapped(3));
+    // Ask from the other gap (row 5), which the coach could otherwise teach.
+    bloc.add(const SudokuEvent.cellSelected(Cell(5, 4)));
+    bloc.add(const SudokuEvent.hint());
+    final hinted = await bloc.stream.firstWhere(
+      (s) => s.activeCoachHint != null,
+    );
+
+    final coach = hinted.activeCoachHint!;
+    expect(coach.technique, SudokuHintTechnique.mistakeInRow);
+    expect(coach.row, 0);
+    expect(coach.targetIndex, isNull);
+    expect(coach.evidenceIndices, {0, 1, 2, 3, 4, 5});
+    expect(hinted.selectedIndex, 34, reason: 'selection stays put');
+    expect(hinted.hintsRemaining, 2);
+    expect(hinted.usedHintsThisRun, isTrue);
+
+    // Erasing the wrong digit resolves the hint.
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.erase());
+    final fixed = await bloc.stream.firstWhere((s) => s.grid[1] == 0);
+    expect(fixed.activeCoachHint, isNull);
     await bloc.close();
   });
 

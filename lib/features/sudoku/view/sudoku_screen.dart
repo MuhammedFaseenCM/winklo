@@ -156,6 +156,8 @@ class _SudokuScreenState extends State<SudokuScreen>
         );
       case SudokuHintTechnique.nakedSingle:
         return AppStrings.sudokuHintNakedSingle(digit: hint.digit);
+      case SudokuHintTechnique.mistakeInRow:
+        return AppStrings.sudokuHintMistakeInRow((hint.row ?? 0) + 1);
     }
   }
 

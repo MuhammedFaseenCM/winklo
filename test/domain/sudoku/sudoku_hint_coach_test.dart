@@ -135,4 +135,77 @@ void main() {
     final grid = List<int>.filled(36, 0);
     expect(SudokuHintCoach.find(puzzle: puzzleFor(grid), grid: grid), isNull);
   });
+
+  group('findMistake', () {
+    // Solution: every row reads 1..6 shifted; only the values matter here.
+    final solution = [for (var i = 0; i < 36; i++) (i % 6) + 1];
+    final given = List<int>.filled(36, 0)..[0] = 1;
+    final puzzle = SudokuPuzzle(
+      id: 't',
+      dateId: 't',
+      given: given,
+      solution: solution,
+      difficulty: SudokuDifficulty.easy,
+    );
+
+    test('null when every filled cell matches the solution', () {
+      final grid = List<int>.from(given)
+        ..[7] = 2
+        ..[20] = 3;
+      expect(SudokuHintCoach.findMistake(puzzle: puzzle, grid: grid), isNull);
+    });
+
+    test('points at the row of the first wrong digit', () {
+      final grid = List<int>.from(given)
+        ..[9] =
+            2 // r1c3: should be 4
+        ..[20] = 5; // r3c2: should be 3
+      final hint = SudokuHintCoach.findMistake(puzzle: puzzle, grid: grid)!;
+      expect(hint.technique, SudokuHintTechnique.mistakeInRow);
+      expect(hint.row, 1);
+      expect(hint.targetIndex, isNull);
+      expect(hint.evidenceIndices, {6, 7, 8, 9, 10, 11});
+    });
+
+    test('prefers the selected cell when it is the wrong one', () {
+      final grid = List<int>.from(given)
+        ..[9] = 2
+        ..[20] = 5;
+      final hint = SudokuHintCoach.findMistake(
+        puzzle: puzzle,
+        grid: grid,
+        preferredIndex: 20,
+      )!;
+      expect(hint.row, 3);
+    });
+
+    test('isResolved once the row holds no wrong digit', () {
+      final wrong = List<int>.from(given)..[9] = 2;
+      final hint = SudokuHintCoach.findMistake(puzzle: puzzle, grid: wrong)!;
+      expect(
+        SudokuHintCoach.isResolved(hint, puzzle: puzzle, grid: wrong),
+        isFalse,
+      );
+      final erased = List<int>.from(wrong)..[9] = 0;
+      expect(
+        SudokuHintCoach.isResolved(hint, puzzle: puzzle, grid: erased),
+        isTrue,
+      );
+    });
+  });
+
+  test('isResolved for a placement hint checks the target digit', () {
+    final grid = regionLastRemainingGrid();
+    final puzzle = puzzleFor(grid);
+    final hint = SudokuHintCoach.find(puzzle: puzzle, grid: grid)!;
+    expect(
+      SudokuHintCoach.isResolved(hint, puzzle: puzzle, grid: grid),
+      isFalse,
+    );
+    final placed = List<int>.from(grid)..[hint.targetIndex!] = hint.digit;
+    expect(
+      SudokuHintCoach.isResolved(hint, puzzle: puzzle, grid: placed),
+      isTrue,
+    );
+  });
 }

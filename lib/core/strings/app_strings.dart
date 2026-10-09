@@ -76,6 +76,8 @@ abstract final class AppStrings {
   static String sudokuHintNakedSingle({required int digit}) =>
       'This cell has to be $digit — every other digit conflicts with the row, column, or region.';
   static const sudokuHintNoSimple = 'No simple hint right now.';
+  static String sudokuHintMistakeInRow(int row) =>
+      'One of the digits in row $row is wrong. Fix it first, then ask for another hint.';
   static const sudokuErase = 'Erase';
   static const sudokuReset = 'Reset';
   static const sudokuNotes = 'Notes';
