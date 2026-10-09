@@ -1,0 +1,10 @@
+name = "winklo-account-deletion"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[[r2_buckets]]
+binding = "AVATARS"
+bucket_name = "winklo-avatars"
+
+[vars]
+FIREBASE_PROJECT_ID = "brain-zip-app"
