@@ -93,6 +93,26 @@ void main() {
     expect(find.text('profile-body'), findsOneWidget);
   });
 
+  testWidgets('system back from profile returns to home instead of crashing', (
+    tester,
+  ) async {
+    final router = buildTestRouter();
+
+    await tester.pumpWidget(wrap(MaterialApp.router(routerConfig: router)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(AppStrings.navProfile));
+    await tester.pumpAndSettle();
+    expect(find.text('profile-body'), findsOneWidget);
+
+    final handled = await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(handled, isTrue);
+    expect(find.text('home-body'), findsOneWidget);
+    expect(router.state.uri.path, '/');
+  });
+
   testWidgets('forced update hides nav and blocks tab switches', (
     tester,
   ) async {
