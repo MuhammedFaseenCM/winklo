@@ -48,7 +48,7 @@ The clock pauses when you leave a game and the run is saved on the phone, so it 
 
 ## Project status
 
-As of 10 October 2026. The released build is 1.0.0+14, in closed testing since 7 October.
+As of 13 October 2026. Production review build is **1.0.0+16** (uploaded to the Play production track). Closed testing still had 1.0.0+14 since 7 October; version code 15 was already consumed on Play.
 
 - **Checks:** `flutter analyze` reports only infos (no warnings or errors), and every test passes. CI (`.github/workflows/ci.yml`) runs both, plus the Workers' type checks and tests, on every push to `master` and every pull request.
 - **Server side:** Firebase is on the free Spark plan, so there are no Cloud Functions; server work runs in Cloudflare Workers.
@@ -63,11 +63,11 @@ As of 10 October 2026. The released build is 1.0.0+14, in closed testing since 7
 Fix first 1–11 and 17–19 are done and tested on three branches, each started from the one before: `fix/privacy-play-policy` (1–4), `fix/gameplay-fairness` (5–8) and `fix/reliability-and-tooling` (9–11 and 17–19). `master` also has work that isn't released: progress sync with leaderboard backfill, the Zip path review, the redrawn icon and muted tap sounds. The steps, in order:
 
 - [x] Deploy the hard daily puzzles (winklo-admin `38c7055`) and rebuild the 11 October boards with them.
-- [ ] Merge the three branches into `master`, in the order above. This also republishes the website from `docs/`: the landing page, the privacy policy and the delete-account page.
-- [ ] Deploy the Firestore rules for Fix first 3–4 with `firebase deploy --only firestore:rules`. Production still runs the old rules, which let any signed-in player read any profile. They can go out before the release: 1.0.0+14 already stamps `updatedAt` with the server time, as the new rules require.
-- [ ] Deploy the account-deletion Worker for Fix first 2 (`npm run deploy` in `workers/account-deletion`). Until then, deleting an account leaves the player's daily leaderboard entries, app-open records and error reports behind.
-- [ ] Release 1.0.0+15 with `master`'s work and the app side of Fix first 1–11 and 17: bump `version` in `pubspec.yaml`, add `fastlane/metadata/android/en-US/changelogs/15.txt`, then build and upload.
-- [ ] In Play Console, paste the updated App access and account-deletion answers from `play/app_content_answers.txt` (Sudoku needs sign-in too, and the app now has Delete account), and check the store listing against `play/store-media/README.md`.
+- [x] Merge the three branches into `master` (content already on `master`).
+- [x] Deploy the Firestore rules for Fix first 3–4 (`firebase deploy --only firestore:rules`, 13 October).
+- [x] Deploy the account-deletion Worker for Fix first 2 (`npx wrangler deploy` in `workers/account-deletion`, 13 October).
+- [x] Release **1.0.0+16** to the Play production track for review (`fastlane android production`): changelog in `fastlane/metadata/android/en-US/changelogs/16.txt`.
+- [ ] In Play Console, paste the updated App access and account-deletion answers from `play/app_content_answers.txt` (Sudoku needs sign-in too, and the app now has Delete account), and check the store listing against `play/store-media/README.md`. Confirm the production release is in review / approved.
 - [ ] Change the GitHub repo description, which still says "Daily Zip path-puzzle game…". Only the repo owner can.
 
 Also in progress, in winklo-admin: a redesign of the admin console, on branch `feat/ember-glass-redesign`.

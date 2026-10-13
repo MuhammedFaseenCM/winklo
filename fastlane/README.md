@@ -39,6 +39,14 @@ Upload a production AAB to the internal testing track
 
 Upload a production AAB to closed testing (alpha)
 
+### android production
+
+```sh
+[bundle exec] fastlane android production
+```
+
+Upload a production AAB to the production track and send for review
+
 ### android testing
 
 ```sh

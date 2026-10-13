@@ -35,6 +35,16 @@ platform :android do
     )
   end
 
+  desc "Upload a production AAB to the production track and send for review"
+  lane :production do
+    upload_to_play_store(
+      **upload_common.merge(skip_upload_changelogs: false),
+      track: "production",
+      aab: aab_path,
+      changes_not_sent_for_review: false
+    )
+  end
+
   desc "Upload a production AAB to internal and closed testing"
   lane :testing do
     upload_to_play_store(

@@ -1,0 +1,8 @@
+What's new
+
+• Delete account from Profile (opens the secure web flow)
+• Progress syncs across devices with your Google account
+• Fairer clears: resets keep hint/mistake flags; personal bests beat earlier days
+• Sudoku hints catch mistakes first; overnight runs keep their day
+• Streak reminder timing and slower-network puzzle loading
+• Quieter error reporting and a safer Android back button
