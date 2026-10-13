@@ -10,6 +10,15 @@ import 'client_error_context.dart';
 
 typedef ClientErrorUidProvider = String? Function();
 
+/// Firestore `users/{uid}` snapshot listeners often emit this during sign-out
+/// (auth clears before the listener is cancelled). Already handled in repos /
+/// cubits; still surfaces via [PlatformDispatcher] as uncaught async noise.
+bool isExpectedFirebasePermissionDenied(Object error) {
+  final text = error.toString();
+  return text.contains('permission-denied') ||
+      text.contains('PERMISSION_DENIED');
+}
+
 /// Fire-and-forget client error writer with session throttle / dedupe.
 class ClientErrorReporter {
   ClientErrorReporter({
@@ -89,6 +98,7 @@ class ClientErrorReporter {
   }
 
   void reportPlatform(Object error, StackTrace stack, {bool fatal = true}) {
+    if (isExpectedFirebasePermissionDenied(error)) return;
     _enqueue(
       ClientErrorReport(
         severity: fatal ? 'fatal' : 'error',

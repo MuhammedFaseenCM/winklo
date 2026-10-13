@@ -58,6 +58,9 @@ class FirebaseBootstrap {
       );
     };
     PlatformDispatcher.instance.onError = (error, stack) {
+      // Sign-out races on users/{uid} snapshots — handled in-app; do not
+      // treat as a fatal Crashlytics / client_errors event.
+      if (isExpectedFirebasePermissionDenied(error)) return true;
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       ClientErrorReporter.instance.reportPlatform(error, stack);
       return true;

@@ -58,4 +58,38 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(repo.reports, hasLength(2));
   });
+
+  test('skips Firestore permission-denied platform noise', () async {
+    FirebaseBootstrap.isReady = true;
+    final repo = _RecordingRepo();
+    final reporter = ClientErrorReporter(
+      repository: repo,
+      maxWritesPerSession: 20,
+      dedupeCooldown: Duration.zero,
+    );
+
+    reporter.reportPlatform(
+      Exception(
+        '[cloud_firestore/permission-denied] PERMISSION_DENIED: Missing or insufficient permissions.',
+      ),
+      StackTrace.current,
+    );
+    reporter.reportPlatform(Exception('real boom'), StackTrace.current);
+
+    await Future<void>.delayed(Duration.zero);
+    expect(repo.reports, hasLength(1));
+    expect(repo.reports.single.message, contains('real boom'));
+  });
+
+  test('isExpectedFirebasePermissionDenied matches firestore sign-out races', () {
+    expect(
+      isExpectedFirebasePermissionDenied(
+        Exception(
+          '[cloud_firestore/permission-denied] PERMISSION_DENIED: Missing or insufficient permissions.',
+        ),
+      ),
+      isTrue,
+    );
+    expect(isExpectedFirebasePermissionDenied(Exception('other')), isFalse);
+  });
 }

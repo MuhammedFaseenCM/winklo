@@ -257,7 +257,15 @@ void main() {
     test('throws for a snapshot showing unacknowledged local writes', () {
       expect(
         () => confirmedSnapshotData({'hintsUsed': 1}, hasPendingWrites: true),
-        throwsA(isA<Failure>()),
+        throwsA(
+          isA<Failure>()
+              .having(
+                (f) => f.message,
+                'message',
+                'Progress has unconfirmed local writes.',
+              )
+              .having((f) => f.reportable, 'reportable', false),
+        ),
       );
     });
   });

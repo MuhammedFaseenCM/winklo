@@ -963,6 +963,74 @@ void main() {
 
       expect(await sync(), const SyncProgressResult(failures: 1));
     });
+
+    test(
+      'unconfirmed local writes still fail the item but are not reported',
+      () async {
+        when(
+          () => remote.fetchDay(
+            uid: any(named: 'uid'),
+            gameId: any(named: 'gameId'),
+            playId: any(named: 'playId'),
+          ),
+        ).thenThrow(
+          const Failure(
+            'Progress has unconfirmed local writes.',
+            reportable: false,
+          ),
+        );
+        await build(
+          initial: {
+            'progress_owner_uid': _uid,
+            'best_time_zip_daily_$_today': 30,
+          },
+        );
+
+        final result = await sync();
+
+        expect(result.failures, greaterThan(0));
+        verifyNever(() => clientErrors.report(any()));
+      },
+    );
+
+    test(
+      'reportable failure is still reported when mixed with transient ones',
+      () async {
+        var fetchCalls = 0;
+        when(
+          () => remote.fetchDay(
+            uid: any(named: 'uid'),
+            gameId: any(named: 'gameId'),
+            playId: any(named: 'playId'),
+          ),
+        ).thenAnswer((_) async {
+          fetchCalls++;
+          if (fetchCalls == 1) {
+            throw const Failure(
+              'Progress has unconfirmed local writes.',
+              reportable: false,
+            );
+          }
+          throw const Failure('rules denied');
+        });
+        await build(
+          initial: {
+            'progress_owner_uid': _uid,
+            'best_time_zip_daily_$_today': 30,
+            'best_time_sudoku_$_today': 40,
+          },
+        );
+
+        final result = await sync();
+
+        expect(result.failures, greaterThan(0));
+        final report =
+            verify(() => clientErrors.report(captureAny())).captured.single
+                as ClientErrorReport;
+        expect(report.message, contains('rules denied'));
+        expect(report.cause, contains('rules denied'));
+      },
+    );
   });
 
   group('serialization', () {

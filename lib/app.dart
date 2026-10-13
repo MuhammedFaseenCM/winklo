@@ -8,6 +8,7 @@ import 'core/lifecycle/app_open_lifecycle.dart';
 import 'core/lifecycle/progress_change_signal.dart';
 import 'core/lifecycle/progress_sync_lifecycle.dart';
 import 'core/router/app_router.dart';
+import 'core/router/safe_back_button_dispatcher.dart';
 import 'core/strings/app_strings.dart';
 import 'core/theme/app_text_scale.dart';
 import 'core/theme/app_theme.dart';
@@ -90,11 +91,18 @@ class _WinkloAppState extends State<WinkloApp> {
       analytics: context.read<AnalyticsRepository>(),
       authCubit: context.read<AuthCubit>(),
     );
+    final router = _router!;
+    // go_router 18 hard-codes RootBackButtonDispatcher on RouterConfig; pass
+    // the safe dispatcher explicitly so empty-match Android backs don't crash
+    // (flutter/flutter#187616).
     final app = MaterialApp.router(
       title: AppStrings.appTitle,
       theme: buildAppTheme(),
       themeMode: ThemeMode.dark,
-      routerConfig: _router,
+      routeInformationProvider: router.routeInformationProvider,
+      routeInformationParser: router.routeInformationParser,
+      routerDelegate: router.routerDelegate,
+      backButtonDispatcher: SafeGoRouterBackButtonDispatcher(() => router),
       debugShowCheckedModeBanner: false,
       // Global tap-outside-to-dismiss: wraps every routed screen so a tap on
       // empty space drops keyboard focus app-wide. `translucent` lets taps on

@@ -4,6 +4,7 @@ import '../entities/client_error_report.dart';
 import '../entities/clear_meta.dart';
 import '../entities/game_day_record.dart';
 import '../entities/game_streak.dart';
+import '../failures.dart';
 import '../game_ids.dart';
 import '../logic/progress_merge.dart';
 import '../repositories/auth_repository.dart';
@@ -195,8 +196,8 @@ class _Run {
 
   bool _localChanged = false;
   int _failures = 0;
-  Object? _firstError;
-  StackTrace? _firstStack;
+  Object? _firstReportableError;
+  StackTrace? _firstReportableStack;
   late final DateTime _at;
   late final String _uid;
 
@@ -275,9 +276,14 @@ class _Run {
 
   void _fail(Object error, StackTrace stack) {
     _failures++;
-    _firstError ??= error;
-    _firstStack ??= stack;
+    if (_isReportable(error)) {
+      _firstReportableError ??= error;
+      _firstReportableStack ??= stack;
+    }
   }
+
+  static bool _isReportable(Object error) =>
+      error is! Failure || error.reportable;
 
   /// Legacy data (no owner yet) is claimed; another account's data is purged
   /// and this account's remote progress is pulled in its place. Progress the
@@ -545,8 +551,9 @@ class _Run {
   /// (the rules only accept a report under the signed-in uid).
   void _reportFailures() {
     final report = _s._reportClientError;
-    if (_failures == 0 || report == null || _aborted) return;
-    if (!_s._claimReport('${_firstError.runtimeType}|$_firstError', _at)) {
+    final error = _firstReportableError;
+    if (_failures == 0 || report == null || _aborted || error == null) return;
+    if (!_s._claimReport('${error.runtimeType}|$error', _at)) {
       return;
     }
     unawaited(
@@ -556,9 +563,9 @@ class _Run {
           severity: 'error',
           source: 'handled',
           code: SyncProgress.failureCode,
-          message: '$_failures progress sync item(s) failed: $_firstError',
-          cause: _firstError?.runtimeType.toString(),
-          stack: _firstStack?.toString(),
+          message: '$_failures progress sync item(s) failed: $error',
+          cause: error.toString(),
+          stack: _firstReportableStack?.toString(),
           function: 'SyncProgress',
           uid: _uid,
         ),

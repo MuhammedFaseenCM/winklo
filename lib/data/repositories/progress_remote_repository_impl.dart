@@ -131,7 +131,10 @@ Map<String, dynamic>? confirmedSnapshotData(
   required bool hasPendingWrites,
 }) {
   if (hasPendingWrites) {
-    throw const Failure('Progress has unconfirmed local writes.');
+    throw const Failure(
+      'Progress has unconfirmed local writes.',
+      reportable: false,
+    );
   }
   return data;
 }
@@ -240,6 +243,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
     } catch (e, st) {
       debugPrint('Progress fetchDay failed: $e');
       debugPrint('$st');
+      if (e is Failure) rethrow;
       throw Failure('Could not load progress.', cause: e);
     }
   }
@@ -286,6 +290,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
     } catch (e, st) {
       debugPrint('Progress fetchStreak failed: $e');
       debugPrint('$st');
+      if (e is Failure) rethrow;
       throw Failure('Could not load progress.', cause: e);
     }
   }

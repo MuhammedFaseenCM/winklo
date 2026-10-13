@@ -33,40 +33,61 @@ class _DashboardShellView extends StatelessWidget {
 
   final StatefulNavigationShell navigationShell;
 
+  /// Handles Android system back before [GoRouterDelegate.popRoute], which
+  /// can throw when the match list is transiently empty (go_router#187616).
+  Future<bool> _onBackButtonPressed(BuildContext context) async {
+    final router = GoRouter.of(context);
+    if (router.routerDelegate.currentConfiguration.matches.isEmpty) {
+      return false;
+    }
+    if (router.canPop()) {
+      router.pop();
+      return true;
+    }
+    if (navigationShell.currentIndex != 0) {
+      navigationShell.goBranch(0);
+      return true;
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AppUpdateCubit, AppUpdateState>(
-      builder: (context, updateState) {
-        final forced = updateState.status == AppUpdateStatus.forced;
-        return Stack(
-          children: [
-            Scaffold(
-              extendBody: true,
-              body: TabSwitchAnimator(
-                index: navigationShell.currentIndex,
-                child: navigationShell,
+    return BackButtonListener(
+      onBackButtonPressed: () => _onBackButtonPressed(context),
+      child: BlocBuilder<AppUpdateCubit, AppUpdateState>(
+        builder: (context, updateState) {
+          final forced = updateState.status == AppUpdateStatus.forced;
+          return Stack(
+            children: [
+              Scaffold(
+                extendBody: true,
+                body: TabSwitchAnimator(
+                  index: navigationShell.currentIndex,
+                  child: navigationShell,
+                ),
+                bottomNavigationBar: forced
+                    ? null
+                    : FloatingNavDock(
+                        selectedIndex: navigationShell.currentIndex,
+                        onDestinationSelected: (index) {
+                          if (context.read<AppUpdateCubit>().isForced) return;
+                          navigationShell.goBranch(
+                            index,
+                            initialLocation:
+                                index == navigationShell.currentIndex,
+                          );
+                        },
+                      ),
               ),
-              bottomNavigationBar: forced
-                  ? null
-                  : FloatingNavDock(
-                      selectedIndex: navigationShell.currentIndex,
-                      onDestinationSelected: (index) {
-                        if (context.read<AppUpdateCubit>().isForced) return;
-                        navigationShell.goBranch(
-                          index,
-                          initialLocation:
-                              index == navigationShell.currentIndex,
-                        );
-                      },
-                    ),
-            ),
-            if (forced)
-              HomeForceUpdateOverlay(
-                onUpdate: () => context.read<AppUpdateCubit>().openStore(),
-              ),
-          ],
-        );
-      },
+              if (forced)
+                HomeForceUpdateOverlay(
+                  onUpdate: () => context.read<AppUpdateCubit>().openStore(),
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
