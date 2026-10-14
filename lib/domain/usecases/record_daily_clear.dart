@@ -6,8 +6,7 @@ import '../repositories/streak_repository.dart';
 import '../streak_calculator.dart';
 
 class RecordDailyClear {
-  RecordDailyClear(this._repo, {AnalyticsRepository? analytics})
-    : _analytics = analytics;
+  RecordDailyClear(this._repo, {this._analytics});
 
   final StreakRepository _repo;
   final AnalyticsRepository? _analytics;

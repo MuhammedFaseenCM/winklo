@@ -17,14 +17,9 @@ class NextUnclearedDaily {
   /// Home's tile order.
   static const dailies = [GameIds.zip, GameIds.pathWords, GameIds.sudoku];
 
-  static String routeFor(String gameId) => switch (gameId) {
-    GameIds.pathWords => '/path-words',
-    GameIds.sudoku => '/sudoku',
-    _ => '/zip',
-  };
-
-  /// The score key each game saves its daily clear under. Zip keys by the
-  /// level's doc id (`daily_YYYYMMDD`); the others by the play id.
+  /// The score key each game saves its daily clear under (as the blocs and
+  /// Home build it). Zip keys by the level's doc id (`daily_YYYYMMDD`); the
+  /// others by the play id.
   static String modeKeyFor(String gameId, String playId) => switch (gameId) {
     GameIds.zip => 'zip_daily_$playId',
     _ => '${gameId}_$playId',

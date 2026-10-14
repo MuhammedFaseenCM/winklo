@@ -8,8 +8,7 @@ import '../repositories/notification_repository.dart';
 /// Unknown or mistyped deep-links (e.g. `/Home`, `/word_match`) fall back to
 /// home so taps never land on go_router's Page Not Found screen.
 class HandleNotificationTap {
-  HandleNotificationTap({AnalyticsRepository? analytics})
-    : _analytics = analytics;
+  HandleNotificationTap({this._analytics});
 
   final AnalyticsRepository? _analytics;
 

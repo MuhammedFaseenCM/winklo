@@ -65,10 +65,4 @@ void main() {
       GameIds.pathWords,
     );
   });
-
-  test('routes open each daily', () {
-    expect(NextUnclearedDaily.routeFor(GameIds.zip), '/zip');
-    expect(NextUnclearedDaily.routeFor(GameIds.pathWords), '/path-words');
-    expect(NextUnclearedDaily.routeFor(GameIds.sudoku), '/sudoku');
-  });
 }

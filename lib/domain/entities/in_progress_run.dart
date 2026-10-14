@@ -20,7 +20,7 @@ class InProgressRun {
   final Map<String, dynamic> board;
 
   /// The puzzle's fingerprint when the run was saved. Null for runs saved
-  /// before fingerprints existed (builds up to 1.0.0+14).
+  /// before fingerprints existed (builds up to 1.0.0+16).
   final String? boardFingerprint;
 
   /// False when the day's board was replaced after this run was saved, so

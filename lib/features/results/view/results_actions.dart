@@ -57,6 +57,12 @@ class ResultsActions extends StatelessWidget {
     if (shared) await analytics.logShare(gameId: _gameId);
   }
 
+  static String _routeFor(String gameId) => switch (gameId) {
+    GameIds.pathWords => '/path-words',
+    GameIds.sudoku => '/sudoku',
+    _ => '/zip',
+  };
+
   static String _titleFor(String gameId) => switch (gameId) {
     GameIds.pathWords => AppStrings.pathWordsTitle,
     GameIds.sudoku => AppStrings.sudokuTitle,
@@ -88,7 +94,7 @@ class ResultsActions extends StatelessWidget {
             onPressed: () async {
               await _log(context, 'play_next');
               if (!context.mounted) return;
-              context.pushReplacement(NextUnclearedDaily.routeFor(next));
+              context.pushReplacement(_routeFor(next));
             },
           )
         else
