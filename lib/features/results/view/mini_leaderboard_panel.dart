@@ -24,6 +24,7 @@ class MiniLeaderboardPanel extends StatelessWidget {
     this.usedHints,
     this.hadMistakes,
     this.currentStreak,
+    this.footer,
   });
 
   final String gameId;
@@ -31,6 +32,9 @@ class MiniLeaderboardPanel extends StatelessWidget {
   final bool? usedHints;
   final bool? hadMistakes;
   final int? currentStreak;
+
+  /// Replaces the default leaderboard and home buttons under the board.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +50,7 @@ class MiniLeaderboardPanel extends StatelessWidget {
         usedHints: usedHints,
         hadMistakes: hadMistakes,
         currentStreak: currentStreak,
+        footer: footer,
       ),
     );
   }
@@ -58,6 +63,7 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
     this.usedHints,
     this.hadMistakes,
     this.currentStreak,
+    this.footer,
   });
 
   final String gameId;
@@ -65,6 +71,7 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
   final bool? usedHints;
   final bool? hadMistakes;
   final int? currentStreak;
+  final Widget? footer;
 
   String _formatTime(int seconds) {
     final m = seconds ~/ 60;
@@ -186,16 +193,19 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        ZipPrimaryButton(
-          label: AppStrings.seeFullLeaderboard,
-          icon: Icons.leaderboard_rounded,
-          onPressed: () => context.go('/leaderboard?game=$gameId'),
-        ),
-        const SizedBox(height: 6),
-        TextButton(
-          onPressed: () => context.go('/'),
-          child: Text(AppStrings.backHome),
-        ),
+        ?footer,
+        if (footer == null) ...[
+          ZipPrimaryButton(
+            label: AppStrings.seeFullLeaderboard,
+            icon: Icons.leaderboard_rounded,
+            onPressed: () => context.go('/leaderboard?game=$gameId'),
+          ),
+          const SizedBox(height: 6),
+          TextButton(
+            onPressed: () => context.go('/'),
+            child: Text(AppStrings.backHome),
+          ),
+        ],
       ],
     );
   }

@@ -12,7 +12,9 @@ import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/game_ids.dart';
+import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/usecases/next_uncleared_daily.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
@@ -22,6 +24,8 @@ import 'package:winklo/features/results/results_args.dart';
 import 'package:winklo/features/results/results_screen.dart';
 import 'package:winklo/features/results/view/mini_leaderboard_panel.dart';
 import 'package:winklo/features/results/view/results_board_tease.dart';
+
+import '../../helpers/mock_analytics_repository.dart';
 
 class _MockWatchLeaderboard extends Mock implements WatchLeaderboard {}
 
@@ -33,6 +37,25 @@ class _MockAuthRepository extends Mock implements AuthRepository {}
 class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
 
 class _MockSignOut extends Mock implements SignOut {}
+
+class _MockNextUnclearedDaily extends Mock implements NextUnclearedDaily {}
+
+/// What the daily Results actions read; the app always provides both.
+List<RepositoryProvider<Object>> _actionProviders() {
+  final next = _MockNextUnclearedDaily();
+  when(
+    () => next(
+      justCleared: any(named: 'justCleared'),
+      playId: any(named: 'playId'),
+    ),
+  ).thenReturn(null);
+  final analytics = MockAnalyticsRepository();
+  stubAnalytics(analytics);
+  return [
+    RepositoryProvider<NextUnclearedDaily>.value(value: next),
+    RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+  ];
+}
 
 void main() {
   setUpAll(() {
@@ -88,6 +111,7 @@ void main() {
         providers: [
           RepositoryProvider<WatchLeaderboard>.value(value: watch),
           RepositoryProvider<AuthRepository>.value(value: auth),
+          ..._actionProviders(),
         ],
         child: BlocProvider(
           create: (_) => AuthCubit(
@@ -166,6 +190,7 @@ void main() {
         providers: [
           RepositoryProvider<WatchLeaderboard>.value(value: watch),
           RepositoryProvider<AuthRepository>.value(value: auth),
+          ..._actionProviders(),
         ],
         child: BlocProvider(
           create: (_) => AuthCubit(
@@ -218,7 +243,10 @@ void main() {
 
       await tester.pumpWidget(
         MultiRepositoryProvider(
-          providers: [RepositoryProvider<AuthRepository>.value(value: auth)],
+          providers: [
+            RepositoryProvider<AuthRepository>.value(value: auth),
+            ..._actionProviders(),
+          ],
           child: BlocProvider(
             create: (_) => AuthCubit(
               authRepository: auth,
@@ -330,6 +358,7 @@ void main() {
         providers: [
           RepositoryProvider<WatchLeaderboard>.value(value: watch),
           RepositoryProvider<AuthRepository>.value(value: auth),
+          ..._actionProviders(),
           RepositoryProvider<SubmitLeaderboardTime>.value(value: submit),
         ],
         child: BlocProvider(
@@ -418,6 +447,7 @@ void main() {
         providers: [
           RepositoryProvider<WatchLeaderboard>.value(value: watch),
           RepositoryProvider<AuthRepository>.value(value: auth),
+          ..._actionProviders(),
         ],
         child: BlocProvider(
           create: (_) => AuthCubit(
@@ -493,6 +523,7 @@ void main() {
           providers: [
             RepositoryProvider<WatchLeaderboard>.value(value: watch),
             RepositoryProvider<AuthRepository>.value(value: auth),
+            ..._actionProviders(),
             RepositoryProvider<SubmitLeaderboardTime>.value(value: submit),
           ],
           child: BlocProvider(

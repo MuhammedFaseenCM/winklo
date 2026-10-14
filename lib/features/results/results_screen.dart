@@ -16,6 +16,7 @@ import 'results_args.dart';
 import 'view/counting_play_time.dart';
 import 'view/ember_burst.dart';
 import 'view/mini_leaderboard_panel.dart';
+import 'view/results_actions.dart';
 import 'view/results_board_tease.dart';
 
 class ResultsScreen extends StatelessWidget {
@@ -221,6 +222,7 @@ class _CelebrateAndClaimResults extends StatelessWidget {
                           usedHints: args.usedHints,
                           hadMistakes: args.hadMistakes,
                           currentStreak: args.currentStreak,
+                          footer: ResultsActions(args: args),
                         ),
                       ),
                     ],

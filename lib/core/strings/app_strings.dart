@@ -98,6 +98,8 @@ abstract final class AppStrings {
   static const newPersonalBest = 'New personal best';
   static const newPuzzleUnlocksTomorrow = 'A new puzzle unlocks tomorrow.';
   static const backHome = 'Back home';
+  static String playNextGame(String gameTitle) => 'Play $gameTitle next';
+  static const perfectDay = 'Perfect day! All three puzzles cleared.';
   static const resultsTimeLabel = 'time';
 
   static String formatPlayTime(int totalSeconds) {
