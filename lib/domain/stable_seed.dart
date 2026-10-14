@@ -10,3 +10,8 @@ int stableSeed(String key) {
   }
   return hash;
 }
+
+/// A short id for a puzzle's [canonical] content, so a saved run can tell
+/// whether the board it was played on has since been replaced.
+String boardFingerprint(String canonical) =>
+    stableSeed(canonical).toRadixString(16).padLeft(8, '0');

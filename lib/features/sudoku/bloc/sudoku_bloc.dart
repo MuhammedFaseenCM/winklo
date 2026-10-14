@@ -161,11 +161,17 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       return;
     }
 
-    final draft = await inProgressRuns.load(
+    var draft = await inProgressRuns.load(
       gameId: GameIds.sudoku,
       playId: playId,
     );
     if (emit.isDone) return;
+    if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
+      // Ops replaced today's board; the saved digits belong to the old one.
+      await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
+      if (emit.isDone) return;
+      draft = null;
+    }
 
     final now = _now();
     if (draft != null) {
@@ -600,6 +606,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         elapsedMs: elapsedMs,
         usedHintsThisRun: state.usedHintsThisRun,
         hadMistakesThisRun: state.hadMistakesThisRun,
+        boardFingerprint: state.puzzle?.fingerprint,
         board: {
           'grid': state.grid,
           'notes': [for (final note in state.notes) note.toList()..sort()],

@@ -834,6 +834,52 @@ void main() {
     ],
   );
 
+  test('a run saved on a replaced board is dropped, not restored', () async {
+    final puzzle = _almostSolvedPuzzle(day: day);
+    final grid = List<int>.from(puzzle.given)..[1] = 3;
+    inProgressRuns.runs['${GameIds.sudoku}_20260927'] = InProgressRun(
+      gameId: GameIds.sudoku,
+      playId: '20260927',
+      elapsedMs: 12000,
+      usedHintsThisRun: true,
+      board: {
+        'grid': grid,
+        'notes': List.generate(puzzle.cellCount, (_) => <int>[]),
+        'notesMode': false,
+      },
+      boardFingerprint: 'replaced',
+    );
+    final bloc = buildBloc();
+
+    bloc.add(SudokuEvent.started(date: day));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == SudokuStatus.ready,
+    );
+
+    expect(ready.grid[1], 0);
+    expect(ready.elapsedMs, 0);
+    expect(ready.usedHintsThisRun, isFalse);
+    expect(inProgressRuns.runs['${GameIds.sudoku}_20260927'], isNull);
+    await bloc.close();
+  });
+
+  test('saved runs carry the board fingerprint', () async {
+    final bloc = buildBloc();
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.digitTapped(3));
+    await bloc.stream.firstWhere((s) => s.grid[1] == 3);
+    await pumpEventQueue();
+
+    expect(
+      inProgressRuns.runs['${GameIds.sudoku}_20260927']?.boardFingerprint,
+      _almostSolvedPuzzle(day: day).fingerprint,
+    );
+    await bloc.close();
+  });
+
   blocTest<SudokuBloc, SudokuState>(
     'selecting a cell stays silent',
     build: () => buildBloc(sfx: stubSfx()),

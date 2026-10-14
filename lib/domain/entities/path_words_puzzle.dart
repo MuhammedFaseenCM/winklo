@@ -1,3 +1,4 @@
+import '../stable_seed.dart';
 import 'cell.dart';
 
 /// A stroke released onto the board. [targetId] is set only when it matches
@@ -104,6 +105,17 @@ class PathWordsPuzzle {
   String letterAt(Cell cell) => letters[cell.row * size + cell.col];
 
   bool hasLetter(Cell cell) => letterAt(cell).isNotEmpty;
+
+  /// Changes whenever the board does, including a target's id, word or path,
+  /// since saved runs refer to targets by id.
+  String get fingerprint {
+    final targetKeys = [
+      for (final t in targets) '${t.id}:${t.word}:${t.path.join(' ')}',
+    ];
+    return boardFingerprint(
+      'pathwords|$size|${letters.join(',')}|${targetKeys.join(';')}',
+    );
+  }
 
   factory PathWordsPuzzle.fromJson(Map<String, dynamic> json, {String? id}) {
     final rawLetters = (json['letters'] as List)

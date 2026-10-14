@@ -170,11 +170,14 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       return;
     }
 
-    final draft = await inProgressRuns.load(
-      gameId: GameIds.zip,
-      playId: playId,
-    );
+    var draft = await inProgressRuns.load(gameId: GameIds.zip, playId: playId);
     if (emit.isDone) return;
+    if (draft != null && !draft.isForBoard(level.fingerprint)) {
+      // Ops replaced today's board; the saved path belongs to the old one.
+      await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
+      if (emit.isDone) return;
+      draft = null;
+    }
 
     final now = _now();
     final path = draft == null ? const <Cell>[] : _pathFromDraft(draft);
@@ -361,6 +364,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         playId: playId,
         elapsedMs: elapsedMs,
         usedHintsThisRun: state.usedHintsThisRun,
+        boardFingerprint: state.level?.fingerprint,
         board: {
           'path': [for (final cell in state.path) cell.toList()],
         },

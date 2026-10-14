@@ -1,4 +1,5 @@
 import '../failures.dart';
+import '../stable_seed.dart';
 import 'sudoku_difficulty.dart';
 
 class SudokuPuzzle {
@@ -25,6 +26,11 @@ class SudokuPuzzle {
   int get cellCount => size * size;
 
   int indexOf(int row, int col) => row * size + col;
+
+  /// Changes whenever the board does; the doc id isn't part of it.
+  String get fingerprint => boardFingerprint(
+    'sudoku|$size|$boxRows|$boxCols|${given.join(',')}|${solution.join(',')}',
+  );
 
   /// The only shape the keypad, notes grid and hint coach can play.
   static const playableSize = 6;

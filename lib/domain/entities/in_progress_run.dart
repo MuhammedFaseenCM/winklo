@@ -7,6 +7,7 @@ class InProgressRun {
     required this.board,
     this.usedHintsThisRun = false,
     this.hadMistakesThisRun = false,
+    this.boardFingerprint,
   });
 
   final String gameId;
@@ -18,6 +19,15 @@ class InProgressRun {
   /// Game-specific JSON-encodable board snapshot.
   final Map<String, dynamic> board;
 
+  /// The puzzle's fingerprint when the run was saved. Null for runs saved
+  /// before fingerprints existed (builds up to 1.0.0+14).
+  final String? boardFingerprint;
+
+  /// False when the day's board was replaced after this run was saved, so
+  /// its path, digits or found words no longer fit. Older runs are kept.
+  bool isForBoard(String fingerprint) =>
+      boardFingerprint == null || boardFingerprint == fingerprint;
+
   Map<String, dynamic> toJson() => {
     'gameId': gameId,
     'playId': playId,
@@ -25,6 +35,7 @@ class InProgressRun {
     'usedHintsThisRun': usedHintsThisRun,
     'hadMistakesThisRun': hadMistakesThisRun,
     'board': board,
+    if (boardFingerprint != null) 'boardFingerprint': boardFingerprint,
   };
 
   factory InProgressRun.fromJson(Map<String, dynamic> json) {
@@ -38,6 +49,7 @@ class InProgressRun {
       board: boardRaw is Map
           ? Map<String, dynamic>.from(boardRaw)
           : const <String, dynamic>{},
+      boardFingerprint: json['boardFingerprint'] as String?,
     );
   }
 }

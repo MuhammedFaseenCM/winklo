@@ -352,6 +352,53 @@ void main() {
     },
   );
 
+  test('a run saved on a replaced board is dropped, not restored', () async {
+    final drafts = _MemoryInProgressRuns();
+    drafts.runs['${GameIds.zip}_20260913'] = const InProgressRun(
+      gameId: GameIds.zip,
+      playId: '20260913',
+      elapsedMs: 9000,
+      usedHintsThisRun: true,
+      board: {
+        'path': [
+          [0, 0],
+        ],
+      },
+      boardFingerprint: 'replaced',
+    );
+    final bloc = buildBloc(now: DateTime(2026, 9, 13), drafts: drafts);
+
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == ZipStatus.ready,
+    );
+
+    expect(ready.path, isEmpty);
+    expect(ready.elapsedMs, 0);
+    expect(ready.usedHintsThisRun, isFalse);
+    expect(drafts.runs['${GameIds.zip}_20260913'], isNull);
+    await bloc.close();
+  });
+
+  test('saved runs carry the board fingerprint', () async {
+    final drafts = _MemoryInProgressRuns();
+    final bloc = buildBloc(now: DateTime(2026, 9, 13), drafts: drafts);
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == ZipStatus.ready,
+    );
+
+    bloc.add(ZipEvent.pathChanged(path: [const Cell(0, 0)]));
+    await bloc.stream.firstWhere((s) => s.path.isNotEmpty);
+    await pumpEventQueue();
+
+    expect(
+      drafts.runs['${GameIds.zip}_20260913']?.boardFingerprint,
+      ready.level!.fingerprint,
+    );
+    await bloc.close();
+  });
+
   test('ZipReset clears the path but keeps usedHintsThisRun', () async {
     final drafts = _MemoryInProgressRuns();
     final bloc = buildBloc(

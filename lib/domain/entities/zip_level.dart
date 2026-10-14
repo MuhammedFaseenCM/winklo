@@ -1,6 +1,7 @@
 export 'cell.dart';
 export 'wall.dart';
 
+import '../stable_seed.dart';
 import 'cell.dart';
 import 'wall.dart';
 
@@ -24,6 +25,20 @@ class ZipLevel {
   int get maxNumber {
     if (numbers.isEmpty) return 0;
     return numbers.values.reduce((a, b) => a > b ? a : b);
+  }
+
+  /// Changes whenever the board does. Numbers and walls are sorted, so the
+  /// order Firestore returns them in doesn't matter.
+  String get fingerprint {
+    final numberKeys = [for (final e in numbers.entries) '${e.key}=${e.value}']
+      ..sort();
+    final wallKeys = [
+      for (final w in walls)
+        ([w.a.toString(), w.b.toString()]..sort()).join('|'),
+    ]..sort();
+    return boardFingerprint(
+      'zip|$size|${numberKeys.join(';')}|${wallKeys.join(';')}',
+    );
   }
 
   factory ZipLevel.fromJson(Map<String, dynamic> json, {String? id}) {

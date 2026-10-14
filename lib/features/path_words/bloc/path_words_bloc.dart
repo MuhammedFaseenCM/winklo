@@ -145,11 +145,17 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         return;
       }
 
-      final draft = await inProgressRuns.load(
+      var draft = await inProgressRuns.load(
         gameId: GameIds.pathWords,
         playId: playId,
       );
       if (emit.isDone) return;
+      if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
+        // Ops replaced today's board; the saved words belong to the old one.
+        await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
+        if (emit.isDone) return;
+        draft = null;
+      }
 
       final now = _now();
       if (draft != null) {
@@ -752,6 +758,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         playId: playId,
         elapsedMs: elapsedMs,
         usedHintsThisRun: state.usedHintsThisRun,
+        boardFingerprint: state.puzzle?.fingerprint,
         board: {
           'activePath': [for (final cell in state.activePath) cell.toList()],
           'placedPaths': [

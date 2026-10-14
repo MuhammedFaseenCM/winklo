@@ -1599,6 +1599,68 @@ void main() {
     },
   );
 
+  test('a run saved on a replaced board is dropped, not restored', () async {
+    when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+      (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+    );
+    final drafts = _MemoryInProgressRuns();
+    drafts.runs['${GameIds.pathWords}_20260917'] = const InProgressRun(
+      gameId: GameIds.pathWords,
+      playId: '20260917',
+      elapsedMs: 7000,
+      usedHintsThisRun: true,
+      board: {
+        'activePath': <List<int>>[],
+        'placedPaths': [
+          {
+            'cells': [
+              [0, 0],
+              [0, 1],
+            ],
+            'colorIndex': 0,
+            'targetId': 't0',
+          },
+        ],
+        'completedTargetIds': ['t0'],
+        'hintRevealLength': 0,
+      },
+      boardFingerprint: 'replaced',
+    );
+    final bloc = buildBloc(drafts: drafts);
+
+    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == PathWordsStatus.ready,
+    );
+
+    expect(ready.completedTargetIds, isEmpty);
+    expect(ready.placedPaths, isEmpty);
+    expect(ready.elapsedMs, 0);
+    expect(ready.usedHintsThisRun, isFalse);
+    expect(drafts.runs['${GameIds.pathWords}_20260917'], isNull);
+    await bloc.close();
+  });
+
+  test('saved runs carry the board fingerprint', () async {
+    when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+      (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+    );
+    final drafts = _MemoryInProgressRuns();
+    final bloc = buildBloc(drafts: drafts);
+    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+    await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+
+    bloc.add(const PathWordsEvent.pauseRun());
+    await bloc.stream.firstWhere((s) => s.resumedAt == null);
+    await pumpEventQueue();
+
+    expect(
+      drafts.runs['${GameIds.pathWords}_20260917']?.boardFingerprint,
+      _tinyPuzzle(day: DateTime(2026, 9, 17)).fingerprint,
+    );
+    await bloc.close();
+  });
+
   Future<(PathWordsBloc, _MemoryInProgressRuns, void Function(DateTime))>
   pausedRunOn17th() async {
     when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
