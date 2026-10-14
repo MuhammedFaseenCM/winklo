@@ -1,0 +1,8 @@
+What's new
+
+• Share your time from the results screen
+• Jump straight to your next puzzle after a clear
+• Sudoku's How to play is up to date and shows on your first game
+• Path Words accepts a word traced along another route
+• A replaced daily puzzle no longer restores your old moves onto it
+• A clear message when a puzzle needs a newer version of the app
