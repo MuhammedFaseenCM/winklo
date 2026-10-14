@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -170,6 +172,9 @@ class ResultsScreen extends StatelessWidget {
 class _CelebrateAndClaimResults extends StatelessWidget {
   const _CelebrateAndClaimResults({required this.args});
 
+  /// The mini board's title, a row or two and the actions footer.
+  static const _minBoardHeight = 300.0;
+
   final ResultsArgs args;
 
   Future<void> _signInAndSync(BuildContext context) async {
@@ -207,28 +212,41 @@ class _CelebrateAndClaimResults extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
             child: signedIn
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Flexible(
-                        flex: 2,
-                        child: SingleChildScrollView(
-                          child: _celebrationHeader(context, compact: true),
+                ? LayoutBuilder(
+                    builder: (context, constraints) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // The celebration takes the height it needs, up to
+                        // just over half the screen and never squeezing the
+                        // board below its minimum (it scrolls past that on
+                        // short phones); the board gets the rest.
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: math.max(
+                              0,
+                              math.min(
+                                constraints.maxHeight * 0.55,
+                                constraints.maxHeight - 12 - _minBoardHeight,
+                              ),
+                            ),
+                          ),
+                          child: SingleChildScrollView(
+                            child: _celebrationHeader(context, compact: true),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        flex: 3,
-                        child: MiniLeaderboardPanel(
-                          gameId: gameId,
-                          timeSeconds: args.timeSeconds,
-                          usedHints: args.usedHints,
-                          hadMistakes: args.hadMistakes,
-                          currentStreak: args.currentStreak,
-                          footer: ResultsActions(args: args),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: MiniLeaderboardPanel(
+                            gameId: gameId,
+                            timeSeconds: args.timeSeconds,
+                            usedHints: args.usedHints,
+                            hadMistakes: args.hadMistakes,
+                            currentStreak: args.currentStreak,
+                            footer: ResultsActions(args: args),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   )
                 : LayoutBuilder(
                     builder: (context, constraints) {

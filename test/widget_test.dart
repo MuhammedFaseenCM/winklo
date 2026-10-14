@@ -156,7 +156,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
 
     expect(find.text(AppStrings.streakLabel(3)), findsOneWidget);
-    expect(find.textContaining(AppStrings.longestStreakLabel(5)), findsNothing);
+    // The tile's stats line: best time and longest streak.
+    expect(
+      find.textContaining(AppStrings.longestStreakLabel(5)),
+      findsOneWidget,
+    );
     expect(find.text(AppStrings.cleared), findsNothing);
     expect(find.text(AppStrings.result), findsOneWidget);
     expect(find.text(AppStrings.playAgain), findsNothing);
@@ -175,7 +179,7 @@ void main() {
     expect(find.byWidgetPredicate((w) => w is GameWidget), findsOneWidget);
     expect(find.text(AppStrings.pathWordsUndo), findsNothing);
     // Review mode sums up the clear instead.
-    expect(find.text('Cleared in 0:29'), findsOneWidget);
+    expect(find.text('Cleared\u00A0in\u00A00:29'), findsOneWidget);
     expect(find.text(AppStrings.resultsFullBoard), findsOneWidget);
   });
 }

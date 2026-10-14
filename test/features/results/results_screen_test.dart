@@ -593,6 +593,79 @@ void main() {
     },
   );
 
+  testWidgets('a typical phone shows the whole celebration, countdown '
+      'included', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final auth = _MockAuthRepository();
+    const me = AppUser(uid: 'u1', displayName: 'Tester');
+    when(() => auth.currentUser).thenReturn(me);
+    when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(me));
+    final watch = _MockWatchLeaderboard();
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => Stream.value(const []));
+    final router = GoRouter(
+      initialLocation: '/results',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const Text('home')),
+        GoRoute(
+          path: '/results',
+          builder: (_, _) => ResultsScreen(
+            args: ResultsArgs(
+              title: 'Puzzle cleared!',
+              subtitle: '',
+              timeSeconds: 72,
+              improved: true,
+              replayDaily: true,
+              gameId: GameIds.zip,
+              currentStreak: 6,
+              longestStreak: 14,
+              day: DateTime.now(),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<WatchLeaderboard>.value(value: watch),
+          RepositoryProvider<AuthRepository>.value(value: auth),
+          ..._actionProviders(),
+        ],
+        child: BlocProvider(
+          create: (_) => AuthCubit(
+            authRepository: auth,
+            signInWithGoogle: _MockSignInWithGoogle(),
+            signOut: _MockSignOut(),
+          ),
+          child: MaterialApp.router(
+            theme: buildAppTheme(),
+            routerConfig: router,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final countdown = find.textContaining('New puzzle in');
+    final header = find.ancestor(
+      of: countdown,
+      matching: find.byType(SingleChildScrollView),
+    );
+    expect(
+      tester.getRect(countdown).bottom,
+      lessThanOrEqualTo(tester.getRect(header).bottom),
+    );
+    expect(find.text(AppStrings.longestStreakLabel(14)), findsOneWidget);
+  });
+
   testWidgets('a result from a day that has ended says a new puzzle is '
       'ready', (tester) async {
     final auth = _MockAuthRepository();

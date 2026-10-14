@@ -42,7 +42,7 @@ abstract final class AppStrings {
   /// leaderboard.
   static String homeTileStats({int? bestSeconds, int longestStreak = 0}) => [
     if (bestSeconds != null) bestTimeLabel(formatPlayTime(bestSeconds)),
-    if (longestStreak >= 2) 'Longest streak $longestStreak',
+    if (longestStreak >= 2) longestStreakLabel(longestStreak),
   ].join(' · ');
 
   // Path Words
@@ -153,9 +153,7 @@ abstract final class AppStrings {
     return '$days-day streak';
   }
 
-  static String longestStreakLabel(int days) {
-    return 'Best: $days';
-  }
+  static String longestStreakLabel(int days) => 'Longest streak $days';
 
   // Force update / soft update
   static const updateRequiredTitle = 'Update required';

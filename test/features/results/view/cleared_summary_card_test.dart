@@ -26,6 +26,12 @@ class _MockWatchLeaderboard extends Mock implements WatchLeaderboard {}
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
+/// The card keeps each chunk on one line with non-breaking spaces.
+String shown(String summary) => summary
+    .split(' · ')
+    .map((chunk) => chunk.replaceAll(' ', '\u00A0'))
+    .join(' · ');
+
 void main() {
   setUpAll(() => registerFallbackValue(LeaderboardPeriod.daily));
 
@@ -83,7 +89,7 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.text('Cleared in 1:12 · Hint-free'), findsOneWidget);
+    expect(find.text(shown('Cleared in 1:12 · Hint-free')), findsOneWidget);
     expect(find.textContaining('New puzzle in'), findsOneWidget);
 
     board.add([
@@ -97,7 +103,10 @@ void main() {
     ]);
     await tester.pump();
     await tester.pump();
-    expect(find.text('Cleared in 1:12 · #4 today · Hint-free'), findsOneWidget);
+    expect(
+      find.text(shown('Cleared in 1:12 · #4 today · Hint-free')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text(AppStrings.resultsFullBoard));
     await tester.pumpAndSettle();

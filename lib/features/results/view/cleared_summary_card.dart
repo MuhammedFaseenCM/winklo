@@ -50,6 +50,13 @@ class ClearedSummaryCard extends StatelessWidget {
   }
 }
 
+/// Lets a narrow card wrap only at the " · " between chunks, so "#48 today"
+/// never splits across lines.
+String _wrapBetweenChunks(String summary) => summary
+    .split(' · ')
+    .map((chunk) => chunk.replaceAll(' ', '\u00A0'))
+    .join(' · ');
+
 class _ClearedSummaryBody extends StatelessWidget {
   const _ClearedSummaryBody({required this.gameId, required this.day});
 
@@ -82,12 +89,14 @@ class _ClearedSummaryBody extends StatelessWidget {
               children: [
                 BlocBuilder<ClearedSummaryCubit, ClearedSummaryState>(
                   builder: (context, state) => Text(
-                    clearedSummaryText(
-                      gameId: gameId,
-                      timeSeconds: state.timeSeconds,
-                      rank: state.rank,
-                      usedHints: state.usedHints,
-                      hadMistakes: state.hadMistakes,
+                    _wrapBetweenChunks(
+                      clearedSummaryText(
+                        gameId: gameId,
+                        timeSeconds: state.timeSeconds,
+                        rank: state.rank,
+                        usedHints: state.usedHints,
+                        hadMistakes: state.hadMistakes,
+                      ),
                     ),
                     style: textTheme.titleSmall?.copyWith(
                       color: ZipColors.onInk,
