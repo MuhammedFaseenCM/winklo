@@ -1606,6 +1606,55 @@ void main() {
     },
   );
 
+  test('a word traced along another route counts, saves and undoes', () async {
+    // Hand-made 3x3: "cat" stored as c(0,1) a(0,0) t(1,0), "ox" elsewhere,
+    // and a spare "a" and "t" on the right that belong to no word.
+    final puzzle = PathWordsPuzzle(
+      id: 'alt',
+      day: DateTime(2026, 9, 17),
+      size: 3,
+      letters: const ['a', 'c', 'a', 't', '', 't', 'o', 'x', ''],
+      targets: const [
+        PathWordsTarget(
+          id: 't0',
+          word: 'cat',
+          start: Cell(0, 1),
+          path: [Cell(0, 1), Cell(0, 0), Cell(1, 0)],
+          colorIndex: 0,
+        ),
+        PathWordsTarget(
+          id: 't1',
+          word: 'ox',
+          start: Cell(2, 0),
+          path: [Cell(2, 0), Cell(2, 1)],
+          colorIndex: 1,
+        ),
+      ],
+    );
+    when(
+      () => generateDaily(day: any(named: 'day')),
+    ).thenAnswer((_) async => puzzle);
+    final drafts = _MemoryInProgressRuns();
+    final bloc = buildBloc(drafts: drafts);
+    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+    await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+
+    bloc.add(const PathWordsEvent.pointerDown(Cell(0, 1)));
+    bloc.add(const PathWordsEvent.pointerEnter(Cell(0, 2)));
+    bloc.add(const PathWordsEvent.pointerEnter(Cell(1, 2)));
+    bloc.add(const PathWordsEvent.pointerUp());
+    await bloc.stream.firstWhere((s) => s.completedTargetIds.contains('t0'));
+    await pumpEventQueue();
+
+    final saved = drafts.runs['${GameIds.pathWords}_20260917'];
+    expect(saved?.board['completedTargetIds'], ['t0']);
+
+    bloc.add(const PathWordsEvent.undo());
+    await bloc.stream.firstWhere((s) => s.completedTargetIds.isEmpty);
+    expect(bloc.state.placedPaths, isEmpty);
+    await bloc.close();
+  });
+
   test('returning to a saved run logs game_started as resumed', () async {
     when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
       (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
