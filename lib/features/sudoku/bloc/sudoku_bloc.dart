@@ -167,8 +167,13 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       playId: playId,
     );
     if (emit.isDone) return;
+    var keptHints = false;
+    var keptMistakes = false;
     if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
       // Ops replaced today's board; the saved digits belong to the old one.
+      // Hints and mistakes on it still count, as after a reset.
+      keptHints = draft.usedHintsThisRun;
+      keptMistakes = draft.hadMistakesThisRun;
       await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
       if (emit.isDone) return;
       draft = null;
@@ -218,10 +223,12 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           hintsRemaining: hintQuota.remaining(GameIds.sudoku, playId),
           activeCoachHint: null,
           showNoSimpleHint: false,
-          usedHintsThisRun: false,
-          hadMistakesThisRun: false,
+          usedHintsThisRun: keptHints,
+          hadMistakesThisRun: keptMistakes,
         ),
       );
+      // Save the kept flags under the new board straight away.
+      if (keptHints || keptMistakes) await _persistDraft();
     }
     await analytics.logGameStarted(
       gameId: GameIds.sudoku,

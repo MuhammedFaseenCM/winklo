@@ -150,8 +150,11 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         playId: playId,
       );
       if (emit.isDone) return;
+      var keptHints = false;
       if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
         // Ops replaced today's board; the saved words belong to the old one.
+        // Hints spent on it still count, as after a reset.
+        keptHints = draft.usedHintsThisRun;
         await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
         if (emit.isDone) return;
         draft = null;
@@ -195,7 +198,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
             resumedAt: now,
             hintsRemaining: hintQuota.remaining(GameIds.pathWords, _runPlayId),
             hintRevealLength: 0,
-            usedHintsThisRun: false,
+            usedHintsThisRun: keptHints,
             activePath: const [],
             placedPaths: const [],
             completedTargetIds: const {},
@@ -209,6 +212,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
             resultsExtra: null,
           ),
         );
+        // Save the kept flag under the new board straight away.
+        if (keptHints) await _persistDraft();
       }
       await analytics.logGameStarted(
         gameId: GameIds.pathWords,

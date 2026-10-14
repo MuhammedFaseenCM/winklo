@@ -172,8 +172,11 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
 
     var draft = await inProgressRuns.load(gameId: GameIds.zip, playId: playId);
     if (emit.isDone) return;
+    var keptHints = false;
     if (draft != null && !draft.isForBoard(level.fingerprint)) {
       // Ops replaced today's board; the saved path belongs to the old one.
+      // Hints spent on it still count, as after a reset.
+      keptHints = draft.usedHintsThisRun;
       await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
       if (emit.isDone) return;
       draft = null;
@@ -191,12 +194,14 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         level: level,
         status: ZipStatus.ready,
         finished: false,
-        usedHintsThisRun: draft?.usedHintsThisRun ?? false,
+        usedHintsThisRun: draft?.usedHintsThisRun ?? keptHints,
         elapsedMs: draft?.elapsedMs ?? 0,
         resumedAt: now,
         path: path,
       ),
     );
+    // Save the kept flags under the new board straight away.
+    if (keptHints) await _persistDraft();
     await analytics.logGameStarted(
       gameId: GameIds.zip,
       dayId: playId,

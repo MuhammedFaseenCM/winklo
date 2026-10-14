@@ -869,7 +869,7 @@ void main() {
     await bloc.close();
   });
 
-  test('a run saved on a replaced board is dropped, not restored', () async {
+  test('a replaced board drops the saved run but keeps its hint use', () async {
     final puzzle = _almostSolvedPuzzle(day: day);
     final grid = List<int>.from(puzzle.given)..[1] = 3;
     inProgressRuns.runs['${GameIds.sudoku}_20260927'] = InProgressRun(
@@ -893,8 +893,13 @@ void main() {
 
     expect(ready.grid[1], 0);
     expect(ready.elapsedMs, 0);
-    expect(ready.usedHintsThisRun, isFalse);
-    expect(inProgressRuns.runs['${GameIds.sudoku}_20260927'], isNull);
+    // Hints spent on the old board still count, as after a reset.
+    expect(ready.usedHintsThisRun, isTrue);
+    // The old run is gone; what's saved now is the new board's run.
+    final saved = inProgressRuns.runs['${GameIds.sudoku}_20260927'];
+    expect(saved?.boardFingerprint, _almostSolvedPuzzle(day: day).fingerprint);
+    expect(saved?.elapsedMs, 0);
+    expect(saved?.usedHintsThisRun, isTrue);
     await bloc.close();
   });
 

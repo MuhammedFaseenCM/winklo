@@ -393,7 +393,7 @@ void main() {
     },
   );
 
-  test('a run saved on a replaced board is dropped, not restored', () async {
+  test('a replaced board drops the saved run but keeps its hint use', () async {
     final drafts = _MemoryInProgressRuns();
     drafts.runs['${GameIds.zip}_20260913'] = const InProgressRun(
       gameId: GameIds.zip,
@@ -416,8 +416,13 @@ void main() {
 
     expect(ready.path, isEmpty);
     expect(ready.elapsedMs, 0);
-    expect(ready.usedHintsThisRun, isFalse);
-    expect(drafts.runs['${GameIds.zip}_20260913'], isNull);
+    // Hints spent on the old board still count, as after a reset.
+    expect(ready.usedHintsThisRun, isTrue);
+    // The old run is gone; what's saved now is the new board's run.
+    final saved = drafts.runs['${GameIds.zip}_20260913'];
+    expect(saved?.boardFingerprint, ready.level.fingerprint);
+    expect(saved?.elapsedMs, 0);
+    expect(saved?.usedHintsThisRun, isTrue);
     await bloc.close();
   });
 
