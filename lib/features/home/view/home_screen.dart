@@ -13,12 +13,14 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/next_puzzle_countdown.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/app_update_decision.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/app_update_repository.dart';
 import '../../../domain/usecases/check_app_update.dart';
+import '../../../domain/usecases/get_best_daily_time_seconds.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
@@ -41,6 +43,7 @@ class HomeScreen extends StatelessWidget {
       create: (context) => HomeCubit(
         getBestPoints: context.read<GetBestPoints>(),
         getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
+        getBestDailyTimeSeconds: context.read<GetBestDailyTimeSeconds>(),
         getStreak: context.read<GetStreak>(),
         analytics: context.read<AnalyticsRepository>(),
         checkAppUpdate: context.read<CheckAppUpdate>(),
@@ -204,7 +207,10 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   context.go('/leaderboard?game=${GameIds.zip}');
                 },
                 streak: state.currentStreak,
+                longestStreak: state.longestStreak,
                 isOnFreeze: state.isOnFreeze,
+                freezeAvailable: state.freezeAvailable,
+                lifetimeBestSeconds: state.lifetimeBestSeconds,
                 cleared: zipCleared,
               )
               .animate()
@@ -233,7 +239,10 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     context.go('/leaderboard?game=${GameIds.pathWords}');
                   },
                   streak: state.pathWordsCurrentStreak,
+                  longestStreak: state.pathWordsLongestStreak,
                   isOnFreeze: state.pathWordsIsOnFreeze,
+                  freezeAvailable: state.pathWordsFreezeAvailable,
+                  lifetimeBestSeconds: state.pathWordsLifetimeBestSeconds,
                   cleared: pathWordsCleared,
                 )
                 .animate()
@@ -261,7 +270,10 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     context.go('/leaderboard?game=${GameIds.sudoku}');
                   },
                   streak: state.sudokuCurrentStreak,
+                  longestStreak: state.sudokuLongestStreak,
                   isOnFreeze: state.sudokuIsOnFreeze,
+                  freezeAvailable: state.sudokuFreezeAvailable,
+                  lifetimeBestSeconds: state.sudokuLifetimeBestSeconds,
                   cleared: sudokuCleared,
                 )
                 .animate()
@@ -404,7 +416,10 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
-/// Packs game tiles tightly; scrolls only when they cannot fit.
+/// Packs game tiles tightly at the top; scrolls only when they cannot fit.
+///
+/// The scroll view sizes itself to the real tiles, so a tall tile (a stats
+/// line, a large font) can never overflow a short screen.
 class _HomeGamesPane extends StatelessWidget {
   const _HomeGamesPane({required this.tiles});
 
@@ -412,45 +427,20 @@ class _HomeGamesPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final layout = AppLayout.of(context);
-    final gap = layout.tileGap;
-    final count = tiles.length;
-    if (count == 0) return const SizedBox.shrink();
+    final gap = AppLayout.of(context).tileGap;
+    if (tiles.isEmpty) return const SizedBox.shrink();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final gaps = gap * (count - 1);
-        final needed = count * layout.homeMinTileHeight + gaps;
-        final fits = constraints.maxHeight >= needed;
-
-        final column = Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < count; i++) ...[
-              if (i > 0) SizedBox(height: gap),
-              tiles[i],
-            ],
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < tiles.length; i++) ...[
+            if (i > 0) SizedBox(height: gap),
+            tiles[i],
           ],
-        );
-
-        if (fits) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [column, const Spacer()],
-          );
-        }
-
-        return ListView(
-          physics: const BouncingScrollPhysics(),
-          children: [
-            for (var i = 0; i < count; i++) ...[
-              if (i > 0) SizedBox(height: gap),
-              tiles[i],
-            ],
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 }
@@ -468,7 +458,10 @@ class _DailyGameTile extends StatelessWidget {
     this.onViewResult,
     this.playBackground,
     this.streak = 0,
+    this.longestStreak = 0,
     this.isOnFreeze = false,
+    this.freezeAvailable = false,
+    this.lifetimeBestSeconds,
     this.cleared = false,
   });
 
@@ -483,13 +476,23 @@ class _DailyGameTile extends StatelessWidget {
   final VoidCallback? onViewResult;
   final Color? playBackground;
   final int streak;
+  final int longestStreak;
   final bool isOnFreeze;
+  final bool freezeAvailable;
+  final int? lifetimeBestSeconds;
   final bool cleared;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final layout = AppLayout.of(context);
+    final stats = AppStrings.homeTileStats(
+      bestSeconds: lifetimeBestSeconds,
+      longestStreak: longestStreak,
+    );
+    // A freeze only matters while there is a streak to protect; once it is
+    // protecting one, "Streak protected" says so instead.
+    final showFreeze = streak > 0 && freezeAvailable && !isOnFreeze;
     final titleStyle = textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w800,
       fontSize: layout.isCompact ? 16 : 18,
@@ -621,6 +624,10 @@ class _DailyGameTile extends StatelessWidget {
                           ),
                         ],
                         const Spacer(),
+                        if (showFreeze) ...[
+                          const _FreezeReadyBadge(),
+                          SizedBox(width: layout.space(6)),
+                        ],
                         if (streak > 0)
                           ZipHudPill(
                             icon: Icons.local_fire_department_rounded,
@@ -652,14 +659,40 @@ class _DailyGameTile extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               SizedBox(height: layout.space(2)),
-                              Text(
-                                tagline,
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: ZipColors.inkSoft,
-                                  height: 1.25,
+                              if (cleared)
+                                NextPuzzleCountdown(
+                                  period: DevFlags.playPeriod,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: accent,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.25,
+                                  ),
+                                )
+                              else
+                                Text(
+                                  tagline,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: ZipColors.inkSoft,
+                                    height: 1.25,
+                                  ),
+                                  maxLines: stats.isEmpty ? 2 : 1,
+                                  overflow: stats.isEmpty
+                                      ? null
+                                      : TextOverflow.ellipsis,
                                 ),
-                                maxLines: 2,
-                              ),
+                              if (stats.isNotEmpty) ...[
+                                SizedBox(height: layout.space(2)),
+                                Text(
+                                  stats,
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: ZipColors.inkSoft,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.25,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -700,6 +733,32 @@ class _DailyGameTile extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FreezeReadyBadge extends StatelessWidget {
+  const _FreezeReadyBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final layout = AppLayout.of(context);
+    return Tooltip(
+      message: AppStrings.streakFreezeReady,
+      triggerMode: TooltipTriggerMode.tap,
+      child: Container(
+        padding: EdgeInsets.all(layout.space(5)),
+        decoration: BoxDecoration(
+          color: ZipColors.skySoft,
+          shape: BoxShape.circle,
+          border: Border.all(color: ZipColors.sky.withValues(alpha: 0.45)),
+        ),
+        child: Icon(
+          Icons.ac_unit_rounded,
+          size: layout.space(13),
+          color: ZipColors.sky,
         ),
       ),
     );

@@ -141,6 +141,7 @@ void main() {
     expect(find.text(AppStrings.resultsFullBoard), findsOneWidget);
     expect(find.text(AppStrings.shareResult), findsOneWidget);
     expect(find.byTooltip(AppStrings.backHome), findsOneWidget);
+    expect(find.textContaining('New puzzle in'), findsOneWidget);
     expect(find.byType(ResultsBoardTease), findsNothing);
     expect(
       find.text(AppStrings.saveTimeToBoard(AppStrings.formatPlayTime(12))),
@@ -591,6 +592,59 @@ void main() {
       expect(find.text('Ada'), findsOneWidget);
     },
   );
+
+  testWidgets('a result from a day that has ended says a new puzzle is '
+      'ready', (tester) async {
+    final auth = _MockAuthRepository();
+    when(() => auth.currentUser).thenReturn(null);
+    when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(null));
+    final now = DateTime.now();
+    final router = GoRouter(
+      initialLocation: '/results',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const Text('home')),
+        GoRoute(
+          path: '/results',
+          builder: (_, _) => ResultsScreen(
+            args: ResultsArgs(
+              title: 'Puzzle cleared!',
+              subtitle: '',
+              timeSeconds: 12,
+              improved: false,
+              replayDaily: true,
+              gameId: GameIds.sudoku,
+              // Started before midnight, finished after it.
+              day: DateTime(now.year, now.month, now.day - 1),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<AuthRepository>.value(value: auth),
+          ..._actionProviders(),
+        ],
+        child: BlocProvider(
+          create: (_) => AuthCubit(
+            authRepository: auth,
+            signInWithGoogle: _MockSignInWithGoogle(),
+            signOut: _MockSignOut(),
+          ),
+          child: MaterialApp.router(
+            theme: buildAppTheme(),
+            routerConfig: router,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.newPuzzleReady), findsOneWidget);
+    expect(find.text(AppStrings.newPuzzleUnlocksTomorrow), findsNothing);
+  });
 
   testWidgets('Daily clear sends the player home, not back into the puzzle', (
     tester,

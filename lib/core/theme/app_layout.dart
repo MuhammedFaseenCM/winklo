@@ -58,9 +58,6 @@ class AppLayout {
 
   double get tileArtSize => space(isCompact ? 44 : 52);
 
-  /// Estimated tile height used to decide whether home needs a scroll fallback.
-  double get homeMinTileHeight => isCompact ? 128 : 140;
-
   EdgeInsets get buttonPadding => EdgeInsets.symmetric(
     horizontal: space(isCompact ? 16 : 22),
     vertical: space(isCompact ? 12 : 16),

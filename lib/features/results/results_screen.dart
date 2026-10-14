@@ -4,10 +4,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/dev_flags.dart';
 import '../../core/strings/app_strings.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/next_puzzle_countdown.dart';
 import '../../core/widgets/zip_ui.dart';
 import '../../domain/game_ids.dart';
+import '../../domain/play_period.dart';
 import '../../domain/repositories/analytics_repository.dart';
 import '../../domain/usecases/submit_leaderboard_time.dart';
 import '../auth/cubit/auth_cubit.dart';
@@ -251,15 +254,6 @@ class _CelebrateAndClaimResults extends StatelessWidget {
                                     curve: Curves.easeOutCubic,
                                   ),
                               const SizedBox(height: 16),
-                              if (args.replayDaily) ...[
-                                Text(
-                                  AppStrings.newPuzzleUnlocksTomorrow,
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: ZipColors.inkSoft),
-                                ).animate().fadeIn(delay: 700.ms),
-                                const SizedBox(height: 12),
-                              ],
                               ZipPrimaryButton(
                                     label: AppStrings.saveTimeToBoard(
                                       timeLabel,
@@ -317,6 +311,40 @@ class _CelebrateAndClaimResults extends StatelessWidget {
             .animate()
             .fadeIn(delay: 160.ms, duration: 450.ms)
             .slideY(begin: 0.12, curve: Curves.easeOutCubic),
+        SizedBox(height: compact ? 10 : 14),
+        _NextPuzzleLine(day: args.day).animate().fadeIn(delay: 700.ms),
+      ],
+    );
+  }
+}
+
+/// "New puzzle in 6h 12m" under the daily result.
+class _NextPuzzleLine extends StatelessWidget {
+  const _NextPuzzleLine({this.day});
+
+  final DateTime? day;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelLarge?.copyWith(
+      color: ZipColors.inkSoft,
+      fontWeight: FontWeight.w600,
+    );
+    final period = DevFlags.playPeriod;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.schedule_rounded, size: 16, color: style?.color),
+        const SizedBox(width: 6),
+        Flexible(
+          child: NextPuzzleCountdown(
+            period: period,
+            // The run's day is a date, which can't place a minute-long
+            // debug period.
+            periodOf: PlayPeriod.isSubDaily(period) ? null : day,
+            style: style,
+          ),
+        ),
       ],
     );
   }

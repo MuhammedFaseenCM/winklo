@@ -9,6 +9,7 @@ import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_text_scale.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/game_ids.dart';
+import 'package:winklo/domain/logic/progress_merge.dart';
 import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/streak_calculator.dart';
 import 'package:winklo/features/home/view/home_screen.dart';
@@ -97,5 +98,50 @@ void main() {
     final buttonBox = tester.getRect(playFinder);
     expect(buttonBox.bottom, lessThanOrEqualTo(640));
     expect(buttonBox.height, greaterThan(0));
+  });
+
+  testWidgets('a very short phone scrolls the tiles instead of overflowing', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final today = PlayPeriod.id(now, PlayPeriod.daily);
+    final earlier = PlayPeriod.id(
+      now.subtract(const Duration(days: 4)),
+      PlayPeriod.daily,
+    );
+    final overflowErrors = <FlutterErrorDetails>[];
+    final previousOnError = FlutterError.onError;
+    FlutterError.onError = (details) {
+      if (details.toString().contains('overflowed')) {
+        overflowErrors.add(details);
+      }
+      previousOnError?.call(details);
+    };
+    addTearDown(() => FlutterError.onError = previousOnError);
+
+    await pumpHome(
+      tester,
+      size: const Size(320, 520),
+      textScaler: TextScaler.noScaling,
+      prefsValues: {
+        // Every tile with a stats line, the tallest a tile gets.
+        for (final game in [
+          GameIds.zip,
+          GameIds.pathWords,
+          GameIds.sudoku,
+        ]) ...{
+          'best_time_${modeKeyFor(game, earlier)}': 95,
+          'best_time_${modeKeyFor(game, today)}': 120,
+          'streak_current_$game': 12,
+          'streak_longest_$game': 40,
+          'streak_last_$game': today,
+        },
+      },
+    );
+
+    expect(overflowErrors, isEmpty);
+    final sudokuResult = find.text(AppStrings.result).last;
+    await tester.scrollUntilVisible(sudokuResult, 50);
+    expect(tester.getRect(sudokuResult).bottom, lessThanOrEqualTo(520));
   });
 }

@@ -35,6 +35,16 @@ abstract final class AppStrings {
   static const streakProtectedLabel = 'Streak protected';
   static const cleared = 'Cleared';
   static String bestTimeLabel(String formatted) => 'Best $formatted';
+  static const streakFreezeReady =
+      'Streak freeze ready: miss one day and your streak carries on.';
+
+  /// "Best 0:48 · Longest streak 9" under a Home tile's title; empty when
+  /// there is nothing to show yet. Streaks count from 2 days, as on the
+  /// leaderboard.
+  static String homeTileStats({int? bestSeconds, int longestStreak = 0}) => [
+    if (bestSeconds != null) bestTimeLabel(formatPlayTime(bestSeconds)),
+    if (longestStreak >= 2) 'Longest streak $longestStreak',
+  ].join(' · ');
 
   // Path Words
   static const pathWordsTitle = 'Path Words';
@@ -97,6 +107,20 @@ abstract final class AppStrings {
   // Results
   static const newPersonalBest = 'New personal best';
   static const newPuzzleUnlocksTomorrow = 'A new puzzle unlocks tomorrow.';
+  static const newPuzzleReady = 'A new puzzle is ready';
+
+  /// "New puzzle in 6h 12m". Minutes round up, so the last minute reads 1m
+  /// rather than 0m.
+  static String newPuzzleIn(Duration remaining) {
+    if (remaining <= Duration.zero) return newPuzzleReady;
+    const minute = Duration.microsecondsPerMinute;
+    final minutes = (remaining.inMicroseconds + minute - 1) ~/ minute;
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    final parts = [if (h > 0) '${h}h', if (m > 0 || h == 0) '${m}m'];
+    return 'New puzzle in ${parts.join(' ')}';
+  }
+
   static const backHome = 'Back home';
   static String playNextGame(String gameTitle) => 'Play $gameTitle next';
   static const perfectDay = 'Perfect day! All three puzzles cleared.';

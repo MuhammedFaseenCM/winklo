@@ -21,6 +21,16 @@ abstract final class PlayPeriod {
     return DateTime(local.year, local.month, local.day);
   }
 
+  /// When the period after the one holding [date] starts, on the local
+  /// clock: the next midnight for [daily], the next minute for [minute].
+  static DateTime nextStart(DateTime date, Duration period) {
+    final b = bucket(date, period);
+    if (isSubDaily(period)) {
+      return DateTime(b.year, b.month, b.day, b.hour, b.minute + 1);
+    }
+    return DateTime(b.year, b.month, b.day + 1);
+  }
+
   static String id(DateTime date, Duration period) {
     final b = bucket(date, period);
     final y = b.year.toString().padLeft(4, '0');

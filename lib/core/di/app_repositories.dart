@@ -69,6 +69,7 @@ import 'package:winklo/domain/usecases/generate_daily_sudoku.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_deck_by_id.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_decks.dart';
 import 'package:winklo/domain/usecases/fetch_zip_levels.dart';
+import 'package:winklo/domain/usecases/get_best_daily_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/is_new_personal_best.dart';
@@ -295,6 +296,10 @@ List<SingleChildWidget> buildRepositoryProviders({
     ),
     RepositoryProvider<GetBestTimeSeconds>(
       create: (context) => GetBestTimeSeconds(context.read<ScoreRepository>()),
+    ),
+    RepositoryProvider<GetBestDailyTimeSeconds>(
+      create: (context) =>
+          GetBestDailyTimeSeconds(context.read<ScoreRepository>()),
     ),
     RepositoryProvider<NextUnclearedDaily>(
       create: (context) => NextUnclearedDaily(

@@ -10,6 +10,7 @@ import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/app_update_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/check_app_update.dart';
+import '../../../domain/usecases/get_best_daily_time_seconds.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
@@ -22,6 +23,7 @@ class HomeCubit extends Cubit<HomeState> {
   HomeCubit({
     required this.getBestPoints,
     required this.getBestTimeSeconds,
+    required this.getBestDailyTimeSeconds,
     required this.getStreak,
     required this.analytics,
     required this.checkAppUpdate,
@@ -30,13 +32,18 @@ class HomeCubit extends Cubit<HomeState> {
     required this.zipLevelRepository,
     DateTime? now,
     this.playPeriod = PlayPeriod.daily,
+    Timer Function(Duration wait, void Function() callback)? createTimer,
   }) : _now = now,
-       super(HomeState.initial(now ?? DateTime.now(), period: playPeriod)) {
-    _scheduleRefresh();
-  }
+       _createTimer = createTimer ?? Timer.new,
+       super(HomeState.initial(now ?? DateTime.now(), period: playPeriod));
+
+  /// How long after a new period starts Home reloads, so the new day id is
+  /// already in effect.
+  static const rolloverSlack = Duration(seconds: 1);
 
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
+  final GetBestDailyTimeSeconds getBestDailyTimeSeconds;
   final GetStreak getStreak;
   final AnalyticsRepository analytics;
   final CheckAppUpdate checkAppUpdate;
@@ -45,18 +52,21 @@ class HomeCubit extends Cubit<HomeState> {
   final ZipLevelRepository zipLevelRepository;
   final DateTime? _now;
   final Duration playPeriod;
-  Timer? _refreshTimer;
+  final Timer Function(Duration wait, void Function() callback) _createTimer;
+  Timer? _rolloverTimer;
 
   DateTime get _clock => _now ?? DateTime.now();
 
-  void _scheduleRefresh() {
-    if (!PlayPeriod.isSubDaily(playPeriod)) return;
-    if (_now != null) return;
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      final nextId = DailyPuzzleGenerator.dateId(_clock, period: playPeriod);
-      if (nextId != state.dateId) {
-        load();
-      }
+  /// Reloads when the next puzzle unlocks, in case Home stays open across
+  /// midnight. Coming back to the app reloads too, which covers a timer that
+  /// fires late after the phone slept.
+  void _scheduleRollover() {
+    _rolloverTimer?.cancel();
+    if (isClosed) return;
+    final now = _clock;
+    final wait = PlayPeriod.nextStart(now, playPeriod).difference(now);
+    _rolloverTimer = _createTimer(wait + rolloverSlack, () {
+      if (!isClosed) unawaited(load());
     });
   }
 
@@ -91,6 +101,9 @@ class HomeCubit extends Cubit<HomeState> {
     final pathTime = getBestTimeSeconds(pathWordsKey);
     final sudokuPts = getBestPoints(sudokuKey);
     final sudokuTime = getBestTimeSeconds(sudokuKey);
+    final zipLifetimeBest = getBestDailyTimeSeconds(GameIds.zip);
+    final pathWordsLifetimeBest = getBestDailyTimeSeconds(GameIds.pathWords);
+    final sudokuLifetimeBest = getBestDailyTimeSeconds(GameIds.sudoku);
     final decision = await checkAppUpdate();
     if (isClosed) return;
     _logSoftUpdateShown(decision.status);
@@ -100,18 +113,21 @@ class HomeCubit extends Cubit<HomeState> {
         dateId: level.id,
         bestPoints: zipPts,
         bestTimeSeconds: zipTime,
+        lifetimeBestSeconds: zipLifetimeBest,
         currentStreak: zipStreak.current,
         longestStreak: zipStreak.longest,
         isOnFreeze: zipStreak.isOnFreeze,
         freezeAvailable: zipStreak.freezeAvailable,
         pathWordsBestPoints: pathPts,
         pathWordsBestTimeSeconds: pathTime,
+        pathWordsLifetimeBestSeconds: pathWordsLifetimeBest,
         pathWordsCurrentStreak: pathWordsStreak.current,
         pathWordsLongestStreak: pathWordsStreak.longest,
         pathWordsIsOnFreeze: pathWordsStreak.isOnFreeze,
         pathWordsFreezeAvailable: pathWordsStreak.freezeAvailable,
         sudokuBestPoints: sudokuPts,
         sudokuBestTimeSeconds: sudokuTime,
+        sudokuLifetimeBestSeconds: sudokuLifetimeBest,
         sudokuCurrentStreak: sudokuStreak.current,
         sudokuLongestStreak: sudokuStreak.longest,
         sudokuIsOnFreeze: sudokuStreak.isOnFreeze,
@@ -122,6 +138,7 @@ class HomeCubit extends Cubit<HomeState> {
         updateRequiredLabel: decision.requiredLabel,
       ),
     );
+    _scheduleRollover();
 
     unawaited(
       scheduleEngagementNotifications?.call(
@@ -171,7 +188,7 @@ class HomeCubit extends Cubit<HomeState> {
 
   @override
   Future<void> close() {
-    _refreshTimer?.cancel();
+    _rolloverTimer?.cancel();
     return super.close();
   }
 }
