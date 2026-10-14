@@ -32,15 +32,18 @@ This describes the code in this repo. The released build doesn't have all of it 
 
 All three load the day's puzzle from Firestore (`zip_levels`, `path_words_levels`, `sudoku_levels`, doc id `daily_YYYYMMDD` for the phone's local date). The puzzles come from the separate [winklo-admin](https://github.com/MuhammedFaseenCM/winklo-admin) repo, where a Worker cron fills any missing day from UTC today to two days ahead. Since 10 October it makes only hard puzzles, starting with 11 October's: Zip 8×8, Sudoku 6×6, and 6×6 Path Words boards built in code from words the AI suggests (or from a built-in list). Validators check every board, and the cron only creates missing days, so a day's board is never replaced. A board saved by hand in the admin CMS is locked, so the cron never overwrites it.
 
+Reopening a cleared game shows its board read-only with a summary underneath: "Cleared in 1:12 · #4 today · Hint-free" (the rank from that day's board, left out when you're signed out, offline or outside the top 50), the countdown to the next puzzle and a **Full board** link.
+
 The clock pauses when you leave a game and the run is saved on the phone, so it survives the app being closed on the same day, and a game left open over midnight can still be finished for its own day. Players are ranked by time only.
 
 ### Around the games
 
-- **Home:** a tile per game with "Play today's …" or "Result", the current streak, "Streak protected" while a freeze covers a missed day, and a leaderboard shortcut. Remote Config drives a soft update banner on Home and a full-screen forced update.
-- **Results:** the clear time counting up, a "New personal best" badge when the time beats every earlier day, a streak badge, and a mini daily leaderboard (the top 3 plus the two players above and below you). Under the board: "Play … next" for the next daily not cleared today, in Home's order (or "Perfect day!" once all three are done), then one row with **Share** (a spoiler-free text with the day, time, streak and clean-run chips, plus the landing-page link), **Full board** and a home button, kept to about 104 dp so the board keeps its rows on a 360×640 phone.
+- **Home:** a tile per game with "Play today's …" or "Result", the current streak, a snowflake while the streak's freeze is unused (tap it for what it does), "Streak protected" while a freeze covers a missed day, and a leaderboard shortcut. Under the title: "Best 0:48 · Longest streak 14" (the best time over every day on this phone; streaks from 2 days), and once today's puzzle is cleared, "New puzzle in 6h 12m" in place of the tagline. Home reloads just after midnight if it's left open, and the tiles scroll only when they don't fit. Remote Config drives a soft update banner on Home and a full-screen forced update.
+- **Results:** the clear time counting up, a "New personal best" badge when the time beats every earlier day, a streak badge with the longest streak, "New puzzle in 6h 12m" (counted from the run's own day, so a run finished after midnight says a new puzzle is ready), and a mini daily leaderboard (the top 3 plus the two players above and below you). Under the board: "Play … next" for the next daily not cleared today, in Home's order (or "Perfect day!" once all three are done), then one row with **Share** (a spoiler-free text with the day, time, streak and clean-run chips, plus the landing-page link), **Full board** and a home button, kept to about 104 dp so the board keeps its rows on a 360×640 phone.
 - **Leaderboards:** per game, daily and all-time (Remote Config `showAllTimeLeaderboard` can hide all-time), readable without signing in. Top 50 by time, updating live, with medals for the top 3. Daily rows add "Hint-free", "Flawless" (Sudoku), streak (2+ days) and "You" chips.
 - **Streaks:** one per game. A single freeze covers one missed day, once.
-- **Profile:** a preset or uploaded avatar, display name, sound effects toggle, privacy policy, report an issue, about (app version), sign out and delete account.
+- **Haptics:** a light tick for each cell traced in Zip and Path Words and each Sudoku digit, a stronger one for a found word, a Zip number reached or a completed row, column or box, and the strongest on a win. Ticks closer than 35 ms are dropped, so a fast swipe ripples instead of buzzing.
+- **Profile:** a preset or uploaded avatar, display name, sound effects and vibration toggles, privacy policy, report an issue, about (app version), sign out and delete account.
 - **Accounts and sync:** Google sign-in is required to play. Best times, clean-run flags, hint use, streaks and Zip paths sync to `users/{uid}` (today's and yesterday's results on each sync) and backfill the leaderboards. The sync isn't in a released build yet; see [Project status](#project-status).
 - **Account deletion:** a web page where players sign in with Google, and the account-deletion Worker deletes their account and data straight away. From 1.0.0+15, Profile → Delete account in the app signs out and opens that page in the browser.
 - **Notifications:** local reminders at 08:00 ("puzzles are ready") and 20:00 ("streak at risk"), plus the FCM topics `announcements` and `app_updates`.
@@ -48,7 +51,7 @@ The clock pauses when you leave a game and the run is saved on the phone, so it 
 
 ## Project status
 
-As of 14 October 2026. Production review build is **1.0.0+16** (uploaded to the Play production track). Closed testing still had 1.0.0+14 since 7 October; version code 15 was already consumed on Play.
+As of 15 October 2026. Production review build is **1.0.0+16** (uploaded to the Play production track). Closed testing still had 1.0.0+14 since 7 October; version code 15 was already consumed on Play.
 
 - **Checks:** `flutter analyze` reports only infos (no warnings or errors), and every test passes. CI (`.github/workflows/ci.yml`) runs both, plus the Workers' type checks and tests, on every push to `master` and every pull request.
 - **Server side:** Firebase is on the free Spark plan, so there are no Cloud Functions; server work runs in Cloudflare Workers.
@@ -77,7 +80,14 @@ Started from `master` at `8ebb8d1`; not merged and not uploaded. It holds [Fix f
 - [ ] Merge `feat/quick-wins` into `master`.
 - [ ] Build and upload 1.0.0+17 with fastlane once 1.0.0+16's review allows (`fastlane android production`, or `fastlane android testing` first).
 
-Also in progress, in winklo-admin: a redesign of the admin console, on branch `feat/ember-glass-redesign`.
+### Ready to merge: `feat/home-review-haptics`
+
+Started from `feat/quick-wins` at `e4b3f2b`, so it holds that branch too; not merged and not uploaded. It adds four [quick wins](#quick-wins-the-data-is-already-there): 1 (bests, longest streak and freezes on Home), 2 (the countdown on Home and Results, and Home's midnight reload), 4 (the summary when a cleared game is reopened) and 6 (haptics, with a Vibration switch in Profile). Along the way it fixes Home overflowing a 520 dp screen and Results clipping its header on a 412 dp phone. It moves the version to **1.0.0+18**; `changelogs/18.txt` covers everything since 1.0.0+16, so it reads right whether or not 1.0.0+17 ships first. To ship it:
+
+- [ ] Merge `feat/quick-wins`, then `feat/home-review-haptics`, into `master` (or this branch alone, which contains both).
+- [ ] Build and upload 1.0.0+18 once 1.0.0+16's review allows. If 1.0.0+17 never goes out, nothing is lost: Play version codes only need to go up.
+
+The admin console redesign (`feat/ember-glass-redesign`) is merged into winklo-admin's `main`.
 
 ### Pending
 
@@ -86,7 +96,7 @@ Also in progress, in winklo-admin: a redesign of the admin console, on branch `f
 
 ## Feature roadmap
 
-This roadmap was first written against `489ecff` (2026-10-09) and re-checked claim by claim against `8637d00` (2026-10-10). **Apart from the Fix first items marked Done, nothing in this section is built yet.** Each idea notes what already exists that makes it cheaper, and gives a rough size: **S** is a day or less, **M** is 2–5 days, **L** is one to two weeks or more.
+This roadmap was first written against `489ecff` (2026-10-09) and re-checked claim by claim against `8637d00` (2026-10-10). **Apart from the items marked Done, nothing in this section is built yet.** Each idea notes what already exists that makes it cheaper, and gives a rough size: **S** is a day or less, **M** is 2–5 days, **L** is one to two weeks or more.
 
 How the ideas were chosen:
 
@@ -153,12 +163,12 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 
 ### Quick wins: the data is already there
 
-1. **Show the longest streak and freezes on Home.** `HomeCubit` already loads the longest streak and whether a freeze is available, but the tiles only show the current streak and "Streak protected". The "best time" it loads is just today's time; `ScoreRepository.getBestDailyTimeSeconds` (Fix first 6) now gives a lifetime best, and `AppStrings.bestTimeLabel` is waiting for it. **S**
-2. **Countdown to the next puzzle.** Show "New puzzle in 6h 12m" on cleared tiles and on Results. Home reloads when you come back to it, but not at midnight while it stays open (only the debug minute mode has a timer), so add a rollover timer. *Builds on:* `PlayPeriod`. **S**
+1. **Done: the longest streak and freezes on Home.** Each tile shows "Best 0:48 · Longest streak 14" under its title, the best time over every day on this phone (`GetBestDailyTimeSeconds`), and a snowflake while the streak's one freeze is unused. Results says "Longest streak 14" too, instead of "Best: 14".
+2. **Done: countdown to the next puzzle.** "New puzzle in 6h 12m" on cleared tiles, on Results and under a reopened clear (`NextPuzzleCountdown`, from `PlayPeriod.nextStart`). Home reloads just after midnight while it stays open (`HomeCubit`'s rollover timer, which replaced the debug minute mode's polling).
 3. **Done: share your result.** Results has a Share button that sends `Winklo Zip · 9 Oct`, `⏱ 1:12 · 🔥 5 · Hint-free` and the landing-page link through the system share sheet, using the leaderboard's chip rules (Flawless for Sudoku, streaks from 2 days). It sits behind `ShareRepository` (`share_plus`). An image card or a replay of the Zip path can come later.
-4. **Show your result in review mode.** Reopening a cleared game shows only the board (Sudoku adds "come back tomorrow"). Add a header such as "Cleared in 1:12 · #4 today · Hint-free" with a link to the full board. *Builds on:* the best time and flags in `ScoreRepository`, and the player's leaderboard entry. **S**
+4. **Done: your result in review mode.** A reopened clear shows "Cleared in 1:12 · #4 today · Hint-free" under the board, with the countdown and a Full board link (`ClearedSummaryCard`). It sits where the controls were, so the board keeps its size, and replaces Sudoku's "Come back tomorrow". The rank needs the player in that day's top 50, the only part of the board the app loads.
 5. **Done: "play the next game" on Results.** The daily Results lead with "Play Path Words next": the next game in Home's order (wrapping round) not cleared today, from `NextUnclearedDaily`, or "Perfect day!" once all three are done. The old "Next puzzle" button and `nextLevelId` still only serve the hidden legacy games.
-6. **Haptics.** The whole app has a single haptic tap, on Results. Add light ticks for each cell, found word and completed row, column or box, and a stronger one on a win, with a setting to turn them off. The `VIBRATE` permission is already declared. **S**
+6. **Done: haptics.** `HapticsService` gives a tick per cell traced or digit placed, a stronger one for a found word, a Zip number reached or a completed row, column or box, and the strongest on a win. Profile has a Vibration switch (on by default), which the tap on Results follows too.
 7. **Ask for a review at a good moment.** After a personal best or a 7-day streak, show Play's in-app review prompt (`in_app_review`). **S**
 8. **Done: fill the analytics gaps.** `game_started` and `game_completed` carry `day_id`, and `resumed` or `used_hints` (as 1/0), so each day's start-to-clear rate can be compared before and after the hard-only dailies. New events: `login`, `share`, `notification_opened`, `update_prompt_shown` and `update_prompt_accepted` (soft banner and forced screen, once per appearance), `profile_name_changed`, `profile_avatar_changed` and `streak_freeze_used`, and `results_action` now fires for the dailies (`play_next`, `share`, `leaderboard`, `home`).
 
@@ -167,7 +177,7 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 #### Zip
 
 - **Replay your path.** Since `489ecff` the saved path of your best-time run keeps the order you drew the cells in, so review can animate it being drawn. It would also make a good share clip. **S**
-- **Feedback at each number.** Play a soft sound and haptic when the path reaches the next number. (Reject sounds for illegal moves were removed on purpose in `6d243ae`.) **S**
+- **Feedback at each number.** The haptic is done (quick win 6); a soft sound when the path reaches the next number isn't. (Reject sounds for illegal moves were removed on purpose in `6d243ae`.) **S**
 - **Compare with the setter's path.** Add a review toggle that overlays the stored `solution`, since many boards have more than one answer. **S**
 - **Even harder weekends.** Since 10 October every daily is the hardest tier (Fix first 12), and the rules for all three games sit in one function in winklo-admin (`dailyPuzzleParams`). Zip is already at the largest size the app plays (8×8), so weekend boards would get harder through fewer numbers and more walls. **S–M**
 - **Make sure every level has a `solution`.** Hints are disabled when it's missing. Generated boards include one, but the sample level in `FIREBASE.md` doesn't, so check any board made by hand. **S** (content check)
@@ -225,7 +235,7 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 
 ### Accessibility and settings
 
-- **A settings screen.** Today only sound has a toggle. Put sound, haptics, reminders, an optional on-screen timer and reduced motion in one place. **M**
+- **A settings screen.** Today sound and vibration have toggles in Profile. Put sound, haptics, reminders, an optional on-screen timer and reduced motion in one place. **M**
 - **Optional visible timer.** A running clock exists but only shows in debug builds (`DevRunTimerLabel`). Offer it as an opt-in setting, in keeping with "no timer you didn't ask for". **S**
 - **Respect the system font size.** `AppTextScale` turns off OS text scaling for the whole app so layouts stay fixed. Allow scaling up to about 1.3× outside the boards, which means replacing that app-wide wrapper. **S–M**
 - **Reduced motion.** Respect the system "remove animations" setting for the ember burst, sparks and shimmer. **S**
@@ -262,7 +272,7 @@ These aren't features, but they affect how cheap the ideas above are:
 
 | Phase | Ideas | Why |
 |---|---|---|
-| **Now** (one to two weeks, mostly S) | Ship `feat/quick-wins` (Fix first 13–16, sharing, "play the next game" and the analytics gaps are done there); the winklo-admin follow-ups; the longest streak and countdown on Home; the review header; haptics | Closes the Play-policy and privacy gaps, makes the chips and personal bests honest, and makes later changes measurable |
+| **Now** (one to two weeks, mostly S) | Ship `feat/quick-wins` and `feat/home-review-haptics` (Fix first 13–16 and quick wins 1–6 and 8 are done there); the winklo-admin follow-ups; the review prompt (quick win 7) | Closes the Play-policy and privacy gaps, makes the chips and personal bests honest, and makes later changes measurable |
 | **Next** (2–4 weeks, mostly M) | Fair play and reporting players; Sudoku undo and highlighting; earning freezes back; smarter reminders and a settings screen; rank beyond the top 50 and percentile; past days' boards; the stats screen | Protects the leaderboard, strengthens the daily habit and gives players more reasons to come back |
 | **Later** (mostly L) | Archive; practice mode; achievements; weekend specials; home-screen widget; App Links; friends leagues; screen-reader support for the boards; iOS; other languages | Bigger bets, once the core loop can be measured |
 

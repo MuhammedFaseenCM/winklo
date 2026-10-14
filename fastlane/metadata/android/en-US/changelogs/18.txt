@@ -1,0 +1,8 @@
+What's new
+
+• Home shows your best time, longest streak, streak freeze and a countdown to the next puzzle
+• Reopen a cleared puzzle to see your time and today's rank
+• Vibration for each move and win (turn it off in Profile)
+• Share your time, and jump to your next puzzle after a clear
+• Path Words accepts a word traced along another route
+• Sudoku's How to play is up to date, and fixes for replaced puzzles
