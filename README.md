@@ -91,7 +91,7 @@ The admin console redesign (`feat/ember-glass-redesign`) is merged into winklo-a
 
 ### Pending
 
-- **Daily puzzle follow-ups in winklo-admin**, listed after [Fix first 15](#auto-generated-puzzles): the AI's suggested words aren't reaching the boards yet, the admin's Path Words generator can still fall back to the old boards, nothing stops an edit to a day that's already live, and two type errors remain.
+- **Merge winklo-admin `fix/daily-puzzle-follow-ups`** (pushed at `acdc951`, not merged): all four follow-ups listed after [Fix first 15](#auto-generated-puzzles). Merging to its `main` deploys the SPA and the Worker, now only after their type checks and tests pass. Then check the next Path Words day the cron creates: `boardSource` should say `ai`, and `generatorMeta.aiWords` says why if it doesn't.
 - **The rest of the [feature roadmap](#feature-roadmap)**; [Suggested order](#suggested-order) says where to start.
 
 ## Feature roadmap
@@ -145,12 +145,12 @@ Item 12 is live. Items 13–15 are done in the app on `feat/quick-wins`; the fol
 14. **Done: a replaced board drops the runs saved on the old one.** Each puzzle has a `fingerprint` (FNV-1a over what's on the board, not the doc id), saved runs store it, and each game starts the board and clock fresh when it no longer matches, keeping the run's hint and mistake flags as a reset does. Runs saved by 1.0.0+16 and earlier have no fingerprint and are still restored, so updating mid-run keeps the run. Times from both boards still share that day's leaderboard, and because the app uses the phone's date, a day goes live at the first midnight on Earth (10:00 UTC the day before, at UTC+14) and stays open until 12:00 UTC the day after, so only replace a board before it goes live.
 15. **Done: Path Words accepts a word traced along another route.** `PathWordsRules.completedTarget` still prefers the stored path, but now also accepts any route that spells a remaining word and stays off every other word's cells (taking those would leave that word impossible to trace). Found words are drawn where the player traced them. Since item 12 the generator rejects boards with two routes for a word; this covers hand-made ones.
 
-Follow-ups in winklo-admin:
+Follow-ups in winklo-admin, all done on its branch `fix/daily-puzzle-follow-ups` (not merged):
 
-- **The AI's words aren't reaching the boards yet.** The first hard Path Words boards say `boardSource: local`: none of the AI's suggested words were used, so every word came from the built-in list. Check the `admin-api` Worker's logs and its Workers AI usage. **S**
-- **The admin's Path Words Generate button can still make the old boards.** It asks the Worker for a board, but if that call fails it quietly falls back to the old in-browser generator (`generatePathWords`), whose boards can be small, easy, or leave a word on its own. **S**
-- **Block edits to a day that's already live.** The CMS can still save over a daily that players can open, which splits its leaderboard and mixes up saved runs (item 14). Lock each day from 10:00 UTC the day before. **S**
-- **Type check before deploying.** `path_words_validate.ts` has two type errors on `main` (`colorIndex` may be undefined), and the deploy workflow doesn't run `tsc`. **S**
+- **Done: the AI's words reach the boards.** Every hard Path Words board so far says `boardSource: local`. The Worker only read a reply whose `response` was JSON text; a parsed object, a `choices` list, nested words or a cut-off reply all became zero words, silently. It now reads every reply shape, asks for JSON with a schema from `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (the 3B model couldn't, and misspelled), times out after 30 s, and records why words were dropped in the daily's `generatorMeta.aiWords` and a `path_words_ai_words` log line. Which shape production actually sent isn't confirmed; the Worker's logs weren't kept.
+- **Done: Generate never makes the old boards.** A failed call shows "Couldn't generate a board" with Try again, and the in-browser generator is deleted.
+- **Done: a live day is locked.** From 10:00 UTC the day before (`daily_live.ts`, shared by the Worker and the CMS), the admin API refuses to change or delete that day's board (409 `day_live`), and the CMS shows it read-only with a Live badge. A live day with no board can still be filled.
+- **Done: type check before deploying.** Both `colorIndex` errors were real (stored JSON can lack it), and the deploy workflow now type-checks and tests the SPA and the Worker before either deploys.
 
 #### Copy and tooling
 
