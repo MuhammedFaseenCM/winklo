@@ -82,6 +82,9 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   /// Period of the run on screen; hints count against it, not the clock.
   String get _runPlayId => _playId ?? PlayPeriod.id(state.day, playPeriod);
 
+  /// Where this daily's best is stored, for showing it in review.
+  String get clearModeKey => 'path_words_$_runPlayId';
+
   Future<void> _onStarted(
     PathWordsStarted event,
     Emitter<PathWordsState> emit,

@@ -25,6 +25,7 @@ import '../../../domain/usecases/get_clear_board.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
+import '../../results/view/cleared_summary_card.dart';
 import '../bloc/zip_bloc.dart';
 import '../bloc/zip_event.dart';
 import '../bloc/zip_state.dart';
@@ -326,7 +327,16 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                             child: GameRuleTipBanner(message: _ruleTip!),
                           ),
-                        if (!isReview)
+                        if (isReview)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                            child: ClearedSummaryCard(
+                              gameId: GameIds.zip,
+                              modeKey: _bloc.clearModeKey,
+                              day: state.day,
+                            ),
+                          )
+                        else
                           Padding(
                             padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                             child: Row(

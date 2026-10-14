@@ -89,6 +89,9 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   /// Period of the run on screen; hints count against it, not the clock.
   String get _runPlayId => _playId ?? PlayPeriod.id(state.day, playPeriod);
 
+  /// Where this daily's best is stored, for showing it in review.
+  String get clearModeKey => 'sudoku_$_runPlayId';
+
   Future<void> _onStarted(
     SudokuStarted event,
     Emitter<SudokuState> emit,

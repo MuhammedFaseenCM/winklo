@@ -75,6 +75,7 @@ import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/is_new_personal_best.dart';
 import 'package:winklo/domain/usecases/next_uncleared_daily.dart';
 import 'package:winklo/domain/usecases/get_clear_board.dart';
+import 'package:winklo/domain/usecases/get_clear_meta.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/domain/usecases/handle_notification_tap.dart';
 import 'package:winklo/domain/usecases/initialize_notifications.dart';
@@ -309,6 +310,9 @@ List<SingleChildWidget> buildRepositoryProviders({
     ),
     RepositoryProvider<IsNewPersonalBest>(
       create: (context) => IsNewPersonalBest(context.read<ScoreRepository>()),
+    ),
+    RepositoryProvider<GetClearMeta>(
+      create: (context) => GetClearMeta(context.read<ScoreRepository>()),
     ),
     RepositoryProvider<GetClearBoard>(
       create: (context) => GetClearBoard(context.read<ScoreRepository>()),

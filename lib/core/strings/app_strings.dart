@@ -28,7 +28,6 @@ abstract final class AppStrings {
   static const zipFailed = 'Could not load today’s puzzle.';
   static const playAgain = 'Play again';
   static const result = 'Result';
-  static const comeBackTomorrow = 'Come back tomorrow';
   static const today = 'TODAY';
   static const wordMatch = 'Word Match';
   static const categoryRace = 'Category Race';
@@ -127,6 +126,8 @@ abstract final class AppStrings {
   static const shareResult = 'Share';
   static const shareFailed = 'Couldn’t open sharing. Try again.';
   static const resultsFullBoard = 'Full board';
+  static String clearedIn(String time) => 'Cleared in $time';
+  static String rankToday(int rank) => '#$rank today';
   static const resultsTimeLabel = 'time';
 
   static String formatPlayTime(int totalSeconds) {

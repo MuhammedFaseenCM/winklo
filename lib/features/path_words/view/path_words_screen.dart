@@ -13,6 +13,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
 import '../../../core/widgets/zip_ui.dart';
+import '../../../domain/game_ids.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
@@ -24,6 +25,7 @@ import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
+import '../../results/view/cleared_summary_card.dart';
 import '../bloc/path_words_bloc.dart';
 import '../bloc/path_words_event.dart';
 import '../bloc/path_words_state.dart';
@@ -393,7 +395,14 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                 palette: PathWordsGame.pathColors,
                               ),
                             ],
-                            if (!isReview) ...[
+                            if (isReview) ...[
+                              const SizedBox(height: 12),
+                              ClearedSummaryCard(
+                                gameId: GameIds.pathWords,
+                                modeKey: _bloc.clearModeKey,
+                                day: state.day,
+                              ),
+                            ] else ...[
                               const SizedBox(height: 10),
                               Row(
                                 children: [

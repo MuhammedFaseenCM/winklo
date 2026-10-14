@@ -1,6 +1,7 @@
 import '../../../core/constants/app_urls.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/game_ids.dart';
+import 'clean_run_chips.dart';
 
 const _months = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
@@ -32,9 +33,11 @@ String resultShareText({
     '⏱ ${AppStrings.formatPlayTime(timeSeconds)}',
     // Streak chips start at 2 days on the leaderboard too.
     if (currentStreak != null && currentStreak >= 2) '🔥 $currentStreak',
-    if (usedHints == false) AppStrings.leaderboardNoHintChip,
-    if (gameId == GameIds.sudoku && hadMistakes == false)
-      AppStrings.leaderboardNoMistakesChip,
+    ...cleanRunChips(
+      gameId: gameId,
+      usedHints: usedHints,
+      hadMistakes: hadMistakes,
+    ),
   ];
   return [
     'Winklo $title · ${day.day} ${_months[day.month - 1]}',

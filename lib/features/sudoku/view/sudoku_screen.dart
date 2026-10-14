@@ -14,6 +14,7 @@ import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/sudoku/sudoku_hint_coach.dart';
 import '../../../domain/entities/sudoku_difficulty.dart';
+import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
@@ -24,6 +25,7 @@ import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
+import '../../results/view/cleared_summary_card.dart';
 import '../bloc/sudoku_bloc.dart';
 import '../bloc/sudoku_event.dart';
 import '../bloc/sudoku_state.dart';
@@ -421,14 +423,10 @@ class _SudokuScreenState extends State<SudokuScreen>
                                         16,
                                         8,
                                       ),
-                                      child: Text(
-                                        AppStrings.comeBackTomorrow,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color: ZipColors.inkSoft,
-                                            ),
+                                      child: ClearedSummaryCard(
+                                        gameId: GameIds.sudoku,
+                                        modeKey: _bloc.clearModeKey,
+                                        day: state.day,
                                       ),
                                     ),
                                 ],

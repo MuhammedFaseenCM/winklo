@@ -159,7 +159,6 @@ void main() {
     expect(find.textContaining(AppStrings.longestStreakLabel(5)), findsNothing);
     expect(find.text(AppStrings.cleared), findsNothing);
     expect(find.text(AppStrings.result), findsOneWidget);
-    expect(find.text(AppStrings.comeBackTomorrow), findsNothing);
     expect(find.text(AppStrings.playAgain), findsNothing);
     expect(find.text(AppStrings.playTodaysPathWords), findsNothing);
     expect(find.text(AppStrings.playTodaysZip), findsOneWidget);
@@ -175,5 +174,8 @@ void main() {
     expect(find.text(AppStrings.pathWordsTitle), findsOneWidget);
     expect(find.byWidgetPredicate((w) => w is GameWidget), findsOneWidget);
     expect(find.text(AppStrings.pathWordsUndo), findsNothing);
+    // Review mode sums up the clear instead.
+    expect(find.text('Cleared in 0:29'), findsOneWidget);
+    expect(find.text(AppStrings.resultsFullBoard), findsOneWidget);
   });
 }

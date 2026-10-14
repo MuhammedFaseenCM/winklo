@@ -94,6 +94,9 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   /// run left open over midnight keeps its own quota.
   String get playId => _playId ?? PlayPeriod.id(state.day, playPeriod);
 
+  /// Where this daily's best is stored, for showing it in review.
+  String get clearModeKey => 'zip_${state.level.id}';
+
   static ZipState _initialState(DateTime now, {required Duration playPeriod}) {
     return ZipState.initial(now, period: playPeriod);
   }
