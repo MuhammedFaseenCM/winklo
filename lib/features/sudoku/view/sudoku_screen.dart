@@ -49,6 +49,9 @@ class _SudokuScreenState extends State<SudokuScreen>
   SudokuGame? _game;
   var _howToPlayPrompted = false;
 
+  /// The first-run rules are open; the clock stays stopped until they close.
+  var _howToPlayOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -82,7 +85,7 @@ class _SudokuScreenState extends State<SudokuScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
-        _bloc.add(const SudokuEvent.resumeRun());
+        if (!_howToPlayOpen) _bloc.add(const SudokuEvent.resumeRun());
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
@@ -216,8 +219,12 @@ class _SudokuScreenState extends State<SudokuScreen>
               _howToPlayPrompted = true;
               SudokuHowToPlay.maybeShow(
                 context,
-                onOpen: () => _bloc.add(const SudokuEvent.pauseRun()),
+                onOpen: () {
+                  _howToPlayOpen = true;
+                  _bloc.add(const SudokuEvent.pauseRun());
+                },
                 onClose: () {
+                  _howToPlayOpen = false;
                   if (mounted) _bloc.add(const SudokuEvent.resumeRun());
                 },
               );
