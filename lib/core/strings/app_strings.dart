@@ -83,7 +83,7 @@ abstract final class AppStrings {
   static const sudokuNotes = 'Notes';
   static const sudokuHowToPlayTitle = 'How to play';
   static const sudokuHowToPlayBody =
-      'Fill every empty cell with 1–6 so each row, column, and 2×3 box has every digit once. Wrong entries are rejected. Notes are unlimited; you get 3 hints per day.';
+      'Fill every empty cell with 1–6 so each row, column and 2×3 box has every digit once. You can enter any digit; a full row, column or box that’s wrong lights up. Notes are unlimited. You get 3 hints per puzzle: each points out a wrong digit or explains the next step, and never fills a cell for you.';
   static const sudokuHowToPlayGotIt = 'Got it';
   static const sudokuClearedTitle = 'Puzzle cleared!';
   static const sudokuLoading = 'Building today’s puzzle…';

@@ -47,6 +47,7 @@ class _SudokuScreenState extends State<SudokuScreen>
   late final SudokuBloc _bloc;
   late final bool _ownsBloc;
   SudokuGame? _game;
+  var _howToPlayPrompted = false;
 
   @override
   void initState() {
@@ -204,6 +205,22 @@ class _SudokuScreenState extends State<SudokuScreen>
                 curr.status == SudokuStatus.navigating,
             listener: (context, state) {
               context.pushReplacement('/results', extra: state.resultsExtra);
+            },
+          ),
+          BlocListener<SudokuBloc, SudokuState>(
+            listenWhen: (prev, curr) =>
+                !_howToPlayPrompted &&
+                curr.status == SudokuStatus.ready &&
+                !curr.finished,
+            listener: (context, state) {
+              _howToPlayPrompted = true;
+              SudokuHowToPlay.maybeShow(
+                context,
+                onOpen: () => _bloc.add(const SudokuEvent.pauseRun()),
+                onClose: () {
+                  if (mounted) _bloc.add(const SudokuEvent.resumeRun());
+                },
+              );
             },
           ),
           BlocListener<SudokuBloc, SudokuState>(
