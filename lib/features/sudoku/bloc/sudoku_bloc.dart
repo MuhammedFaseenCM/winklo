@@ -135,10 +135,11 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       puzzle = await generatePuzzle(day: PlayPeriod.bucket(seed, playPeriod));
     } catch (e) {
       if (emit.isDone) return;
+      final unsupported = e is UnsupportedPuzzle;
       emit(
         state.copyWith(
-          status: SudokuStatus.failed,
-          errorMessage: e is UnsupportedPuzzle
+          status: unsupported ? SudokuStatus.unsupported : SudokuStatus.failed,
+          errorMessage: unsupported
               ? AppStrings.puzzleNeedsUpdate
               : AppStrings.sudokuFailed,
         ),

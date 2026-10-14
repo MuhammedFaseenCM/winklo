@@ -32,6 +32,12 @@ Map<String, dynamic> _json({
   };
 }
 
+/// Broken data is a load failure, not a reason to update the app.
+final _corrupt = allOf(
+  isA<DailyPuzzleUnavailable>(),
+  isNot(isA<UnsupportedPuzzle>()),
+);
+
 void main() {
   group('SudokuPuzzle.fromJson', () {
     test('accepts a 6×6 board with 2×3 boxes', () {
@@ -91,14 +97,14 @@ void main() {
         () => SudokuPuzzle.fromJson(
           _json(solution: _solution6.sublist(0, 30), given: List.filled(30, 0)),
         ),
-        throwsA(isA<UnsupportedPuzzle>()),
+        throwsA(_corrupt),
       );
     });
 
     test('rejects givens that are not 36 cells', () {
       expect(
         () => SudokuPuzzle.fromJson(_json(given: List.filled(35, 0))),
-        throwsA(isA<UnsupportedPuzzle>()),
+        throwsA(_corrupt),
       );
     });
 
@@ -108,7 +114,7 @@ void main() {
         () => SudokuPuzzle.fromJson(
           _json(solution: solution, given: List.filled(36, 0)),
         ),
-        throwsA(isA<UnsupportedPuzzle>()),
+        throwsA(_corrupt),
       );
     });
 
@@ -116,7 +122,30 @@ void main() {
       final given = List.filled(36, 0)..[0] = 2; // solution says 1
       expect(
         () => SudokuPuzzle.fromJson(_json(given: given)),
-        throwsA(isA<UnsupportedPuzzle>()),
+        throwsA(_corrupt),
+      );
+    });
+
+    test('rejects a solution with a repeated digit in a row', () {
+      final solution = List<int>.from(_solution6)..[1] = 1; // row 0: 1 1 3 …
+      expect(
+        () => SudokuPuzzle.fromJson(
+          _json(solution: solution, given: List.filled(36, 0)),
+        ),
+        throwsA(_corrupt),
+      );
+    });
+
+    test('rejects a solution whose rows are fine but columns repeat', () {
+      // Swapping two cells in row 0 keeps the row valid but breaks columns.
+      final solution = List<int>.from(_solution6)
+        ..[0] = 2
+        ..[1] = 1;
+      expect(
+        () => SudokuPuzzle.fromJson(
+          _json(solution: solution, given: List.filled(36, 0)),
+        ),
+        throwsA(_corrupt),
       );
     });
 

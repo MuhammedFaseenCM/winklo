@@ -246,7 +246,9 @@ class _SudokuScreenState extends State<SudokuScreen>
             }
             final puzzle = state.puzzle;
             final isReview = state.status == SudokuStatus.locked;
-            final isFailed = state.status == SudokuStatus.failed;
+            final isUnsupported = state.status == SudokuStatus.unsupported;
+            final isFailed =
+                state.status == SudokuStatus.failed || isUnsupported;
             final isLoading = state.status == SudokuStatus.loading;
             final isReadyToPlay =
                 !state.finished &&
@@ -337,7 +339,8 @@ class _SudokuScreenState extends State<SudokuScreen>
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Text(
-                                                    AppStrings.sudokuFailed,
+                                                    state.errorMessage ??
+                                                        AppStrings.sudokuFailed,
                                                     textAlign: TextAlign.center,
                                                     style: Theme.of(context)
                                                         .textTheme
@@ -350,19 +353,32 @@ class _SudokuScreenState extends State<SudokuScreen>
                                                         ),
                                                   ),
                                                   const SizedBox(height: 14),
-                                                  FilledButton.icon(
-                                                    onPressed: () => _bloc.add(
-                                                      SudokuEvent.started(
-                                                        date: widget.date,
+                                                  if (isUnsupported)
+                                                    FilledButton.icon(
+                                                      onPressed: () =>
+                                                          context.go('/'),
+                                                      icon: const Icon(
+                                                        Icons.home_rounded,
+                                                      ),
+                                                      label: const Text(
+                                                        AppStrings.backHome,
+                                                      ),
+                                                    )
+                                                  else
+                                                    FilledButton.icon(
+                                                      onPressed: () =>
+                                                          _bloc.add(
+                                                            SudokuEvent.started(
+                                                              date: widget.date,
+                                                            ),
+                                                          ),
+                                                      icon: const Icon(
+                                                        Icons.refresh_rounded,
+                                                      ),
+                                                      label: const Text(
+                                                        AppStrings.retry,
                                                       ),
                                                     ),
-                                                    icon: const Icon(
-                                                      Icons.refresh_rounded,
-                                                    ),
-                                                    label: const Text(
-                                                      AppStrings.retry,
-                                                    ),
-                                                  ),
                                                 ],
                                               ),
                                             ),

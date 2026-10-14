@@ -14,6 +14,9 @@ enum SudokuStatus {
   navigating,
   locked,
   failed,
+
+  /// Loaded a board this build can't play; retrying won't help.
+  unsupported,
 }
 
 @freezed

@@ -339,7 +339,7 @@ void main() {
     skip: 1, // loading
     expect: () => [
       isA<SudokuState>()
-          .having((s) => s.status, 'status', SudokuStatus.failed)
+          .having((s) => s.status, 'status', SudokuStatus.unsupported)
           .having(
             (s) => s.errorMessage,
             'errorMessage',
