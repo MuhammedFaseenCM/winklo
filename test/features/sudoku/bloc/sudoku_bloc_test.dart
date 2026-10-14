@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:winklo/core/haptics/haptics_service.dart';
 import 'package:winklo/core/sfx/sfx_id.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/core/strings/app_strings.dart';
@@ -41,6 +42,8 @@ class _MockIsNewPersonalBest extends Mock implements IsNewPersonalBest {}
 class _MockAnalyticsRepository extends Mock implements AnalyticsRepository {}
 
 class _MockSfx extends Mock implements SfxService {}
+
+class _MockHaptics extends Mock implements HapticsService {}
 
 class _FakeHintQuota implements HintQuotaRepository {
   _FakeHintQuota(this._remaining);
@@ -201,6 +204,7 @@ void main() {
     _FakeHintQuota? quota,
     _MemoryInProgressRuns? drafts,
     SfxService? sfx,
+    HapticsService? haptics,
   }) {
     return SudokuBloc(
       submitScore: submitScore,
@@ -219,6 +223,7 @@ void main() {
       wait: (_) async {},
       celebrationDuration: Duration.zero,
       sfx: sfx,
+      haptics: haptics,
     );
   }
 
@@ -307,6 +312,7 @@ void main() {
       () => analytics.logGameReset(gameId: any(named: 'gameId')),
     ).thenAnswer((_) async {});
     registerFallbackValue(SfxId.tap);
+    registerFallbackValue(HapticKind.tick);
   });
 
   blocTest<SudokuBloc, SudokuState>(
@@ -961,6 +967,72 @@ void main() {
       verifyNever(() => bloc.sfx!.play(SfxId.clear));
     },
   );
+
+  group('haptics', () {
+    _MockHaptics stubHaptics() {
+      final haptics = _MockHaptics();
+      when(() => haptics.play(any())).thenReturn(null);
+      return haptics;
+    }
+
+    blocTest<SudokuBloc, SudokuState>(
+      'a digit ticks',
+      build: () => buildBloc(
+        generatePuzzle: ({required DateTime day}) =>
+            _noUnitCompletePuzzle(day: day),
+        haptics: stubHaptics(),
+      ),
+      act: (bloc) async {
+        bloc.add(SudokuEvent.started(date: day));
+        await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+        bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+        bloc.add(const SudokuEvent.digitTapped(2));
+        await bloc.stream.firstWhere((s) => s.grid[1] == 2);
+      },
+      verify: (bloc) {
+        verify(() => bloc.haptics!.play(HapticKind.tick)).called(1);
+        verifyNever(() => bloc.haptics!.play(HapticKind.success));
+      },
+    );
+
+    blocTest<SudokuBloc, SudokuState>(
+      'completing a row, column or box gives a stronger one',
+      build: () => buildBloc(
+        generatePuzzle: ({required DateTime day}) => _twoEmptyPuzzle(day: day),
+        haptics: stubHaptics(),
+      ),
+      act: (bloc) async {
+        bloc.add(SudokuEvent.started(date: day));
+        await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+        bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+        bloc.add(const SudokuEvent.digitTapped(2));
+        await bloc.stream.firstWhere((s) => s.grid[1] == 2);
+      },
+      verify: (bloc) {
+        verify(() => bloc.haptics!.play(HapticKind.success)).called(1);
+        verifyNever(() => bloc.haptics!.play(HapticKind.tick));
+      },
+    );
+
+    blocTest<SudokuBloc, SudokuState>(
+      'the solving digit is a win',
+      build: () => buildBloc(haptics: stubHaptics()),
+      act: (bloc) async {
+        bloc.add(SudokuEvent.started(date: day));
+        await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+        bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+        bloc.add(const SudokuEvent.digitTapped(2));
+        await bloc.stream.firstWhere(
+          (s) => s.status == SudokuStatus.navigating,
+        );
+      },
+      verify: (bloc) {
+        verify(() => bloc.haptics!.play(HapticKind.win)).called(1);
+        verifyNever(() => bloc.haptics!.play(HapticKind.success));
+        verifyNever(() => bloc.haptics!.play(HapticKind.tick));
+      },
+    );
+  });
 
   blocTest<SudokuBloc, SudokuState>(
     'completing a unit plays success',

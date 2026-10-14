@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/dev_flags.dart';
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
@@ -174,6 +175,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
           inProgressRuns: context.read<InProgressRunRepository>(),
           playPeriod: DevFlags.playPeriod,
           sfx: context.read<SfxService>(),
+          haptics: context.read<HapticsService?>(),
         );
 
     if (widget.autoStart) {

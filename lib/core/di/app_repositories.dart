@@ -7,6 +7,7 @@ import 'package:winklo/core/config/path_words_nouns_config.dart';
 import 'package:winklo/core/dev_flags.dart';
 import 'package:winklo/core/firebase/firebase_bootstrap.dart';
 import 'package:winklo/core/lifecycle/progress_change_signal.dart';
+import 'package:winklo/core/haptics/haptics_service.dart';
 import 'package:winklo/core/sfx/audioplayers_sfx_playback.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/data/clients/avatar/avatar_upload_client.dart';
@@ -31,6 +32,7 @@ import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_remote_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
+import 'package:winklo/data/repositories/haptics_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/sfx_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
 import 'package:winklo/data/repositories/tutorial_repository_impl.dart';
@@ -54,6 +56,7 @@ import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/progress_local_repository.dart';
 import 'package:winklo/domain/repositories/progress_remote_repository.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
+import 'package:winklo/domain/repositories/haptics_settings_repository.dart';
 import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
 import 'package:winklo/domain/repositories/tutorial_repository.dart';
@@ -121,6 +124,14 @@ List<SingleChildWidget> buildRepositoryProviders({
         settings: context.read<SfxSettingsRepository>(),
         playClip: createAudioplayersPlayClip(),
       ),
+    ),
+    RepositoryProvider<HapticsSettingsRepository>(
+      create: (context) =>
+          HapticsSettingsRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<HapticsService>(
+      create: (context) =>
+          HapticsService(settings: context.read<HapticsSettingsRepository>()),
     ),
     RepositoryProvider<AnalyticsRepository>(
       create: (_) => FirebaseAnalyticsRepositoryImpl(),

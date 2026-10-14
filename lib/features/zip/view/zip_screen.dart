@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/dev_flags.dart';
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
@@ -48,6 +49,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
   late final ZipBloc _bloc;
   late final HintQuotaRepository _hintQuota;
   late final SfxService _sfx;
+  late final HapticsService? _haptics;
   ZipGame? _game;
   bool _tutorialPrompted = false;
   String? _ruleTip;
@@ -92,6 +94,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
         setState(() => _ruleTip = _messageForTip(tip));
       },
       onSfx: (id) => unawaited(_sfx.play(id)),
+      onHaptic: (kind) => _haptics?.play(kind),
     );
     return true;
   }
@@ -115,6 +118,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _hintQuota = context.read<HintQuotaRepository>();
     _sfx = context.read<SfxService>();
+    _haptics = context.read<HapticsService?>();
     _bloc = ZipBloc(
       submitScore: context.read<SubmitScore>(),
       submitLeaderboardTime: context.read<SubmitLeaderboardTime>(),

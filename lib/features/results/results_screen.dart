@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/dev_flags.dart';
+import '../../core/haptics/haptics_service.dart';
 import '../../core/strings/app_strings.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/next_puzzle_countdown.dart';
@@ -379,7 +379,7 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
 
   void _onTimeLanded() {
     if (!mounted || _showBurst) return;
-    HapticFeedback.lightImpact();
+    context.read<HapticsService?>()?.play(HapticKind.light);
     setState(() => _showBurst = true);
   }
 

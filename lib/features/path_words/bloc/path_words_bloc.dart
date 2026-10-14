@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_id.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
@@ -47,6 +48,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     this.celebrationDuration = const Duration(seconds: 2),
     this.playPeriod = PlayPeriod.daily,
     this.sfx,
+    this.haptics,
   }) : _now = now ?? DateTime.now,
        _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
        super(PathWordsState.initial((now ?? DateTime.now)())) {
@@ -74,6 +76,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   final Duration celebrationDuration;
   final Duration playPeriod;
   final SfxService? sfx;
+  final HapticsService? haptics;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   String? _playId;
@@ -404,6 +407,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     );
     if (grew) {
       unawaited(sfx?.play(SfxId.tap) ?? Future<void>.value());
+      haptics?.play(HapticKind.tick);
     }
   }
 
@@ -470,11 +474,15 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       ),
     );
 
+    final solved = updatedCompleted.length >= puzzle.targets.length;
     if (stroke.targetId != null) {
       unawaited(sfx?.play(SfxId.success) ?? Future<void>.value());
     }
-    if (updatedCompleted.length >= puzzle.targets.length) {
+    if (solved) {
       unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());
+      haptics?.play(HapticKind.win);
+    } else if (stroke.targetId != null) {
+      haptics?.play(HapticKind.success);
     }
 
     if (updatedCompleted.length >= puzzle.targets.length) {

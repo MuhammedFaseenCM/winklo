@@ -14,6 +14,8 @@ class ProfileSettingsList extends StatelessWidget {
     this.enabled = true,
     this.sfxEnabled,
     this.onSfxChanged,
+    this.hapticsEnabled,
+    this.onHapticsChanged,
   });
 
   final VoidCallback onPrivacy;
@@ -28,6 +30,10 @@ class ProfileSettingsList extends StatelessWidget {
   /// Sound-effects mute; not gated by [enabled].
   final bool? sfxEnabled;
   final ValueChanged<bool>? onSfxChanged;
+
+  /// Vibration on/off; not gated by [enabled].
+  final bool? hapticsEnabled;
+  final ValueChanged<bool>? onHapticsChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +74,26 @@ class ProfileSettingsList extends StatelessWidget {
                 trailing: Switch.adaptive(
                   value: sfxEnabled ?? true,
                   onChanged: onSfxChanged,
+                ),
+              ),
+              const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
+            ],
+            if (onHapticsChanged != null) ...[
+              ListTile(
+                leading: const Icon(
+                  Icons.vibration_rounded,
+                  color: ZipColors.teal,
+                ),
+                title: Text(
+                  AppStrings.profileVibration,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: ZipColors.onInk,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                trailing: Switch.adaptive(
+                  value: hapticsEnabled ?? true,
+                  onChanged: onHapticsChanged,
                 ),
               ),
               const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),

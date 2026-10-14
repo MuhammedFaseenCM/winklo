@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:winklo/core/haptics/haptics_service.dart';
 import 'package:winklo/core/sfx/sfx_id.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/core/strings/app_strings.dart';
@@ -42,6 +43,8 @@ class _MockIsNewPersonalBest extends Mock implements IsNewPersonalBest {}
 class _MockAnalyticsRepository extends Mock implements AnalyticsRepository {}
 
 class _MockSfx extends Mock implements SfxService {}
+
+class _MockHaptics extends Mock implements HapticsService {}
 
 class _FakeHintQuota implements HintQuotaRepository {
   _FakeHintQuota(this._remaining);
@@ -171,6 +174,7 @@ void main() {
     Duration celebrationDuration = const Duration(seconds: 2),
     _MemoryInProgressRuns? drafts,
     SfxService? sfx,
+    HapticsService? haptics,
   }) {
     return PathWordsBloc(
       inProgressRuns: drafts ?? _MemoryInProgressRuns(),
@@ -187,6 +191,7 @@ void main() {
       wait: wait,
       celebrationDuration: celebrationDuration,
       sfx: sfx,
+      haptics: haptics,
     );
   }
 
@@ -249,6 +254,7 @@ void main() {
     ).thenAnswer((_) async {});
     registerFallbackValue(DateTime(2026, 9, 17));
     registerFallbackValue(SfxId.tap);
+    registerFallbackValue(HapticKind.tick);
   });
 
   blocTest<PathWordsBloc, PathWordsState>(
@@ -1919,6 +1925,87 @@ void main() {
       verifyNever(() => b.sfx!.play(SfxId.clear));
     },
   );
+
+  group('haptics', () {
+    _MockHaptics stubHaptics() {
+      final haptics = _MockHaptics();
+      when(() => haptics.play(any())).thenReturn(null);
+      return haptics;
+    }
+
+    blocTest<PathWordsBloc, PathWordsState>(
+      'ticks per traced cell and a stronger one for a found word',
+      build: () {
+        when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+          (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+        );
+        return buildBloc(haptics: stubHaptics());
+      },
+      act: (b) async {
+        b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+        await pumpEventQueue();
+        b.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+        b.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+        b.add(const PathWordsEvent.pointerUp());
+        await pumpEventQueue();
+      },
+      verify: (b) {
+        verifyInOrder([
+          () => b.haptics!.play(HapticKind.tick),
+          () => b.haptics!.play(HapticKind.success),
+        ]);
+        verifyNever(() => b.haptics!.play(HapticKind.win));
+      },
+    );
+
+    blocTest<PathWordsBloc, PathWordsState>(
+      'the last word is a win, not another found word',
+      build: () {
+        when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+          (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+        );
+        when(
+          () => submitScore(
+            modeKey: any(named: 'modeKey'),
+            points: any(named: 'points'),
+            timeSeconds: any(named: 'timeSeconds'),
+            usedHints: any(named: 'usedHints'),
+            hadMistakes: any(named: 'hadMistakes'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => recordDailyClear(
+            gameId: any(named: 'gameId'),
+            dateId: any(named: 'dateId'),
+          ),
+        ).thenAnswer(
+          (_) async => const GameStreak(gameId: GameIds.pathWords, current: 1),
+        );
+        return buildBloc(
+          haptics: stubHaptics(),
+          celebrationDuration: Duration.zero,
+          wait: (_) async {},
+        );
+      },
+      act: (b) async {
+        b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+        await pumpEventQueue();
+        for (final word in const [
+          [Cell(0, 0), Cell(0, 1)],
+          [Cell(1, 0), Cell(1, 1)],
+        ]) {
+          b.add(PathWordsEvent.pointerDown(word.first));
+          b.add(PathWordsEvent.pointerEnter(word.last));
+          b.add(const PathWordsEvent.pointerUp());
+          await pumpEventQueue();
+        }
+      },
+      verify: (b) {
+        verify(() => b.haptics!.play(HapticKind.success)).called(1);
+        verify(() => b.haptics!.play(HapticKind.win)).called(1);
+      },
+    );
+  });
 
   blocTest<PathWordsBloc, PathWordsState>(
     'finding a word plays success',

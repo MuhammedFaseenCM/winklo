@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_urls.dart';
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
@@ -86,6 +87,7 @@ class _SignedOutBodyState extends State<_SignedOutBody> {
   @override
   Widget build(BuildContext context) {
     final sfx = context.read<SfxService>();
+    final haptics = context.read<HapticsService?>();
     return BlurredMockEmptyBody(
       background: const ProfileSignedOutMock(),
       message: AppStrings.profileSignedOutBody,
@@ -114,6 +116,29 @@ class _SignedOutBodyState extends State<_SignedOutBody> {
               },
             ),
           ),
+          if (haptics != null)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.vibration_rounded,
+                color: ZipColors.teal,
+              ),
+              title: Text(
+                AppStrings.profileVibration,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: ZipColors.onInk,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              trailing: Switch.adaptive(
+                value: haptics.isEnabled,
+                onChanged: (value) async {
+                  await haptics.setEnabled(value);
+                  if (!mounted) return;
+                  setState(() {});
+                },
+              ),
+            ),
           const SizedBox(height: 8),
           FilledButton(
             onPressed: () => showSignInSheet(context),
@@ -212,6 +237,7 @@ class _SignedInBodyState extends State<_SignedInBody> {
   Widget build(BuildContext context) {
     final layout = AppLayout.of(context);
     final sfx = context.read<SfxService>();
+    final haptics = context.read<HapticsService?>();
     return BlocListener<ProfileCubit, ProfileState>(
       listenWhen: (previous, next) =>
           next.status == ProfileStatus.failure &&
@@ -343,6 +369,14 @@ class _SignedInBodyState extends State<_SignedInBody> {
                       if (!mounted) return;
                       setState(() {});
                     },
+                    hapticsEnabled: haptics?.isEnabled,
+                    onHapticsChanged: haptics == null
+                        ? null
+                        : (value) async {
+                            await haptics.setEnabled(value);
+                            if (!mounted) return;
+                            setState(() {});
+                          },
                     onPrivacy: () => unawaited(_openPrivacy(context)),
                     onAbout: () => unawaited(showAboutGameDialog(context)),
                     onReport: () => unawaited(_openReport(context)),

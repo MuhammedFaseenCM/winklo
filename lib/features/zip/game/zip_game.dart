@@ -5,6 +5,7 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_id.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/zip_level.dart';
@@ -19,6 +20,7 @@ import 'zip_tip_sparks.dart';
 typedef ZipWinCallback = void Function();
 typedef ZipRuleTipCallback = void Function(ZipRuleTip tip);
 typedef ZipSfxCallback = void Function(SfxId id);
+typedef ZipHapticCallback = void Function(HapticKind kind);
 
 class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   ZipGame({
@@ -28,6 +30,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     this.onPathChanged,
     this.onRuleTip,
     this.onSfx,
+    this.onHaptic,
     this.readOnly = false,
     int initialHintsRemaining = HintQuotaRepository.cap,
     this._initialPath = const [],
@@ -40,6 +43,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   final void Function(List<Cell> path)? onPathChanged;
   final ZipRuleTipCallback? onRuleTip;
   final ZipSfxCallback? onSfx;
+  final ZipHapticCallback? onHaptic;
   final bool readOnly;
   final PathValidator _validator;
   final List<Cell> _initialPath;
@@ -233,7 +237,8 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
       ..clear()
       ..addAll(extended);
     _notifyStats();
-    if (path.length > before) {
+    final grew = path.length > before;
+    if (grew) {
       onSfx?.call(SfxId.tap);
     }
 
@@ -241,7 +246,17 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
       _won = true;
       _celebrate = true;
       onSfx?.call(SfxId.clear);
+      onHaptic?.call(HapticKind.win);
       onWin();
+      return;
+    }
+    if (grew) {
+      // Reaching the next number (after 1, where every path starts) is a
+      // step done; any other cell is a tick.
+      final number = level.numbers[path.last];
+      onHaptic?.call(
+        number != null && number > 1 ? HapticKind.success : HapticKind.tick,
+      );
     }
   }
 

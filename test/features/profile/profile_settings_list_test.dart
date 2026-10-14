@@ -97,4 +97,37 @@ void main() {
 
     expect(deleteTaps, 1);
   });
+
+  testWidgets('the vibration switch reports its new value', (tester) async {
+    bool? changedTo;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: ProfileSettingsList(
+            sfxEnabled: true,
+            onSfxChanged: (_) {},
+            hapticsEnabled: true,
+            onHapticsChanged: (value) => changedTo = value,
+            onPrivacy: () {},
+            onAbout: () {},
+            onReport: () {},
+            onSignOut: () {},
+            onDeleteAccount: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text(AppStrings.profileVibration), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.widgetWithText(ListTile, AppStrings.profileVibration),
+        matching: find.byType(Switch),
+      ),
+    );
+    await tester.pump();
+
+    expect(changedTo, isFalse);
+  });
 }

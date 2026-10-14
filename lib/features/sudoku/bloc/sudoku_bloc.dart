@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_id.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
@@ -48,6 +49,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     this.celebrationDuration = const Duration(seconds: 2),
     this.playPeriod = PlayPeriod.daily,
     this.sfx,
+    this.haptics,
   }) : generatePuzzle =
            generatePuzzle ??
            (({required DateTime day}) => SudokuGenerator.generate(day: day)),
@@ -79,6 +81,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   final Duration celebrationDuration;
   final Duration playPeriod;
   final SfxService? sfx;
+  final HapticsService? haptics;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   var _unitFlashGeneration = 0;
@@ -324,9 +327,13 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     }
 
     if (SudokuRules.isSolved(result.grid, puzzle.solution)) {
+      haptics?.play(HapticKind.win);
       await _finish(emit);
       return;
     }
+    haptics?.play(
+      unitFlash.unitIds.isNotEmpty ? HapticKind.success : HapticKind.tick,
+    );
 
     await _persistDraft();
     await _clearUnitFlashAfterDelay(emit, unitFlash.cells);
