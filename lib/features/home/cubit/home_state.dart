@@ -12,6 +12,10 @@ sealed class HomeState with _$HomeState {
   const factory HomeState({
     required ZipLevel dailyLevel,
     required String dateId,
+
+    /// The moment the shown data was read for; its play period is the one
+    /// on screen.
+    DateTime? loadedAt,
     @Default(0) int bestPoints,
     int? bestTimeSeconds,
     int? lifetimeBestSeconds,

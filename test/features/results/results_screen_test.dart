@@ -593,6 +593,75 @@ void main() {
     },
   );
 
+  for (final (name, size) in const [
+    ('a phone turned sideways', Size(915, 412)),
+    ('a short split screen', Size(412, 480)),
+  ]) {
+    testWidgets('$name scrolls the whole page and still shows the time', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final auth = _MockAuthRepository();
+      const me = AppUser(uid: 'u1', displayName: 'Tester');
+      when(() => auth.currentUser).thenReturn(me);
+      when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(me));
+      final watch = _MockWatchLeaderboard();
+      when(
+        () => watch(
+          gameId: any(named: 'gameId'),
+          period: any(named: 'period'),
+          dayId: any(named: 'dayId'),
+        ),
+      ).thenAnswer((_) => Stream.value(const []));
+
+      await tester.pumpWidget(
+        MultiRepositoryProvider(
+          providers: [
+            RepositoryProvider<WatchLeaderboard>.value(value: watch),
+            RepositoryProvider<AuthRepository>.value(value: auth),
+            ..._actionProviders(),
+          ],
+          child: BlocProvider(
+            create: (_) => AuthCubit(
+              authRepository: auth,
+              signInWithGoogle: _MockSignInWithGoogle(),
+              signOut: _MockSignOut(),
+            ),
+            child: MaterialApp(
+              theme: buildAppTheme(),
+              home: const ResultsScreen(
+                args: ResultsArgs(
+                  title: 'Puzzle cleared!',
+                  subtitle: '',
+                  timeSeconds: 72,
+                  improved: true,
+                  replayDaily: true,
+                  gameId: GameIds.zip,
+                  currentStreak: 6,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(AppStrings.formatPlayTime(72)).hitTestable(),
+        findsOneWidget,
+      );
+      // The board and its actions are a scroll away.
+      await tester.scrollUntilVisible(
+        find.text(AppStrings.shareResult),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(AppStrings.shareResult).hitTestable(), findsOneWidget);
+    });
+  }
+
   testWidgets('a typical phone shows the whole celebration, countdown '
       'included', (tester) async {
     await tester.binding.setSurfaceSize(const Size(412, 915));

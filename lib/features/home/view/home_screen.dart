@@ -211,6 +211,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                 isOnFreeze: state.isOnFreeze,
                 freezeAvailable: state.freezeAvailable,
                 lifetimeBestSeconds: state.lifetimeBestSeconds,
+                loadedAt: state.loadedAt,
                 cleared: zipCleared,
               )
               .animate()
@@ -243,6 +244,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   isOnFreeze: state.pathWordsIsOnFreeze,
                   freezeAvailable: state.pathWordsFreezeAvailable,
                   lifetimeBestSeconds: state.pathWordsLifetimeBestSeconds,
+                  loadedAt: state.loadedAt,
                   cleared: pathWordsCleared,
                 )
                 .animate()
@@ -274,6 +276,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   isOnFreeze: state.sudokuIsOnFreeze,
                   freezeAvailable: state.sudokuFreezeAvailable,
                   lifetimeBestSeconds: state.sudokuLifetimeBestSeconds,
+                  loadedAt: state.loadedAt,
                   cleared: sudokuCleared,
                 )
                 .animate()
@@ -462,6 +465,7 @@ class _DailyGameTile extends StatelessWidget {
     this.isOnFreeze = false,
     this.freezeAvailable = false,
     this.lifetimeBestSeconds,
+    this.loadedAt,
     this.cleared = false,
   });
 
@@ -480,6 +484,10 @@ class _DailyGameTile extends StatelessWidget {
   final bool isOnFreeze;
   final bool freezeAvailable;
   final int? lifetimeBestSeconds;
+
+  /// When the tile's data was read; the countdown runs to the end of that
+  /// period, so a stale tile says a new puzzle is ready.
+  final DateTime? loadedAt;
   final bool cleared;
 
   @override
@@ -662,6 +670,7 @@ class _DailyGameTile extends StatelessWidget {
                               if (cleared)
                                 NextPuzzleCountdown(
                                   period: DevFlags.playPeriod,
+                                  periodOf: loadedAt,
                                   style: textTheme.bodySmall?.copyWith(
                                     color: accent,
                                     fontWeight: FontWeight.w700,

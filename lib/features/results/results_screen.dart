@@ -175,6 +175,9 @@ class _CelebrateAndClaimResults extends StatelessWidget {
   /// The mini board's title, a row or two and the actions footer.
   static const _minBoardHeight = 300.0;
 
+  /// Enough of the celebration to show the clear time.
+  static const _minHeaderHeight = 200.0;
+
   final ResultsArgs args;
 
   Future<void> _signInAndSync(BuildContext context) async {
@@ -213,40 +216,53 @@ class _CelebrateAndClaimResults extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
             child: signedIn
                 ? LayoutBuilder(
-                    builder: (context, constraints) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // The celebration takes the height it needs, up to
-                        // just over half the screen and never squeezing the
-                        // board below its minimum (it scrolls past that on
-                        // short phones); the board gets the rest.
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxHeight: math.max(
-                              0,
-                              math.min(
-                                constraints.maxHeight * 0.55,
-                                constraints.maxHeight - 12 - _minBoardHeight,
+                    builder: (context, constraints) {
+                      final height = constraints.maxHeight;
+                      final board = MiniLeaderboardPanel(
+                        gameId: gameId,
+                        timeSeconds: args.timeSeconds,
+                        usedHints: args.usedHints,
+                        hadMistakes: args.hadMistakes,
+                        currentStreak: args.currentStreak,
+                        footer: ResultsActions(args: args),
+                      );
+                      if (height < _minHeaderHeight + 12 + _minBoardHeight) {
+                        // Sideways or split screen: no room for both, so the
+                        // whole page scrolls, celebration first.
+                        return SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _celebrationHeader(context, compact: true),
+                              const SizedBox(height: 12),
+                              SizedBox(height: _minBoardHeight, child: board),
+                            ],
+                          ),
+                        );
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // The celebration takes the height it needs, up to
+                          // just over half the screen and never squeezing the
+                          // board below its minimum (it scrolls past that);
+                          // the board gets the rest.
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: math.min(
+                                height * 0.55,
+                                height - 12 - _minBoardHeight,
                               ),
                             ),
+                            child: SingleChildScrollView(
+                              child: _celebrationHeader(context, compact: true),
+                            ),
                           ),
-                          child: SingleChildScrollView(
-                            child: _celebrationHeader(context, compact: true),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: MiniLeaderboardPanel(
-                            gameId: gameId,
-                            timeSeconds: args.timeSeconds,
-                            usedHints: args.usedHints,
-                            hadMistakes: args.hadMistakes,
-                            currentStreak: args.currentStreak,
-                            footer: ResultsActions(args: args),
-                          ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: 12),
+                          Expanded(child: board),
+                        ],
+                      );
+                    },
                   )
                 : LayoutBuilder(
                     builder: (context, constraints) {

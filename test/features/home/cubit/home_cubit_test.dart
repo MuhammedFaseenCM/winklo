@@ -79,6 +79,7 @@ void main() {
 
   HomeCubit buildCubit({
     DateTime? now,
+    DateTime Function()? clock,
     Duration playPeriod = PlayPeriod.daily,
     Timer Function(Duration, void Function())? createTimer,
   }) {
@@ -91,7 +92,8 @@ void main() {
       checkAppUpdate: checkAppUpdate,
       appUpdateRepository: appUpdateRepository,
       zipLevelRepository: zipLevels,
-      now: now ?? DateTime.utc(2026, 9, 13),
+      now: clock == null ? (now ?? DateTime.utc(2026, 9, 13)) : null,
+      clock: clock,
       playPeriod: playPeriod,
       createTimer: createTimer ?? (_, _) => Timer(Duration.zero, () {}),
     );
@@ -434,6 +436,55 @@ void main() {
       ).called(1);
       // And it waits for the midnight after that.
       expect(waits, hasLength(2));
+      await cubit.close();
+    });
+
+    test('a reload that ends after midnight reloads again at once', () async {
+      stubIdleScores();
+      var now = DateTime(2026, 10, 14, 23, 59, 59);
+      // The update check is slow enough to carry the load past midnight.
+      when(() => checkAppUpdate()).thenAnswer((_) async {
+        now = DateTime(2026, 10, 15, 0, 0, 1);
+        return AppUpdateDecision.none;
+      });
+      final waits = <Duration>[];
+      final cubit = buildCubit(
+        clock: () => now,
+        createTimer: (wait, _) {
+          waits.add(wait);
+          return Timer(const Duration(days: 1), () {});
+        },
+      );
+
+      await cubit.load();
+
+      expect(waits.single, Duration.zero);
+      expect(cubit.state.loadedAt, DateTime(2026, 10, 14, 23, 59, 59));
+      await cubit.close();
+    });
+
+    test('a slower, older reload never overwrites a newer one', () async {
+      stubIdleScores();
+      final slow = Completer<AppUpdateDecision>();
+      final answers = [slow.future, Future.value(AppUpdateDecision.none)];
+      when(() => checkAppUpdate()).thenAnswer((_) => answers.removeAt(0));
+      final cubit = buildCubit(
+        createTimer: (_, _) => Timer(const Duration(days: 1), () {}),
+      );
+      final emitted = <HomeState>[];
+      final sub = cubit.stream.listen(emitted.add);
+
+      final older = cubit.load();
+      await cubit.load();
+      slow.complete(
+        const AppUpdateDecision(status: AppUpdateStatus.soft, storeUrl: 'x'),
+      );
+      await older;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(emitted, hasLength(1));
+      expect(cubit.state.updateStatus, AppUpdateStatus.none);
+      await sub.cancel();
       await cubit.close();
     });
 

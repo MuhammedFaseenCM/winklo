@@ -31,11 +31,18 @@ class HomeCubit extends Cubit<HomeState> {
     this.scheduleEngagementNotifications,
     required this.zipLevelRepository,
     DateTime? now,
+    DateTime Function()? clock,
     this.playPeriod = PlayPeriod.daily,
     Timer Function(Duration wait, void Function() callback)? createTimer,
   }) : _now = now,
+       _clockFn = clock,
        _createTimer = createTimer ?? Timer.new,
-       super(HomeState.initial(now ?? DateTime.now(), period: playPeriod));
+       super(
+         HomeState.initial(
+           clock?.call() ?? now ?? DateTime.now(),
+           period: playPeriod,
+         ),
+       );
 
   /// How long after a new period starts Home reloads, so the new day id is
   /// already in effect.
@@ -51,26 +58,32 @@ class HomeCubit extends Cubit<HomeState> {
   final ScheduleEngagementNotifications? scheduleEngagementNotifications;
   final ZipLevelRepository zipLevelRepository;
   final DateTime? _now;
+  final DateTime Function()? _clockFn;
   final Duration playPeriod;
   final Timer Function(Duration wait, void Function() callback) _createTimer;
   Timer? _rolloverTimer;
+  var _loadGeneration = 0;
 
-  DateTime get _clock => _now ?? DateTime.now();
+  DateTime get _clock => _clockFn?.call() ?? _now ?? DateTime.now();
 
-  /// Reloads when the next puzzle unlocks, in case Home stays open across
-  /// midnight. Coming back to the app reloads too, which covers a timer that
-  /// fires late after the phone slept.
-  void _scheduleRollover() {
+  /// Reloads when the period after [loadedAt]'s unlocks, in case Home stays
+  /// open across midnight. A load that ran past that moment reloads at once.
+  /// Coming back to the app reloads too, which covers a timer that fires
+  /// late after the phone slept.
+  void _scheduleRollover(DateTime loadedAt) {
     _rolloverTimer?.cancel();
     if (isClosed) return;
-    final now = _clock;
-    final wait = PlayPeriod.nextStart(now, playPeriod).difference(now);
-    _rolloverTimer = _createTimer(wait + rolloverSlack, () {
+    final wait =
+        PlayPeriod.nextStart(loadedAt, playPeriod).difference(_clock) +
+        rolloverSlack;
+    _rolloverTimer = _createTimer(wait.isNegative ? Duration.zero : wait, () {
       if (!isClosed) unawaited(load());
     });
   }
 
   Future<void> load() async {
+    // Home reloads often; only the latest load may show its results.
+    final generation = ++_loadGeneration;
     final now = _clock;
     final expectedDateId = DailyPuzzleGenerator.dateId(now, period: playPeriod);
     late final ZipLevel level;
@@ -105,12 +118,13 @@ class HomeCubit extends Cubit<HomeState> {
     final pathWordsLifetimeBest = getBestDailyTimeSeconds(GameIds.pathWords);
     final sudokuLifetimeBest = getBestDailyTimeSeconds(GameIds.sudoku);
     final decision = await checkAppUpdate();
-    if (isClosed) return;
+    if (isClosed || generation != _loadGeneration) return;
     _logSoftUpdateShown(decision.status);
     emit(
       state.copyWith(
         dailyLevel: level,
         dateId: level.id,
+        loadedAt: now,
         bestPoints: zipPts,
         bestTimeSeconds: zipTime,
         lifetimeBestSeconds: zipLifetimeBest,
@@ -138,7 +152,7 @@ class HomeCubit extends Cubit<HomeState> {
         updateRequiredLabel: decision.requiredLabel,
       ),
     );
-    _scheduleRollover();
+    _scheduleRollover(now);
 
     unawaited(
       scheduleEngagementNotifications?.call(
