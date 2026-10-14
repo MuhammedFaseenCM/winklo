@@ -14,6 +14,7 @@ import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/repositories/share_repository.dart';
 import 'package:winklo/domain/usecases/next_uncleared_daily.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
@@ -40,7 +41,9 @@ class _MockSignOut extends Mock implements SignOut {}
 
 class _MockNextUnclearedDaily extends Mock implements NextUnclearedDaily {}
 
-/// What the daily Results actions read; the app always provides both.
+class _MockShareRepository extends Mock implements ShareRepository {}
+
+/// What the daily Results actions read; the app always provides them.
 List<RepositoryProvider<Object>> _actionProviders() {
   final next = _MockNextUnclearedDaily();
   when(
@@ -54,6 +57,7 @@ List<RepositoryProvider<Object>> _actionProviders() {
   return [
     RepositoryProvider<NextUnclearedDaily>.value(value: next),
     RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+    RepositoryProvider<ShareRepository>.value(value: _MockShareRepository()),
   ];
 }
 
@@ -134,7 +138,8 @@ void main() {
     expect(find.text(AppStrings.resultsTimeLabel), findsOneWidget);
     expect(find.text(AppStrings.newPersonalBest), findsOneWidget);
     expect(find.byType(MiniLeaderboardPanel), findsOneWidget);
-    expect(find.text(AppStrings.seeFullLeaderboard), findsOneWidget);
+    expect(find.text(AppStrings.resultsFullBoard), findsOneWidget);
+    expect(find.text(AppStrings.shareResult), findsOneWidget);
     expect(find.text(AppStrings.backHome), findsOneWidget);
     expect(find.byType(ResultsBoardTease), findsNothing);
     expect(

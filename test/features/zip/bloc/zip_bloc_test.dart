@@ -242,6 +242,7 @@ void main() {
       expect(bloc.state.points, 940);
       expect(bloc.state.timeSeconds, 12);
       expect(bloc.state.resultsExtra?.currentStreak, 3);
+      expect(bloc.state.resultsExtra?.day, DateTime(2026, 9, 13));
       verify(
         () => submitScore(
           modeKey: 'zip_daily_20260913',

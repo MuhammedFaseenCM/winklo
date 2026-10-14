@@ -306,6 +306,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           gameId: GameIds.zip,
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
+          day: state.day,
         ),
       ),
     );

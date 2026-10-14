@@ -429,6 +429,7 @@ void main() {
       expect(bloc.state.status, SudokuStatus.navigating);
       expect(bloc.state.points, 950);
       expect(bloc.state.resultsExtra?.gameId, GameIds.sudoku);
+      expect(bloc.state.resultsExtra?.day, DateTime(2026, 9, 27));
       verify(
         () => submitScore(
           modeKey: any(named: 'modeKey', that: startsWith('sudoku_')),

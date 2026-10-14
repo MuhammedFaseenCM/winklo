@@ -21,6 +21,7 @@ import 'package:winklo/data/repositories/external_link_repository_impl.dart';
 import 'package:winklo/data/repositories/auth_repository_impl.dart';
 import 'package:winklo/data/repositories/category_repository_impl.dart';
 import 'package:winklo/data/repositories/firebase_analytics_repository_impl.dart';
+import 'package:winklo/data/repositories/share_repository_impl.dart';
 import 'package:winklo/data/repositories/hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/in_progress_run_repository_impl.dart';
 import 'package:winklo/data/repositories/issue_report_repository_impl.dart';
@@ -38,6 +39,7 @@ import 'package:winklo/data/repositories/word_match_repository_impl.dart';
 import 'package:winklo/data/repositories/zip_level_repository_impl.dart';
 import 'package:winklo/domain/repositories/activity_repository.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
+import 'package:winklo/domain/repositories/share_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/external_link_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
@@ -121,6 +123,7 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<AnalyticsRepository>(
       create: (_) => FirebaseAnalyticsRepositoryImpl(),
     ),
+    RepositoryProvider<ShareRepository>(create: (_) => ShareRepositoryImpl()),
     RepositoryProvider<NotificationClient>(
       create: (_) => FirebaseNotificationClient(),
     ),

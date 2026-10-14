@@ -13,11 +13,13 @@ import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/repositories/share_repository.dart';
 import 'package:winklo/domain/usecases/next_uncleared_daily.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+import 'package:winklo/features/results/logic/result_share_text.dart';
 import 'package:winklo/features/results/results_args.dart';
 import 'package:winklo/features/results/results_screen.dart';
 
@@ -29,12 +31,15 @@ class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _MockNextUnclearedDaily extends Mock implements NextUnclearedDaily {}
 
+class _MockShareRepository extends Mock implements ShareRepository {}
+
 void main() {
   const user = AppUser(uid: 'u1', displayName: 'Tester');
 
   late _MockAuthRepository auth;
   late _MockWatchLeaderboard watch;
   late _MockNextUnclearedDaily next;
+  late _MockShareRepository share;
   late MockAnalyticsRepository analytics;
   late StreamController<List<LeaderboardEntry>> board;
 
@@ -44,6 +49,7 @@ void main() {
     auth = _MockAuthRepository();
     watch = _MockWatchLeaderboard();
     next = _MockNextUnclearedDaily();
+    share = _MockShareRepository();
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
     board = StreamController<List<LeaderboardEntry>>.broadcast();
@@ -76,7 +82,7 @@ void main() {
         ),
         GoRoute(
           path: '/results',
-          builder: (_, _) => const ResultsScreen(
+          builder: (_, _) => ResultsScreen(
             args: ResultsArgs(
               title: 'Puzzle cleared!',
               subtitle: '',
@@ -86,6 +92,7 @@ void main() {
               gameId: GameIds.zip,
               usedHints: false,
               currentStreak: 5,
+              day: DateTime(2026, 10, 9),
             ),
           ),
         ),
@@ -97,6 +104,7 @@ void main() {
           RepositoryProvider<WatchLeaderboard>.value(value: watch),
           RepositoryProvider<AuthRepository>.value(value: auth),
           RepositoryProvider<NextUnclearedDaily>.value(value: next),
+          RepositoryProvider<ShareRepository>.value(value: share),
           RepositoryProvider<AnalyticsRepository>.value(value: analytics),
         ],
         child: BlocProvider(
@@ -158,7 +166,7 @@ void main() {
     nextIs(GameIds.sudoku);
     await pumpZipResults(tester);
 
-    await tester.tap(find.text(AppStrings.seeFullLeaderboard));
+    await tester.tap(find.text(AppStrings.resultsFullBoard));
     await tester.pumpAndSettle();
     expect(find.text('board zip'), findsOneWidget);
     verify(
@@ -179,6 +187,47 @@ void main() {
     verify(
       () => analytics.logResultsAction(gameId: GameIds.zip, action: 'home'),
     ).called(1);
+  });
+
+  testWidgets('share sends a spoiler-free result and logs it', (tester) async {
+    nextIs(GameIds.sudoku);
+    when(() => share.shareText(any())).thenAnswer((_) async => true);
+    await pumpZipResults(tester);
+
+    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.pumpAndSettle();
+
+    verify(
+      () => share.shareText(
+        resultShareText(
+          gameId: GameIds.zip,
+          day: DateTime(2026, 10, 9),
+          timeSeconds: 72,
+          currentStreak: 5,
+          usedHints: false,
+        ),
+      ),
+    ).called(1);
+    verify(
+      () => analytics.logResultsAction(gameId: GameIds.zip, action: 'share'),
+    ).called(1);
+    verify(() => analytics.logShare(gameId: GameIds.zip)).called(1);
+  });
+
+  testWidgets('closing the share sheet logs the tap but not a share', (
+    tester,
+  ) async {
+    nextIs(GameIds.sudoku);
+    when(() => share.shareText(any())).thenAnswer((_) async => false);
+    await pumpZipResults(tester);
+
+    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.pumpAndSettle();
+
+    verify(
+      () => analytics.logResultsAction(gameId: GameIds.zip, action: 'share'),
+    ).called(1);
+    verifyNever(() => analytics.logShare(gameId: any(named: 'gameId')));
   });
 }
 

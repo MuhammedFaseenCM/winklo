@@ -742,6 +742,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           gameId: GameIds.pathWords,
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
+          day: state.day,
         ),
       ),
     );

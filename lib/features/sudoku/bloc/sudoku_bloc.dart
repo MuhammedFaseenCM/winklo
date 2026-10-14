@@ -593,6 +593,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           gameId: GameIds.sudoku,
           usedHints: state.usedHintsThisRun,
           hadMistakes: state.hadMistakesThisRun,
+          day: state.day,
         ),
       ),
     );

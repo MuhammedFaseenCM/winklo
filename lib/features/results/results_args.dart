@@ -14,6 +14,7 @@ class ResultsArgs {
     this.gameId,
     this.usedHints,
     this.hadMistakes,
+    this.day,
   });
 
   final String title;
@@ -32,4 +33,7 @@ class ResultsArgs {
   /// Session flags for soft-claim leaderboard sync. Null = unknown.
   final bool? usedHints;
   final bool? hadMistakes;
+
+  /// The daily this run cleared, for the share text.
+  final DateTime? day;
 }

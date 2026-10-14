@@ -100,6 +100,8 @@ abstract final class AppStrings {
   static const backHome = 'Back home';
   static String playNextGame(String gameTitle) => 'Play $gameTitle next';
   static const perfectDay = 'Perfect day! All three puzzles cleared.';
+  static const shareResult = 'Share';
+  static const resultsFullBoard = 'Full board';
   static const resultsTimeLabel = 'time';
 
   static String formatPlayTime(int totalSeconds) {

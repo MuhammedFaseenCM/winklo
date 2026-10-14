@@ -472,7 +472,8 @@ void main() {
             '/path-words',
           )
           .having((s) => s.resultsExtra?.currentStreak, 'currentStreak', 3)
-          .having((s) => s.resultsExtra?.longestStreak, 'longestStreak', 5),
+          .having((s) => s.resultsExtra?.longestStreak, 'longestStreak', 5)
+          .having((s) => s.resultsExtra?.day, 'day', DateTime(2026, 9, 17)),
     ],
     verify: (_) {
       expect(waited, [const Duration(seconds: 2)]);
