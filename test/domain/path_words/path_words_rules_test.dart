@@ -194,6 +194,19 @@ void main() {
       expect(paths, {'t0': traced});
     });
 
+    test('blocks the traced cells, matching what the board draws', () {
+      const traced = [Cell(0, 1), Cell(0, 2), Cell(1, 2)];
+      final blocked = PathWordsRules.blockedCells(
+        puzzle: decoyPuzzle(),
+        completedTargetIds: {'t0'},
+        placedPaths: const [
+          PathWordsStroke(cells: traced, colorIndex: 0, targetId: 't0'),
+        ],
+      );
+      // The stored route's other letters belong to no word and look free.
+      expect(blocked, traced.toSet());
+    });
+
     test('falls back to the stored path when no stroke is kept', () {
       final paths = PathWordsRules.completedPaths(
         puzzle: decoyPuzzle(),

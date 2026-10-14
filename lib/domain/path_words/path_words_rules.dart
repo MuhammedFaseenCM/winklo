@@ -4,31 +4,24 @@ import '../entities/path_words_puzzle.dart';
 class PathWordsRules {
   PathWordsRules._();
 
-  static Set<Cell> lockedCells(
-    PathWordsPuzzle puzzle,
-    Set<String> completedTargetIds,
-  ) {
-    final locked = <Cell>{};
-    for (final target in puzzle.targets) {
-      if (completedTargetIds.contains(target.id)) {
-        locked.addAll(target.path);
-      }
-    }
-    return locked;
-  }
-
   static Set<Cell> occupiedCells(Iterable<PathWordsStroke> strokes) {
     return {for (final stroke in strokes) ...stroke.cells};
   }
 
-  /// Cells a new stroke must not enter: solved words and every placed stroke.
+  /// Cells a new stroke must not enter: solved words, where they were traced
+  /// (as the board draws them), and every placed stroke.
   static Set<Cell> blockedCells({
     required PathWordsPuzzle puzzle,
     required Set<String> completedTargetIds,
-    required Iterable<PathWordsStroke> placedPaths,
+    required List<PathWordsStroke> placedPaths,
   }) {
     return {
-      ...lockedCells(puzzle, completedTargetIds),
+      for (final path in completedPaths(
+        puzzle: puzzle,
+        completedTargetIds: completedTargetIds,
+        placedPaths: placedPaths,
+      ).values)
+        ...path,
       ...occupiedCells(placedPaths),
     };
   }
