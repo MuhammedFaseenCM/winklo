@@ -1,5 +1,8 @@
+import '../failures.dart';
+
 abstract class ShareRepository {
-  /// Opens the system share sheet with [text]. True when it was shared, or
-  /// when the platform can't say; false when the player closed the sheet.
+  /// Opens the system share sheet with [text]. True once the player picks an
+  /// app; false when they close the sheet. Throws a [Failure] when the sheet
+  /// can't open.
   Future<bool> shareText(String text);
 }

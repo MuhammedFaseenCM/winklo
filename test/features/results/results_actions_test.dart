@@ -10,6 +10,7 @@ import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
+import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
@@ -22,6 +23,7 @@ import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/results/logic/result_share_text.dart';
 import 'package:winklo/features/results/results_args.dart';
 import 'package:winklo/features/results/results_screen.dart';
+import 'package:winklo/features/results/view/results_actions.dart';
 
 import '../../helpers/mock_analytics_repository.dart';
 
@@ -134,6 +136,46 @@ void main() {
     ).thenReturn(gameId);
   }
 
+  testWidgets('the actions stay compact at a 360 dp phone width', (
+    tester,
+  ) async {
+    nextIs(GameIds.pathWords);
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<NextUnclearedDaily>.value(value: next),
+          RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+          RepositoryProvider<ShareRepository>.value(value: share),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: const Scaffold(
+            body: Center(
+              // 360 dp less the Results screen's 24 dp side padding.
+              child: SizedBox(
+                width: 312,
+                child: ResultsActions(
+                  args: ResultsArgs(
+                    title: 'Puzzle cleared!',
+                    subtitle: '',
+                    timeSeconds: 72,
+                    improved: false,
+                    gameId: GameIds.zip,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // The live board shares this Expanded, so every extra row here costs it
+    // a leaderboard row; the old footer (full board + home) was about 108 px.
+    expect(tester.getSize(find.byType(ResultsActions)).height, lessThan(112));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('offers the next uncleared daily and opens it', (tester) async {
     nextIs(GameIds.pathWords);
     await pumpZipResults(tester);
@@ -181,7 +223,7 @@ void main() {
     nextIs(GameIds.sudoku);
     await pumpZipResults(tester);
 
-    await tester.tap(find.text(AppStrings.backHome));
+    await tester.tap(find.byTooltip(AppStrings.backHome));
     await tester.pumpAndSettle();
     expect(find.text('home'), findsOneWidget);
     verify(
@@ -227,6 +269,41 @@ void main() {
     verify(
       () => analytics.logResultsAction(gameId: GameIds.zip, action: 'share'),
     ).called(1);
+    verifyNever(() => analytics.logShare(gameId: any(named: 'gameId')));
+  });
+
+  testWidgets('a second tap while the sheet is open is ignored', (
+    tester,
+  ) async {
+    nextIs(GameIds.sudoku);
+    final pending = Completer<bool>();
+    when(() => share.shareText(any())).thenAnswer((_) => pending.future);
+    await pumpZipResults(tester);
+
+    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.pump();
+    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.pump();
+    pending.complete(true);
+    await tester.pumpAndSettle();
+
+    verify(() => share.shareText(any())).called(1);
+    verify(() => analytics.logShare(gameId: GameIds.zip)).called(1);
+  });
+
+  testWidgets('a sheet that cannot open says so and logs no share', (
+    tester,
+  ) async {
+    nextIs(GameIds.sudoku);
+    when(
+      () => share.shareText(any()),
+    ).thenAnswer((_) async => throw const Failure('share failed'));
+    await pumpZipResults(tester);
+
+    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.shareFailed), findsOneWidget);
     verifyNever(() => analytics.logShare(gameId: any(named: 'gameId')));
   });
 }

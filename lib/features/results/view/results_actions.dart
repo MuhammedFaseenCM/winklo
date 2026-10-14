@@ -6,6 +6,7 @@ import '../../../core/dev_flags.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/zip_ui.dart';
+import '../../../domain/failures.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/repositories/analytics_repository.dart';
@@ -33,17 +34,26 @@ class ResultsActions extends StatelessWidget {
   Future<void> _share(BuildContext context) async {
     final share = context.read<ShareRepository>();
     final analytics = context.read<AnalyticsRepository>();
+    final messenger = ScaffoldMessenger.maybeOf(context);
     await _log(context, 'share');
-    final shared = await share.shareText(
-      resultShareText(
-        gameId: _gameId,
-        day: args.day ?? DateTime.now(),
-        timeSeconds: args.timeSeconds,
-        currentStreak: args.currentStreak,
-        usedHints: args.usedHints,
-        hadMistakes: args.hadMistakes,
-      ),
-    );
+    final bool shared;
+    try {
+      shared = await share.shareText(
+        resultShareText(
+          gameId: _gameId,
+          day: args.day ?? DateTime.now(),
+          timeSeconds: args.timeSeconds,
+          currentStreak: args.currentStreak,
+          usedHints: args.usedHints,
+          hadMistakes: args.hadMistakes,
+        ),
+      );
+    } on Failure {
+      messenger?.showSnackBar(
+        const SnackBar(content: Text(AppStrings.shareFailed)),
+      );
+      return;
+    }
     if (shared) await analytics.logShare(gameId: _gameId);
   }
 
@@ -62,13 +72,19 @@ class ResultsActions extends StatelessWidget {
       playId: PlayPeriod.id(DateTime.now(), DevFlags.playPeriod),
     );
 
+    // Compact, with home as an icon, so the live board above (which shares
+    // this Expanded) keeps room for its rows on small phones.
+    const compactPadding = EdgeInsets.symmetric(horizontal: 12, vertical: 10);
+    final compactStyle = OutlinedButton.styleFrom(padding: compactPadding);
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (next != null)
           ZipPrimaryButton(
             label: AppStrings.playNextGame(_titleFor(next)),
             icon: Icons.play_arrow_rounded,
+            compact: true,
             onPressed: () async {
               await _log(context, 'play_next');
               if (!context.mounted) return;
@@ -76,31 +92,29 @@ class ResultsActions extends StatelessWidget {
             },
           )
         else
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              AppStrings.perfectDay,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: ZipColors.success,
-                fontWeight: FontWeight.w800,
-              ),
+          Text(
+            AppStrings.perfectDay,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: ZipColors.success,
+              fontWeight: FontWeight.w800,
             ),
           ),
-        const SizedBox(height: 10),
-        // Side by side so the live board above keeps its height.
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
+              child: _OneAtATimeButton(
+                style: compactStyle,
                 onPressed: () => _share(context),
-                icon: const Icon(Icons.share_rounded),
-                label: const Text(AppStrings.shareResult, maxLines: 1),
+                icon: Icons.share_rounded,
+                label: AppStrings.shareResult,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
+                style: compactStyle,
                 onPressed: () async {
                   await _log(context, 'leaderboard');
                   if (!context.mounted) return;
@@ -114,18 +128,61 @@ class ResultsActions extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(width: 8),
+            IconButton.outlined(
+              tooltip: AppStrings.backHome,
+              onPressed: () async {
+                await _log(context, 'home');
+                if (!context.mounted) return;
+                context.go('/');
+              },
+              icon: const Icon(Icons.home_rounded),
+            ),
           ],
         ),
-        const SizedBox(height: 2),
-        TextButton(
-          onPressed: () async {
-            await _log(context, 'home');
-            if (!context.mounted) return;
-            context.go('/');
-          },
-          child: const Text(AppStrings.backHome),
-        ),
       ],
+    );
+  }
+}
+
+/// An outlined button that ignores taps until its last press finishes, so a
+/// double tap can't open the share sheet twice.
+class _OneAtATimeButton extends StatefulWidget {
+  const _OneAtATimeButton({
+    required this.style,
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  final ButtonStyle style;
+  final Future<void> Function() onPressed;
+  final IconData icon;
+  final String label;
+
+  @override
+  State<_OneAtATimeButton> createState() => _OneAtATimeButtonState();
+}
+
+class _OneAtATimeButtonState extends State<_OneAtATimeButton> {
+  var _busy = false;
+
+  Future<void> _press() async {
+    setState(() => _busy = true);
+    try {
+      await widget.onPressed();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      style: widget.style,
+      onPressed: _busy ? null : _press,
+      icon: Icon(widget.icon),
+      label: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
   }
 }

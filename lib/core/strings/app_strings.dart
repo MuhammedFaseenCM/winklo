@@ -101,6 +101,7 @@ abstract final class AppStrings {
   static String playNextGame(String gameTitle) => 'Play $gameTitle next';
   static const perfectDay = 'Perfect day! All three puzzles cleared.';
   static const shareResult = 'Share';
+  static const shareFailed = 'Couldn’t open sharing. Try again.';
   static const resultsFullBoard = 'Full board';
   static const resultsTimeLabel = 'time';
 

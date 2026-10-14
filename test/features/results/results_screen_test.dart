@@ -140,7 +140,7 @@ void main() {
     expect(find.byType(MiniLeaderboardPanel), findsOneWidget);
     expect(find.text(AppStrings.resultsFullBoard), findsOneWidget);
     expect(find.text(AppStrings.shareResult), findsOneWidget);
-    expect(find.text(AppStrings.backHome), findsOneWidget);
+    expect(find.byTooltip(AppStrings.backHome), findsOneWidget);
     expect(find.byType(ResultsBoardTease), findsNothing);
     expect(
       find.text(AppStrings.saveTimeToBoard(AppStrings.formatPlayTime(12))),
