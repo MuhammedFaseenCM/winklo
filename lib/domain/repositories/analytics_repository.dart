@@ -3,13 +3,21 @@ abstract class AnalyticsRepository {
 
   Future<void> logHomeGameOpened({required String gameId});
 
-  Future<void> logGameStarted({required String gameId});
+  /// [dayId] is the daily's play id; with [resumed] it gives each day's
+  /// start-to-clear rate (first opens vs. returns to a saved run).
+  Future<void> logGameStarted({
+    required String gameId,
+    String? dayId,
+    bool resumed = false,
+  });
 
   Future<void> logGameCompleted({
     required String gameId,
     required int points,
     required int timeSeconds,
     int? streak,
+    String? dayId,
+    bool? usedHints,
   });
 
   Future<void> logHintUsed({
@@ -43,4 +51,28 @@ abstract class AnalyticsRepository {
   Future<void> logProfileDeleteAccountOpened();
 
   Future<void> logAppOpen({String? platform});
+
+  /// Google sign-in finished.
+  Future<void> logLogin();
+
+  /// A daily result went out through the system share sheet.
+  Future<void> logShare({required String gameId});
+
+  Future<void> logNotificationOpened({
+    required String type,
+    required String route,
+  });
+
+  /// The soft update banner or the forced update screen appeared.
+  Future<void> logUpdatePromptShown({required bool forced});
+
+  Future<void> logUpdatePromptAccepted({required bool forced});
+
+  Future<void> logProfileNameChanged();
+
+  /// [source] is `preset` or `photo`.
+  Future<void> logProfileAvatarChanged({required String source});
+
+  /// A clear after a missed day spent the game's streak freeze.
+  Future<void> logStreakFreezeUsed({required String gameId});
 }

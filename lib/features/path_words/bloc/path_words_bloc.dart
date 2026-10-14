@@ -210,7 +210,11 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           ),
         );
       }
-      await analytics.logGameStarted(gameId: GameIds.pathWords);
+      await analytics.logGameStarted(
+        gameId: GameIds.pathWords,
+        dayId: playId,
+        resumed: draft != null,
+      );
     } catch (_) {
       if (emit.isDone) return;
       emit(
@@ -715,6 +719,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       points: points,
       timeSeconds: elapsed,
       streak: streak.current,
+      dayId: _runPlayId,
+      usedHints: state.usedHintsThisRun,
     );
 
     if (emit.isDone) return;

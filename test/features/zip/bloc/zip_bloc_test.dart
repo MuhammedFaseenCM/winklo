@@ -188,6 +188,16 @@ void main() {
           playId: '20260913',
         ),
       ).called(1);
+      verify(
+        () => analytics.logGameCompleted(
+          gameId: GameIds.zip,
+          points: any(named: 'points'),
+          timeSeconds: any(named: 'timeSeconds'),
+          streak: 1,
+          dayId: '20260913',
+          usedHints: true,
+        ),
+      ).called(1);
       await bloc.close();
     },
   );
@@ -330,9 +340,39 @@ void main() {
     build: buildBloc,
     act: (b) => b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 14))),
     verify: (_) {
-      verify(() => analytics.logGameStarted(gameId: GameIds.zip)).called(1);
+      verify(
+        () => analytics.logGameStarted(
+          gameId: GameIds.zip,
+          dayId: '20260914',
+          resumed: false,
+        ),
+      ).called(1);
     },
   );
+
+  test('returning to a saved run logs game_started as resumed', () async {
+    final drafts = _MemoryInProgressRuns();
+    drafts.runs['${GameIds.zip}_20260913'] = const InProgressRun(
+      gameId: GameIds.zip,
+      playId: '20260913',
+      elapsedMs: 4000,
+      board: {'path': <List<int>>[]},
+    );
+    final bloc = buildBloc(now: DateTime(2026, 9, 13), drafts: drafts);
+
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
+    await pumpEventQueue();
+
+    verify(
+      () => analytics.logGameStarted(
+        gameId: GameIds.zip,
+        dayId: '20260913',
+        resumed: true,
+      ),
+    ).called(1);
+    await bloc.close();
+  });
 
   blocTest<ZipBloc, ZipState>(
     'ZipHint marks usedHintsThisRun and logs hint_used',
@@ -394,7 +434,7 @@ void main() {
 
     expect(
       drafts.runs['${GameIds.zip}_20260913']?.boardFingerprint,
-      ready.level!.fingerprint,
+      ready.level.fingerprint,
     );
     await bloc.close();
   });

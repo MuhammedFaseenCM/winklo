@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../domain/failures.dart';
+import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/usecases/clear_notification_token.dart';
 import '../../../domain/usecases/sign_in_with_google.dart';
@@ -21,6 +22,7 @@ class AuthCubit extends Cubit<AuthState> {
     this._syncFcmToken,
     this._clearNotificationToken,
     this._syncProgress,
+    this._analytics,
   }) : super(
          _authRepository.currentUser != null
              ? AuthState(
@@ -62,6 +64,7 @@ class AuthCubit extends Cubit<AuthState> {
 
   /// Flushes unpushed local progress before sign-out (see [signOut]).
   final SyncProgress? _syncProgress;
+  final AnalyticsRepository? _analytics;
   StreamSubscription? _subscription;
 
   /// Upper bound for each pre-sign-out remote step.
@@ -76,6 +79,7 @@ class AuthCubit extends Cubit<AuthState> {
       if (isClosed) return false;
       emit(AuthState(status: AuthStatus.signedIn, user: user));
       unawaited(_syncFcmToken?.call(user.uid));
+      unawaited(_analytics?.logLogin());
       return true;
     } on Failure catch (e) {
       if (isClosed) return false;

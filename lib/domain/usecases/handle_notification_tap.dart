@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import '../repositories/analytics_repository.dart';
 import '../repositories/notification_repository.dart';
 
 /// Resolves a notification tap to a go_router location (default `/`).
@@ -5,6 +8,11 @@ import '../repositories/notification_repository.dart';
 /// Unknown or mistyped deep-links (e.g. `/Home`, `/word_match`) fall back to
 /// home so taps never land on go_router's Page Not Found screen.
 class HandleNotificationTap {
+  HandleNotificationTap({AnalyticsRepository? analytics})
+    : _analytics = analytics;
+
+  final AnalyticsRepository? _analytics;
+
   /// Exact paths that map 1:1 to app routes.
   static const Set<String> allowedExactRoutes = {
     '/',
@@ -28,7 +36,14 @@ class HandleNotificationTap {
     '/category_race': '/category-race',
   };
 
+  /// Also logs `notification_opened` with the route the tap resolved to.
   String call(NotificationTap tap) {
+    final route = _resolve(tap);
+    unawaited(_analytics?.logNotificationOpened(type: tap.type, route: route));
+    return route;
+  }
+
+  String _resolve(NotificationTap tap) {
     final raw = tap.route.trim();
     if (raw.isEmpty) return '/';
     if (!raw.startsWith('/')) return '/';

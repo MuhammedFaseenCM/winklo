@@ -222,7 +222,11 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         ),
       );
     }
-    await analytics.logGameStarted(gameId: GameIds.sudoku);
+    await analytics.logGameStarted(
+      gameId: GameIds.sudoku,
+      dayId: playId,
+      resumed: draft != null,
+    );
   }
 
   void _onCellSelected(SudokuCellSelected event, Emitter<SudokuState> emit) {
@@ -566,6 +570,8 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       points: points,
       timeSeconds: elapsed,
       streak: streak.current,
+      dayId: _runPlayId,
+      usedHints: state.usedHintsThisRun,
     );
 
     if (emit.isDone) return;

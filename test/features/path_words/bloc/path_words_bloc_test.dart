@@ -222,7 +222,11 @@ void main() {
       ),
     ).thenAnswer((_) async {});
     when(
-      () => analytics.logGameStarted(gameId: any(named: 'gameId')),
+      () => analytics.logGameStarted(
+        gameId: any(named: 'gameId'),
+        dayId: any(named: 'dayId'),
+        resumed: any(named: 'resumed'),
+      ),
     ).thenAnswer((_) async {});
     when(
       () => analytics.logGameCompleted(
@@ -230,6 +234,8 @@ void main() {
         points: any(named: 'points'),
         timeSeconds: any(named: 'timeSeconds'),
         streak: any(named: 'streak'),
+        dayId: any(named: 'dayId'),
+        usedHints: any(named: 'usedHints'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -1598,6 +1604,38 @@ void main() {
       expect(bloc.state.finished, isTrue);
     },
   );
+
+  test('returning to a saved run logs game_started as resumed', () async {
+    when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+      (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+    );
+    final drafts = _MemoryInProgressRuns();
+    drafts.runs['${GameIds.pathWords}_20260917'] = const InProgressRun(
+      gameId: GameIds.pathWords,
+      playId: '20260917',
+      elapsedMs: 3000,
+      board: {
+        'activePath': <List<int>>[],
+        'placedPaths': <Map<String, Object>>[],
+        'completedTargetIds': <String>[],
+        'hintRevealLength': 0,
+      },
+    );
+    final bloc = buildBloc(drafts: drafts);
+
+    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+    await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+    await pumpEventQueue();
+
+    verify(
+      () => analytics.logGameStarted(
+        gameId: GameIds.pathWords,
+        dayId: '20260917',
+        resumed: true,
+      ),
+    ).called(1);
+    await bloc.close();
+  });
 
   test('a run saved on a replaced board is dropped, not restored', () async {
     when(() => generateDaily(day: any(named: 'day'))).thenAnswer(

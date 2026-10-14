@@ -5,6 +5,7 @@ import 'package:bloc/bloc.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/app_user.dart';
 import '../../../domain/failures.dart';
+import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/profile_repository.dart';
 import '../../../domain/usecases/update_avatar.dart';
 import '../../../domain/usecases/update_display_name.dart';
@@ -16,10 +17,12 @@ class ProfileCubit extends Cubit<ProfileState> {
     required UpdateDisplayName updateDisplayName,
     required UpdateAvatar updateAvatar,
     required String? uid,
+    AnalyticsRepository? analytics,
   }) : _profileRepository = profileRepository,
        _updateDisplayName = updateDisplayName,
        _updateAvatar = updateAvatar,
        _uid = uid,
+       _analytics = analytics,
        super(const ProfileState()) {
     if (uid == null) return;
     _subscription = _profileRepository
@@ -46,6 +49,7 @@ class ProfileCubit extends Cubit<ProfileState> {
   final UpdateDisplayName _updateDisplayName;
   final UpdateAvatar _updateAvatar;
   final String? _uid;
+  final AnalyticsRepository? _analytics;
   StreamSubscription<AppUser?>? _subscription;
 
   Future<void> refresh() async {
@@ -121,6 +125,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     );
     try {
       final user = await pending;
+      unawaited(_analytics?.logProfileNameChanged());
       if (isClosed) return;
       emit(
         state.copyWith(
@@ -148,6 +153,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     );
     try {
       final user = await _updateAvatar.preset(avatarId);
+      unawaited(_analytics?.logProfileAvatarChanged(source: 'preset'));
       if (isClosed) return;
       emit(
         state.copyWith(
@@ -177,6 +183,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     );
     try {
       final user = await _updateAvatar.photo(bytes, contentType: contentType);
+      unawaited(_analytics?.logProfileAvatarChanged(source: 'photo'));
       if (isClosed) return;
       emit(
         state.copyWith(

@@ -9,6 +9,7 @@ import 'core/di/app_repositories.dart';
 import 'core/errors/client_error_reporter.dart';
 import 'core/firebase/firebase_bootstrap.dart';
 import 'data/repositories/client_error_repository_impl.dart';
+import 'domain/repositories/analytics_repository.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/usecases/clear_notification_token.dart';
 import 'domain/usecases/initialize_notifications.dart';
@@ -57,6 +58,7 @@ Future<void> main() async {
           syncFcmToken: context.read<SyncFcmToken>(),
           clearNotificationToken: context.read<ClearNotificationToken>(),
           syncProgress: context.read<SyncProgress>(),
+          analytics: context.read<AnalyticsRepository>(),
         ),
         child: const _BootstrapNotifications(child: WinkloApp()),
       ),

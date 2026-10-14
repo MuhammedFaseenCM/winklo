@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/failures.dart';
+import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/usecases/clear_notification_token.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
@@ -26,6 +27,8 @@ class _MockClearNotificationToken extends Mock
     implements ClearNotificationToken {}
 
 class _MockSyncProgress extends Mock implements SyncProgress {}
+
+class _MockAnalytics extends Mock implements AnalyticsRepository {}
 
 void main() {
   const user = AppUser(uid: 'u1', displayName: 'Ada');
@@ -114,6 +117,26 @@ void main() {
       verify(() => syncFcmToken('u1')).called(1);
     },
   );
+
+  test('signIn success logs login; a cancelled sign-in does not', () async {
+    final analytics = _MockAnalytics();
+    when(() => analytics.logLogin()).thenAnswer((_) async {});
+    final cubit = AuthCubit(
+      authRepository: auth,
+      signInWithGoogle: signIn,
+      signOut: signOut,
+      analytics: analytics,
+    );
+
+    when(() => signIn()).thenThrow(const Failure('sign_in_cancelled'));
+    await cubit.signIn();
+    verifyNever(() => analytics.logLogin());
+
+    when(() => signIn()).thenAnswer((_) async => user);
+    await cubit.signIn();
+    verify(() => analytics.logLogin()).called(1);
+    await cubit.close();
+  });
 
   blocTest<AuthCubit, AuthState>(
     'signIn success emits signedIn',

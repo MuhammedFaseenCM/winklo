@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../domain/entities/app_update_decision.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
@@ -92,6 +93,7 @@ class HomeCubit extends Cubit<HomeState> {
     final sudokuTime = getBestTimeSeconds(sudokuKey);
     final decision = await checkAppUpdate();
     if (isClosed) return;
+    _logSoftUpdateShown(decision.status);
     emit(
       state.copyWith(
         dailyLevel: level,
@@ -134,9 +136,18 @@ class HomeCubit extends Cubit<HomeState> {
     );
   }
 
+  /// Home reloads on every visit; count the banner once per appearance.
+  void _logSoftUpdateShown(AppUpdateStatus next) {
+    if (next == AppUpdateStatus.soft &&
+        state.updateStatus != AppUpdateStatus.soft) {
+      unawaited(analytics.logUpdatePromptShown(forced: false));
+    }
+  }
+
   Future<void> recheckUpdate() async {
     final decision = await checkAppUpdate();
     if (isClosed) return;
+    _logSoftUpdateShown(decision.status);
     emit(
       state.copyWith(
         updateStatus: decision.status,
@@ -150,6 +161,7 @@ class HomeCubit extends Cubit<HomeState> {
   Future<void> openStore() async {
     final url = state.updateStoreUrl;
     if (url.isEmpty) return;
+    unawaited(analytics.logUpdatePromptAccepted(forced: false));
     await appUpdateRepository.openStore(url);
   }
 

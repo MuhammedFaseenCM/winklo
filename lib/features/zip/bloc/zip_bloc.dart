@@ -197,7 +197,11 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         path: path,
       ),
     );
-    await analytics.logGameStarted(gameId: GameIds.zip);
+    await analytics.logGameStarted(
+      gameId: GameIds.zip,
+      dayId: playId,
+      resumed: draft != null,
+    );
   }
 
   Future<void> _onPathChanged(
@@ -279,6 +283,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       points: points,
       timeSeconds: elapsed,
       streak: streak.current,
+      dayId: playId,
+      usedHints: state.usedHintsThisRun,
     );
 
     if (emit.isDone) return;
@@ -364,7 +370,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         playId: playId,
         elapsedMs: elapsedMs,
         usedHintsThisRun: state.usedHintsThisRun,
-        boardFingerprint: state.level?.fingerprint,
+        boardFingerprint: state.level.fingerprint,
         board: {
           'path': [for (final cell in state.path) cell.toList()],
         },

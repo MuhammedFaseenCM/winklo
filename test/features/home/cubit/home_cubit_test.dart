@@ -367,4 +367,50 @@ void main() {
           ),
     ],
   );
+
+  group('update prompt analytics', () {
+    const soft = AppUpdateDecision(
+      status: AppUpdateStatus.soft,
+      storeUrl: 'https://play.google.com/store/apps/details?id=x',
+    );
+
+    test(
+      'the soft banner logs update_prompt_shown once per appearance',
+      () async {
+        stubIdleScores();
+        when(() => checkAppUpdate()).thenAnswer((_) async => soft);
+        final cubit = buildCubit();
+
+        await cubit.load();
+        await cubit.load(); // Home reloads each time it's revisited.
+
+        verify(() => analytics.logUpdatePromptShown(forced: false)).called(1);
+        await cubit.close();
+      },
+    );
+
+    test('tapping update logs update_prompt_accepted', () async {
+      stubIdleScores();
+      when(() => checkAppUpdate()).thenAnswer((_) async => soft);
+      final cubit = buildCubit();
+      await cubit.load();
+
+      await cubit.openStore();
+
+      verify(() => analytics.logUpdatePromptAccepted(forced: false)).called(1);
+      await cubit.close();
+    });
+
+    test('no update logs nothing', () async {
+      stubIdleScores();
+      final cubit = buildCubit();
+
+      await cubit.load();
+
+      verifyNever(
+        () => analytics.logUpdatePromptShown(forced: any(named: 'forced')),
+      );
+      await cubit.close();
+    });
+  });
 }

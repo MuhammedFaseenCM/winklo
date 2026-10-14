@@ -43,10 +43,24 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
     );
   }
 
+  // Analytics parameters can't be booleans; flags are logged as 1 or 0.
+  static int _flag(bool value) => value ? 1 : 0;
+
   @override
-  Future<void> logGameStarted({required String gameId}) {
+  Future<void> logGameStarted({
+    required String gameId,
+    String? dayId,
+    bool resumed = false,
+  }) {
     return _safe(
-      (a) => a.logEvent(name: 'game_started', parameters: {'game_id': gameId}),
+      (a) => a.logEvent(
+        name: 'game_started',
+        parameters: {
+          'game_id': gameId,
+          'day_id': ?dayId,
+          'resumed': _flag(resumed),
+        },
+      ),
     );
   }
 
@@ -56,16 +70,18 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
     required int points,
     required int timeSeconds,
     int? streak,
+    String? dayId,
+    bool? usedHints,
   }) {
     return _safe((a) {
       final parameters = <String, Object>{
         'game_id': gameId,
         'points': points,
         'time_seconds': timeSeconds,
+        'streak': ?streak,
+        'day_id': ?dayId,
+        if (usedHints != null) 'used_hints': _flag(usedHints),
       };
-      if (streak != null) {
-        parameters['streak'] = streak;
-      }
       return a.logEvent(name: 'game_completed', parameters: parameters);
     });
   }
@@ -173,5 +189,79 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
         parameters: parameters.isEmpty ? null : parameters,
       );
     });
+  }
+
+  @override
+  Future<void> logLogin() {
+    return _safe((a) => a.logLogin(loginMethod: 'google'));
+  }
+
+  @override
+  Future<void> logShare({required String gameId}) {
+    return _safe(
+      (a) => a.logShare(
+        contentType: 'daily_result',
+        itemId: gameId,
+        method: 'share_sheet',
+      ),
+    );
+  }
+
+  @override
+  Future<void> logNotificationOpened({
+    required String type,
+    required String route,
+  }) {
+    return _safe(
+      (a) => a.logEvent(
+        name: 'notification_opened',
+        parameters: {'type': type, 'route': route},
+      ),
+    );
+  }
+
+  @override
+  Future<void> logUpdatePromptShown({required bool forced}) {
+    return _safe(
+      (a) => a.logEvent(
+        name: 'update_prompt_shown',
+        parameters: {'kind': forced ? 'forced' : 'soft'},
+      ),
+    );
+  }
+
+  @override
+  Future<void> logUpdatePromptAccepted({required bool forced}) {
+    return _safe(
+      (a) => a.logEvent(
+        name: 'update_prompt_accepted',
+        parameters: {'kind': forced ? 'forced' : 'soft'},
+      ),
+    );
+  }
+
+  @override
+  Future<void> logProfileNameChanged() {
+    return _safe((a) => a.logEvent(name: 'profile_name_changed'));
+  }
+
+  @override
+  Future<void> logProfileAvatarChanged({required String source}) {
+    return _safe(
+      (a) => a.logEvent(
+        name: 'profile_avatar_changed',
+        parameters: {'source': source},
+      ),
+    );
+  }
+
+  @override
+  Future<void> logStreakFreezeUsed({required String gameId}) {
+    return _safe(
+      (a) => a.logEvent(
+        name: 'streak_freeze_used',
+        parameters: {'game_id': gameId},
+      ),
+    );
   }
 }

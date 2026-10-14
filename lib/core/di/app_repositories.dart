@@ -145,7 +145,8 @@ List<SingleChildWidget> buildRepositoryProviders({
       ),
     ),
     RepositoryProvider<HandleNotificationTap>(
-      create: (_) => HandleNotificationTap(),
+      create: (context) =>
+          HandleNotificationTap(analytics: context.read<AnalyticsRepository>()),
     ),
     RepositoryProvider<AuthRepository>(create: (_) => AuthRepositoryImpl()),
     RepositoryProvider<ActivityRepository>(
@@ -301,7 +302,10 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) => GetStreak(context.read<StreakRepository>()),
     ),
     RepositoryProvider<RecordDailyClear>(
-      create: (context) => RecordDailyClear(context.read<StreakRepository>()),
+      create: (context) => RecordDailyClear(
+        context.read<StreakRepository>(),
+        analytics: context.read<AnalyticsRepository>(),
+      ),
     ),
     RepositoryProvider<FetchZipLevels>(
       create: (context) => FetchZipLevels(context.read<ZipLevelRepository>()),

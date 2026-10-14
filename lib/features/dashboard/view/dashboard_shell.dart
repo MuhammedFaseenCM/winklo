@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../domain/entities/app_update_decision.dart';
+import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/app_update_repository.dart';
 import '../../../domain/usecases/check_app_update.dart';
 import '../../app_update/cubit/app_update_cubit.dart';
@@ -22,6 +23,7 @@ class DashboardShell extends StatelessWidget {
       create: (context) => AppUpdateCubit(
         checkAppUpdate: context.read<CheckAppUpdate>(),
         appUpdateRepository: context.read<AppUpdateRepository>(),
+        analytics: context.read<AnalyticsRepository>(),
       )..check(),
       child: _DashboardShellView(navigationShell: navigationShell),
     );

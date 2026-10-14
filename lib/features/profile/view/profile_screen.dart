@@ -64,6 +64,7 @@ class ProfileScreen extends StatelessWidget {
                 updateDisplayName: context.read<UpdateDisplayName>(),
                 updateAvatar: context.read<UpdateAvatar>(),
                 uid: user.uid,
+                analytics: context.read<AnalyticsRepository>(),
               ),
               child: _SignedInBody(fallbackUser: user),
             );

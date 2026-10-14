@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import '../entities/game_streak.dart';
+import '../repositories/analytics_repository.dart';
 import '../repositories/streak_repository.dart';
 import '../streak_calculator.dart';
 
 class RecordDailyClear {
-  RecordDailyClear(this._repo);
+  RecordDailyClear(this._repo, {AnalyticsRepository? analytics})
+    : _analytics = analytics;
 
   final StreakRepository _repo;
+  final AnalyticsRepository? _analytics;
 
   Future<GameStreak> call({
     required String gameId,
@@ -16,6 +21,9 @@ class RecordDailyClear {
       streak: stored,
       todayId: dateId,
     );
+    if (stored.freezeAvailable && !updated.freezeAvailable) {
+      unawaited(_analytics?.logStreakFreezeUsed(gameId: gameId));
+    }
     return _repo.saveStreak(updated);
   }
 }

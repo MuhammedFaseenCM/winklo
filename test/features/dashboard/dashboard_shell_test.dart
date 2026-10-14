@@ -5,10 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/domain/entities/app_update_decision.dart';
+import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
 import 'package:winklo/features/dashboard/view/dashboard_shell.dart';
 import 'package:winklo/features/home/view/widgets/home_force_update_overlay.dart';
+
+import '../../helpers/mock_analytics_repository.dart';
 
 class _MockCheckAppUpdate extends Mock implements CheckAppUpdate {}
 
@@ -17,8 +20,11 @@ class _MockAppUpdateRepository extends Mock implements AppUpdateRepository {}
 void main() {
   late _MockCheckAppUpdate checkAppUpdate;
   late _MockAppUpdateRepository appUpdateRepository;
+  late MockAnalyticsRepository analytics;
 
   setUp(() {
+    analytics = MockAnalyticsRepository();
+    stubAnalytics(analytics);
     checkAppUpdate = _MockCheckAppUpdate();
     appUpdateRepository = _MockAppUpdateRepository();
     when(
@@ -30,6 +36,7 @@ void main() {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<CheckAppUpdate>.value(value: checkAppUpdate),
+        RepositoryProvider<AnalyticsRepository>.value(value: analytics),
         RepositoryProvider<AppUpdateRepository>.value(
           value: appUpdateRepository,
         ),

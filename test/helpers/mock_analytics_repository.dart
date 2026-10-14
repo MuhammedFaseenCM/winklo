@@ -11,7 +11,11 @@ void stubAnalytics(MockAnalyticsRepository analytics) {
     () => analytics.logHomeGameOpened(gameId: any(named: 'gameId')),
   ).thenAnswer((_) async {});
   when(
-    () => analytics.logGameStarted(gameId: any(named: 'gameId')),
+    () => analytics.logGameStarted(
+      gameId: any(named: 'gameId'),
+      dayId: any(named: 'dayId'),
+      resumed: any(named: 'resumed'),
+    ),
   ).thenAnswer((_) async {});
   when(
     () => analytics.logGameCompleted(
@@ -19,6 +23,8 @@ void stubAnalytics(MockAnalyticsRepository analytics) {
       points: any(named: 'points'),
       timeSeconds: any(named: 'timeSeconds'),
       streak: any(named: 'streak'),
+      dayId: any(named: 'dayId'),
+      usedHints: any(named: 'usedHints'),
     ),
   ).thenAnswer((_) async {});
   when(
@@ -52,5 +58,28 @@ void stubAnalytics(MockAnalyticsRepository analytics) {
   when(() => analytics.logProfileSignOut()).thenAnswer((_) async {});
   when(
     () => analytics.logProfileDeleteAccountOpened(),
+  ).thenAnswer((_) async {});
+  when(() => analytics.logLogin()).thenAnswer((_) async {});
+  when(
+    () => analytics.logShare(gameId: any(named: 'gameId')),
+  ).thenAnswer((_) async {});
+  when(
+    () => analytics.logNotificationOpened(
+      type: any(named: 'type'),
+      route: any(named: 'route'),
+    ),
+  ).thenAnswer((_) async {});
+  when(
+    () => analytics.logUpdatePromptShown(forced: any(named: 'forced')),
+  ).thenAnswer((_) async {});
+  when(
+    () => analytics.logUpdatePromptAccepted(forced: any(named: 'forced')),
+  ).thenAnswer((_) async {});
+  when(() => analytics.logProfileNameChanged()).thenAnswer((_) async {});
+  when(
+    () => analytics.logProfileAvatarChanged(source: any(named: 'source')),
+  ).thenAnswer((_) async {});
+  when(
+    () => analytics.logStreakFreezeUsed(gameId: any(named: 'gameId')),
   ).thenAnswer((_) async {});
 }

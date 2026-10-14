@@ -281,7 +281,11 @@ void main() {
       ),
     );
     when(
-      () => analytics.logGameStarted(gameId: any(named: 'gameId')),
+      () => analytics.logGameStarted(
+        gameId: any(named: 'gameId'),
+        dayId: any(named: 'dayId'),
+        resumed: any(named: 'resumed'),
+      ),
     ).thenAnswer((_) async {});
     when(
       () => analytics.logGameCompleted(
@@ -289,6 +293,8 @@ void main() {
         points: any(named: 'points'),
         timeSeconds: any(named: 'timeSeconds'),
         streak: any(named: 'streak'),
+        dayId: any(named: 'dayId'),
+        usedHints: any(named: 'usedHints'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -833,6 +839,34 @@ void main() {
           .having((s) => s.hadMistakesThisRun, 'hadMistakes', isTrue),
     ],
   );
+
+  test('game_started and game_completed carry the day', () async {
+    final bloc = buildBloc();
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.digitTapped(2));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.navigating);
+
+    verify(
+      () => analytics.logGameStarted(
+        gameId: GameIds.sudoku,
+        dayId: '20260927',
+        resumed: false,
+      ),
+    ).called(1);
+    verify(
+      () => analytics.logGameCompleted(
+        gameId: GameIds.sudoku,
+        points: any(named: 'points'),
+        timeSeconds: any(named: 'timeSeconds'),
+        streak: 1,
+        dayId: '20260927',
+        usedHints: false,
+      ),
+    ).called(1);
+    await bloc.close();
+  });
 
   test('a run saved on a replaced board is dropped, not restored', () async {
     final puzzle = _almostSolvedPuzzle(day: day);
