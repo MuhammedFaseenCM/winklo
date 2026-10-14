@@ -88,6 +88,8 @@ abstract final class AppStrings {
   static const sudokuClearedTitle = 'Puzzle cleared!';
   static const sudokuLoading = 'Building today’s puzzle…';
   static const sudokuFailed = 'Could not load today’s puzzle.';
+  static const puzzleNeedsUpdate =
+      'Today’s puzzle needs a newer version of Winklo. Update the app to play it.';
   static const sudokuDifficultyEasy = 'Easy';
   static const sudokuDifficultyMedium = 'Medium';
   static const sudokuDifficultyHard = 'Hard';

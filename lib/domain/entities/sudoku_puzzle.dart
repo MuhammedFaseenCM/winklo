@@ -1,3 +1,4 @@
+import '../failures.dart';
 import 'sudoku_difficulty.dart';
 
 class SudokuPuzzle {
@@ -25,6 +26,13 @@ class SudokuPuzzle {
 
   int indexOf(int row, int col) => row * size + col;
 
+  /// The only shape the keypad, notes grid and hint coach can play.
+  static const playableSize = 6;
+  static const playableBoxRows = 2;
+  static const playableBoxCols = 3;
+
+  /// Throws [UnsupportedPuzzle] for any board this build can't finish, such
+  /// as a 9×9 (the keypad stops at 6) or a 4×4 (which would accept 5 and 6).
   factory SudokuPuzzle.fromJson(Map<String, dynamic> json, {String? id}) {
     final given = (json['given'] as List).map((e) => (e as num).toInt()).toList();
     final solution =
@@ -34,16 +42,56 @@ class SudokuPuzzle {
       (d) => d.name == diffStr,
       orElse: () => SudokuDifficulty.easy,
     );
+    final size = (json['size'] as num?)?.toInt() ?? playableSize;
+    final boxRows = (json['boxRows'] as num?)?.toInt() ?? playableBoxRows;
+    final boxCols = (json['boxCols'] as num?)?.toInt() ?? playableBoxCols;
+    _checkPlayable(
+      size: size,
+      boxRows: boxRows,
+      boxCols: boxCols,
+      given: given,
+      solution: solution,
+    );
     return SudokuPuzzle(
       id: id ?? json['id'] as String? ?? '',
       dateId: json['dateId'] as String? ?? '',
-      size: (json['size'] as num?)?.toInt() ?? 6,
-      boxRows: (json['boxRows'] as num?)?.toInt() ?? 2,
-      boxCols: (json['boxCols'] as num?)?.toInt() ?? 3,
+      size: size,
+      boxRows: boxRows,
+      boxCols: boxCols,
       given: given,
       solution: solution,
       difficulty: difficulty,
     );
+  }
+
+  static void _checkPlayable({
+    required int size,
+    required int boxRows,
+    required int boxCols,
+    required List<int> given,
+    required List<int> solution,
+  }) {
+    if (size != playableSize ||
+        boxRows != playableBoxRows ||
+        boxCols != playableBoxCols) {
+      throw UnsupportedPuzzle(
+        'Sudoku ${size}x$size with ${boxRows}x$boxCols boxes is not playable',
+      );
+    }
+    const cells = playableSize * playableSize;
+    if (given.length != cells || solution.length != cells) {
+      throw const UnsupportedPuzzle('Sudoku grids must have 36 cells');
+    }
+    for (var i = 0; i < cells; i++) {
+      final s = solution[i];
+      final g = given[i];
+      if (s < 1 || s > playableSize) {
+        throw UnsupportedPuzzle('Sudoku solution digit $s is out of range');
+      }
+      if (g != 0 && g != s) {
+        throw UnsupportedPuzzle('Sudoku given at $i disagrees with solution');
+      }
+    }
   }
 
   Map<String, dynamic> toJson() => {

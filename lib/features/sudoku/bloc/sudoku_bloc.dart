@@ -8,6 +8,7 @@ import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/entities/sudoku_puzzle.dart';
+import '../../../domain/failures.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/logic/run_rollover.dart';
 import '../../../domain/play_period.dart';
@@ -132,12 +133,14 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     late final SudokuPuzzle puzzle;
     try {
       puzzle = await generatePuzzle(day: PlayPeriod.bucket(seed, playPeriod));
-    } catch (_) {
+    } catch (e) {
       if (emit.isDone) return;
       emit(
         state.copyWith(
           status: SudokuStatus.failed,
-          errorMessage: AppStrings.sudokuFailed,
+          errorMessage: e is UnsupportedPuzzle
+              ? AppStrings.puzzleNeedsUpdate
+              : AppStrings.sudokuFailed,
         ),
       );
       return;

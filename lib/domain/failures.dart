@@ -19,3 +19,9 @@ class DailyPuzzleUnavailable implements Exception {
   @override
   String toString() => message;
 }
+
+/// Thrown when a daily puzzle loads but this build can't play its shape,
+/// for example a 9×9 Sudoku. Players need a newer app, not a retry.
+class UnsupportedPuzzle extends DailyPuzzleUnavailable {
+  const UnsupportedPuzzle([super.message = 'Unsupported puzzle shape']);
+}

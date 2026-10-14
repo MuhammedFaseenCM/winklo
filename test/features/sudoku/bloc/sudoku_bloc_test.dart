@@ -3,11 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/sfx/sfx_id.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
+import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
 import 'package:winklo/domain/entities/sudoku_difficulty.dart';
 import 'package:winklo/domain/entities/sudoku_puzzle.dart';
+import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/hint_quota_repository.dart';
@@ -318,6 +320,44 @@ void main() {
           .having((s) => s.hintsRemaining, 'hintsRemaining', 3)
           .having((s) => s.resumedAt, 'resumedAt', isNotNull)
           .having((s) => s.elapsedMs, 'elapsedMs', 0),
+    ],
+  );
+
+  blocTest<SudokuBloc, SudokuState>(
+    'a board this build cannot play asks the player to update',
+    build: () => buildBloc(
+      generatePuzzle: ({required DateTime day}) =>
+          throw const UnsupportedPuzzle(),
+    ),
+    act: (bloc) => bloc.add(SudokuEvent.started(date: day)),
+    skip: 1, // loading
+    expect: () => [
+      isA<SudokuState>()
+          .having((s) => s.status, 'status', SudokuStatus.failed)
+          .having(
+            (s) => s.errorMessage,
+            'errorMessage',
+            AppStrings.puzzleNeedsUpdate,
+          ),
+    ],
+  );
+
+  blocTest<SudokuBloc, SudokuState>(
+    'a puzzle that fails to load shows the generic error',
+    build: () => buildBloc(
+      generatePuzzle: ({required DateTime day}) =>
+          throw const DailyPuzzleUnavailable(),
+    ),
+    act: (bloc) => bloc.add(SudokuEvent.started(date: day)),
+    skip: 1, // loading
+    expect: () => [
+      isA<SudokuState>()
+          .having((s) => s.status, 'status', SudokuStatus.failed)
+          .having(
+            (s) => s.errorMessage,
+            'errorMessage',
+            AppStrings.sudokuFailed,
+          ),
     ],
   );
 
