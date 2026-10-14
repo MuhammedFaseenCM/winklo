@@ -16,7 +16,7 @@ import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_clear_meta.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
-import 'package:winklo/features/results/view/cleared_summary_card.dart';
+import 'package:winklo/core/widgets/cleared_summary/cleared_summary_card.dart';
 
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 
@@ -26,11 +26,12 @@ class _MockWatchLeaderboard extends Mock implements WatchLeaderboard {}
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
-/// The card keeps each chunk on one line with non-breaking spaces.
+/// The card keeps each chunk, and the dot after it, on one line with
+/// non-breaking spaces.
 String shown(String summary) => summary
     .split(' · ')
     .map((chunk) => chunk.replaceAll(' ', '\u00A0'))
-    .join(' · ');
+    .join('\u00A0· ');
 
 void main() {
   setUpAll(() => registerFallbackValue(LeaderboardPeriod.daily));

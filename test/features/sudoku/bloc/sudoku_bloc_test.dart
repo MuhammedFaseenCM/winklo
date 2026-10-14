@@ -436,15 +436,18 @@ void main() {
       expect(bloc.state.points, 950);
       expect(bloc.state.resultsExtra?.gameId, GameIds.sudoku);
       expect(bloc.state.resultsExtra?.day, DateTime(2026, 9, 27));
-      verify(
+      final savedUnder = verify(
         () => submitScore(
-          modeKey: any(named: 'modeKey', that: startsWith('sudoku_')),
+          modeKey: captureAny(named: 'modeKey'),
           points: 950,
           timeSeconds: 10,
           usedHints: false,
           hadMistakes: false,
         ),
-      ).called(1);
+      ).captured.single;
+      expect(savedUnder, 'sudoku_20260927');
+      // Review reads the clear back from the same key.
+      expect(bloc.clearModeKey, savedUnder);
       verify(
         () => submitLeaderboardTime(
           gameId: GameIds.sudoku,
@@ -992,6 +995,28 @@ void main() {
       verify: (bloc) {
         verify(() => bloc.haptics!.play(HapticKind.tick)).called(1);
         verifyNever(() => bloc.haptics!.play(HapticKind.success));
+      },
+    );
+
+    blocTest<SudokuBloc, SudokuState>(
+      'a note ticks too',
+      build: () => buildBloc(
+        generatePuzzle: ({required DateTime day}) =>
+            _noUnitCompletePuzzle(day: day),
+        haptics: stubHaptics(),
+      ),
+      act: (bloc) async {
+        bloc.add(SudokuEvent.started(date: day));
+        await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+        bloc.add(const SudokuEvent.notesModeToggled());
+        bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+        bloc.add(const SudokuEvent.digitTapped(2));
+        await bloc.stream.firstWhere(
+          (s) => s.notes.length > 1 && s.notes[1].contains(2),
+        );
+      },
+      verify: (bloc) {
+        verify(() => bloc.haptics!.play(HapticKind.tick)).called(1);
       },
     );
 

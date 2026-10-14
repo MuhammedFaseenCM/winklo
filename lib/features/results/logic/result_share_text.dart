@@ -1,7 +1,7 @@
 import '../../../core/constants/app_urls.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/game_ids.dart';
-import 'clean_run_chips.dart';
+import '../../../core/strings/clean_run_chips.dart';
 
 const _months = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //

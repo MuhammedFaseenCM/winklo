@@ -276,6 +276,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           hintFlashIndex: null,
         ),
       );
+      haptics?.play(HapticKind.tick);
       await _persistDraft();
       return;
     }

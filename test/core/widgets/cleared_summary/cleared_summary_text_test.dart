@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/domain/game_ids.dart';
-import 'package:winklo/features/results/logic/cleared_summary_text.dart';
+import 'package:winklo/core/widgets/cleared_summary/cleared_summary_text.dart';
 
 void main() {
   test('time, rank and clean-run chips', () {

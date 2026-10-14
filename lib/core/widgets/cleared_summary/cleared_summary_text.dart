@@ -1,5 +1,5 @@
-import '../../../core/strings/app_strings.dart';
-import 'clean_run_chips.dart';
+import '../../strings/app_strings.dart';
+import '../../strings/clean_run_chips.dart';
 
 /// "Cleared in 1:12 · #4 today · Hint-free" for a daily reopened after its
 /// clear.

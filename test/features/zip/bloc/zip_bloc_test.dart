@@ -198,6 +198,8 @@ void main() {
           usedHints: true,
         ),
       ).called(1);
+      // Review reads the clear back from the key it was saved under.
+      expect(bloc.clearModeKey, 'zip_daily_20260913');
       await bloc.close();
     },
   );

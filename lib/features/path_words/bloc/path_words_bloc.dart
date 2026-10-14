@@ -295,6 +295,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
             ruleTip: null,
           ),
         );
+        haptics?.play(HapticKind.tick);
         return;
       }
 
@@ -354,6 +355,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         ruleTip: null,
       ),
     );
+    haptics?.play(HapticKind.tick);
   }
 
   void _onPointerEnter(

@@ -12,8 +12,8 @@ import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_clear_meta.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
-import 'package:winklo/features/results/cubit/cleared_summary_cubit.dart';
-import 'package:winklo/features/results/cubit/cleared_summary_state.dart';
+import 'package:winklo/core/widgets/cleared_summary/cleared_summary_cubit.dart';
+import 'package:winklo/core/widgets/cleared_summary/cleared_summary_state.dart';
 
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 

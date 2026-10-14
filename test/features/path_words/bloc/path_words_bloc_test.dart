@@ -1950,10 +1950,9 @@ void main() {
         await pumpEventQueue();
       },
       verify: (b) {
-        verifyInOrder([
-          () => b.haptics!.play(HapticKind.tick),
-          () => b.haptics!.play(HapticKind.success),
-        ]);
+        // The stroke's first cell ticks too, as in Zip.
+        verify(() => b.haptics!.play(HapticKind.tick)).called(2);
+        verify(() => b.haptics!.play(HapticKind.success)).called(1);
         verifyNever(() => b.haptics!.play(HapticKind.win));
       },
     );

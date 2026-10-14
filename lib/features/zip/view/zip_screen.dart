@@ -26,7 +26,7 @@ import '../../../domain/usecases/get_clear_board.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
-import '../../results/view/cleared_summary_card.dart';
+import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
 import '../bloc/zip_bloc.dart';
 import '../bloc/zip_event.dart';
 import '../bloc/zip_state.dart';

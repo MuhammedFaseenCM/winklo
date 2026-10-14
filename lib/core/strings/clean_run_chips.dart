@@ -1,5 +1,5 @@
-import '../../../core/strings/app_strings.dart';
-import '../../../domain/game_ids.dart';
+import 'app_strings.dart';
+import '../../domain/game_ids.dart';
 
 /// The clean-run chips the daily leaderboard shows: Hint-free, and Flawless
 /// for Sudoku. Unknown flags (null) earn no chip.

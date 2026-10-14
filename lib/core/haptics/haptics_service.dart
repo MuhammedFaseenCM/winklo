@@ -51,7 +51,9 @@ class HapticsService {
     if (kind == HapticKind.tick) {
       final now = _now();
       final last = _lastTickAt;
-      if (last != null && now.difference(last) < tickGap) return;
+      // A clock set back (now before last) counts as time passed.
+      final gap = last == null ? null : now.difference(last);
+      if (gap != null && !gap.isNegative && gap < tickGap) return;
       _lastTickAt = now;
     }
     unawaited(

@@ -57,6 +57,16 @@ void main() {
     expect(felt, [HapticKind.tick, HapticKind.tick]);
   });
 
+  test('a clock set back does not mute the ticks', () {
+    haptics.play(HapticKind.tick);
+    // E.g. the player turns the date back a day.
+    now = now.subtract(const Duration(days: 1));
+    haptics.play(HapticKind.tick);
+    now = now.add(const Duration(milliseconds: 10));
+    haptics.play(HapticKind.tick);
+    expect(felt, [HapticKind.tick, HapticKind.tick]);
+  });
+
   test('only ticks are spaced out', () {
     haptics.play(HapticKind.tick);
     haptics.play(HapticKind.success);

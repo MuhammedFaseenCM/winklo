@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/dev_flags.dart';
-import '../../../core/strings/app_strings.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/next_puzzle_countdown.dart';
+import '../../dev_flags.dart';
+import '../../strings/app_strings.dart';
+import '../../theme/app_theme.dart';
+import '../next_puzzle_countdown.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_clear_meta.dart';
 import '../../../domain/usecases/watch_leaderboard.dart';
-import '../cubit/cleared_summary_cubit.dart';
-import '../cubit/cleared_summary_state.dart';
-import '../logic/cleared_summary_text.dart';
+import 'cleared_summary_cubit.dart';
+import 'cleared_summary_state.dart';
+import 'cleared_summary_text.dart';
 
 /// Under a cleared daily's board: "Cleared in 1:12 · #4 today · Hint-free",
 /// the countdown to the next puzzle and a link to the full board.
@@ -50,12 +50,12 @@ class ClearedSummaryCard extends StatelessWidget {
   }
 }
 
-/// Lets a narrow card wrap only at the " · " between chunks, so "#48 today"
-/// never splits across lines.
+/// Lets a narrow card wrap only after the " · " between chunks, so
+/// "#48 today" never splits and no line starts with the dot.
 String _wrapBetweenChunks(String summary) => summary
     .split(' · ')
     .map((chunk) => chunk.replaceAll(' ', '\u00A0'))
-    .join(' · ');
+    .join('\u00A0· ');
 
 class _ClearedSummaryBody extends StatelessWidget {
   const _ClearedSummaryBody({required this.gameId, required this.day});
