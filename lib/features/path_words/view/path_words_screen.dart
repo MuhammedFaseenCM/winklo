@@ -13,7 +13,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
 import '../../../core/widgets/zip_ui.dart';
-import '../../../domain/entities/cell.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
@@ -75,12 +74,11 @@ class _PathWordsScreenState extends State<PathWordsScreen>
     final puzzle = state.puzzle;
     if (puzzle == null) return null;
 
-    final completedPaths = <String, List<Cell>>{};
-    for (final target in puzzle.targets) {
-      if (state.completedTargetIds.contains(target.id)) {
-        completedPaths[target.id] = target.path;
-      }
-    }
+    final completedPaths = PathWordsRules.completedPaths(
+      puzzle: puzzle,
+      completedTargetIds: state.completedTargetIds,
+      placedPaths: state.placedPaths,
+    );
 
     return PathWordsBoardView(
       puzzle: puzzle,

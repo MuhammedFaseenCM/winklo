@@ -322,18 +322,51 @@ class PathWordsRules {
     return (first.row * 31 + first.col * 17 + path.length * 13).abs() % count;
   }
 
+  /// Cells to draw for each found word: the stroke the player traced, which
+  /// can differ from the stored route, or the stored route when no stroke is
+  /// kept (review mode).
+  static Map<String, List<Cell>> completedPaths({
+    required PathWordsPuzzle puzzle,
+    required Set<String> completedTargetIds,
+    required List<PathWordsStroke> placedPaths,
+  }) {
+    final traced = {
+      for (final stroke in placedPaths)
+        if (stroke.targetId != null) stroke.targetId!: stroke.cells,
+    };
+    return {
+      for (final target in puzzle.targets)
+        if (completedTargetIds.contains(target.id))
+          target.id: traced[target.id] ?? target.path,
+    };
+  }
+
   static PathWordsTarget? completedTarget({
     required PathWordsPuzzle puzzle,
     required List<Cell> path,
     required Set<String> completedTargetIds,
   }) {
-    for (final target in puzzle.targets) {
-      if (completedTargetIds.contains(target.id)) {
-        continue;
-      }
+    final remaining = [
+      for (final target in puzzle.targets)
+        if (!completedTargetIds.contains(target.id)) target,
+    ];
+    for (final target in remaining) {
       if (_pathsEqual(path, target.path)) {
         return target;
       }
+    }
+    // Hand-made boards can hide a word along more than one route. Accept any
+    // route that spells it, as long as it stays off every other word's cells:
+    // taking those would leave that word impossible to trace.
+    final spelled = path.map(puzzle.letterAt).join();
+    for (final target in remaining) {
+      if (target.word.toLowerCase() != spelled) continue;
+      final othersCells = {
+        for (final other in puzzle.targets)
+          if (other.id != target.id) ...other.path,
+      };
+      if (path.any(othersCells.contains)) continue;
+      return target;
     }
     return null;
   }
