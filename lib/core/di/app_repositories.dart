@@ -116,6 +116,7 @@ import 'package:winklo/domain/usecases/upload_progress_history.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 
 import 'habit_providers.dart';
+import 'language_providers.dart';
 
 /// [clientErrorRepository] is registered first when given so providers in this
 /// list (e.g. [SyncProgress]) can report handled errors; tests may omit it.
@@ -445,5 +446,6 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (_) => GenerateDailySudoku(period: DevFlags.playPeriod),
     ),
     ...buildHabitProviders(),
+    ...buildLanguageProviders(),
   ];
 }
