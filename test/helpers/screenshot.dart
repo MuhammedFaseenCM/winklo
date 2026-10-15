@@ -8,22 +8,36 @@ import 'package:flutter_test/flutter_test.dart';
 /// Screenshot tests render a screen at a phone size and check it lays out
 /// without overflow. With `WINKLO_SCREENSHOTS=1` in the environment they also
 /// write a PNG to `build/screenshots/` (readable text: Roboto stands in for
-/// Lexend, and the Material icons are loaded).
+/// Lexend, the bundled Noto Sans Malayalam is loaded, and so are the
+/// Material icons).
 bool get writeScreenshots => Platform.environment['WINKLO_SCREENSHOTS'] == '1';
 
 /// Loads Roboto under the Lexend family names google_fonts uses, and the
-/// Material icon font, from the Flutter SDK. No-op when they aren't found.
+/// Material icon font, from the Flutter SDK (no-op when they aren't found),
+/// and the app's Noto Sans Malayalam under google_fonts' names for it.
 Future<void> loadScreenshotFonts() async {
-  final fonts = _materialFontsDir();
-  if (fonts == null) return;
-  Future<void> load(String family, List<String> files) async {
+  Future<void> loadFiles(String family, List<String> paths) async {
     final loader = FontLoader(family);
-    for (final file in files) {
-      final bytes = File('${fonts.path}/$file').readAsBytesSync();
+    for (final path in paths) {
+      final bytes = File(path).readAsBytesSync();
       loader.addFont(Future.value(ByteData.view(bytes.buffer)));
     }
     await loader.load();
   }
+
+  // The Malayalam fallback (app_theme.dart) ships with the app, so it's in
+  // the repo: Malayalam screens measure the same here as on a phone.
+  await loadFiles('NotoSansMalayalam_regular', [
+    'assets/google_fonts/NotoSansMalayalam-Regular.ttf',
+  ]);
+  await loadFiles('NotoSansMalayalam_700', [
+    'assets/google_fonts/NotoSansMalayalam-Bold.ttf',
+  ]);
+
+  final fonts = _materialFontsDir();
+  if (fonts == null) return;
+  Future<void> load(String family, List<String> files) =>
+      loadFiles(family, [for (final file in files) '${fonts.path}/$file']);
 
   await load('MaterialIcons', ['MaterialIcons-Regular.otf']);
   for (final (variant, file) in [
