@@ -33,6 +33,7 @@ import '../bloc/path_words_state.dart';
 import '../game/path_words_board_view.dart';
 import '../game/path_words_game.dart';
 import 'widgets/path_words_how_to_play.dart';
+import 'widgets/path_words_paused_cover.dart';
 import 'widgets/path_words_shimmer.dart';
 import 'widgets/path_words_tutorial.dart';
 import 'widgets/path_words_word_list.dart';
@@ -483,7 +484,7 @@ class _BoardPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final g = game;
-    if (g != null) return GameWidget(game: g);
+    if (g != null) return PathWordsPausedCover(child: GameWidget(game: g));
 
     if (status == PathWordsStatus.failed) {
       return Container(

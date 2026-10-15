@@ -33,6 +33,7 @@ import '../bloc/sudoku_state.dart';
 import '../game/sudoku_board_view.dart';
 import '../game/sudoku_game.dart';
 import 'widgets/sudoku_how_to_play.dart';
+import 'widgets/sudoku_paused_cover.dart';
 
 class SudokuScreen extends StatefulWidget {
   const SudokuScreen({super.key, this.date, this.bloc, this.autoStart = true});
@@ -398,7 +399,9 @@ class _SudokuScreenState extends State<SudokuScreen>
                                         ? const Center(
                                             child: CircularProgressIndicator(),
                                           )
-                                        : GameWidget(game: game),
+                                        : SudokuPausedCover(
+                                            child: GameWidget(game: game),
+                                          ),
                                   ),
                                   if (isReadyToPlay) ...[
                                     _NotesToggle(
