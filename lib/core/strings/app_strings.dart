@@ -8,6 +8,7 @@ abstract final class AppStrings {
   static const playTodaysZip = "Play today's Zip";
   static const zipUndo = 'Undo';
   static const zipClear = 'Clear';
+  static const zipReplay = 'Replay';
   static const zipHint = 'Hint';
   static String zipHintWithCount(int n) => 'Hint ($n)';
   static const zipHowToPlayTitle = 'How to play';

@@ -64,6 +64,15 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   double _celebrateT = 0;
   bool _celebrate = false;
 
+  /// Cells drawn per second while a review replays the saved path.
+  static const replayCellsPerSecond = 12.0;
+  List<Cell>? _replayCells;
+  double _replayElapsed = 0;
+  void Function()? _onReplayFinished;
+
+  /// True while [replay] is drawing the path.
+  bool get isReplaying => _replayCells != null;
+
   @override
   Color backgroundColor() => const Color(0x00000000);
 
@@ -104,12 +113,61 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     if (_celebrate) {
       _celebrateT += dt;
     }
+    _advanceReplay(dt);
     if (_drawing && _clampedLiveTip() != null) {
       _tipSparks.ensureActive(seed: path.length);
       _tipSparks.update(dt);
     } else if (_tipSparks.isActive) {
       _tipSparks.clear();
     }
+  }
+
+  /// Redraws [cells] from the first one, about [replayCellsPerSecond] a
+  /// second, then rests on the full path and calls [onReplayFinished] once.
+  ///
+  /// Review only. Returns false (and does nothing) for a playable board, an
+  /// empty path, or while a replay is already running.
+  bool replay(List<Cell> cells, {void Function()? onReplayFinished}) {
+    if (!readOnly || cells.isEmpty || isReplaying) return false;
+    _replayCells = List<Cell>.unmodifiable(cells);
+    _replayElapsed = 0;
+    _onReplayFinished = onReplayFinished;
+    path
+      ..clear()
+      ..add(cells.first);
+    return true;
+  }
+
+  void _advanceReplay(double dt) {
+    final cells = _replayCells;
+    if (cells == null) return;
+    _replayElapsed += dt;
+    final shown = math.min(
+      cells.length,
+      1 + (_replayElapsed * replayCellsPerSecond).floor(),
+    );
+    if (shown != path.length) {
+      path
+        ..clear()
+        ..addAll(cells.take(shown));
+    }
+    if (shown < cells.length) return;
+    final finished = _onReplayFinished;
+    _replayCells = null;
+    _onReplayFinished = null;
+    finished?.call();
+  }
+
+  /// Where the replay's tip is between the last drawn cell and the next, so
+  /// the stroke slides rather than jumps.
+  Offset? _replayTip() {
+    final cells = _replayCells;
+    if (cells == null || path.isEmpty || path.length >= cells.length) {
+      return null;
+    }
+    final progress = _replayElapsed * replayCellsPerSecond;
+    final t = (progress - progress.floor()).clamp(0.0, 1.0);
+    return Offset.lerp(_centerOf(path.last), _centerOf(cells[path.length]), t);
   }
 
   void _layout() {
@@ -619,7 +677,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
 
     final width = _cellSize * 0.46;
     final centers = [for (final cell in path) _centerOf(cell)];
-    final live = _clampedLiveTip();
+    final live = _clampedLiveTip() ?? _replayTip();
     final pts = ZipStroke.points(cellCenters: centers, liveTip: live);
     if (pts.isEmpty) return;
 
