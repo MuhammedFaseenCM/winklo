@@ -2450,6 +2450,7 @@ void main() {
             currentStreak: 1,
             dayId: any(named: 'dayId'),
             playId: '20260917',
+            proof: any(named: 'proof'),
           ),
         ).called(1);
         final summary = bloc.state.resultsExtra?.pathWords;
