@@ -1,0 +1,9 @@
+name = "winklo-leaderboard"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Secret (not in this file): FIREBASE_SERVICE_ACCOUNT_JSON, a service account
+# that can read and write Firestore (`npx wrangler secret put
+# FIREBASE_SERVICE_ACCOUNT_JSON`).
+[vars]
+FIREBASE_PROJECT_ID = "brain-zip-app"
