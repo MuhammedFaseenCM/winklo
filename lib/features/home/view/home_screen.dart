@@ -30,6 +30,7 @@ import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
 import 'widgets/home_freeze_badge.dart';
+import 'widgets/home_habit_cards.dart';
 import 'widgets/home_update_banner.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -319,6 +320,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                                 },
                               ),
                             ],
+                            const HomeHabitCards(),
                             SizedBox(height: layout.sectionGap),
                             Expanded(child: _HomeGamesPane(tiles: gameTiles)),
                           ],
