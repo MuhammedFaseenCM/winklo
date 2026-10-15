@@ -116,3 +116,10 @@ Mode keys put the mode first, so nothing starting with `zip_daily_`, `path_words
 - Mode keys are `archive_zip_<day>` / `practice_zip` (mode first) instead of the spec's `zip_archive_<day>` / `zip_practice`, so the stats' daily-prefix scans can never match them.
 - Practice Path Words uses a new bundled list (`en_practice_words.txt`, the cron's fallback pool), because `en_nouns.txt` has no 6-letter words and the 79k ENABLE list is full of obscure words.
 - The Dart generators were brought up to the cron's hard rules for practice (`practice(seed)` entry points); the old date-seeded `generate`/`forDate` stay for their tests.
+- Archive and practice hints count in the local records store (`hints_used_<game>_archive_<day>`, reset when a fresh archive run starts) instead of `HintQuotaRepository`, because that repository's writes fire `ProgressChangeSignal`. Practice hints never run out (`UnlimitedHintQuota`).
+- Draft and hint keys keep the repositories' `<prefix>_<game>_<runId>` shape (`in_progress_zip_archive_20261012`); only the score/meta keys (which the stats scan by prefix) put the mode first. Nothing scans in-progress or hint keys except the per-user purge and stash, which cover them.
+- An archive link for today, a future day or a malformed day redirects to that game's archive calendar instead of opening the daily or an unranked copy of today's puzzle.
+- Archive runs never lock: a day cleared in the daily (or the archive) can be replayed in the archive, and its ✓ stays.
+- Bonus games: their bests moved from `SubmitScore` (`best_pts_match_<deck>`, `best_pts_race_<category>`, which fired the progress sync) to the local records store (`bonus_word_match_<deck>` best time, `bonus_category_race_<category>` most words). Old Word Match/Category Race points bests aren't migrated; the games were unreachable from the UI.
+- Results for archive, practice and bonus runs is a separate local-best page (`LocalResultsView`); its second button is Back home.
+
