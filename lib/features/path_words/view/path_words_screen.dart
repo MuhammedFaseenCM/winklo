@@ -474,7 +474,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                       icon: const Icon(Icons.lightbulb_rounded),
                                       label: Text(
                                         hintLabelFor(
-                                          _bloc.hintQuota,
+                                          widget.mode,
                                           state.hintsRemaining,
                                           AppStrings.pathWordsHintWithCount,
                                         ),

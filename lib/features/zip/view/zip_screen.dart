@@ -432,7 +432,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                     icon: const Icon(Icons.lightbulb_rounded),
                                     label: Text(
                                       hintLabelFor(
-                                        _hintQuota,
+                                        widget.mode,
                                         game?.hintsRemaining ?? 0,
                                         AppStrings.zipHintWithCount,
                                       ),

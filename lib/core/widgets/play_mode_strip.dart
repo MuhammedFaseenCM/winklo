@@ -21,15 +21,13 @@ extension PlayModeReads on BuildContext {
       mode.isDaily ? null : read<PlayModeRecordRepository>();
 }
 
-/// The hint button's label: "Hint (2)", or plain "Hint" when [quota] never
-/// runs out (practice).
+/// The hint button's label: "Hint (2)", or plain "Hint" in practice, where
+/// hints never run out.
 String hintLabelFor(
-  HintQuotaRepository quota,
+  PlayMode mode,
   int remaining,
   String Function(int remaining) withCount,
-) => UnlimitedHintQuota.isUnlimited(quota)
-    ? AppStrings.hintUnlimited
-    : withCount(remaining);
+) => mode.isPractice ? AppStrings.hintUnlimited : withCount(remaining);
 
 /// "Archive · 9 Oct" or "Practice" under a game's header, so a run off the
 /// dailies never looks like today's puzzle. Practice adds New board.

@@ -35,8 +35,9 @@ class WordMatchSelectScreen extends StatelessWidget {
             body: ZipAtmosphere(
               child: switch (state.status) {
                 WordMatchSelectStatus.initial ||
-                WordMatchSelectStatus.loading =>
-                  const Center(child: CircularProgressIndicator()),
+                WordMatchSelectStatus.loading => const Center(
+                  child: CircularProgressIndicator(),
+                ),
                 WordMatchSelectStatus.failure => Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -138,9 +139,7 @@ class _DeckList extends StatelessWidget {
                         children: [
                           Text(
                             deck.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   color: ZipColors.onInk,
                                   fontWeight: FontWeight.w800,

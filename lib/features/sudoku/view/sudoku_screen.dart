@@ -438,7 +438,7 @@ class _SudokuScreenState extends State<SudokuScreen>
                                     _NumberPad(
                                       hintsRemaining: state.hintsRemaining,
                                       hintLabel: hintLabelFor(
-                                        _bloc.hintQuota,
+                                        widget.mode,
                                         state.hintsRemaining,
                                         AppStrings.sudokuHintWithCount,
                                       ),

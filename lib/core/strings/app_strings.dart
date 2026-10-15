@@ -582,4 +582,8 @@ abstract final class AppStrings {
   static const archivePrevious = 'Previous month';
   static const archiveNext = 'Next month';
   static const archiveLegend = '✓ cleared in the daily or the archive';
+  static String pathWordsThemeOf(String theme) => 'Theme: $theme';
+  static const resultsWordsLabel = 'words';
+  static String localBestScore(int words) =>
+      words == 1 ? 'Best 1 word' : 'Best $words words';
 }

@@ -202,9 +202,7 @@ class _CategoryRaceScreenState extends State<CategoryRaceScreen> {
                           children: [
                             Text(
                               category.name,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
+                              style: Theme.of(context).textTheme.headlineSmall
                                   ?.copyWith(
                                     color: ZipColors.onInk,
                                     fontWeight: FontWeight.w800,

@@ -9,9 +9,16 @@ import 'path_words_theme_line.dart';
 /// Under a Path Words clear on Results: the day's theme, the words found
 /// (tap one with a definition to read it) and how many bonus words.
 class PathWordsResultsPanel extends StatelessWidget {
-  const PathWordsResultsPanel({super.key, required this.summary});
+  const PathWordsResultsPanel({
+    super.key,
+    required this.summary,
+    this.themeLabel = AppStrings.pathWordsThemeReveal,
+  });
 
   final PathWordsClearSummary summary;
+
+  /// How the theme line reads ("Today: …" by default).
+  final String Function(String theme) themeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +32,7 @@ class PathWordsResultsPanel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (summary.theme != null) ...[
-          PathWordsThemeLine(theme: summary.theme),
+          PathWordsThemeLine(theme: summary.theme, label: themeLabel),
           const SizedBox(height: 10),
         ],
         Wrap(

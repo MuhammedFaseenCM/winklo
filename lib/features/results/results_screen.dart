@@ -22,6 +22,7 @@ import '../path_words/view/widgets/path_words_results_panel.dart';
 import 'results_args.dart';
 import 'view/counting_play_time.dart';
 import 'view/ember_burst.dart';
+import 'view/local_results_view.dart';
 import 'view/mini_leaderboard_panel.dart';
 import 'view/results_actions.dart';
 import 'view/results_board_tease.dart';
@@ -42,6 +43,8 @@ class ResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Archive, practice and bonus runs: a local best, nothing of the dailies.
+    if (args.local != null) return LocalResultsView(args: args);
     switch (args.gameId) {
       case GameIds.zip:
       case GameIds.pathWords:
