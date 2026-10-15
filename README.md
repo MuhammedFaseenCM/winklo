@@ -43,7 +43,7 @@ The clock pauses when you leave a game and the run is saved on the phone, so it 
 - **Leaderboards:** per game, daily and all-time (Remote Config `showAllTimeLeaderboard` can hide all-time), readable without signing in. Top 50 by time, updating live, with medals for the top 3. Daily rows add "Hint-free", "Flawless" (Sudoku), streak (2+ days) and "You" chips.
 - **Streaks:** one per game. A single freeze covers one missed day, once.
 - **Haptics:** a light tick for each cell traced in Zip and Path Words (the first one too) and each Sudoku digit or note, a stronger one for a found word, a Zip number reached or a completed row, column or box, and the strongest on a win. Ticks closer than 35 ms are dropped, so a fast swipe ripples instead of buzzing.
-- **Profile:** a preset or uploaded avatar, display name, sound effects and vibration toggles, privacy policy, report an issue, about (app version), sign out and delete account.
+- **Profile:** a preset or uploaded avatar, display name, a **Your stats** row (per game: clears, streaks, best and average time, the hint-free share, a clear-time histogram, a calendar of cleared days and a 30-day personal-best trend), sixteen badges (locked ones dimmed with how to earn them; new ones are announced once on Results), sound effects and vibration toggles, privacy policy, report an issue, about (app version), sign out and delete account.
 - **Accounts and sync:** Google sign-in is required to play. Best times, clean-run flags, hint use, streaks and Zip paths sync to `users/{uid}` (today's and yesterday's results on each sync) and backfill the leaderboards. The sync isn't in a released build yet; see [Project status](#project-status).
 - **Account deletion:** a web page where players sign in with Google, and the account-deletion Worker deletes their account and data straight away. From 1.0.0+15, Profile → Delete account in the app signs out and opens that page in the browser.
 - **Notifications:** local reminders at 08:00 ("puzzles are ready") and 20:00 ("streak at risk"), plus the FCM topics `announcements` and `app_updates`.
@@ -212,9 +212,9 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 
 ### Stats, history and achievements
 
-- **Stats screen.** Per game: clears, current and longest streak, best and average time, how often you clear without hints, a time histogram and a calendar of cleared days. Synced history lives in `users/{uid}/game_days` (time, points, hints, mistakes) and owners can read it, but only from 1.0.0+15 on, and each sync covers only today and yesterday. Older days exist only on each phone, so the stats screen needs a one-time upload of the local history first. **M**
-- **Achievements.** First clear, 7/30/100-day streaks, a Zip under a minute, a week without hints, ten flawless Sudokus, a perfect day with all three cleared. Compute them from the same day records and show them on Profile. **M**
-- **Personal-best trend.** A small chart of clear times over the last 30 days. **S** once the stats screen exists.
+- **Done: Stats screen.** Built in the roadmap batch: Profile → Your stats opens `/profile/stats`, fed by a one-time upload of each phone's history on the first signed-in sync. Per game: clears, current and longest streak, best and average time, how often you clear without hints, a time histogram and a calendar of cleared days. Synced history lives in `users/{uid}/game_days` (time, points, hints, mistakes) and owners can read it, but only from 1.0.0+15 on, and each sync covers only today and yesterday. Older days exist only on each phone, so the stats screen needs a one-time upload of the local history first. **M**
+- **Done: Achievements.** Built in the roadmap batch, with a banner on Results for new ones. First clear, 7/30/100-day streaks, a Zip under a minute, a week without hints, ten flawless Sudokus, a perfect day with all three cleared. Compute them from the same day records and show them on Profile. **M**
+- **Done: Personal-best trend.** On the stats screen. A small chart of clear times over the last 30 days. **S** once the stats screen exists.
 - **Today's summary on Home.** "2 of 3 cleared · 3:41 total", with a "Perfect day" badge when all three are done. **S**
 
 ### Habit and retention
