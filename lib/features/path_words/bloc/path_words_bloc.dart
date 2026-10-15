@@ -9,6 +9,7 @@ import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
+import '../../../domain/entities/leaderboard_proof.dart';
 import '../../../domain/entities/path_words_puzzle.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/logic/run_rollover.dart';
@@ -716,6 +717,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       dateId: dateId,
     );
 
+    final puzzle = state.puzzle;
+    final proof = puzzle == null
+        ? null
+        : PathWordsLeaderboardProof.fromRun(
+            puzzle: puzzle,
+            completedTargetIds: state.completedTargetIds,
+            placedPaths: state.placedPaths,
+          );
     try {
       await submitLeaderboardTime(
         gameId: GameIds.pathWords,
@@ -727,6 +736,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         dayId: leaderboardDayId(state.day),
         // Lets a successful submit mark this clear as posted for the sync.
         playId: playId,
+        proof: proof,
       );
     } catch (_) {
       // Best-effort remote sync; local score already saved.
@@ -761,6 +771,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
           day: state.day,
+          leaderboardProof: proof,
         ),
       ),
     );

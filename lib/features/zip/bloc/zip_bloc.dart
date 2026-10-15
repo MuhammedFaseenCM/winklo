@@ -5,6 +5,7 @@ import 'package:bloc/bloc.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
+import '../../../domain/entities/leaderboard_proof.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/logic/run_rollover.dart';
@@ -270,6 +271,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       dateId: StreakCalculator.dateId(state.day),
     );
 
+    final proof = ZipLeaderboardProof(state.path);
     try {
       await submitLeaderboardTime(
         gameId: GameIds.zip,
@@ -281,6 +283,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         dayId: leaderboardDayId(state.day),
         // Lets a successful submit mark this clear as posted for the sync.
         playId: playId,
+        proof: proof,
       );
     } catch (_) {
       // Best-effort remote sync; local score already saved.
@@ -315,6 +318,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
           day: state.day,
+          leaderboardProof: proof,
         ),
       ),
     );

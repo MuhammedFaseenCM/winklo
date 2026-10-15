@@ -1,3 +1,6 @@
+import '../../domain/entities/leaderboard_period.dart';
+import '../../domain/entities/leaderboard_proof.dart';
+
 class ResultsArgs {
   const ResultsArgs({
     required this.title,
@@ -15,6 +18,7 @@ class ResultsArgs {
     this.usedHints,
     this.hadMistakes,
     this.day,
+    this.leaderboardProof,
   });
 
   final String title;
@@ -36,4 +40,14 @@ class ResultsArgs {
 
   /// The daily this run cleared, for the share text.
   final DateTime? day;
+
+  /// Lets the leaderboard Worker check the clear when a guest signs in to
+  /// save it from Results.
+  final LeaderboardProof? leaderboardProof;
+
+  /// The board day of [day] (`yyyy-MM-dd`), or null for today's.
+  String? get leaderboardDay {
+    final cleared = day;
+    return cleared == null ? null : leaderboardDayId(cleared);
+  }
 }

@@ -3,6 +3,7 @@ import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:winklo/core/config/avatar_upload_config.dart';
+import 'package:winklo/core/config/leaderboard_submit_config.dart';
 import 'package:winklo/core/config/path_words_nouns_config.dart';
 import 'package:winklo/core/dev_flags.dart';
 import 'package:winklo/core/di/update_and_prefetch_providers.dart';
@@ -13,6 +14,7 @@ import 'package:winklo/core/sfx/audioplayers_sfx_playback.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/data/clients/avatar/avatar_upload_client.dart';
 import 'package:winklo/data/clients/avatar/r2_avatar_upload_client.dart';
+import 'package:winklo/data/clients/leaderboard/http_leaderboard_submit_client.dart';
 import 'package:winklo/data/clients/notification/firebase_notification_client.dart';
 import 'package:winklo/data/clients/notification/notification_client.dart';
 import 'package:winklo/data/clients/path_words/http_path_words_nouns_client.dart';
@@ -29,6 +31,7 @@ import 'package:winklo/data/repositories/hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/in_progress_run_repository_impl.dart';
 import 'package:winklo/data/repositories/issue_report_repository_impl.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
+import 'package:winklo/data/repositories/league_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
 import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
@@ -56,6 +59,7 @@ import 'package:winklo/domain/repositories/hint_quota_repository.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
+import 'package:winklo/domain/repositories/league_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/progress_local_repository.dart';
@@ -214,8 +218,15 @@ List<SingleChildWidget> buildRepositoryProviders({
           SubmitIssueReport(context.read<IssueReportRepository>()),
     ),
     RepositoryProvider<LeaderboardRepository>(
-      create: (_) => LeaderboardRepositoryImpl(),
+      create: (_) => LeaderboardRepositoryImpl(
+        submitClient: LeaderboardSubmitConfig.isConfigured
+            ? HttpLeaderboardSubmitClient(
+                baseUrl: LeaderboardSubmitConfig.baseUrl,
+              )
+            : null,
+      ),
     ),
+    RepositoryProvider<LeagueRepository>(create: (_) => LeagueRepositoryImpl()),
     RepositoryProvider<SignInWithGoogle>(
       create: (context) => SignInWithGoogle(context.read<AuthRepository>()),
     ),

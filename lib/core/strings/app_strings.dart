@@ -277,12 +277,6 @@ abstract final class AppStrings {
     return '$current → $requiredLabel';
   }
 
-  // League invite links (/join/CODE) until leagues ship
-  static const joinLinkTitle = 'League invite';
-  static String joinLinkCode(String code) => 'Invite code $code';
-  static const joinLinkBody =
-      'Leagues are on their way. Keep this invite and open it again after your next update.';
-
   // Auth / leaderboard
   static const playSignInTitle = 'Sign in to play';
   static const playSignInBody =
@@ -320,6 +314,98 @@ abstract final class AppStrings {
   static const youLabel = 'You';
   static const leaderboardNoHintChip = 'Hint-free';
   static const leaderboardNoMistakesChip = 'Flawless';
+
+  // Leaderboard: past days, the weekly board and leagues (roadmap area C)
+  static const leaderboardThisWeek = 'This week';
+  static const leaderboardToday = 'Today';
+  static const leaderboardYesterday = 'Yesterday';
+  static const _shortMonths = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  static String leaderboardShortDate(int day, int month) =>
+      '$day ${_shortMonths[month - 1]}';
+  static String leaderboardDaysCleared(int days) =>
+      days == 1 ? '1 day' : '$days days';
+  static String leaderboardWeeklyRow(int days, String time) =>
+      '${leaderboardDaysCleared(days)} · $time';
+  static const leaderboardPastDayEmpty = 'No times on this day.';
+  static const leaderboardWeeklyEmpty =
+      'No one has cleared a day this week yet.';
+  static const leaderboardWeeklyDebugNote =
+      'The server fills in the weekly board, so debug builds show it empty.';
+  static const leaderboardLeagueEmpty =
+      'No one in this league has a time here yet.';
+  static const leaderboardScopeEveryone = 'Everyone';
+  static const leaderboardLeagues = 'Leagues';
+  static String playerCardRank(int rank) => 'Rank #$rank';
+  static const playerCardTime = 'Time';
+  static const playerCardWeekTotal = 'Week total';
+  static const playerCardDays = 'Days cleared';
+  static const gamePaused = 'Paused';
+  static const gamePausedResume = 'Tap to resume';
+  static const leaguesTitle = 'Leagues';
+  static const leaguesIntro =
+      'A board for friends, family or a team. Share the code, and everyone '
+      'who joins shows up on it.';
+  static const leaguesEmpty = 'You’re not in a league yet.';
+  static const leaguesFailed = 'Could not load your leagues.';
+  static const leaguesSignIn = 'Sign in to make or join a league.';
+  static const leaguesCreate = 'Create a league';
+  static const leaguesJoin = 'Join with a code';
+  static const leagueNameLabel = 'League name';
+  static const leagueNameHint = 'Family, office, book club…';
+  static const leagueNameInvalid = 'Use 1 to 30 characters.';
+  static const leagueCodeLabel = 'Invite code';
+  static const leagueCodeHint = 'ABC234';
+  static const leagueCodeInvalid = 'A code is 6 letters and digits.';
+  static const leagueCreateAction = 'Create';
+  static const leagueJoinAction = 'Join';
+  static const leagueCancel = 'Cancel';
+  static const leagueSave = 'Save';
+  static String leagueMembers(int count) =>
+      count == 1 ? '1 player' : '$count players';
+  static const leagueOwner = 'Owner';
+  static String leagueCode(String code) => 'Code $code';
+  static const leagueShareInvite = 'Share invite';
+  static const leagueCopyCode = 'Copy code';
+  static const leagueCodeCopied = 'Code copied';
+  static String leagueInviteText(String name, String url) =>
+      'Join my Winklo league “$name”: $url';
+  static const leagueMembersHeading = 'Players';
+  static const leagueMemberFallbackName = 'Player';
+  static const leagueLoadFailed = 'Could not load this league.';
+  static const leagueRename = 'Rename';
+  static const leagueRemove = 'Remove';
+  static String leagueRemoveConfirm(String name) =>
+      'Remove $name from the league?';
+  static const leagueLeave = 'Leave league';
+  static const leagueLeaveConfirm =
+      'Leave this league? You can join again with its code.';
+  static const leagueDelete = 'Delete league';
+  static const leagueDeleteConfirm =
+      'Delete this league for everyone? This can’t be undone.';
+  static const leagueGone = 'This league no longer exists.';
+  static const leagueSeeBoard = 'See the board';
+  static const leagueActionFailed = 'Something went wrong. Try again.';
+  static const joinLeagueTitle = 'Join a league';
+  static const joinLeagueSignIn = 'Sign in to join this league.';
+  static String joinLeagueNotFound(String code) =>
+      'No league has the code $code.';
+  static const joinLeagueBadCode = 'That isn’t a league code.';
+  static const joinLeagueFull = 'That league is full (30 players).';
+  static const joinLeagueButton = 'Join league';
+  static const joinLeagueAlreadyIn = 'You’re in this league.';
 
   /// Compact game-tab label (full title stays [pathWordsTitle]).
   static const pathWordsTab = 'Path';

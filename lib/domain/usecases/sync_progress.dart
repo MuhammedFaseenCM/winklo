@@ -4,6 +4,7 @@ import '../entities/client_error_report.dart';
 import '../entities/clear_meta.dart';
 import '../entities/game_day_record.dart';
 import '../entities/game_streak.dart';
+import '../entities/leaderboard_proof.dart';
 import '../failures.dart';
 import '../game_ids.dart';
 import '../logic/local_game_day.dart';
@@ -537,11 +538,17 @@ class _Run {
             dayId: leaderboardDayIdForPlayId(day.playId),
             // The repository refuses the write if the account switched.
             expectedUid: _uid,
+            // Only Zip saves enough of the run to rebuild its proof.
+            proof: day.gameId == GameIds.zip
+                ? ZipLeaderboardProof.fromBoard(day.board)
+                : null,
           )
           .timeout(_s.leaderboardTimeout);
     } on TimeoutException {
       _leaderboardStalled = true;
       rethrow;
+    } on LeaderboardSubmitRefused {
+      // Final: the Worker will refuse this clear every time, so stop sending it.
     }
     await _s._local.setPushedSignature(markerKey, signature);
   }

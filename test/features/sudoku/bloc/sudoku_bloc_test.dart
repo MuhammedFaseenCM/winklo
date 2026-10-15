@@ -5,6 +5,7 @@ import 'package:winklo/core/haptics/haptics_service.dart';
 import 'package:winklo/core/sfx/sfx_id.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
@@ -270,6 +271,7 @@ void main() {
         currentStreak: any(named: 'currentStreak'),
         dayId: any(named: 'dayId'),
         playId: any(named: 'playId'),
+        proof: any(named: 'proof'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -457,6 +459,14 @@ void main() {
           currentStreak: 1,
           dayId: '2026-09-27',
           playId: '20260927',
+          proof: any(
+            named: 'proof',
+            that: isA<SudokuLeaderboardProof>().having(
+              (p) => p.grid,
+              'grid',
+              allOf(hasLength(36), isNot(contains(0))),
+            ),
+          ),
         ),
       ).called(1);
       verify(
@@ -509,6 +519,7 @@ void main() {
           currentStreak: any(named: 'currentStreak'),
           dayId: '2026-09-27',
           playId: '20260927',
+          proof: any(named: 'proof'),
         ),
       ).called(1);
     },

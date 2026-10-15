@@ -34,6 +34,7 @@ import '../bloc/zip_state.dart';
 import '../game/zip_game.dart';
 import '../logic/zip_rule_tip.dart';
 import 'widgets/zip_how_to_play.dart';
+import 'widgets/zip_paused_cover.dart';
 import 'widgets/zip_replay_button.dart';
 import 'widgets/zip_shimmer.dart';
 import 'widgets/zip_tutorial.dart';
@@ -306,7 +307,9 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                       borderRadius: BorderRadius.circular(24),
                                       child: game == null
                                           ? const SizedBox.shrink()
-                                          : GameWidget(game: game),
+                                          : ZipPausedCover(
+                                              child: GameWidget(game: game),
+                                            ),
                                     )
                                     .animate(
                                       target:

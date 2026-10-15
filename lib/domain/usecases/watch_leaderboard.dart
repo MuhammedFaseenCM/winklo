@@ -11,4 +11,17 @@ class WatchLeaderboard {
     required LeaderboardPeriod period,
     String? dayId,
   }) => _repo.watchBoard(gameId: gameId, period: period, dayId: dayId);
+
+  /// The same board for a league's [memberUids] only.
+  Stream<List<LeaderboardEntry>> members({
+    required String gameId,
+    required LeaderboardPeriod period,
+    required List<String> memberUids,
+    String? dayId,
+  }) => _repo.watchMembersBoard(
+    gameId: gameId,
+    period: period,
+    memberUids: memberUids,
+    dayId: dayId,
+  );
 }

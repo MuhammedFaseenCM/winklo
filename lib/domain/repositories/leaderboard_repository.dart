@@ -1,12 +1,35 @@
 import '../entities/leaderboard_entry.dart';
 import '../entities/leaderboard_period.dart';
+import '../entities/leaderboard_proof.dart';
+import '../failures.dart';
+
+/// The leaderboard Worker checked a clear and refused it (a time under the
+/// minimum, a day that isn't live, or a proof that doesn't solve the puzzle).
+/// Final: sending the same clear again gets the same answer.
+class LeaderboardSubmitRefused extends Failure {
+  const LeaderboardSubmitRefused(this.code)
+    : super('The leaderboard did not accept this time.', cause: code);
+
+  final String code;
+}
 
 abstract class LeaderboardRepository {
   /// Live top entries for [gameId] and [period], ranked 1…n.
-  /// For [LeaderboardPeriod.daily], [dayId] defaults to today's local calendar day.
+  /// For [LeaderboardPeriod.daily], [dayId] defaults to today's local calendar
+  /// day; for [LeaderboardPeriod.weekly] the board is the ISO week holding it.
+  /// Debug builds have no weekly board (only the Worker writes it): empty.
   Stream<List<LeaderboardEntry>> watchBoard({
     required String gameId,
     required LeaderboardPeriod period,
+    String? dayId,
+  });
+
+  /// Live entries of [memberUids] (a league, 30 at most) on the same board as
+  /// [watchBoard], ranked on the phone with the same rules.
+  Stream<List<LeaderboardEntry>> watchMembersBoard({
+    required String gameId,
+    required LeaderboardPeriod period,
+    required List<String> memberUids,
     String? dayId,
   });
 
@@ -21,6 +44,13 @@ abstract class LeaderboardRepository {
   /// When [expectedUid] is given the write is refused (throws) unless that
   /// account is still the signed-in one, so a run started for one account
   /// never lands on another account's entries after a switch.
+  ///
+  /// With a [proof], release builds post the clear to the leaderboard Worker,
+  /// which checks it and writes the daily, all-time and weekly boards; if the
+  /// Worker can't be reached they write the daily and all-time boards
+  /// directly, as builds before 1.1.0 do. A refusal throws
+  /// [LeaderboardSubmitRefused]. A time under the game's minimum, or for a
+  /// day whose board has closed, is skipped: no board would take it.
   Future<void> submitBestTime({
     required String gameId,
     required int timeSeconds,
@@ -29,5 +59,6 @@ abstract class LeaderboardRepository {
     required int currentStreak,
     String? dayId,
     String? expectedUid,
+    LeaderboardProof? proof,
   });
 }

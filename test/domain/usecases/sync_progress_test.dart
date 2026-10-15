@@ -11,6 +11,8 @@ import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/client_error_report.dart';
 import 'package:winklo/domain/entities/game_day_record.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
+import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
@@ -868,6 +870,61 @@ void main() {
       expect(prefs.getInt('streak_current_path_words'), 0);
       expect(prefs.getInt('streak_longest_path_words'), 5);
       expect(remoteStreaks['path_words']!.current, 0);
+    });
+
+    test('a Zip clear with its saved path sends it as the proof', () async {
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 30,
+          'clear_board_zip_daily_$_today': '0,0;0,1;1,1',
+        },
+      );
+
+      await sync();
+
+      final proof =
+          verify(
+                () => leaderboard.submitBestTime(
+                  gameId: 'zip',
+                  timeSeconds: 30,
+                  usedHints: any(named: 'usedHints'),
+                  hadMistakes: any(named: 'hadMistakes'),
+                  currentStreak: any(named: 'currentStreak'),
+                  dayId: '2026-10-07',
+                  expectedUid: _uid,
+                  proof: captureAny(named: 'proof'),
+                ),
+              ).captured.single
+              as ZipLeaderboardProof;
+      expect(proof.path, const [Cell(0, 0), Cell(0, 1), Cell(1, 1)]);
+    });
+
+    test('a clear the Worker refuses is marked posted, not failed', () async {
+      when(
+        () => leaderboard.submitBestTime(
+          gameId: any(named: 'gameId'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          currentStreak: any(named: 'currentStreak'),
+          dayId: any(named: 'dayId'),
+          expectedUid: any(named: 'expectedUid'),
+          proof: any(named: 'proof'),
+        ),
+      ).thenThrow(const LeaderboardSubmitRefused('bad_proof'));
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 30,
+          'clear_board_zip_daily_$_today': '0,0;0,1',
+        },
+      );
+
+      final result = await sync();
+
+      expect(result.failures, 0);
+      expect(prefs.getString('sync_lb_zip_$_today'), '30');
     });
 
     test('a 0 s clear pushes the day but is never submitted', () async {

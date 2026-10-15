@@ -92,14 +92,67 @@ service cloud.firestore {
     }
 
     // Identity / streak refresh that does not change the recorded time.
-    function profileOnlyLeaderboardUpdate() {
+    // [streakMayChange] is false on the release boards once direct writes
+    // are off (fair-play phase 2): only the Worker can check a streak.
+    function profileOnlyLeaderboardUpdate(streakMayChange) {
       return request.resource.data.timeSeconds == resource.data.timeSeconds
         && validCurrentStreak()
         && validLeaderboardIdentity()
         && validLeaderboardUpdatedAt()
         && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['displayName', 'photoUrl', 'avatarId', 'updatedAt',
-              'currentStreak']);
+            .hasOnly(streakMayChange
+              ? ['displayName', 'photoUrl', 'avatarId', 'updatedAt',
+                'currentStreak']
+              : ['displayName', 'photoUrl', 'avatarId', 'updatedAt']);
+    }
+
+    // Fair play. From 1.1.0+19 the app submits through the leaderboard
+    // Worker (workers/leaderboard), which checks the clear and writes with
+    // admin credentials, so these rules don't apply to it. Older builds still
+    // write directly, so phase 1 keeps direct writes open, with a minimum time
+    // and a live day. Phase 2, once minBuildNumber reaches 19: return false
+    // here and deploy the rules; only identity refreshes stay open.
+    function directLeaderboardWritesAllowed() {
+      return true;
+    }
+
+    // Fastest accepted clear per game, in seconds. MIN_SECONDS in
+    // workers/leaderboard/src/limits.ts and leaderboardMinSeconds in
+    // lib/domain/leaderboard_limits.dart are the same numbers
+    // (test/firestore/leaderboard_fair_play_pins_test.dart pins all three).
+    function minLeaderboardSeconds(gameId) {
+      return {'zip': 10, 'path_words': 15, 'sudoku': 15}[gameId];
+    }
+
+    function meetsMinimumTime(gameId) {
+      return request.resource.data.timeSeconds >= minLeaderboardSeconds(gameId);
+    }
+
+    // UTC midnight of a yyyy-MM-dd day id.
+    function utcMidnightOf(dayId) {
+      let parts = dayId.split('-');
+      return timestamp.date(int(parts[0]), int(parts[1]), int(parts[2]));
+    }
+
+    // A leaderboard day is the phone's local date, so its board is open from
+    // 10:00 UTC the day before (00:00 at UTC+14) to 12:00 UTC the day after
+    // (24:00 at UTC-12). isDayLive in workers/leaderboard/src/days.ts.
+    function leaderboardDayIsLive(dayId) {
+      return dayId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.time >= utcMidnightOf(dayId) - duration.value(14, 'h')
+        && request.time < utcMidnightOf(dayId) + duration.value(36, 'h');
+    }
+
+    // A `daily_YYYYMMDD` puzzle holds its solution, so players can read it
+    // only once its day is live somewhere (10:00 UTC the day before, the rule
+    // in winklo-admin's daily_live.ts). Admins can read it at any time. Other
+    // ids are unchanged.
+    function puzzleDocReadable(id) {
+      return !id.matches('^daily_[0-9]{8}$')
+        || isAdmin()
+        || request.time >= timestamp.date(
+            int(id[6:10]), int(id[10:12]), int(id[12:14])
+          ) - duration.value(14, 'h');
     }
 
     // users/{uid}.avatarId is an optional string (null clears a preset).
@@ -110,15 +163,21 @@ service cloud.firestore {
     }
 
     match /zip_levels/{id} {
-      allow read: if true;
+      allow get: if puzzleDocReadable(id);
+      // A query could return a daily before it's live; only admins list.
+      allow list: if isAdmin();
       allow write: if false;
     }
     match /path_words_levels/{id} {
-      allow read: if true;
+      allow get: if puzzleDocReadable(id);
+      // A query could return a daily before it's live; only admins list.
+      allow list: if isAdmin();
       allow write: if false;
     }
     match /sudoku_levels/{id} {
-      allow read: if true;
+      allow get: if puzzleDocReadable(id);
+      // A query could return a daily before it's live; only admins list.
+      allow list: if isAdmin();
       allow write: if false;
     }
     match /word_match_decks/{id} {
@@ -261,37 +320,59 @@ service cloud.firestore {
     }
 
     // Public read so the board loads even if the Auth ID token is still
-    // refreshing; writes stay owner-only + improve-only.
+    // refreshing; writes stay owner-only + improve-only, and (fair play)
+    // need the game's minimum time while direct writes are allowed at all.
     match /leaderboards/{gameId}/all_time/{uid} {
       allow read: if validGame(gameId);
-      allow create: if isOwner(uid)
+      allow create: if directLeaderboardWritesAllowed()
+        && isOwner(uid)
         && validGame(gameId)
         && validTimeSeconds()
+        && meetsMinimumTime(gameId)
         && validLeaderboardKeys()
         && validCleanRunFlags();
       allow update: if isOwner(uid)
         && validGame(gameId)
         && (
-          (improvingTime() && validLeaderboardKeys() && validCleanRunFlags())
-          || profileOnlyLeaderboardUpdate()
+          (directLeaderboardWritesAllowed()
+            && improvingTime()
+            && meetsMinimumTime(gameId)
+            && validLeaderboardKeys()
+            && validCleanRunFlags())
+          || profileOnlyLeaderboardUpdate(directLeaderboardWritesAllowed())
         );
       allow delete: if false;
     }
 
+    // Daily boards also need a yyyy-MM-dd day that is live right now.
     match /leaderboards/{gameId}/daily/{dayId}/entries/{uid} {
       allow read: if validGame(gameId);
-      allow create: if isOwner(uid)
+      allow create: if directLeaderboardWritesAllowed()
+        && isOwner(uid)
         && validGame(gameId)
+        && leaderboardDayIsLive(dayId)
         && validTimeSeconds()
+        && meetsMinimumTime(gameId)
         && validLeaderboardKeys()
         && validCleanRunFlags();
       allow update: if isOwner(uid)
         && validGame(gameId)
+        && leaderboardDayIsLive(dayId)
         && (
-          (improvingTime() && validLeaderboardKeys() && validCleanRunFlags())
-          || profileOnlyLeaderboardUpdate()
+          (directLeaderboardWritesAllowed()
+            && improvingTime()
+            && meetsMinimumTime(gameId)
+            && validLeaderboardKeys()
+            && validCleanRunFlags())
+          || profileOnlyLeaderboardUpdate(directLeaderboardWritesAllowed())
         );
       allow delete: if false;
+    }
+
+    // Weekly totals: only the leaderboard Worker writes them.
+    match /leaderboards/{gameId}/weekly/{weekId}/entries/{uid} {
+      allow read: if validGame(gameId);
+      allow write: if false;
     }
 
     // Twin used by debug builds (`kDebugMode`) so demo seeds / local
@@ -307,7 +388,7 @@ service cloud.firestore {
         && validGame(gameId)
         && (
           (improvingTime() && validLeaderboardKeys() && validCleanRunFlags())
-          || profileOnlyLeaderboardUpdate()
+          || profileOnlyLeaderboardUpdate(true)
         );
       allow delete: if false;
     }
@@ -323,9 +404,141 @@ service cloud.firestore {
         && validGame(gameId)
         && (
           (improvingTime() && validLeaderboardKeys() && validCleanRunFlags())
-          || profileOnlyLeaderboardUpdate()
+          || profileOnlyLeaderboardUpdate(true)
         );
       allow delete: if false;
+    }
+
+    // Private leagues. A league doc lists its members' uids (1 to 30), and
+    // league_codes/{CODE} points an invite code at it. Anyone signed in can
+    // get either by id, which is how a code is joined, but not list them;
+    // members list their own leagues with array-contains. Field list:
+    // leagueFirestoreKeys in lib/data/repositories/league_repository_impl.dart.
+    function validLeagueCode(code) {
+      return code is string
+        && code.matches('^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$');
+    }
+
+    function validLeagueName(name) {
+      return name is string
+        && name.size() >= 1
+        && name.size() <= 30
+        && name.trim().size() > 0;
+    }
+
+    function leagueDoc(leagueId) {
+      return /databases/$(database)/documents/leagues/$(leagueId);
+    }
+
+    function leagueCodeDoc(code) {
+      return /databases/$(database)/documents/league_codes/$(code);
+    }
+
+    // The owner is the only member, and the code doc that points here is
+    // written in the same batch.
+    function validLeagueCreate(leagueId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'name', 'ownerUid', 'code', 'memberUids', 'createdAt'
+        ])
+        && data.keys().hasAll([
+          'name', 'ownerUid', 'code', 'memberUids', 'createdAt'
+        ])
+        && validLeagueName(data.name)
+        && data.ownerUid == request.auth.uid
+        && data.memberUids == [request.auth.uid]
+        && validLeagueCode(data.code)
+        && data.createdAt == request.time
+        && getAfter(leagueCodeDoc(data.code)).data.leagueId == leagueId;
+    }
+
+    function onlyMembersChange() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['memberUids']);
+    }
+
+    // Joining adds your own uid and nothing else; a league holds 30 at most.
+    function joinsLeague() {
+      let before = resource.data.memberUids;
+      let after = request.resource.data.memberUids;
+      return onlyMembersChange()
+        && !(request.auth.uid in before)
+        && after is list
+        && after.size() == before.size() + 1
+        && after.hasAll(before)
+        && request.auth.uid in after
+        && after.size() <= 30;
+    }
+
+    // Leaving removes your own uid and nothing else. The owner can't leave
+    // (they delete the league instead), so a league always has its owner.
+    function leavesLeague() {
+      let before = resource.data.memberUids;
+      let after = request.resource.data.memberUids;
+      return onlyMembersChange()
+        && request.auth.uid != resource.data.ownerUid
+        && request.auth.uid in before
+        && after is list
+        && after.size() == before.size() - 1
+        && before.hasAll(after)
+        && !(request.auth.uid in after);
+    }
+
+    function isLeagueOwner() {
+      return isSignedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // The owner removes other players; they stay in themselves.
+    function ownerRemovesMembers() {
+      let before = resource.data.memberUids;
+      let after = request.resource.data.memberUids;
+      return isLeagueOwner()
+        && onlyMembersChange()
+        && after is list
+        && after.size() < before.size()
+        && before.hasAll(after)
+        && request.auth.uid in after;
+    }
+
+    function ownerRenamesLeague() {
+      return isLeagueOwner()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name'])
+        && validLeagueName(request.resource.data.name);
+    }
+
+    match /leagues/{leagueId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn()
+        && request.auth.uid in resource.data.memberUids;
+      allow create: if isSignedIn() && validLeagueCreate(leagueId);
+      allow update: if isSignedIn()
+        && (joinsLeague()
+          || leavesLeague()
+          || ownerRemovesMembers()
+          || ownerRenamesLeague());
+      // With its code doc in the same batch, so no code is left pointing
+      // nowhere (its own delete rule reads the league).
+      allow delete: if isLeagueOwner()
+        && !existsAfter(leagueCodeDoc(resource.data.code));
+    }
+
+    match /league_codes/{code} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      // Only alongside a new league of yours that carries this code.
+      allow create: if isSignedIn()
+        && validLeagueCode(code)
+        && request.resource.data.keys().hasOnly(['leagueId'])
+        && request.resource.data.leagueId is string
+        && !exists(leagueDoc(request.resource.data.leagueId))
+        && getAfter(leagueDoc(request.resource.data.leagueId)).data.code == code
+        && getAfter(leagueDoc(request.resource.data.leagueId)).data.ownerUid
+          == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn()
+        && get(leagueDoc(resource.data.leagueId)).data.ownerUid
+          == request.auth.uid;
     }
 
     match /issue_reports/{reportId} {

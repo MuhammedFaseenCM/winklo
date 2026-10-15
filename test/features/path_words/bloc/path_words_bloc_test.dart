@@ -3,6 +3,7 @@ import 'package:winklo/core/haptics/haptics_service.dart';
 import 'package:winklo/core/sfx/sfx_id.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/entities/path_words_puzzle.dart';
@@ -224,6 +225,7 @@ void main() {
         currentStreak: any(named: 'currentStreak'),
         dayId: any(named: 'dayId'),
         playId: any(named: 'playId'),
+        proof: any(named: 'proof'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -501,6 +503,14 @@ void main() {
           currentStreak: 3,
           dayId: '2026-09-17',
           playId: '20260917',
+          proof: any(
+            named: 'proof',
+            that: isA<PathWordsLeaderboardProof>().having(
+              (p) => p.strokes,
+              'strokes',
+              isNotEmpty,
+            ),
+          ),
         ),
       ).called(1);
       verify(

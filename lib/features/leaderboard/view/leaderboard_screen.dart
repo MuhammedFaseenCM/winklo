@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import '../../../domain/entities/leaderboard_entry.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../../domain/repositories/league_repository.dart';
 import '../../../domain/usecases/watch_leaderboard.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/cubit/auth_state.dart';
@@ -20,8 +22,11 @@ import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../../auth/view/sign_in_sheet.dart';
 import '../cubit/leaderboard_cubit.dart';
 import '../cubit/leaderboard_state.dart';
+import 'widgets/leaderboard_day_strip.dart';
 import 'widgets/leaderboard_row.dart';
+import 'widgets/leaderboard_scope_bar.dart';
 import 'widgets/leaderboard_shimmer.dart';
+import 'widgets/player_card_sheet.dart';
 
 class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({
@@ -41,6 +46,7 @@ class LeaderboardScreen extends StatelessWidget {
       create: (context) => LeaderboardCubit(
         watchLeaderboard: context.read<WatchLeaderboard>(),
         authRepository: context.read<AuthRepository>(),
+        leagueRepository: context.read<LeagueRepository?>(),
         initialGameId: _resolveLeaderboardGameId(initialGameId),
       ),
       child: _RouteGameSync(
@@ -78,6 +84,10 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
   GoRouter? _router;
   String? _appliedLocation;
 
+  /// The last `league` query applied, so coming back to the tab doesn't undo
+  /// a later pick in the scope bar.
+  String? _appliedLeagueQuery;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -110,9 +120,16 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
     if (sameLeaderboard) return;
     final game = uri.queryParameters['game'];
     final gameId = _resolveLeaderboardGameId(game);
+    final leagueId = uri.queryParameters['league'];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<LeaderboardCubit>().selectGame(gameId);
+      final cubit = context.read<LeaderboardCubit>();
+      cubit.selectGame(gameId);
+      // `/leaderboard?league={id}`: that league's board.
+      if (leagueId != null && leagueId != _appliedLeagueQuery) {
+        cubit.selectLeague(leagueId);
+      }
+      _appliedLeagueQuery = leagueId;
     });
   }
 
@@ -213,7 +230,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     if (_showAllTimeLeaderboard) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _showAllTimeLeaderboard) return;
-      context.read<LeaderboardCubit>().selectPeriod(LeaderboardPeriod.daily);
+      final cubit = context.read<LeaderboardCubit>();
+      if (cubit.state.period != LeaderboardPeriod.allTime) return;
+      cubit.selectPeriod(LeaderboardPeriod.daily);
     });
   }
 
@@ -221,6 +240,13 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     final m = seconds ~/ 60;
     final s = seconds % 60;
     return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  /// A row's time: the week's days and total on the weekly board.
+  String _timeLabel(LeaderboardEntry entry, LeaderboardPeriod period) {
+    final time = _formatTime(entry.timeSeconds);
+    if (period != LeaderboardPeriod.weekly) return time;
+    return AppStrings.leaderboardWeeklyRow(entry.daysCleared ?? 0, time);
   }
 
   void _checkUserVisibility(AppLayout layout, int userIndex) {
@@ -286,6 +312,18 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     );
   }
 
+  /// The empty board's message when there's nothing to play for: a past day,
+  /// or the weekly board in a debug build (only the server writes it).
+  String? _quietEmptyMessage(LeaderboardState state) {
+    if (state.period == LeaderboardPeriod.weekly && kDebugMode) {
+      return AppStrings.leaderboardWeeklyDebugNote;
+    }
+    if (state.period == LeaderboardPeriod.daily && state.dayId != null) {
+      return AppStrings.leaderboardPastDayEmpty;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final layout = AppLayout.of(context);
@@ -298,7 +336,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
         _scrollController.jumpTo(0);
       }
     } else if (cubitState.period != _previousPeriod) {
-      _slideDirection = cubitState.period == LeaderboardPeriod.allTime
+      _slideDirection = cubitState.period.index > _previousPeriod.index
           ? 1.0
           : -1.0;
       _previousPeriod = cubitState.period;
@@ -361,6 +399,16 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                 ),
                           ),
                         ),
+                        if (cubitState.currentUid != null)
+                          IconButton(
+                            key: const Key('leaderboard_manage_leagues'),
+                            tooltip: AppStrings.leaderboardLeagues,
+                            onPressed: () => context.push('/leagues'),
+                            icon: const Icon(
+                              Icons.group_rounded,
+                              color: ZipColors.onInk,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -406,52 +454,101 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                       },
                     ),
                   ),
-                  if (_showAllTimeLeaderboard) ...[
-                    SizedBox(height: layout.space(10)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: layout.space(16),
-                      ),
-                      child: BlocBuilder<LeaderboardCubit, LeaderboardState>(
-                        buildWhen: (p, n) => p.period != n.period,
-                        builder: (context, state) {
-                          final selectedIndex =
-                              state.period == LeaderboardPeriod.allTime ? 1 : 0;
-                          return _LeaderboardPillTrack(
-                            selectedIndex: selectedIndex,
+                  SizedBox(height: layout.space(10)),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: layout.space(16)),
+                    child: BlocBuilder<LeaderboardCubit, LeaderboardState>(
+                      buildWhen: (p, n) => p.period != n.period,
+                      builder: (context, state) {
+                        final periods = [
+                          LeaderboardPeriod.daily,
+                          LeaderboardPeriod.weekly,
+                          if (_showAllTimeLeaderboard)
+                            LeaderboardPeriod.allTime,
+                        ];
+                        final selectedIndex = periods.indexOf(state.period);
+                        return _LeaderboardPillTrack(
+                          selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                          segmentCount: periods.length,
+                          isSecondary: true,
+                          child: _LeaderboardSegmentBar<LeaderboardPeriod>(
+                            selected: state.period,
                             isSecondary: true,
-                            child: _LeaderboardSegmentBar<LeaderboardPeriod>(
-                              selected: state.period,
-                              isSecondary: true,
-                              onChanged: (value) {
-                                context.read<LeaderboardCubit>().selectPeriod(
-                                  value,
-                                );
-                              },
-                              segments: const [
-                                _LeaderboardSegment(
-                                  value: LeaderboardPeriod.daily,
-                                  icon: Icons.today_rounded,
-                                  label: AppStrings.leaderboardDaily,
-                                  iconSize: 16,
-                                ),
-                                _LeaderboardSegment(
+                            onChanged: (value) {
+                              context.read<LeaderboardCubit>().selectPeriod(
+                                value,
+                              );
+                            },
+                            segments: [
+                              const _LeaderboardSegment(
+                                value: LeaderboardPeriod.daily,
+                                icon: Icons.today_rounded,
+                                label: AppStrings.leaderboardDaily,
+                                iconSize: 16,
+                              ),
+                              const _LeaderboardSegment(
+                                value: LeaderboardPeriod.weekly,
+                                icon: Icons.date_range_rounded,
+                                label: AppStrings.leaderboardThisWeek,
+                                iconSize: 16,
+                              ),
+                              if (_showAllTimeLeaderboard)
+                                const _LeaderboardSegment(
                                   value: LeaderboardPeriod.allTime,
                                   icon: Icons.military_tech_rounded,
                                   label: AppStrings.leaderboardAllTime,
                                   iconSize: 16,
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  ],
+                  ),
+                  BlocBuilder<LeaderboardCubit, LeaderboardState>(
+                    buildWhen: (p, n) =>
+                        p.leagues != n.leagues ||
+                        p.leagueId != n.leagueId ||
+                        p.currentUid != n.currentUid,
+                    builder: (context, state) {
+                      if (state.currentUid == null || state.leagues.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: EdgeInsets.only(top: layout.space(10)),
+                        child: LeaderboardScopeBar(
+                          leagues: state.leagues,
+                          selectedLeagueId: state.leagueId,
+                          onSelected: (id) =>
+                              context.read<LeaderboardCubit>().selectLeague(id),
+                        ),
+                      );
+                    },
+                  ),
+                  BlocBuilder<LeaderboardCubit, LeaderboardState>(
+                    buildWhen: (p, n) =>
+                        p.period != n.period || p.dayId != n.dayId,
+                    builder: (context, state) {
+                      if (state.period != LeaderboardPeriod.daily) {
+                        return const SizedBox.shrink();
+                      }
+                      final cubit = context.read<LeaderboardCubit>();
+                      return Padding(
+                        padding: EdgeInsets.only(top: layout.space(10)),
+                        child: LeaderboardDayStrip(
+                          dayIds: cubit.recentDayIds,
+                          selectedDayId: state.dayId,
+                          onSelected: cubit.selectDay,
+                        ),
+                      );
+                    },
+                  ),
                   SizedBox(height: layout.space(12)),
                   Expanded(
                     child: _LeaderboardSlideSwitch(
-                      switchKey: '${cubitState.gameId}_${cubitState.period}',
+                      switchKey:
+                          '${cubitState.gameId}_${cubitState.period}_'
+                          '${cubitState.dayId}_${cubitState.leagueId}',
                       direction: _slideDirection,
                       child: BlocBuilder<LeaderboardCubit, LeaderboardState>(
                         builder: (context, state) {
@@ -471,6 +568,16 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                     context.read<LeaderboardCubit>().retry(),
                               );
                             case LeaderboardStatus.ready:
+                              final quietEmpty = _quietEmptyMessage(state);
+                              if (state.entries.isEmpty && quietEmpty != null) {
+                                return CenteredMessageBody(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 28,
+                                    vertical: 24,
+                                  ),
+                                  message: quietEmpty,
+                                );
+                              }
                               if (state.entries.isEmpty) {
                                 final gameTitle = switch (state.gameId) {
                                   GameIds.pathWords =>
@@ -529,7 +636,11 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                     ),
                                   ),
                                   iconSpacing: 20,
-                                  message: AppStrings.leaderboardEmpty,
+                                  message: state.leagueId != null
+                                      ? AppStrings.leaderboardLeagueEmpty
+                                      : state.period == LeaderboardPeriod.weekly
+                                      ? AppStrings.leaderboardWeeklyEmpty
+                                      : AppStrings.leaderboardEmpty,
                                   messageStyle: Theme.of(context)
                                       .textTheme
                                       .titleMedium
@@ -606,17 +717,28 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                         final entry = state.entries[index];
                                         final isYou =
                                             entry.uid == state.currentUid;
-                                        return LeaderboardRow(
-                                          key: isYou ? _userRowKey : null,
-                                          entry: entry,
-                                          timeLabel: _formatTime(
-                                            entry.timeSeconds,
+                                        return GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () => showPlayerCardSheet(
+                                            context,
+                                            entry: entry,
+                                            gameId: state.gameId,
+                                            period: state.period,
+                                            isYou: isYou,
                                           ),
-                                          isYou: isYou,
-                                          showCleanRunChips:
-                                              state.period ==
-                                              LeaderboardPeriod.daily,
-                                          gameId: state.gameId,
+                                          child: LeaderboardRow(
+                                            key: isYou ? _userRowKey : null,
+                                            entry: entry,
+                                            timeLabel: _timeLabel(
+                                              entry,
+                                              state.period,
+                                            ),
+                                            isYou: isYou,
+                                            showCleanRunChips:
+                                                state.period ==
+                                                LeaderboardPeriod.daily,
+                                            gameId: state.gameId,
+                                          ),
                                         );
                                       },
                                     ),
@@ -683,8 +805,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                                     ),
                                                     child: _PinnedUserRow(
                                                       entry: userEntry,
-                                                      timeLabel: _formatTime(
-                                                        userEntry.timeSeconds,
+                                                      timeLabel: _timeLabel(
+                                                        userEntry,
+                                                        state.period,
                                                       ),
                                                       showCleanRunChips:
                                                           state.period ==

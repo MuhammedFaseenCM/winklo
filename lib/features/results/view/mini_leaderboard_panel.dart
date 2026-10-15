@@ -6,6 +6,7 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/centered_message_body.dart';
 import '../../../core/widgets/zip_ui.dart';
+import '../../../domain/entities/leaderboard_proof.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/watch_leaderboard.dart';
@@ -25,6 +26,8 @@ class MiniLeaderboardPanel extends StatelessWidget {
     this.hadMistakes,
     this.currentStreak,
     this.footer,
+    this.dayId,
+    this.leaderboardProof,
   });
 
   final String gameId;
@@ -36,6 +39,11 @@ class MiniLeaderboardPanel extends StatelessWidget {
   /// Replaces the default leaderboard and home buttons under the board.
   final Widget? footer;
 
+  /// The cleared day's board (`yyyy-MM-dd`) and the run's proof, for a
+  /// guest who signs in here to save the time.
+  final String? dayId;
+  final LeaderboardProof? leaderboardProof;
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -43,7 +51,7 @@ class MiniLeaderboardPanel extends StatelessWidget {
         watchLeaderboard: context.read<WatchLeaderboard>(),
         authRepository: context.read<AuthRepository>(),
         initialGameId: gameId,
-      ),
+      )..selectDay(dayId),
       child: _MiniLeaderboardPanelBody(
         gameId: gameId,
         timeSeconds: timeSeconds,
@@ -51,6 +59,8 @@ class MiniLeaderboardPanel extends StatelessWidget {
         hadMistakes: hadMistakes,
         currentStreak: currentStreak,
         footer: footer,
+        dayId: dayId,
+        leaderboardProof: leaderboardProof,
       ),
     );
   }
@@ -64,6 +74,8 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
     this.hadMistakes,
     this.currentStreak,
     this.footer,
+    this.dayId,
+    this.leaderboardProof,
   });
 
   final String gameId;
@@ -72,6 +84,8 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
   final bool? hadMistakes;
   final int? currentStreak;
   final Widget? footer;
+  final String? dayId;
+  final LeaderboardProof? leaderboardProof;
 
   String _formatTime(int seconds) {
     final m = seconds ~/ 60;
@@ -90,6 +104,8 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
         usedHints: usedHints ?? true,
         hadMistakes: hadMistakes ?? true,
         currentStreak: currentStreak ?? 0,
+        dayId: dayId,
+        proof: leaderboardProof,
       );
     } catch (_) {
       // Best-effort remote sync; signed-in UI still shows live board.
