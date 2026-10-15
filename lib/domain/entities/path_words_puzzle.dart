@@ -1,5 +1,6 @@
 import '../stable_seed.dart';
 import 'cell.dart';
+import 'daily_special.dart';
 
 /// A stroke released onto the board. [targetId] is set only when it matches
 /// a remaining solution path.
@@ -92,6 +93,9 @@ class PathWordsPuzzle {
     required this.size,
     required this.letters,
     required this.targets,
+    this.theme,
+    this.definitions = const {},
+    this.special,
   });
 
   final String id;
@@ -102,12 +106,29 @@ class PathWordsPuzzle {
   final List<String> letters;
   final List<PathWordsTarget> targets;
 
+  /// The day's theme ("Kitchen tools"), shown only after a clear; null when
+  /// the day has none.
+  final String? theme;
+
+  /// A one-line definition of each target word, keyed by the word in lower
+  /// case; empty when the doc has none. Shown only after a clear.
+  final Map<String, String> definitions;
+
+  /// `weekend` on a weekend special (see [DailySpecial]); null otherwise.
+  final String? special;
+
+  bool get isWeekendSpecial => special == DailySpecial.weekend;
+
+  /// The definition of [word], in any case; null when there is none.
+  String? definitionFor(String word) => definitions[word.toLowerCase()];
+
   String letterAt(Cell cell) => letters[cell.row * size + cell.col];
 
   bool hasLetter(Cell cell) => letterAt(cell).isNotEmpty;
 
   /// Changes whenever the board does, including a target's id, word or path,
-  /// since saved runs refer to targets by id.
+  /// since saved runs refer to targets by id. The theme, definitions and
+  /// special aren't part of the board, so editing them keeps a saved run.
   String get fingerprint {
     final targetKeys = [
       for (final t in targets) '${t.id}:${t.word}:${t.path.join(' ')}',
@@ -122,18 +143,36 @@ class PathWordsPuzzle {
         .map((e) => e.toString().toLowerCase())
         .toList();
     final targets = (json['targets'] as List? ?? [])
-        .map((t) => PathWordsTarget.fromJson(Map<String, dynamic>.from(t as Map)))
+        .map(
+          (t) => PathWordsTarget.fromJson(Map<String, dynamic>.from(t as Map)),
+        )
         .toList();
     final rawDay = json['day'];
     final day = rawDay is String
         ? DateTime.tryParse(rawDay) ?? DateTime.now()
         : DateTime.now();
+    final rawTheme = json['theme'];
+    final theme = rawTheme is String && rawTheme.trim().isNotEmpty
+        ? rawTheme.trim()
+        : null;
+    final rawDefinitions = json['definitions'];
+    final definitions = <String, String>{
+      if (rawDefinitions is Map)
+        for (final entry in rawDefinitions.entries)
+          if (entry.value is String &&
+              (entry.value as String).trim().isNotEmpty)
+            entry.key.toString().trim().toLowerCase(): (entry.value as String)
+                .trim(),
+    };
     return PathWordsPuzzle(
       id: id ?? json['id'] as String? ?? '',
       day: day,
       size: (json['size'] as num).toInt(),
       letters: rawLetters,
       targets: targets,
+      theme: theme,
+      definitions: definitions,
+      special: readDailySpecial(json['special']),
     );
   }
 
@@ -143,5 +182,8 @@ class PathWordsPuzzle {
     'size': size,
     'letters': letters,
     'targets': targets.map((t) => t.toJson()).toList(),
+    if (theme != null) 'theme': theme,
+    if (definitions.isNotEmpty) 'definitions': definitions,
+    if (special != null) 'special': special,
   };
 }

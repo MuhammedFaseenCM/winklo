@@ -1,5 +1,6 @@
 import '../failures.dart';
 import '../stable_seed.dart';
+import 'daily_special.dart';
 import 'sudoku_difficulty.dart';
 
 class SudokuPuzzle {
@@ -12,6 +13,7 @@ class SudokuPuzzle {
     this.size = 6,
     this.boxRows = 2,
     this.boxCols = 3,
+    this.special,
   });
 
   final String id;
@@ -22,6 +24,12 @@ class SudokuPuzzle {
   final List<int> given;
   final List<int> solution;
   final SudokuDifficulty difficulty;
+
+  /// `weekend` on a weekend special (see [DailySpecial]); null otherwise.
+  /// Not part of the fingerprint.
+  final String? special;
+
+  bool get isWeekendSpecial => special == DailySpecial.weekend;
 
   int get cellCount => size * size;
 
@@ -70,6 +78,7 @@ class SudokuPuzzle {
       given: given,
       solution: solution,
       difficulty: difficulty,
+      special: readDailySpecial(json['special']),
     );
   }
 
@@ -129,5 +138,6 @@ class SudokuPuzzle {
     'difficulty': difficulty.name,
     'given': given,
     'solution': solution,
+    if (special != null) 'special': special,
   };
 }
