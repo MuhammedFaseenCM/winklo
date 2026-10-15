@@ -33,6 +33,12 @@
 10. **Where the review card's theme goes.** Path Words review mode shows a "Today: …" line directly above the shared `ClearedSummaryCard`, in a Path Words widget, so the shared card (used by all three games) is unchanged.
 11. **Results word list.** Results has no word list today, so a new `PathWordsResultsPanel` under the celebration shows the theme, the found words as chips (tappable when they have a definition) and "3 bonus words".
 
+## Deviations found while building
+
+- **Giving the word away** means the word at the start of one of the definition's words ("cedars", "Cedar-wood"), not anywhere inside it: a plain substring rule rejected "that" for "at" and "scatter" for "cat".
+- **Weekend Sudoku fallback** returns the sparsest board instead of throwing (see Task 2), so a failure can't leave a day without a puzzle.
+- **The bonus blocklist** covers word forms (root plus common suffixes, doubled last letter) and a few roots anywhere in a word, with an allow-list for innocent look-alikes (spicy, rapier, titter, snigger).
+
 ## File map
 
 ### winklo-admin (`/Users/apple/Developments/personal/winklo-admin-wt/themes`)
@@ -141,7 +147,7 @@ describe('dailyPuzzleParams', () => {
 - [ ] **Step 2: Run** — FAIL (unknown options).
 - [ ] **Step 3: Implement**:
   - `generateZip` opts gain `numberCount?` / `wallCount?` that replace `zipBand(difficulty)`'s ranges.
-  - `generateSudoku` opts gain `clues?: {min,max}` replacing `clueBand` and `attempts?` (default 12). With `clues` given the last resort keeps digging with new rngs until the band is met or attempts run out, then throws rather than returning a board outside the band (the weekend promise is exactly 8). Each attempt also retries the dig with a few orders before refilling.
+  - `generateSudoku` opts gain `clues?: {min,max}` replacing `clueBand`, `attempts?` (default 12, or 800 with `clues`) and `digsPerGrid?` (1, or 3 with `clues`). With `clues` given, a miss keeps the sparsest one-solution board as the fallback, so a day is never left without a Sudoku (in tests every weekend of a year gets exactly 8). Without `clues` the flow is unchanged, so weekday boards are identical to `main`.
   - `buildHardBoard` gains `lengths?` (replaces `hardWordLengths`) and `blankCounts?` (replaces `feasibleBlankCounts`), and returns `preferredWords: string[]` (the targets that came from `preferred`).
 - [ ] **Step 4: Run** — PASS; check run time stays under a second or two per board.
 
