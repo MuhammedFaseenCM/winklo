@@ -90,23 +90,30 @@ void main() {
 
   group('progress changes', () {
     late StreamController<void> changes;
+    late StreamController<void> restored;
 
-    setUp(() => changes = StreamController<void>.broadcast());
-    tearDown(() => changes.close());
+    setUp(() {
+      changes = StreamController<void>.broadcast();
+      restored = StreamController<void>.broadcast();
+    });
+    tearDown(() async {
+      await changes.close();
+      await restored.close();
+    });
 
     blocTest<StatsCubit, StatsState>(
-      'reload once per burst of changes',
+      'reload once per burst of changes and restores',
       build: () => StatsCubit(
         loadHistory: load,
-        changes: changes.stream,
+        reloadOn: [changes.stream, restored.stream],
         reloadDebounce: const Duration(milliseconds: 20),
       ),
       act: (cubit) async {
         await Future<void>.delayed(Duration.zero);
         changes
           ..add(null)
-          ..add(null)
           ..add(null);
+        restored.add(null);
         await Future<void>.delayed(const Duration(milliseconds: 60));
       },
       verify: (_) => verify(() => load(refreshRemote: false)).called(2),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +20,14 @@ List<Achievement> _ids(List<String> ids) => [
 void main() {
   late _MockClaim claim;
 
-  setUp(() => claim = _MockClaim());
+  setUpAll(() => registerFallbackValue(<Achievement>[]));
+
+  setUp(() {
+    claim = _MockClaim();
+    when(
+      () => claim.markShown(any(), occasion: any(named: 'occasion')),
+    ).thenAnswer((_) async {});
+  });
 
   Future<void> pumpBanner(WidgetTester tester, {bool provide = true}) async {
     const app = MaterialApp(
@@ -42,16 +51,21 @@ void main() {
   }
 
   testWidgets('one new badge by name', (tester) async {
-    when(() => claim()).thenAnswer((_) async => _ids(['first_clear_zip']));
+    when(
+      () => claim.pending(occasion: any(named: 'occasion')),
+    ).thenAnswer((_) async => _ids(['first_clear_zip']));
     await pumpBanner(tester);
 
     expect(find.text(AppStrings.newAchievementsTitle(1)), findsOneWidget);
     expect(find.text('First Zip'), findsOneWidget);
-    verify(() => claim()).called(1);
+    verify(() => claim.pending(occasion: any(named: 'occasion'))).called(1);
+    verify(
+      () => claim.markShown(any(), occasion: any(named: 'occasion')),
+    ).called(1);
   });
 
   testWidgets('several new badges are summarised', (tester) async {
-    when(() => claim()).thenAnswer(
+    when(() => claim.pending(occasion: any(named: 'occasion'))).thenAnswer(
       (_) async => _ids([
         'first_clear_zip',
         'streak_7_zip',
@@ -65,8 +79,30 @@ void main() {
     expect(find.text('First Zip, 7-day Zip streak and 2 more'), findsOneWidget);
   });
 
+  testWidgets('nothing is marked seen when the banner closes first', (
+    tester,
+  ) async {
+    final pending = Completer<List<Achievement>>();
+    when(
+      () => claim.pending(occasion: any(named: 'occasion')),
+    ).thenAnswer((_) => pending.future);
+    await tester.pumpWidget(
+      RepositoryProvider<ClaimNewAchievements>.value(
+        value: claim,
+        child: const MaterialApp(home: NewAchievementsBanner()),
+      ),
+    );
+    await tester.pumpWidget(const SizedBox());
+    pending.complete(_ids(['perfect_day']));
+    await tester.pump();
+
+    verifyNever(() => claim.markShown(any(), occasion: any(named: 'occasion')));
+  });
+
   testWidgets('nothing new shows nothing', (tester) async {
-    when(() => claim()).thenAnswer((_) async => const []);
+    when(
+      () => claim.pending(occasion: any(named: 'occasion')),
+    ).thenAnswer((_) async => const []);
     await pumpBanner(tester);
 
     expect(find.text(AppStrings.newAchievementsTitle(1)), findsNothing);
@@ -74,7 +110,9 @@ void main() {
   });
 
   testWidgets('a failed claim shows nothing', (tester) async {
-    when(() => claim()).thenAnswer((_) async => throw const Failure('x'));
+    when(
+      () => claim.pending(occasion: any(named: 'occasion')),
+    ).thenAnswer((_) async => throw const Failure('x'));
     await pumpBanner(tester);
 
     expect(find.textContaining('badge'), findsNothing);

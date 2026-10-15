@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/lifecycle/progress_change_signal.dart';
+import '../../../../core/lifecycle/progress_sync_lifecycle.dart';
 import '../../../../core/strings/app_strings.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../domain/achievements/achievement.dart';
@@ -23,8 +24,12 @@ class ProfileStatsSection extends StatelessWidget {
     return BlocProvider(
       create: (context) => StatsCubit(
         loadHistory: loadHistory,
-        // New clears light up their badges while Profile stays mounted.
-        changes: context.read<ProgressChangeSignal?>()?.changes,
+        // New clears, and progress a sync restores (another device, an
+        // account switch), update the badges while Profile stays mounted.
+        reloadOn: [
+          ?context.read<ProgressChangeSignal?>()?.changes,
+          ?context.read<ProgressSyncLifecycle?>()?.restored,
+        ],
       ),
       child: const _ProfileStatsBody(),
     );

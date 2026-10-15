@@ -195,6 +195,30 @@ void main() {
     verify(() => remote.fetchAllDays(uid: 'u2')).called(1);
   });
 
+  test(
+    'an account switch during the remote read reads the new account',
+    () async {
+      signIn('u1');
+      when(() => remote.fetchAllDays(uid: 'u1')).thenAnswer((_) async {
+        signIn('u2');
+        return const [
+          GameDayRecord(
+            gameId: GameIds.zip,
+            playId: '20260901',
+            timeSeconds: 9,
+          ),
+        ];
+      });
+      when(
+        () => remote.fetchAllDays(uid: 'u2'),
+      ).thenAnswer((_) async => const []);
+      await build({});
+      final history = await load();
+      expect(history.days, isEmpty);
+      verify(() => remote.fetchAllDays(uid: 'u2')).called(1);
+    },
+  );
+
   test('concurrent loads share one fetch', () async {
     signIn('u1');
     final pending = Completer<List<GameDayRecord>>();

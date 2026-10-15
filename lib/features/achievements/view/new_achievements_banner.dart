@@ -13,14 +13,18 @@ import 'achievement_copy.dart';
 /// Renders nothing when there is none, or when the app provides no
 /// [ClaimNewAchievements] (screen tests of Results).
 class NewAchievementsBanner extends StatelessWidget {
-  const NewAchievementsBanner({super.key});
+  const NewAchievementsBanner({super.key, this.occasion});
+
+  /// Identifies the result (its `ResultsArgs`), so the banner survives a
+  /// remount of the Results layout (rotation, signing in).
+  final Object? occasion;
 
   @override
   Widget build(BuildContext context) {
     final claim = context.read<ClaimNewAchievements?>();
     if (claim == null) return const SizedBox.shrink();
     return BlocProvider(
-      create: (_) => NewAchievementsCubit(claim: claim),
+      create: (_) => NewAchievementsCubit(claim: claim, occasion: occasion),
       child: BlocBuilder<NewAchievementsCubit, List<Achievement>>(
         builder: (context, fresh) {
           if (fresh.isEmpty) return const SizedBox.shrink();

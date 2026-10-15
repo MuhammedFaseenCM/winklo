@@ -51,13 +51,20 @@ class LoadGameHistory {
   Future<GameHistory> call({bool refreshRemote = false}) async {
     final now = _now();
     final todayId = StreakCalculator.dateId(now);
-    final uid = _auth.currentUser?.uid;
-    final signedIn = uid != null && uid.isNotEmpty;
-
+    var uid = _auth.currentUser?.uid;
     List<GameDayRecord>? remote;
-    if (signedIn && _isRemoteAvailable()) {
-      remote = await _remoteDays(uid, refresh: refreshRemote);
+    for (var attempt = 0; attempt < 2; attempt++) {
+      remote = null;
+      if (uid != null && uid.isNotEmpty && _isRemoteAvailable()) {
+        remote = await _remoteDays(uid, refresh: refreshRemote);
+      }
+      // The account changed while the remote copy loaded: local progress is
+      // being swapped for the new account's, so read for that one instead.
+      final current = _auth.currentUser?.uid;
+      if (current == uid) break;
+      uid = current;
     }
+    final signedIn = uid != null && uid.isNotEmpty;
 
     final local = readLocalDailyHistory(scores: _scores, hintQuota: _hintQuota);
     final streaks = <String, GameStreak>{};

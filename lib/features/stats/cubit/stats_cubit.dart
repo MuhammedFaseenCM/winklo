@@ -11,22 +11,25 @@ import 'stats_state.dart';
 
 /// Per-game stats and earned achievements from [LoadGameHistory].
 ///
-/// Loads on creation. With [changes] (local progress writes) it reloads,
-/// debounced by [reloadDebounce], so Profile's badges follow new clears.
+/// Loads on creation, then reloads (debounced by [reloadDebounce]) on each
+/// event of the `reloadOn` streams, e.g. local progress writes and sync
+/// restores, so Profile's badges follow new clears.
 class StatsCubit extends Cubit<StatsState> {
   StatsCubit({
     required this._loadHistory,
-    Stream<void>? changes,
+    Iterable<Stream<void>> reloadOn = const [],
     this.reloadDebounce = const Duration(milliseconds: 500),
     bool refreshRemote = false,
   }) : super(const StatsState()) {
-    _changeSub = changes?.listen((_) => _scheduleReload());
+    _reloadSubs = [
+      for (final stream in reloadOn) stream.listen((_) => _scheduleReload()),
+    ];
     unawaited(load(refresh: refreshRemote));
   }
 
   final LoadGameHistory _loadHistory;
   final Duration reloadDebounce;
-  StreamSubscription<void>? _changeSub;
+  late final List<StreamSubscription<void>> _reloadSubs;
   Timer? _reloadTimer;
 
   /// [refresh] fetches the account's remote days again.
@@ -70,7 +73,9 @@ class StatsCubit extends Cubit<StatsState> {
   @override
   Future<void> close() async {
     _reloadTimer?.cancel();
-    await _changeSub?.cancel();
+    for (final sub in _reloadSubs) {
+      await sub.cancel();
+    }
     return super.close();
   }
 }

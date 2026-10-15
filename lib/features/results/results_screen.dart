@@ -348,7 +348,7 @@ class _CelebrateAndClaimResults extends StatelessWidget {
             .slideY(begin: 0.12, curve: Curves.easeOutCubic),
         SizedBox(height: compact ? 10 : 14),
         _NextPuzzleLine(day: args.day).animate().fadeIn(delay: 700.ms),
-        const NewAchievementsBanner(),
+        NewAchievementsBanner(occasion: args),
       ],
     );
   }

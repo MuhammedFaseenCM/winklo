@@ -40,38 +40,59 @@ void main() {
     () => load(refreshRemote: any(named: 'refreshRemote')),
   ).thenAnswer((_) async => _history(days));
 
-  test('returns new achievements once, in catalog order', () async {
+  Future<List<String>> claimShown({Object? occasion}) async {
+    final fresh = await claim.pending(occasion: occasion);
+    await claim.markShown(fresh, occasion: occasion);
+    return [for (final a in fresh) a.id];
+  }
+
+  test('returns new achievements in catalog order until shown', () async {
     history([_clear(GameIds.sudoku), _clear(GameIds.zip, time: 40)]);
 
-    final first = await claim();
-    expect(first.map((a) => a.id), [
+    final expected = [
       'first_clear_zip',
       'first_clear_sudoku',
       'zip_under_minute',
-    ]);
-    expect(await claim(), isEmpty);
+    ];
+    expect((await claim.pending()).map((a) => a.id), expected);
+    // Not shown yet: still pending.
+    expect((await claim.pending()).map((a) => a.id), expected);
+    expect(await claimShown(), expected);
+    expect(await claim.pending(), isEmpty);
+    expect(store.seenIds(), expected.toSet());
   });
 
-  test('only what is new since the last claim', () async {
+  test('only what is new since the last announcement', () async {
     history([_clear(GameIds.zip)]);
-    await claim();
+    await claimShown();
 
     history([
       _clear(GameIds.zip),
       _clear(GameIds.pathWords),
       _clear(GameIds.sudoku),
     ]);
-    final fresh = await claim();
-    expect(fresh.map((a) => a.id), [
+    expect(await claimShown(), [
       'first_clear_path_words',
       'first_clear_sudoku',
       'perfect_day',
     ]);
   });
 
+  test('the same occasion gets its shown list back', () async {
+    history([_clear(GameIds.zip)]);
+    final occasion = Object();
+    expect(await claimShown(occasion: occasion), ['first_clear_zip']);
+
+    expect((await claim.pending(occasion: occasion)).map((a) => a.id), [
+      'first_clear_zip',
+    ]);
+    expect(await claim.pending(occasion: Object()), isEmpty);
+    expect(await claim.pending(), isEmpty);
+  });
+
   test('nothing earned yet returns nothing and stores nothing', () async {
     history(const []);
-    expect(await claim(), isEmpty);
+    expect(await claimShown(), isEmpty);
     expect(store.seenIds(), isEmpty);
   });
 }

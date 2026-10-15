@@ -68,6 +68,7 @@ List<RepositoryProvider<Object>> _actionProviders() {
 void main() {
   setUpAll(() {
     registerFallbackValue(LeaderboardPeriod.daily);
+    registerFallbackValue(<Achievement>[]);
   });
 
   testWidgets('Zip clear signed-in shows celebration then mini board', (
@@ -888,9 +889,13 @@ void main() {
       ),
     ).thenAnswer((_) => Stream.value(const []));
     final claim = _MockClaimNewAchievements();
+    late final ResultsArgs args;
     when(
-      () => claim(),
+      () => claim.pending(occasion: any(named: 'occasion')),
     ).thenAnswer((_) async => [Achievements.byId('perfect_day')!]);
+    when(
+      () => claim.markShown(any(), occasion: any(named: 'occasion')),
+    ).thenAnswer((_) async {});
 
     await tester.pumpWidget(
       MultiRepositoryProvider(
@@ -909,7 +914,7 @@ void main() {
           child: MaterialApp(
             theme: buildAppTheme(),
             home: ResultsScreen(
-              args: ResultsArgs(
+              args: args = ResultsArgs(
                 title: 'Puzzle cleared!',
                 subtitle: '',
                 timeSeconds: 72,
@@ -927,6 +932,10 @@ void main() {
 
     expect(find.text(AppStrings.newAchievementsTitle(1)), findsOneWidget);
     expect(find.text(AppStrings.achievementPerfectDayTitle), findsOneWidget);
-    verify(() => claim()).called(1);
+    verify(() => claim.pending(occasion: args)).called(1);
+    verify(
+      () =>
+          claim.markShown([Achievements.byId('perfect_day')!], occasion: args),
+    ).called(1);
   });
 }
