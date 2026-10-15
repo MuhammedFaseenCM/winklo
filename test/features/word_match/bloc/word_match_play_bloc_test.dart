@@ -4,7 +4,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:winklo/domain/entities/word_match_deck.dart';
 import 'package:winklo/domain/entities/word_pair.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_deck_by_id.dart';
-import 'package:winklo/domain/usecases/submit_score.dart';
+import 'package:winklo/domain/repositories/play_mode_record_repository.dart';
 import 'package:winklo/features/word_match/bloc/word_match_play_bloc.dart';
 import 'package:winklo/features/word_match/bloc/word_match_play_event.dart';
 import 'package:winklo/features/word_match/bloc/word_match_play_state.dart';
@@ -16,11 +16,11 @@ import '../../../helpers/mock_analytics_repository.dart';
 class _MockFetchWordMatchDeckById extends Mock
     implements FetchWordMatchDeckById {}
 
-class _MockSubmitScore extends Mock implements SubmitScore {}
+class _MockRecords extends Mock implements PlayModeRecordRepository {}
 
 void main() {
   late _MockFetchWordMatchDeckById fetchDeckById;
-  late _MockSubmitScore submitScore;
+  late _MockRecords records;
   late StreamController<int> ticks;
 
   late MockAnalyticsRepository analytics;
@@ -29,7 +29,8 @@ void main() {
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
     fetchDeckById = _MockFetchWordMatchDeckById();
-    submitScore = _MockSubmitScore();
+    records = _MockRecords();
+    when(() => records.bestTimeSeconds(any())).thenReturn(null);
     ticks = StreamController<int>.broadcast();
   });
 
@@ -55,7 +56,7 @@ void main() {
       ).thenAnswer((_) async => _deck(seconds: 3));
       return WordMatchPlayBloc(
         fetchDeckById: fetchDeckById,
-        submitScore: submitScore,
+        records: records,
         analytics: analytics,
         ticker: () => ticks.stream,
       );
@@ -84,7 +85,7 @@ void main() {
       ).thenAnswer((_) async => _deck(seconds: 2));
       return WordMatchPlayBloc(
         fetchDeckById: fetchDeckById,
-        submitScore: submitScore,
+        records: records,
         analytics: analytics,
         ticker: () => ticks.stream,
       );
@@ -127,30 +128,23 @@ void main() {
           .having((s) => s.resultsExtra?.improved, 'improved', false),
     ],
     verify: (_) {
-      verifyNever(
-        () => submitScore(
-          modeKey: any(named: 'modeKey'),
-          points: any(named: 'points'),
-          timeSeconds: any(named: 'timeSeconds'),
-        ),
-      );
+      verifyNever(() => records.recordTime(any(), any()));
     },
   );
 
   blocTest<WordMatchPlayBloc, WordMatchPlayState>(
-    'won submits score then navigates',
+    'won keeps the local best time then navigates',
     build: () {
       when(
         () => fetchDeckById(any()),
       ).thenAnswer((_) async => _deck(seconds: 10));
-      when(
-        () =>
-            submitScore(modeKey: 'match_animals', points: 500, timeSeconds: 7),
-      ).thenAnswer((_) async => true);
+      when(() => records.recordTime('bonus_word_match_animals', 7)).thenAnswer(
+        (_) async => const LocalBest(best: 7, previous: 9, improved: true),
+      );
 
       return WordMatchPlayBloc(
         fetchDeckById: fetchDeckById,
-        submitScore: submitScore,
+        records: records,
         analytics: analytics,
         ticker: () => ticks.stream,
       );
@@ -179,13 +173,16 @@ void main() {
       isA<WordMatchPlayState>()
           .having((s) => s.status, 'status', WordMatchPlayStatus.navigating)
           .having((s) => s.resultsExtra?.title, 'title', 'All matched!')
-          .having((s) => s.resultsExtra?.improved, 'improved', isTrue),
+          .having((s) => s.resultsExtra?.improved, 'improved', isTrue)
+          .having((s) => s.resultsExtra?.local?.bestSeconds, 'best', 7)
+          .having(
+            (s) => s.resultsExtra?.local?.againLocation,
+            'again',
+            '/word-match/animals',
+          ),
     ],
     verify: (_) {
-      verify(
-        () =>
-            submitScore(modeKey: 'match_animals', points: 500, timeSeconds: 7),
-      ).called(1);
+      verify(() => records.recordTime('bonus_word_match_animals', 7)).called(1);
     },
   );
 
@@ -193,7 +190,7 @@ void main() {
     when(() => fetchDeckById(any())).thenAnswer((_) async => _deck(seconds: 3));
     final bloc = WordMatchPlayBloc(
       fetchDeckById: fetchDeckById,
-      submitScore: submitScore,
+      records: records,
       analytics: analytics,
       ticker: () => ticks.stream,
     );

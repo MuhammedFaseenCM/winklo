@@ -555,4 +555,73 @@ abstract final class AppStrings {
   static const profileReportFailed = 'Could not send report. Try again.';
   static const profilePrivacyFailed = 'Could not load the privacy policy.';
   static const profilePrivacyRetry = 'Retry';
+
+  // More ways to play: archive, practice and bonus games (roadmap area F)
+  static const moreWaysTitle = 'More ways to play';
+  static const moreWaysEntryHint = 'Archive · Practice · Bonus games';
+  static const archiveTitle = 'Archive';
+  static const archiveHint = 'Replay any past daily. No streak or board.';
+  static const practiceTitle = 'Practice';
+  static const practiceHint = 'Endless offline boards. Hints on the house.';
+  static const bonusGamesTitle = 'Bonus games';
+  static const bonusGamesHint = 'Quick word games, just for fun.';
+  static String archiveRunLabel(DateTime day) =>
+      'Archive · ${leaderboardShortDate(day.day, day.month)}';
+  static const practiceRunLabel = 'Practice';
+  static const practiceNewBoard = 'New board';
+  static const hintUnlimited = 'Hint';
+  static String localBest(String time) => 'Best $time';
+  static String archiveBest(String time) => 'Archive best $time';
+  static const newLocalBest = 'New best';
+  static const backToArchive = 'Back to archive';
+  static const archivePickGame = 'Game';
+  static String archiveMonthCleared(int days) =>
+      days == 1 ? '1 day cleared' : '$days days cleared';
+  static const archiveDayCleared = 'Cleared';
+  static const archiveDayOpen = 'Not played';
+  static const archivePrevious = 'Previous month';
+  static const archiveNext = 'Next month';
+  static const archiveLegend = 'Cleared in the daily or the archive';
+  static String pathWordsThemeOf(String theme) => 'Theme: $theme';
+  static const archiveOpenHint = 'Pick a day to play it again.';
+  static const practicePickGame = 'Pick a game for a fresh board.';
+  static const wordMatchHint = 'Drag each word to its pair.';
+  static const categoryRaceHint = 'Name words that fit, against the clock.';
+  static const archiveEmpty = 'The archive opens tomorrow.';
+  static String bonusRunLabel(String game, String item) => '$game · $item';
+  static const bonusLoadFailed = 'Couldn’t load this game. Try again.';
+  static const resultsPairsLabel = 'pairs';
+  static String bonusSecondsLeft(int seconds) => '${seconds}s';
+  static String wordMatchPairs(int n) => n == 1 ? '1 pair' : '$n pairs';
+  static const wordMatchNoDecks = 'No decks yet. Check back soon.';
+  static const wordMatchDeckMissing = 'This deck isn’t available any more.';
+  static const wordMatchInstruction = 'Drag a word onto its pair';
+  static const wordMatchCleared = 'All matched!';
+  static const wordMatchTimeUp = 'Time up';
+  static String wordMatchMatched(int matched, int total) =>
+      'Matched $matched of $total';
+  static const wordMatchHowToBody =
+      'Drag each word onto the word it pairs with. Match every pair before '
+      'the clock runs out. Your best time for each deck stays on this '
+      'device; there is no streak or leaderboard.';
+  static const categoryRaceHowToBody =
+      'You get a category and a letter. Type as many words as you can that '
+      'fit the category and start with that letter before time runs out. '
+      'Your best count stays on this device; there is no streak or '
+      'leaderboard.';
+  static String categoryRaceStart(int seconds) => 'Start · ${seconds}s';
+  static String categoryRaceInstruction(String letter) =>
+      'Type words that fit the category and start with $letter';
+  static const categoryRaceYourWord = 'Your word';
+  static const categoryRaceSubmit = 'Submit word';
+  static String categoryRaceAccepted(int n) => 'Accepted ($n)';
+  static String categoryRaceMustStart(String letter) =>
+      'Must start with $letter';
+  static String categoryRaceNotIn(String category) => 'Not in $category';
+  static const categoryRaceAlreadyUsed = 'Already used';
+  static const categoryRaceRoundOver = 'Round over';
+  static const categoryRaceNoCategories = 'No categories yet. Check back soon.';
+  static const resultsWordsLabel = 'words';
+  static String localBestScore(int words) =>
+      words == 1 ? 'Best 1 word' : 'Best $words words';
 }

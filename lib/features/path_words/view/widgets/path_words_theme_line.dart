@@ -6,9 +6,16 @@ import '../../../../core/theme/app_theme.dart';
 /// "Today: Kitchen tools", shown only once the day is cleared. Nothing when
 /// the day has no theme.
 class PathWordsThemeLine extends StatelessWidget {
-  const PathWordsThemeLine({super.key, required this.theme});
+  const PathWordsThemeLine({
+    super.key,
+    required this.theme,
+    this.label = AppStrings.pathWordsThemeReveal,
+  });
 
   final String? theme;
+
+  /// "Today: …" by default; the archive says "Theme: …".
+  final String Function(String theme) label;
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +31,7 @@ class PathWordsThemeLine extends StatelessWidget {
         Icon(Icons.auto_awesome_rounded, size: 16, color: style?.color),
         const SizedBox(width: 6),
         Flexible(
-          child: Text(
-            AppStrings.pathWordsThemeReveal(value),
-            style: style,
-            textAlign: TextAlign.center,
-          ),
+          child: Text(label(value), style: style, textAlign: TextAlign.center),
         ),
       ],
     );

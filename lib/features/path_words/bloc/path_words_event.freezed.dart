@@ -55,7 +55,7 @@ extension PathWordsEventPatterns on PathWordsEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( PathWordsStarted value)?  started,TResult Function( PathWordsPointerDown value)?  pointerDown,TResult Function( PathWordsPointerEnter value)?  pointerEnter,TResult Function( PathWordsPointerUp value)?  pointerUp,TResult Function( PathWordsUndo value)?  undo,TResult Function( PathWordsHint value)?  hint,TResult Function( PathWordsReset value)?  reset,TResult Function( PathWordsPauseRun value)?  pauseRun,TResult Function( PathWordsResumeRun value)?  resumeRun,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( PathWordsStarted value)?  started,TResult Function( PathWordsPointerDown value)?  pointerDown,TResult Function( PathWordsPointerEnter value)?  pointerEnter,TResult Function( PathWordsPointerUp value)?  pointerUp,TResult Function( PathWordsUndo value)?  undo,TResult Function( PathWordsHint value)?  hint,TResult Function( PathWordsReset value)?  reset,TResult Function( PathWordsPauseRun value)?  pauseRun,TResult Function( PathWordsResumeRun value)?  resumeRun,TResult Function( PathWordsNewBoard value)?  newBoard,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case PathWordsStarted() when started != null:
@@ -67,7 +67,8 @@ return undo(_that);case PathWordsHint() when hint != null:
 return hint(_that);case PathWordsReset() when reset != null:
 return reset(_that);case PathWordsPauseRun() when pauseRun != null:
 return pauseRun(_that);case PathWordsResumeRun() when resumeRun != null:
-return resumeRun(_that);case _:
+return resumeRun(_that);case PathWordsNewBoard() when newBoard != null:
+return newBoard(_that);case _:
   return orElse();
 
 }
@@ -85,7 +86,7 @@ return resumeRun(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( PathWordsStarted value)  started,required TResult Function( PathWordsPointerDown value)  pointerDown,required TResult Function( PathWordsPointerEnter value)  pointerEnter,required TResult Function( PathWordsPointerUp value)  pointerUp,required TResult Function( PathWordsUndo value)  undo,required TResult Function( PathWordsHint value)  hint,required TResult Function( PathWordsReset value)  reset,required TResult Function( PathWordsPauseRun value)  pauseRun,required TResult Function( PathWordsResumeRun value)  resumeRun,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( PathWordsStarted value)  started,required TResult Function( PathWordsPointerDown value)  pointerDown,required TResult Function( PathWordsPointerEnter value)  pointerEnter,required TResult Function( PathWordsPointerUp value)  pointerUp,required TResult Function( PathWordsUndo value)  undo,required TResult Function( PathWordsHint value)  hint,required TResult Function( PathWordsReset value)  reset,required TResult Function( PathWordsPauseRun value)  pauseRun,required TResult Function( PathWordsResumeRun value)  resumeRun,required TResult Function( PathWordsNewBoard value)  newBoard,}){
 final _that = this;
 switch (_that) {
 case PathWordsStarted():
@@ -97,7 +98,8 @@ return undo(_that);case PathWordsHint():
 return hint(_that);case PathWordsReset():
 return reset(_that);case PathWordsPauseRun():
 return pauseRun(_that);case PathWordsResumeRun():
-return resumeRun(_that);}
+return resumeRun(_that);case PathWordsNewBoard():
+return newBoard(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -111,7 +113,7 @@ return resumeRun(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( PathWordsStarted value)?  started,TResult? Function( PathWordsPointerDown value)?  pointerDown,TResult? Function( PathWordsPointerEnter value)?  pointerEnter,TResult? Function( PathWordsPointerUp value)?  pointerUp,TResult? Function( PathWordsUndo value)?  undo,TResult? Function( PathWordsHint value)?  hint,TResult? Function( PathWordsReset value)?  reset,TResult? Function( PathWordsPauseRun value)?  pauseRun,TResult? Function( PathWordsResumeRun value)?  resumeRun,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( PathWordsStarted value)?  started,TResult? Function( PathWordsPointerDown value)?  pointerDown,TResult? Function( PathWordsPointerEnter value)?  pointerEnter,TResult? Function( PathWordsPointerUp value)?  pointerUp,TResult? Function( PathWordsUndo value)?  undo,TResult? Function( PathWordsHint value)?  hint,TResult? Function( PathWordsReset value)?  reset,TResult? Function( PathWordsPauseRun value)?  pauseRun,TResult? Function( PathWordsResumeRun value)?  resumeRun,TResult? Function( PathWordsNewBoard value)?  newBoard,}){
 final _that = this;
 switch (_that) {
 case PathWordsStarted() when started != null:
@@ -123,7 +125,8 @@ return undo(_that);case PathWordsHint() when hint != null:
 return hint(_that);case PathWordsReset() when reset != null:
 return reset(_that);case PathWordsPauseRun() when pauseRun != null:
 return pauseRun(_that);case PathWordsResumeRun() when resumeRun != null:
-return resumeRun(_that);case _:
+return resumeRun(_that);case PathWordsNewBoard() when newBoard != null:
+return newBoard(_that);case _:
   return null;
 
 }
@@ -140,7 +143,7 @@ return resumeRun(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( Cell cell)?  pointerDown,TResult Function( Cell cell)?  pointerEnter,TResult Function()?  pointerUp,TResult Function()?  undo,TResult Function()?  hint,TResult Function()?  reset,TResult Function()?  pauseRun,TResult Function()?  resumeRun,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( Cell cell)?  pointerDown,TResult Function( Cell cell)?  pointerEnter,TResult Function()?  pointerUp,TResult Function()?  undo,TResult Function()?  hint,TResult Function()?  reset,TResult Function()?  pauseRun,TResult Function()?  resumeRun,TResult Function()?  newBoard,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case PathWordsStarted() when started != null:
 return started(_that.date);case PathWordsPointerDown() when pointerDown != null:
@@ -151,7 +154,8 @@ return undo();case PathWordsHint() when hint != null:
 return hint();case PathWordsReset() when reset != null:
 return reset();case PathWordsPauseRun() when pauseRun != null:
 return pauseRun();case PathWordsResumeRun() when resumeRun != null:
-return resumeRun();case _:
+return resumeRun();case PathWordsNewBoard() when newBoard != null:
+return newBoard();case _:
   return orElse();
 
 }
@@ -169,7 +173,7 @@ return resumeRun();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( Cell cell)  pointerDown,required TResult Function( Cell cell)  pointerEnter,required TResult Function()  pointerUp,required TResult Function()  undo,required TResult Function()  hint,required TResult Function()  reset,required TResult Function()  pauseRun,required TResult Function()  resumeRun,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( Cell cell)  pointerDown,required TResult Function( Cell cell)  pointerEnter,required TResult Function()  pointerUp,required TResult Function()  undo,required TResult Function()  hint,required TResult Function()  reset,required TResult Function()  pauseRun,required TResult Function()  resumeRun,required TResult Function()  newBoard,}) {final _that = this;
 switch (_that) {
 case PathWordsStarted():
 return started(_that.date);case PathWordsPointerDown():
@@ -180,7 +184,8 @@ return undo();case PathWordsHint():
 return hint();case PathWordsReset():
 return reset();case PathWordsPauseRun():
 return pauseRun();case PathWordsResumeRun():
-return resumeRun();}
+return resumeRun();case PathWordsNewBoard():
+return newBoard();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -194,7 +199,7 @@ return resumeRun();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( Cell cell)?  pointerDown,TResult? Function( Cell cell)?  pointerEnter,TResult? Function()?  pointerUp,TResult? Function()?  undo,TResult? Function()?  hint,TResult? Function()?  reset,TResult? Function()?  pauseRun,TResult? Function()?  resumeRun,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( Cell cell)?  pointerDown,TResult? Function( Cell cell)?  pointerEnter,TResult? Function()?  pointerUp,TResult? Function()?  undo,TResult? Function()?  hint,TResult? Function()?  reset,TResult? Function()?  pauseRun,TResult? Function()?  resumeRun,TResult? Function()?  newBoard,}) {final _that = this;
 switch (_that) {
 case PathWordsStarted() when started != null:
 return started(_that.date);case PathWordsPointerDown() when pointerDown != null:
@@ -205,7 +210,8 @@ return undo();case PathWordsHint() when hint != null:
 return hint();case PathWordsReset() when reset != null:
 return reset();case PathWordsPauseRun() when pauseRun != null:
 return pauseRun();case PathWordsResumeRun() when resumeRun != null:
-return resumeRun();case _:
+return resumeRun();case PathWordsNewBoard() when newBoard != null:
+return newBoard();case _:
   return null;
 
 }
@@ -595,6 +601,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
   return 'PathWordsEvent.resumeRun()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class PathWordsNewBoard implements PathWordsEvent {
+  const PathWordsNewBoard();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PathWordsNewBoard);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'PathWordsEvent.newBoard()';
 }
 
 

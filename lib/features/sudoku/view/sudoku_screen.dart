@@ -11,14 +11,16 @@ import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
+import '../../../core/widgets/play_mode_strip.dart';
 import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/sudoku/sudoku_hint_coach.dart';
 import '../../../domain/entities/sudoku_difficulty.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/play_mode.dart';
+import '../../../domain/play_period.dart';
 import '../../../domain/repositories/analytics_repository.dart';
-import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/usecases/generate_daily_sudoku.dart';
 import '../../../domain/usecases/get_best_points.dart';
@@ -38,9 +40,18 @@ import 'widgets/sudoku_how_to_play.dart';
 import 'widgets/sudoku_paused_cover.dart';
 
 class SudokuScreen extends StatefulWidget {
-  const SudokuScreen({super.key, this.date, this.bloc, this.autoStart = true});
+  const SudokuScreen({
+    super.key,
+    this.date,
+    this.bloc,
+    this.autoStart = true,
+    this.mode = PlayMode.daily,
+  });
 
   final DateTime? date;
+
+  /// Daily (default), archive or practice.
+  final PlayMode mode;
   final SudokuBloc? bloc;
   final bool autoStart;
 
@@ -74,13 +85,19 @@ class _SudokuScreenState extends State<SudokuScreen>
           getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
           isNewPersonalBest: context.read<IsNewPersonalBest>(),
           analytics: context.read<AnalyticsRepository>(),
-          hintQuota: context.read<HintQuotaRepository>(),
+          hintQuota: context.hintQuotaFor(widget.mode),
           inProgressRuns: context.read<InProgressRunRepository>(),
           generatePuzzle: ({required day}) =>
-              context.read<GenerateDailySudoku>()(day: day),
+              context.read<GenerateDailySudoku>()(
+                day: day,
+                // The archive always reads calendar days.
+                period: widget.mode.isArchive ? PlayPeriod.daily : null,
+              ),
           playPeriod: DevFlags.playPeriod,
           sfx: context.read<SfxService>(),
           haptics: context.read<HapticsService?>(),
+          mode: widget.mode,
+          modeRecords: context.modeRecordsFor(widget.mode),
         );
 
     if (widget.autoStart) {
@@ -318,6 +335,12 @@ class _SudokuScreenState extends State<SudokuScreen>
                           ],
                         ),
                       ),
+                      PlayModeStrip(
+                        mode: widget.mode,
+                        onNewBoard: isReadyToPlay || isFailed
+                            ? () => _bloc.add(const SudokuEvent.newBoard())
+                            : null,
+                      ),
                       Expanded(
                         child: LayoutBuilder(
                           builder: (context, constraints) {
@@ -414,6 +437,11 @@ class _SudokuScreenState extends State<SudokuScreen>
                                     ),
                                     _NumberPad(
                                       hintsRemaining: state.hintsRemaining,
+                                      hintLabel: hintLabelFor(
+                                        widget.mode,
+                                        state.hintsRemaining,
+                                        AppStrings.sudokuHintWithCount,
+                                      ),
                                       onDigit: (d) =>
                                           _bloc.add(SudokuEvent.digitTapped(d)),
                                       onErase: () =>
@@ -543,12 +571,14 @@ class _NotesToggle extends StatelessWidget {
 class _NumberPad extends StatelessWidget {
   const _NumberPad({
     required this.hintsRemaining,
+    required this.hintLabel,
     required this.onDigit,
     required this.onErase,
     required this.onHint,
   });
 
   final int hintsRemaining;
+  final String hintLabel;
   final void Function(int digit) onDigit;
   final VoidCallback onErase;
   final VoidCallback onHint;
@@ -667,7 +697,7 @@ class _NumberPad extends StatelessWidget {
               _actionButton(
                 onPressed: hintsRemaining > 0 ? onHint : null,
                 icon: Icons.lightbulb_outline,
-                label: AppStrings.sudokuHintWithCount(hintsRemaining),
+                label: hintLabel,
               ),
             ],
           ),

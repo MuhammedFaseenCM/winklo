@@ -16,10 +16,16 @@ class GenerateDailyPathWords {
   final Duration period;
   final FirebaseFirestore? _firestore;
 
-  Future<PathWordsPuzzle> call({required DateTime day}) async {
+  /// [period] overrides the build's period (the archive always reads
+  /// calendar days).
+  Future<PathWordsPuzzle> call({
+    required DateTime day,
+    Duration? period,
+  }) async {
     final local = day.toLocal();
-    final bucket = PlayPeriod.bucket(local, period);
-    final dateId = PlayPeriod.id(bucket, period);
+    final usePeriod = period ?? this.period;
+    final bucket = PlayPeriod.bucket(local, usePeriod);
+    final dateId = PlayPeriod.id(bucket, usePeriod);
     final id = 'daily_$dateId';
 
     final firestore = _firestore;

@@ -13,9 +13,11 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
+import '../../../core/widgets/play_mode_strip.dart';
 import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/play_mode.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
@@ -41,9 +43,14 @@ import 'widgets/zip_shimmer.dart';
 import 'widgets/zip_tutorial.dart';
 
 class ZipScreen extends StatefulWidget {
-  const ZipScreen({super.key, this.date});
+  const ZipScreen({super.key, this.date, this.mode = PlayMode.daily});
 
+  /// Today's daily when null. Only names the puzzle; the run's clock is
+  /// always the real one.
   final DateTime? date;
+
+  /// Daily (default), archive or practice.
+  final PlayMode mode;
 
   @override
   State<ZipScreen> createState() => _ZipScreenState();
@@ -120,7 +127,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _hintQuota = context.read<HintQuotaRepository>();
+    _hintQuota = context.hintQuotaFor(widget.mode);
     _sfx = context.read<SfxService>();
     _haptics = context.read<HapticsService?>();
     _bloc = ZipBloc(
@@ -134,9 +141,10 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
       analytics: context.read<AnalyticsRepository>(),
       inProgressRuns: context.read<InProgressRunRepository>(),
       zipLevelRepository: context.read<ZipLevelRepository>(),
-      now: widget.date,
       ignoreDailyLock: DevFlags.zipOnlyTesting,
       playPeriod: DevFlags.playPeriod,
+      mode: widget.mode,
+      modeRecords: context.modeRecordsFor(widget.mode),
     );
     _bloc.add(ZipEvent.started(date: widget.date));
     _ensureGame(_bloc.state);
@@ -260,6 +268,17 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                           ],
                         ),
                       ).animate().fadeIn(duration: 350.ms),
+                      PlayModeStrip(
+                        mode: widget.mode,
+                        onNewBoard:
+                            state.status == ZipStatus.ready ||
+                                state.status == ZipStatus.failed
+                            ? () {
+                                setState(() => _ruleTip = null);
+                                _bloc.add(const ZipEvent.newBoard());
+                              }
+                            : null,
+                      ),
                       if (isLoading)
                         Expanded(
                           child: Semantics(
@@ -412,8 +431,10 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                         : null,
                                     icon: const Icon(Icons.lightbulb_rounded),
                                     label: Text(
-                                      AppStrings.zipHintWithCount(
+                                      hintLabelFor(
+                                        widget.mode,
                                         game?.hintsRemaining ?? 0,
+                                        AppStrings.zipHintWithCount,
                                       ),
                                     ),
                                   ),

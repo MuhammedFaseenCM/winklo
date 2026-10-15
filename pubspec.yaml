@@ -119,6 +119,7 @@ flutter:
     - assets/words/categories/
     - assets/words/en_bonus_words.txt
     - assets/words/en_nouns.txt
+    - assets/words/en_practice_words.txt
     - assets/branding/
     - assets/sfx/
 

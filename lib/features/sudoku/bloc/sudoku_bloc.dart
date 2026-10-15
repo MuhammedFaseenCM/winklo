@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:bloc/bloc.dart';
 
@@ -13,11 +14,13 @@ import '../../../domain/entities/sudoku_puzzle.dart';
 import '../../../domain/failures.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/logic/run_rollover.dart';
+import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/sudoku/sudoku_hint_coach.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/sudoku/sudoku_generator.dart';
@@ -51,7 +54,18 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     this.playPeriod = PlayPeriod.daily,
     this.sfx,
     this.haptics,
-  }) : generatePuzzle =
+    this.mode = PlayMode.daily,
+    this.modeRecords,
+    SudokuPuzzle Function(int seed)? practicePuzzle,
+    int Function()? newPracticeSeed,
+  }) : assert(
+         mode == PlayMode.daily || modeRecords != null,
+         'Archive and practice runs keep their bests in modeRecords',
+       ),
+       practicePuzzle =
+           practicePuzzle ?? ((seed) => SudokuGenerator.practice(seed: seed)),
+       _newPracticeSeed = newPracticeSeed ?? (() => Random().nextInt(1 << 31)),
+       generatePuzzle =
            generatePuzzle ??
            (({required DateTime day}) => SudokuGenerator.generate(day: day)),
        _now = now ?? DateTime.now,
@@ -67,6 +81,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     on<SudokuReset>(_onReset);
     on<SudokuPauseRun>(_onPauseRun);
     on<SudokuResumeRun>(_onResumeRun);
+    on<SudokuNewBoard>(_onNewBoard);
   }
 
   final SubmitScore submitScore;
@@ -83,6 +98,20 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   final Duration playPeriod;
   final SfxService? sfx;
   final HapticsService? haptics;
+
+  /// Daily, archive or practice. Only daily runs touch streaks, boards, the
+  /// daily best and the cleared lock; [hintQuota] is the mode's own.
+  final PlayMode mode;
+
+  /// Bests of archive and practice runs; required for those modes.
+  final PlayModeRecordRepository? modeRecords;
+
+  /// Builds a practice board from a seed.
+  final SudokuPuzzle Function(int seed) practicePuzzle;
+  final int Function() _newPracticeSeed;
+
+  /// Seed of the practice board on screen, kept in its draft.
+  int? _practiceSeed;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   var _unitFlashGeneration = 0;
@@ -100,6 +129,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     SudokuStarted event,
     Emitter<SudokuState> emit,
   ) async {
+    if (!mode.isDaily) return _startOffDaily(emit);
     final seed = event.date ?? _now();
     final day = DateTime(seed.year, seed.month, seed.day);
     final playId = PlayPeriod.id(seed, playPeriod);
@@ -483,8 +513,11 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     final now = _now();
     final playId = _playId;
     // A run left open over midnight finishes for its own day; one older than
-    // that gives way to today's puzzle.
-    if (playId != null && !canFinishRun(playId, now, playPeriod)) {
+    // that gives way to today's puzzle. Archive and practice runs have no
+    // day to leave behind.
+    if (mode.isDaily &&
+        playId != null &&
+        !canFinishRun(playId, now, playPeriod)) {
       await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
       add(SudokuEvent.started(date: now));
       return;
@@ -520,6 +553,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         state.status == SudokuStatus.navigating) {
       return;
     }
+    if (!mode.isDaily) return _finishOffDaily(emit);
     final now = _now();
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     final elapsed = clock.displayedSeconds(at: now);
@@ -622,6 +656,220 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     );
   }
 
+  Future<void> _onNewBoard(
+    SudokuNewBoard event,
+    Emitter<SudokuState> emit,
+  ) async {
+    if (!mode.isPractice) return;
+    if (state.status == SudokuStatus.celebrating ||
+        state.status == SudokuStatus.submitting ||
+        state.status == SudokuStatus.navigating) {
+      return;
+    }
+    await _startOffDaily(emit, freshPractice: true);
+  }
+
+  /// Starts (or resumes) an archive or practice run. It never reads the
+  /// daily lock or today's draft: the run has its own id ([PlayMode.runId]).
+  Future<void> _startOffDaily(
+    Emitter<SudokuState> emit, {
+    bool freshPractice = false,
+  }) async {
+    final runId = mode.runId(dailyPlayId: '');
+    _playId = runId;
+    _clock = null;
+    _unitFlashGeneration++;
+    final today = _now();
+    final day = mode.day ?? DateTime(today.year, today.month, today.day);
+    emit(
+      state.copyWith(
+        status: SudokuStatus.loading,
+        day: day,
+        puzzle: null,
+        grid: const [],
+        notes: const [],
+        selectedIndex: null,
+        notesMode: false,
+        elapsedMs: 0,
+        resumedAt: null,
+        hintFlashIndex: null,
+        errorIndices: const <int>{},
+        usedHintsThisRun: false,
+        hadMistakesThisRun: false,
+        activeCoachHint: null,
+        showNoSimpleHint: false,
+        unitFlashIndices: const <int>{},
+        celebratedUnitIds: const <String>{},
+        finished: false,
+        errorMessage: null,
+        points: null,
+        timeSeconds: null,
+        improved: null,
+        resultsExtra: null,
+      ),
+    );
+
+    if (freshPractice) {
+      await inProgressRuns.clear(gameId: GameIds.sudoku, playId: runId);
+      if (emit.isDone) return;
+    }
+    var draft = freshPractice
+        ? null
+        : await inProgressRuns.load(gameId: GameIds.sudoku, playId: runId);
+    if (emit.isDone) return;
+
+    late final SudokuPuzzle puzzle;
+    try {
+      if (mode.isArchive) {
+        // Past days are always live and read by id, like the dailies.
+        puzzle = await generatePuzzle(day: day);
+      } else {
+        final saved = draft?.board['seed'];
+        final seed = saved is num ? saved.toInt() : _newPracticeSeed();
+        _practiceSeed = seed;
+        puzzle = practicePuzzle(seed);
+      }
+    } catch (e) {
+      if (emit.isDone) return;
+      final unsupported = e is UnsupportedPuzzle;
+      emit(
+        state.copyWith(
+          status: unsupported ? SudokuStatus.unsupported : SudokuStatus.failed,
+          errorMessage: unsupported
+              ? AppStrings.puzzleNeedsUpdate
+              : AppStrings.sudokuFailed,
+        ),
+      );
+      return;
+    }
+    if (emit.isDone) return;
+
+    if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
+      await inProgressRuns.clear(gameId: GameIds.sudoku, playId: runId);
+      if (emit.isDone) return;
+      draft = null;
+    }
+    if (draft == null && mode.isArchive) {
+      // A fresh archive run gets a full set of hints.
+      await modeRecords!.clearHints(GameIds.sudoku, runId);
+      if (emit.isDone) return;
+    }
+
+    final now = _now();
+    final restored = draft == null
+        ? null
+        : _restoreFromDraft(puzzle: puzzle, draft: draft);
+    final grid = restored?.grid ?? SudokuRules.initialGrid(puzzle);
+    _clock = draft == null
+        ? PlayRunClock.start(at: now)
+        : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+    emit(
+      state.copyWith(
+        status: SudokuStatus.ready,
+        puzzle: puzzle,
+        grid: grid,
+        notes: restored?.notes ?? SudokuRules.emptyNotes(puzzle.cellCount),
+        notesMode: restored?.notesMode ?? false,
+        elapsedMs: draft?.elapsedMs ?? 0,
+        resumedAt: now,
+        selectedIndex: null,
+        finished: false,
+        hintsRemaining: hintQuota.remaining(GameIds.sudoku, runId),
+        activeCoachHint: null,
+        showNoSimpleHint: false,
+        usedHintsThisRun: draft?.usedHintsThisRun ?? false,
+        hadMistakesThisRun: draft?.hadMistakesThisRun ?? false,
+        errorIndices: SudokuRules.errorIndices(puzzle: puzzle, grid: grid),
+        celebratedUnitIds: const <String>{},
+        unitFlashIndices: const <int>{},
+      ),
+    );
+    // Keep the practice seed, so leaving and coming back finds this board.
+    if (draft == null && mode.isPractice) await _persistDraft();
+    await analytics.logGameStarted(
+      gameId: GameIds.sudoku,
+      dayId: runId,
+      resumed: draft != null,
+    );
+  }
+
+  /// Finishes an archive or practice run: a local best, no score, streak,
+  /// leaderboard or daily best.
+  Future<void> _finishOffDaily(Emitter<SudokuState> emit) async {
+    final now = _now();
+    final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
+    final elapsed = clock.displayedSeconds(at: now);
+    _clock = clock.pause(at: now);
+    final points = SudokuScoring.pointsForElapsed(elapsed);
+    final runId = mode.runId(dailyPlayId: '');
+
+    emit(
+      state.copyWith(
+        finished: true,
+        status: SudokuStatus.celebrating,
+        points: points,
+        timeSeconds: elapsed,
+        elapsedMs: _clock!.elapsedMs,
+        resumedAt: null,
+        hintFlashIndex: null,
+        errorIndices: const <int>{},
+        unitFlashIndices: const <int>{},
+      ),
+    );
+    unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());
+
+    await inProgressRuns.clear(gameId: GameIds.sudoku, playId: runId);
+    await _wait(celebrationDuration);
+    if (emit.isDone) return;
+    emit(state.copyWith(status: SudokuStatus.submitting));
+
+    final records = modeRecords!;
+    final best = await records.recordTime(
+      mode.recordKey(GameIds.sudoku),
+      elapsed,
+    );
+    if (mode.isArchive) await records.clearHints(GameIds.sudoku, runId);
+
+    await analytics.logGameCompleted(
+      gameId: GameIds.sudoku,
+      points: points,
+      timeSeconds: elapsed,
+      dayId: runId,
+      usedHints: state.usedHintsThisRun,
+    );
+    if (emit.isDone) return;
+
+    emit(
+      state.copyWith(
+        improved: best.improved,
+        status: SudokuStatus.navigating,
+        resultsExtra: ResultsArgs(
+          title: AppStrings.sudokuClearedTitle,
+          subtitle: '',
+          timeSeconds: elapsed,
+          improved: best.improved,
+          points: points,
+          gameId: GameIds.sudoku,
+          usedHints: state.usedHintsThisRun,
+          hadMistakes: state.hadMistakesThisRun,
+          day: mode.day,
+          local: LocalResultInfo(
+            kind: mode.isArchive
+                ? LocalResultKind.archive
+                : LocalResultKind.practice,
+            label: mode.isArchive
+                ? AppStrings.archiveRunLabel(mode.day!)
+                : AppStrings.practiceRunLabel,
+            bestSeconds: best.best,
+            againLocation: mode.isPractice
+                ? PlayMode.practice.location('/sudoku')
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _persistDraft() async {
     final playId = _playId;
     if (playId == null) return;
@@ -641,6 +889,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           'grid': state.grid,
           'notes': [for (final note in state.notes) note.toList()..sort()],
           'notesMode': state.notesMode,
+          if (mode.isPractice && _practiceSeed != null) 'seed': _practiceSeed,
         },
       ),
     );

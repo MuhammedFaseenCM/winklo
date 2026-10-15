@@ -13,12 +13,13 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
+import '../../../core/widgets/play_mode_strip.dart';
 import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/play_mode.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/repositories/analytics_repository.dart';
-import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/repositories/word_list_repository.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
@@ -49,9 +50,13 @@ class PathWordsScreen extends StatefulWidget {
     this.date,
     this.bloc,
     this.autoStart = true,
+    this.mode = PlayMode.daily,
   });
 
   final DateTime? date;
+
+  /// Daily (default), archive or practice.
+  final PlayMode mode;
   final PathWordsBloc? bloc;
   final bool autoStart;
 
@@ -177,12 +182,14 @@ class _PathWordsScreenState extends State<PathWordsScreen>
           getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
           isNewPersonalBest: context.read<IsNewPersonalBest>(),
           analytics: context.read<AnalyticsRepository>(),
-          hintQuota: context.read<HintQuotaRepository>(),
+          hintQuota: context.hintQuotaFor(widget.mode),
           inProgressRuns: context.read<InProgressRunRepository>(),
           playPeriod: DevFlags.playPeriod,
           sfx: context.read<SfxService>(),
           haptics: context.read<HapticsService?>(),
           wordList: context.read<WordListRepository?>(),
+          mode: widget.mode,
+          modeRecords: context.modeRecordsFor(widget.mode),
         );
 
     if (widget.autoStart) {
@@ -311,6 +318,14 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                             const PathWordsHowToPlayButton(),
                           ],
                         ),
+                      ),
+                      PlayModeStrip(
+                        mode: widget.mode,
+                        onNewBoard:
+                            isReadyToPlay ||
+                                state.status == PathWordsStatus.failed
+                            ? () => _bloc.add(const PathWordsEvent.newBoard())
+                            : null,
                       ),
                       Expanded(
                         child: Padding(
@@ -458,8 +473,10 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                           : null,
                                       icon: const Icon(Icons.lightbulb_rounded),
                                       label: Text(
-                                        AppStrings.pathWordsHintWithCount(
+                                        hintLabelFor(
+                                          widget.mode,
                                           state.hintsRemaining,
+                                          AppStrings.pathWordsHintWithCount,
                                         ),
                                       ),
                                     ),
