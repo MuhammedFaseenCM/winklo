@@ -24,13 +24,17 @@ import '../../../domain/usecases/get_best_daily_time_seconds.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
+import '../../../domain/usecases/prefetch_tomorrow_puzzles.dart';
 import '../../../domain/usecases/schedule_engagement_notifications.dart';
 import '../../../domain/repositories/notification_repository.dart';
+import '../../../domain/repositories/update_banner_snooze_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
-import 'widgets/home_update_banner.dart';
+import '../logic/today_summary.dart';
+import 'widgets/home_soft_update_section.dart';
+import 'widgets/home_today_summary.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -51,6 +55,8 @@ class HomeScreen extends StatelessWidget {
         scheduleEngagementNotifications: context
             .read<ScheduleEngagementNotifications>(),
         zipLevelRepository: context.read<ZipLevelRepository>(),
+        updateBannerSnooze: context.read<UpdateBannerSnoozeRepository>(),
+        prefetchTomorrowPuzzles: context.read<PrefetchTomorrowPuzzles>(),
         playPeriod: DevFlags.playPeriod,
       )..load(),
       child: const _HomeView(),
@@ -306,19 +312,15 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                                   begin: 0.08,
                                   curve: Curves.easeOutCubic,
                                 ),
-                            if (isSoftUpdate) ...[
-                              SizedBox(height: layout.space(12)),
-                              HomeUpdateBanner(
+                            if (isSoftUpdate)
+                              HomeSoftUpdateSection(
+                                gap: layout.space(12),
                                 currentLabel: state.updateCurrentLabel,
                                 requiredLabel: state.updateRequiredLabel,
-                                onUpdate: () {
-                                  unawaited(
-                                    context.read<HomeCubit>().openStore(),
-                                  );
-                                },
+                                storeUrl: state.updateStoreUrl,
                               ),
-                            ],
                             SizedBox(height: layout.sectionGap),
+                            HomeTodaySummary(summary: TodaySummary.of(state)),
                             Expanded(child: _HomeGamesPane(tiles: gameTiles)),
                           ],
                         ),

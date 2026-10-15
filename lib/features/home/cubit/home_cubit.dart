@@ -8,12 +8,14 @@ import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/app_update_repository.dart';
+import '../../../domain/repositories/update_banner_snooze_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/check_app_update.dart';
 import '../../../domain/usecases/get_best_daily_time_seconds.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
+import '../../../domain/usecases/prefetch_tomorrow_puzzles.dart';
 import '../../../domain/usecases/schedule_engagement_notifications.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../zip/logic/daily_puzzle_generator.dart';
@@ -30,6 +32,8 @@ class HomeCubit extends Cubit<HomeState> {
     required this.appUpdateRepository,
     this.scheduleEngagementNotifications,
     required this.zipLevelRepository,
+    this.updateBannerSnooze,
+    this.prefetchTomorrowPuzzles,
     DateTime? now,
     DateTime Function()? clock,
     this.playPeriod = PlayPeriod.daily,
@@ -57,12 +61,19 @@ class HomeCubit extends Cubit<HomeState> {
   final AppUpdateRepository appUpdateRepository;
   final ScheduleEngagementNotifications? scheduleEngagementNotifications;
   final ZipLevelRepository zipLevelRepository;
+
+  /// A closed soft banner isn't shown, so it isn't logged as shown.
+  final UpdateBannerSnoozeRepository? updateBannerSnooze;
+
+  /// Warms the cache with tomorrow's dailies once they are live.
+  final PrefetchTomorrowPuzzles? prefetchTomorrowPuzzles;
   final DateTime? _now;
   final DateTime Function()? _clockFn;
   final Duration playPeriod;
   final Timer Function(Duration wait, void Function() callback) _createTimer;
   Timer? _rolloverTimer;
   var _loadGeneration = 0;
+  var _softBannerVisible = false;
 
   DateTime get _clock => _clockFn?.call() ?? _now ?? DateTime.now();
 
@@ -153,6 +164,7 @@ class HomeCubit extends Cubit<HomeState> {
       ),
     );
     _scheduleRollover(now);
+    unawaited(prefetchTomorrowPuzzles?.call(now));
 
     unawaited(
       scheduleEngagementNotifications?.call(
@@ -169,10 +181,14 @@ class HomeCubit extends Cubit<HomeState> {
 
   /// Home reloads on every visit; count the banner once per appearance.
   void _logSoftUpdateShown(AppUpdateStatus next) {
-    if (next == AppUpdateStatus.soft &&
-        state.updateStatus != AppUpdateStatus.soft) {
+    final snoozedUntil = updateBannerSnooze?.snoozedUntil();
+    final snoozed = snoozedUntil != null && _clock.isBefore(snoozedUntil);
+    // A closed banner isn't shown; one back from its snooze appears again.
+    final visible = next == AppUpdateStatus.soft && !snoozed;
+    if (visible && !_softBannerVisible) {
       unawaited(analytics.logUpdatePromptShown(forced: false));
     }
+    _softBannerVisible = visible;
   }
 
   Future<void> recheckUpdate() async {

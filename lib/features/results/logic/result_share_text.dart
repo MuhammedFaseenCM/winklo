@@ -9,12 +9,13 @@ const _months = [
 ];
 
 /// A spoiler-free result to share: the game, the day, the time and the same
-/// clean-run chips the leaderboard shows, then a link to the landing page.
+/// clean-run chips the leaderboard shows, then the game's link (an App Link
+/// into the app, or the site for people without it).
 ///
 /// ```
 /// Winklo Zip · 9 Oct
 /// ⏱ 1:12 · 🔥 5 · Hint-free
-/// https://winklo.pages.dev
+/// https://winklo.pages.dev/zip
 /// ```
 String resultShareText({
   required String gameId,
@@ -42,6 +43,6 @@ String resultShareText({
   return [
     'Winklo $title · ${day.day} ${_months[day.month - 1]}',
     stats.join(' · '),
-    AppUrls.landing,
+    AppUrls.game(gameId),
   ].join('\n');
 }

@@ -36,6 +36,25 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- App Links: winklo.pages.dev/zip etc. open the app (go_router
+                 handles the path). Android verifies them against
+                 https://winklo.pages.dev/.well-known/assetlinks.json, which
+                 must list the Play signing certificate (not in the repo yet:
+                 see the polish plan's App Links task). -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="true" />
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="winklo.pages.dev"/>
+                <data android:path="/zip"/>
+                <data android:path="/path-words"/>
+                <data android:path="/sudoku"/>
+                <data android:path="/leaderboard"/>
+                <data android:pathPrefix="/join/"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

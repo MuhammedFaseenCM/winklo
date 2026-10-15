@@ -8,6 +8,7 @@ abstract final class AppStrings {
   static const playTodaysZip = "Play today's Zip";
   static const zipUndo = 'Undo';
   static const zipClear = 'Clear';
+  static const zipReplay = 'Replay';
   static const zipHint = 'Hint';
   static String zipHintWithCount(int n) => 'Hint ($n)';
   static const zipHowToPlayTitle = 'How to play';
@@ -44,6 +45,17 @@ abstract final class AppStrings {
     if (bestSeconds != null) bestTimeLabel(formatPlayTime(bestSeconds)),
     if (longestStreak >= 2) longestStreakLabel(longestStreak),
   ].join(' · ');
+
+  /// "2 of 3 cleared · 3:41 total" above the Home tiles.
+  static String homeTodaySummary({
+    required int cleared,
+    required int total,
+    int? totalSeconds,
+  }) => [
+    '$cleared of $total cleared',
+    if (totalSeconds != null) '${formatPlayTime(totalSeconds)} total',
+  ].join(' · ');
+  static const homePerfectDayBadge = 'Perfect day';
 
   // Path Words
   static const pathWordsTitle = 'Path Words';
@@ -254,10 +266,19 @@ abstract final class AppStrings {
       'A new version of Winklo is available. Please update for the latest fixes and puzzles.';
   static const updateNow = 'Update now';
   static const updateCantSkip = "This update can't be skipped.";
+  static const updateSnooze = 'Hide for a day';
+  static const updateDownloading = 'Downloading…';
+  static const updateRestart = 'Restart to update';
 
   static String updateVersionRow(String current, String requiredLabel) {
     return '$current → $requiredLabel';
   }
+
+  // League invite links (/join/CODE) until leagues ship
+  static const joinLinkTitle = 'League invite';
+  static String joinLinkCode(String code) => 'Invite code $code';
+  static const joinLinkBody =
+      'Leagues are on their way. Keep this invite and open it again after your next update.';
 
   // Auth / leaderboard
   static const playSignInTitle = 'Sign in to play';

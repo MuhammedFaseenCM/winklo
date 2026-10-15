@@ -7,6 +7,7 @@ import '../../features/category_race/view/category_race_screen.dart';
 import '../../features/dashboard/view/dashboard_shell.dart';
 import '../../features/home/view/home_screen.dart';
 import '../../features/leaderboard/view/leaderboard_screen.dart';
+import '../../features/links/view/join_link_placeholder_screen.dart';
 import '../../features/path_words/view/path_words_screen.dart';
 import '../../features/profile/view/privacy_webview_screen.dart';
 import '../../features/profile/view/profile_screen.dart';
@@ -149,6 +150,13 @@ GoRouter buildRouter({
         path: '/category-race',
         name: 'category_race',
         builder: (context, state) => const CategoryRaceScreen(),
+      ),
+      // League invites (App Link). A placeholder until leagues ship.
+      GoRoute(
+        path: '/join/:code',
+        name: 'join',
+        builder: (context, state) =>
+            JoinLinkPlaceholderScreen(code: state.pathParameters['code'] ?? ''),
       ),
       GoRoute(
         path: '/results',

@@ -27,12 +27,14 @@ import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
+import '../../../core/router/pop_or_go_home.dart';
 import '../bloc/zip_bloc.dart';
 import '../bloc/zip_event.dart';
 import '../bloc/zip_state.dart';
 import '../game/zip_game.dart';
 import '../logic/zip_rule_tip.dart';
 import 'widgets/zip_how_to_play.dart';
+import 'widgets/zip_replay_button.dart';
 import 'widgets/zip_shimmer.dart';
 import 'widgets/zip_tutorial.dart';
 
@@ -218,7 +220,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                         child: Row(
                           children: [
                             IconButton(
-                              onPressed: () => context.pop(),
+                              onPressed: () => popOrGoHome(context),
                               icon: const Icon(Icons.arrow_back_rounded),
                             ),
                             Expanded(
@@ -330,6 +332,13 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                           Padding(
                             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                             child: GameRuleTipBanner(message: _ruleTip!),
+                          ),
+                        if (isReview && game != null)
+                          ZipReplayButton(
+                            key: ValueKey(state.level.id),
+                            game: game,
+                            level: state.level,
+                            savedPath: state.path,
                           ),
                         if (isReview)
                           Padding(
