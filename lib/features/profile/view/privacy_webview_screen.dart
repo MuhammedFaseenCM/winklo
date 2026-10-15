@@ -90,7 +90,7 @@ class _PrivacyWebViewScreenState extends State<PrivacyWebViewScreen> {
     return Scaffold(
       backgroundColor: ZipColors.ink,
       appBar: AppBar(
-        title: const Text(AppStrings.profilePrivacyPolicy),
+        title: Text(AppStrings.profilePrivacyPolicy),
         backgroundColor: ZipColors.ink,
         foregroundColor: ZipColors.onInk,
       ),
@@ -155,7 +155,7 @@ class _FailureBody extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: onRetry,
-              child: const Text(AppStrings.profilePrivacyRetry),
+              child: Text(AppStrings.profilePrivacyRetry),
             ),
           ],
         ),

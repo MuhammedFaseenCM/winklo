@@ -119,7 +119,7 @@ class _ClearedSummaryBody extends StatelessWidget {
           TextButton(
             onPressed: () => context.go('/leaderboard?game=$gameId'),
             style: TextButton.styleFrom(foregroundColor: ZipColors.ember),
-            child: const Text(AppStrings.resultsFullBoard),
+            child: Text(AppStrings.resultsFullBoard),
           ),
         ],
       ),

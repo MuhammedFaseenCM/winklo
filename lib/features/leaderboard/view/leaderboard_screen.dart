@@ -432,7 +432,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                 value,
                               );
                             },
-                            segments: const [
+                            segments: [
                               _LeaderboardSegment(
                                 value: GameIds.zip,
                                 icon: Icons.bolt_rounded,
@@ -480,20 +480,20 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                               );
                             },
                             segments: [
-                              const _LeaderboardSegment(
+                              _LeaderboardSegment(
                                 value: LeaderboardPeriod.daily,
                                 icon: Icons.today_rounded,
                                 label: AppStrings.leaderboardDaily,
                                 iconSize: 16,
                               ),
-                              const _LeaderboardSegment(
+                              _LeaderboardSegment(
                                 value: LeaderboardPeriod.weekly,
                                 icon: Icons.date_range_rounded,
                                 label: AppStrings.leaderboardThisWeek,
                                 iconSize: 16,
                               ),
                               if (_showAllTimeLeaderboard)
-                                const _LeaderboardSegment(
+                                _LeaderboardSegment(
                                   value: LeaderboardPeriod.allTime,
                                   icon: Icons.military_tech_rounded,
                                   label: AppStrings.leaderboardAllTime,
@@ -849,7 +849,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                     child: FilledButton(
                       key: const Key('leaderboard_sign_in_fab'),
                       onPressed: () => showSignInSheet(context),
-                      child: const Text(AppStrings.signInWithGoogle),
+                      child: Text(AppStrings.signInWithGoogle),
                     ),
                   );
                 },

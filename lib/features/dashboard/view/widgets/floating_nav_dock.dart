@@ -15,7 +15,7 @@ class FloatingNavDock extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
 
-  static const _destinations = <_DockDestination>[
+  static List<_DockDestination> get _destinations => <_DockDestination>[
     _DockDestination(
       label: AppStrings.navHome,
       icon: Icons.home_outlined,

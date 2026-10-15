@@ -122,7 +122,7 @@ class _NameEditSheetState extends State<NameEditSheet> {
                     const SizedBox(height: 20),
                     FilledButton(
                       onPressed: isSaving ? null : () => unawaited(_save()),
-                      child: const Text(AppStrings.profileSave),
+                      child: Text(AppStrings.profileSave),
                     ),
                   ],
                 );

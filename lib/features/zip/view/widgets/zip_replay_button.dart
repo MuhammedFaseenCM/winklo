@@ -50,7 +50,7 @@ class ZipReplayButton extends StatelessWidget {
                   disabledForegroundColor: ZipColors.inkSoft,
                 ),
                 icon: const Icon(Icons.replay_rounded),
-                label: const Text(AppStrings.zipReplay),
+                label: Text(AppStrings.zipReplay),
               ),
             ),
           );

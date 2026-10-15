@@ -397,7 +397,7 @@ class _SudokuScreenState extends State<SudokuScreen>
                                                       icon: const Icon(
                                                         Icons.home_rounded,
                                                       ),
-                                                      label: const Text(
+                                                      label: Text(
                                                         AppStrings.backHome,
                                                       ),
                                                     )
@@ -412,7 +412,7 @@ class _SudokuScreenState extends State<SudokuScreen>
                                                       icon: const Icon(
                                                         Icons.refresh_rounded,
                                                       ),
-                                                      label: const Text(
+                                                      label: Text(
                                                         AppStrings.retry,
                                                       ),
                                                     ),
@@ -556,7 +556,7 @@ class _NotesToggle extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: FilterChip(
           selected: enabled,
-          label: const Text(AppStrings.sudokuNotes),
+          label: Text(AppStrings.sudokuNotes),
           onSelected: (_) => onPressed(),
           selectedColor: ZipColors.skySoft,
           checkmarkColor: ZipColors.sky,

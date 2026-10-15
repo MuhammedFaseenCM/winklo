@@ -446,9 +446,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                             )
                                           : null,
                                       icon: const Icon(Icons.undo_rounded),
-                                      label: const Text(
-                                        AppStrings.pathWordsUndo,
-                                      ),
+                                      label: Text(AppStrings.pathWordsUndo),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -547,7 +545,7 @@ class _BoardPane extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text(AppStrings.retry),
+                label: Text(AppStrings.retry),
               ),
             ],
           ),

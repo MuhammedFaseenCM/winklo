@@ -116,7 +116,7 @@ void main() {
   testWidgets('practice offers New board', (tester) async {
     await pump(
       tester,
-      const ResultsArgs(
+      ResultsArgs(
         title: AppStrings.zipClearedTitle,
         subtitle: '',
         timeSeconds: 40,

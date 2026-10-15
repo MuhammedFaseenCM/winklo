@@ -48,7 +48,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: Scaffold(
           body: HomeUpdateBanner(
             currentLabel: '',

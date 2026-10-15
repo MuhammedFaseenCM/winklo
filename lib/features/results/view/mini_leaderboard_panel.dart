@@ -172,7 +172,7 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
                   );
                 case LeaderboardStatus.ready:
                   if (state.entries.isEmpty) {
-                    return const CenteredMessageBody(
+                    return CenteredMessageBody(
                       message: AppStrings.leaderboardEmpty,
                     );
                   }

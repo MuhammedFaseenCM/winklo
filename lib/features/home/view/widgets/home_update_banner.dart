@@ -10,7 +10,7 @@ class HomeUpdateBanner extends StatelessWidget {
     required this.currentLabel,
     required this.requiredLabel,
     required this.onUpdate,
-    this.updateLabel = AppStrings.updateNow,
+    this.updateLabel,
     this.updateIcon = Icons.download_rounded,
     this.onSnooze,
   });
@@ -20,7 +20,9 @@ class HomeUpdateBanner extends StatelessWidget {
 
   /// Null disables the button (while an update downloads).
   final VoidCallback? onUpdate;
-  final String updateLabel;
+
+  /// Null reads [AppStrings.updateNow].
+  final String? updateLabel;
   final IconData updateIcon;
 
   /// Shows a close button that hides the banner for a while.
@@ -125,7 +127,7 @@ class HomeUpdateBanner extends StatelessWidget {
             ],
             const SizedBox(height: 14),
             ZipPrimaryButton(
-              label: updateLabel,
+              label: updateLabel ?? AppStrings.updateNow,
               icon: updateIcon,
               onPressed: onUpdate,
             ),

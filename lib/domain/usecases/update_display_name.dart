@@ -11,9 +11,9 @@ class UpdateDisplayName {
   /// Throws [Failure] on validation or repo errors.
   Future<AppUser> call(String rawName) {
     final trimmed = rawName.trim();
-    if (trimmed.isEmpty) throw const Failure(AppStrings.profileNameEmpty);
+    if (trimmed.isEmpty) throw Failure(AppStrings.profileNameEmpty);
     if (trimmed.length > 24) {
-      throw const Failure(AppStrings.profileNameTooLong);
+      throw Failure(AppStrings.profileNameTooLong);
     }
     return _repo.updateDisplayName(trimmed);
   }

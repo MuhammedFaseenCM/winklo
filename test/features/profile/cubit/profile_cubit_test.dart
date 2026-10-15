@@ -131,7 +131,7 @@ void main() {
     seed: () => const ProfileState(nameDraft: '   '),
     act: (cubit) => cubit.saveName(),
     expect: () => [
-      const ProfileState(
+      ProfileState(
         status: ProfileStatus.failure,
         nameDraft: '   ',
         error: AppStrings.profileNameEmpty,

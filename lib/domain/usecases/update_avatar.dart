@@ -11,7 +11,7 @@ class UpdateAvatar {
 
   Future<AppUser> preset(String avatarId) {
     if (!AvatarCatalog.isPresetId(avatarId)) {
-      throw const Failure(AppStrings.avatarInvalid);
+      throw Failure(AppStrings.avatarInvalid);
     }
     return _repo.updateAvatarPreset(avatarId);
   }

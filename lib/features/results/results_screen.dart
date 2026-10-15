@@ -150,7 +150,7 @@ class ResultsScreen extends StatelessWidget {
                       if (!context.mounted) return;
                       context.pushReplacement('/zip');
                     },
-                    child: const Text(AppStrings.resultsNextPuzzle),
+                    child: Text(AppStrings.resultsNextPuzzle),
                   ),
                 ],
                 if (!replayDaily) ...[

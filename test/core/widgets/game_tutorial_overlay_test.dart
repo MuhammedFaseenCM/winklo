@@ -38,10 +38,7 @@ void main() {
     var gotIt = false;
     await tester.pumpWidget(
       harness(
-        captions: const [
-          AppStrings.zipTutorialStart,
-          AppStrings.zipTutorialFinish,
-        ],
+        captions: [AppStrings.zipTutorialStart, AppStrings.zipTutorialFinish],
         onGotIt: () => gotIt = true,
       ),
     );
@@ -72,7 +69,7 @@ void main() {
     var gotIt = false;
     await tester.pumpWidget(
       harness(
-        captions: const [
+        captions: [
           AppStrings.zipTutorialStart,
           AppStrings.zipTutorialFinish,
           AppStrings.zipTutorialFillEveryCell,

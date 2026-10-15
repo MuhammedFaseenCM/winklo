@@ -32,12 +32,12 @@ class SudokuHowToPlay {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ZipColors.paper,
-        title: const Text(AppStrings.sudokuHowToPlayTitle),
-        content: const Text(AppStrings.sudokuHowToPlayBody),
+        title: Text(AppStrings.sudokuHowToPlayTitle),
+        content: Text(AppStrings.sudokuHowToPlayBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppStrings.sudokuHowToPlayGotIt),
+            child: Text(AppStrings.sudokuHowToPlayGotIt),
           ),
         ],
       ),

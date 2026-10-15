@@ -85,7 +85,7 @@ class PlayModeStrip extends StatelessWidget {
                 foregroundColor: ZipColors.onInk,
               ),
               icon: const Icon(Icons.casino_rounded, size: 18),
-              label: const Text(AppStrings.practiceNewBoard),
+              label: Text(AppStrings.practiceNewBoard),
             ),
         ],
       ),

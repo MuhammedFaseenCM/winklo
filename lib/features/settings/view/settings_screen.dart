@@ -40,7 +40,7 @@ class _SettingsView extends StatelessWidget {
     return Scaffold(
       backgroundColor: ZipColors.ink,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           AppStrings.settingsTitle,
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
@@ -132,7 +132,7 @@ class _SettingsView extends StatelessWidget {
                 ),
                 if (SettingsLanguageSlot.visible) ...[
                   gap,
-                  const SettingsSection(
+                  SettingsSection(
                     title: AppStrings.settingsLanguageSection,
                     children: [SettingsLanguageSlot()],
                   ),

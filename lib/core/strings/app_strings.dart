@@ -1,657 +1,556 @@
-import '../../domain/game_ids.dart';
 import '../../domain/habit/weekly_recap.dart';
+import 'app_text.dart';
+import 'app_text_en.dart';
+import 'play_time_format.dart' as play_time;
 
+/// All user-facing copy. Each member reads the table for the current
+/// language ([AppText]); [use] switches it. English is the default, so code
+/// and tests that never call [use] read English.
+///
+/// Plain Dart on purpose: `domain/` and `data/` (notifications, the
+/// home-screen widget, issue reports) read it without a `BuildContext`.
 abstract final class AppStrings {
-  static const appTitle = 'Winklo';
+  /// The languages with a table, English first (the fallback).
+  static const supportedLanguageCodes = ['en'];
+
+  static AppText _t = const AppTextEn();
+  static String _languageCode = 'en';
+
+  /// Switches every string to [languageCode]'s table; a code without one
+  /// reads English.
+  static void use(String languageCode) {
+    final (code, table) = switch (languageCode) {
+      _ => ('en', const AppTextEn() as AppText),
+    };
+    _languageCode = code;
+    _t = table;
+  }
+
+  /// The language the strings are in: `en` or `ml`.
+  static String get languageCode => _languageCode;
+
+  /// "0:48": minutes and seconds, the same in every language.
+  static String formatPlayTime(int totalSeconds) =>
+      play_time.formatPlayTime(totalSeconds);
+
+  static String get appTitle => _t.appTitle;
 
   // Home
-  static const homeTagline = 'Quick solo mini-games.';
-  static const zipTitle = 'Zip';
-  static const zipTagline = 'Fill every cell from 1 to the finish.';
-  static const playTodaysZip = "Play today's Zip";
-  static const zipUndo = 'Undo';
-  static const zipClear = 'Clear';
-  static const zipReplay = 'Replay';
-  static const zipHint = 'Hint';
-  static String zipHintWithCount(int n) => 'Hint ($n)';
-  static const zipHowToPlayTitle = 'How to play';
-  static const zipTutorialStart = 'Start at 1';
-  static const zipTutorialFinish = 'Finish on the last number';
-  static const zipTutorialFillEveryCell = 'Fill every cell';
-  static const zipTutorialWalls = 'Walls block the path';
-  static const zipHowToPlayGotIt = 'Got it';
-  static const tutorialGotIt = 'Got it';
-  static const tutorialSkip = 'Skip';
-  static const tutorialNext = 'Next';
-  static const zipTipStartAtOne = 'Start at 1';
-  static const zipTipFillEveryCell = 'Fill every cell before you finish';
-  static const zipTipFinishOnLast = 'Finish on the last number';
-  static const zipTipVisitInOrder = 'Visit the numbers in order';
-  static const zipClearedTitle = 'Puzzle cleared!';
-  static const zipLoading = 'Building today’s puzzle…';
-  static const zipFailed = 'Could not load today’s puzzle.';
-  static const playAgain = 'Play again';
-  static const result = 'Result';
-  static const today = 'TODAY';
-  static const wordMatch = 'Word Match';
-  static const categoryRace = 'Category Race';
-  static const streakProtectedLabel = 'Streak protected';
-  static const cleared = 'Cleared';
-  static String bestTimeLabel(String formatted) => 'Best $formatted';
-  static const streakFreezeReady =
-      'Streak freeze ready: miss one day and your streak carries on.';
-
-  /// "Best 0:48 · Longest streak 9" under a Home tile's title; empty when
-  /// there is nothing to show yet. Streaks count from 2 days, as on the
-  /// leaderboard.
-  static String homeTileStats({int? bestSeconds, int longestStreak = 0}) => [
-    if (bestSeconds != null) bestTimeLabel(formatPlayTime(bestSeconds)),
-    if (longestStreak >= 2) longestStreakLabel(longestStreak),
-  ].join(' · ');
-
-  /// "2 of 3 cleared · 3:41 total" above the Home tiles.
+  static String get homeTagline => _t.homeTagline;
+  static String get zipTitle => _t.zipTitle;
+  static String get zipTagline => _t.zipTagline;
+  static String get playTodaysZip => _t.playTodaysZip;
+  static String get zipUndo => _t.zipUndo;
+  static String get zipClear => _t.zipClear;
+  static String get zipReplay => _t.zipReplay;
+  static String get zipHint => _t.zipHint;
+  static String zipHintWithCount(int n) => _t.zipHintWithCount(n);
+  static String get zipHowToPlayTitle => _t.zipHowToPlayTitle;
+  static String get zipTutorialStart => _t.zipTutorialStart;
+  static String get zipTutorialFinish => _t.zipTutorialFinish;
+  static String get zipTutorialFillEveryCell => _t.zipTutorialFillEveryCell;
+  static String get zipTutorialWalls => _t.zipTutorialWalls;
+  static String get zipHowToPlayGotIt => _t.zipHowToPlayGotIt;
+  static String get tutorialGotIt => _t.tutorialGotIt;
+  static String get tutorialSkip => _t.tutorialSkip;
+  static String get tutorialNext => _t.tutorialNext;
+  static String get zipTipStartAtOne => _t.zipTipStartAtOne;
+  static String get zipTipFillEveryCell => _t.zipTipFillEveryCell;
+  static String get zipTipFinishOnLast => _t.zipTipFinishOnLast;
+  static String get zipTipVisitInOrder => _t.zipTipVisitInOrder;
+  static String get zipClearedTitle => _t.zipClearedTitle;
+  static String get zipLoading => _t.zipLoading;
+  static String get zipFailed => _t.zipFailed;
+  static String get playAgain => _t.playAgain;
+  static String get result => _t.result;
+  static String get today => _t.today;
+  static String get wordMatch => _t.wordMatch;
+  static String get categoryRace => _t.categoryRace;
+  static String get streakProtectedLabel => _t.streakProtectedLabel;
+  static String get cleared => _t.cleared;
+  static String bestTimeLabel(String formatted) => _t.bestTimeLabel(formatted);
+  static String get streakFreezeReady => _t.streakFreezeReady;
+  static String homeTileStats({int? bestSeconds, int longestStreak = 0}) =>
+      _t.homeTileStats(bestSeconds: bestSeconds, longestStreak: longestStreak);
   static String homeTodaySummary({
     required int cleared,
     required int total,
     int? totalSeconds,
-  }) => [
-    '$cleared of $total cleared',
-    if (totalSeconds != null) '${formatPlayTime(totalSeconds)} total',
-  ].join(' · ');
-  static const homePerfectDayBadge = 'Perfect day';
+  }) => _t.homeTodaySummary(
+    cleared: cleared,
+    total: total,
+    totalSeconds: totalSeconds,
+  );
+  static String get homePerfectDayBadge => _t.homePerfectDayBadge;
 
   // Path Words
-  static const pathWordsTitle = 'Path Words';
-  static const pathWordsTagline = 'Trace every word across the grid.';
-  static const playTodaysPathWords = "Play today's Path Words";
-  static const pathWordsUndo = 'Undo';
-  static const pathWordsHint = 'Hint';
-  static String pathWordsHintWithCount(int n) => 'Hint ($n)';
-  static const pathWordsHowToPlayTitle = 'How to play';
-  static const pathWordsTutorialMatchList = 'Match a word on the list';
-  static const pathWordsTutorialFindEveryWord = 'Find every word';
-  static const pathWordsTutorialFillEveryCell = 'Every cell should fill';
-  static const pathWordsHowToPlayGotIt = 'Got it';
-  static const pathWordsTipMatchList =
-      'That path isn’t on the list — match a listed word';
+  static String get pathWordsTitle => _t.pathWordsTitle;
+  static String get pathWordsTagline => _t.pathWordsTagline;
+  static String get playTodaysPathWords => _t.playTodaysPathWords;
+  static String get pathWordsUndo => _t.pathWordsUndo;
+  static String get pathWordsHint => _t.pathWordsHint;
+  static String pathWordsHintWithCount(int n) => _t.pathWordsHintWithCount(n);
+  static String get pathWordsHowToPlayTitle => _t.pathWordsHowToPlayTitle;
+  static String get pathWordsTutorialMatchList => _t.pathWordsTutorialMatchList;
+  static String get pathWordsTutorialFindEveryWord =>
+      _t.pathWordsTutorialFindEveryWord;
+  static String get pathWordsTutorialFillEveryCell =>
+      _t.pathWordsTutorialFillEveryCell;
+  static String get pathWordsHowToPlayGotIt => _t.pathWordsHowToPlayGotIt;
+  static String get pathWordsTipMatchList => _t.pathWordsTipMatchList;
   static String pathWordsUnfoundWordLabel(int letterCount) =>
-      '$letterCount-letter word, not found yet';
+      _t.pathWordsUnfoundWordLabel(letterCount);
   static String pathWordsTracingWordLabel(String letters) =>
-      'Tracing ${letters.toUpperCase()}';
-  static const pathWordsClearedTitle = 'Puzzle cleared!';
-  static const pathWordsLoading = 'Building today’s puzzle…';
-  static const pathWordsFailed = 'Could not load today’s puzzle.';
-  static String pathWordsThemeReveal(String theme) => 'Today: $theme';
-  static String pathWordsBonusWord(String word) =>
-      'Bonus word: ${word.toUpperCase()}';
-  static String pathWordsBonusCount(int count) =>
-      count == 1 ? '1 bonus word' : '$count bonus words';
-  static const pathWordsTapForMeaning = 'Tap a word to see what it means';
+      _t.pathWordsTracingWordLabel(letters);
+  static String get pathWordsClearedTitle => _t.pathWordsClearedTitle;
+  static String get pathWordsLoading => _t.pathWordsLoading;
+  static String get pathWordsFailed => _t.pathWordsFailed;
+  static String pathWordsThemeReveal(String theme) =>
+      _t.pathWordsThemeReveal(theme);
+  static String pathWordsBonusWord(String word) => _t.pathWordsBonusWord(word);
+  static String pathWordsBonusCount(int count) => _t.pathWordsBonusCount(count);
+  static String get pathWordsTapForMeaning => _t.pathWordsTapForMeaning;
   static String pathWordsWordWithMeaningLabel(String word) =>
-      '${word.toUpperCase()}, tap for its meaning';
-  static const weekendSpecial = 'Weekend special';
-  static const retry = 'Retry';
+      _t.pathWordsWordWithMeaningLabel(word);
+  static String get weekendSpecial => _t.weekendSpecial;
+  static String get retry => _t.retry;
 
   // Sudoku
-  static const sudokuTitle = 'Sudoku';
-  static const sudokuTagline = 'Fill every cell with 1–6.';
-  static const playTodaysSudoku = "Play today's Sudoku";
-  static const sudokuHint = 'Hint';
-  static String sudokuHintWithCount(int n) => 'Hint ($n)';
-  static const sudokuHintUnitRegion = 'region';
-  static const sudokuHintUnitRow = 'row';
-  static const sudokuHintUnitColumn = 'column';
+  static String get sudokuTitle => _t.sudokuTitle;
+  static String get sudokuTagline => _t.sudokuTagline;
+  static String get playTodaysSudoku => _t.playTodaysSudoku;
+  static String get sudokuHint => _t.sudokuHint;
+  static String sudokuHintWithCount(int n) => _t.sudokuHintWithCount(n);
+  static String get sudokuHintUnitRegion => _t.sudokuHintUnitRegion;
+  static String get sudokuHintUnitRow => _t.sudokuHintUnitRow;
+  static String get sudokuHintUnitColumn => _t.sudokuHintUnitColumn;
   static String sudokuHintLastRemaining({
     required int digit,
     required String unit,
-  }) =>
-      'This cell has to be $digit due to all other cells in this $unit being blocked by other ${digit}s.';
+  }) => _t.sudokuHintLastRemaining(digit: digit, unit: unit);
   static String sudokuHintNakedSingle({required int digit}) =>
-      'This cell has to be $digit — every other digit conflicts with the row, column, or region.';
-  static const sudokuHintNoSimple = 'No simple hint right now.';
+      _t.sudokuHintNakedSingle(digit: digit);
+  static String get sudokuHintNoSimple => _t.sudokuHintNoSimple;
   static String sudokuHintMistakeInRow(int row) =>
-      'One of the digits in row $row is wrong. Fix it first, then ask for another hint.';
-  static const sudokuErase = 'Erase';
-  static const sudokuReset = 'Reset';
-  static const sudokuNotes = 'Notes';
-  static const sudokuHowToPlayTitle = 'How to play';
-  static const sudokuHowToPlayBody =
-      'Fill every empty cell with 1–6 so each row, column and 2×3 box has every digit once. You can enter any digit; a full row, column or box that’s wrong lights up. Notes are unlimited. You get 3 hints per puzzle: each points out a wrong digit or explains the next step, and never fills a cell for you.';
-  static const sudokuHowToPlayGotIt = 'Got it';
-  static const sudokuClearedTitle = 'Puzzle cleared!';
-  static const sudokuLoading = 'Building today’s puzzle…';
-  static const sudokuFailed = 'Could not load today’s puzzle.';
-  static const puzzleNeedsUpdate =
-      'Today’s puzzle needs a newer version of Winklo. Update the app to play it.';
-  static const sudokuDifficultyEasy = 'Easy';
-  static const sudokuDifficultyMedium = 'Medium';
-  static const sudokuDifficultyHard = 'Hard';
+      _t.sudokuHintMistakeInRow(row);
+  static String get sudokuErase => _t.sudokuErase;
+  static String get sudokuReset => _t.sudokuReset;
+  static String get sudokuNotes => _t.sudokuNotes;
+  static String get sudokuHowToPlayTitle => _t.sudokuHowToPlayTitle;
+  static String get sudokuHowToPlayBody => _t.sudokuHowToPlayBody;
+  static String get sudokuHowToPlayGotIt => _t.sudokuHowToPlayGotIt;
+  static String get sudokuClearedTitle => _t.sudokuClearedTitle;
+  static String get sudokuLoading => _t.sudokuLoading;
+  static String get sudokuFailed => _t.sudokuFailed;
+  static String get puzzleNeedsUpdate => _t.puzzleNeedsUpdate;
+  static String get sudokuDifficultyEasy => _t.sudokuDifficultyEasy;
+  static String get sudokuDifficultyMedium => _t.sudokuDifficultyMedium;
+  static String get sudokuDifficultyHard => _t.sudokuDifficultyHard;
 
   // Results
-  static const newPersonalBest = 'New personal best';
-  static const newPuzzleUnlocksTomorrow = 'A new puzzle unlocks tomorrow.';
-  static const newPuzzleReady = 'A new puzzle is ready';
-
-  /// "New puzzle in 6h 12m". Minutes round up, so the last minute reads 1m
-  /// rather than 0m.
-  static String newPuzzleIn(Duration remaining) {
-    if (remaining <= Duration.zero) return newPuzzleReady;
-    const minute = Duration.microsecondsPerMinute;
-    final minutes = (remaining.inMicroseconds + minute - 1) ~/ minute;
-    final h = minutes ~/ 60;
-    final m = minutes % 60;
-    final parts = [if (h > 0) '${h}h', if (m > 0 || h == 0) '${m}m'];
-    return 'New puzzle in ${parts.join(' ')}';
-  }
-
-  static const backHome = 'Back home';
-  static String playNextGame(String gameTitle) => 'Play $gameTitle next';
-  static const perfectDay = 'Perfect day! All three puzzles cleared.';
-  static const shareResult = 'Share';
-  static const shareFailed = 'Couldn’t open sharing. Try again.';
-  static const resultsFullBoard = 'Full board';
-  static String clearedIn(String time) => 'Cleared in $time';
-  static String rankToday(int rank) => '#$rank today';
-  static const resultsTimeLabel = 'time';
-
-  static String formatPlayTime(int totalSeconds) {
-    final m = totalSeconds ~/ 60;
-    final s = totalSeconds % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
-  }
-
+  static String get newPersonalBest => _t.newPersonalBest;
+  static String get newPuzzleUnlocksTomorrow => _t.newPuzzleUnlocksTomorrow;
+  static String get newPuzzleReady => _t.newPuzzleReady;
+  static String newPuzzleIn(Duration remaining) => _t.newPuzzleIn(remaining);
+  static String get backHome => _t.backHome;
+  static String playNextGame(String gameTitle) => _t.playNextGame(gameTitle);
+  static String get perfectDay => _t.perfectDay;
+  static String get shareResult => _t.shareResult;
+  static String get shareFailed => _t.shareFailed;
+  static String get resultsFullBoard => _t.resultsFullBoard;
+  static String clearedIn(String time) => _t.clearedIn(time);
+  static String rankToday(int rank) => _t.rankToday(rank);
+  static String get resultsTimeLabel => _t.resultsTimeLabel;
   static String saveTimeToBoard(String timeLabel) =>
-      'Save $timeLabel to today’s board';
-
-  static const saveTimeSignInTitle = 'Save your time';
-  static const saveTimeSignInBody =
-      'Sign in with Google to put this run on the live daily leaderboard.';
-  static const resultsBoardTeaseHint =
-      'Today’s board is live — tap to save your time and join.';
+      _t.saveTimeToBoard(timeLabel);
+  static String get saveTimeSignInTitle => _t.saveTimeSignInTitle;
+  static String get saveTimeSignInBody => _t.saveTimeSignInBody;
+  static String get resultsBoardTeaseHint => _t.resultsBoardTeaseHint;
 
   // Zip game branding (feature, not app title)
-  static const zipBrand = 'ZIP';
-
-  static String streakLabel(int days) {
-    if (days == 1) return '1-day streak';
-    return '$days-day streak';
-  }
-
-  static String longestStreakLabel(int days) => 'Longest streak $days';
+  static String get zipBrand => _t.zipBrand;
+  static String streakLabel(int days) => _t.streakLabel(days);
+  static String longestStreakLabel(int days) => _t.longestStreakLabel(days);
 
   // Stats
-  static const statsTitle = 'Stats';
-  static const statsProfileRow = 'Your stats';
-  static const statsProfileRowHint = 'Times, streaks and cleared days';
-  static const statsFailed = 'Could not load your stats.';
-  static const statsLocalOnly =
-      'Showing this phone’s clears only. Pull down to try again.';
-  static const statsClears = 'Clears';
-  static const statsCurrentStreak = 'Streak';
-  static const statsLongestStreak = 'Longest';
-  static const statsBestTime = 'Best';
-  static const statsAverageTime = 'Average';
-  static const statsHintFree = 'Hint-free';
-  static const statsNoValue = '–';
-  static String statsPercent(double share) => '${(share * 100).round()}%';
-  static const statsTimesTitle = 'Clear times';
-  static const statsTimesEmpty = 'Clear a puzzle to see your times here.';
-
-  /// Lower edge of a histogram bar; the open-ended last bar reads "4:00+".
+  static String get statsTitle => _t.statsTitle;
+  static String get statsProfileRow => _t.statsProfileRow;
+  static String get statsProfileRowHint => _t.statsProfileRowHint;
+  static String get statsFailed => _t.statsFailed;
+  static String get statsLocalOnly => _t.statsLocalOnly;
+  static String get statsClears => _t.statsClears;
+  static String get statsCurrentStreak => _t.statsCurrentStreak;
+  static String get statsLongestStreak => _t.statsLongestStreak;
+  static String get statsBestTime => _t.statsBestTime;
+  static String get statsAverageTime => _t.statsAverageTime;
+  static String get statsHintFree => _t.statsHintFree;
+  static String get statsNoValue => _t.statsNoValue;
+  static String statsPercent(double share) => _t.statsPercent(share);
+  static String get statsTimesTitle => _t.statsTimesTitle;
+  static String get statsTimesEmpty => _t.statsTimesEmpty;
   static String statsTimesBucket(int fromSeconds, {required bool open}) =>
-      open ? '${formatPlayTime(fromSeconds)}+' : formatPlayTime(fromSeconds);
+      _t.statsTimesBucket(fromSeconds, open: open);
   static String statsTimesBucketSemantics(
     int fromSeconds,
     int? toSeconds,
     int count,
-  ) {
-    final range = toSeconds == null
-        ? '${formatPlayTime(fromSeconds)} or more'
-        : '${formatPlayTime(fromSeconds)} to ${formatPlayTime(toSeconds)}';
-    return '$range: ${statsClearCount(count)}';
-  }
-
-  static String statsClearCount(int count) =>
-      count == 1 ? '1 clear' : '$count clears';
-  static const statsCalendarTitle = 'Cleared days';
-  static const statsCalendarEmpty = 'Your cleared days will show here.';
-  static String statsCalendarCleared(int days) =>
-      days == 1 ? '1 day cleared' : '$days days cleared';
-  static const statsCalendarPrevious = 'Previous month';
-  static const statsCalendarNext = 'Next month';
-  static const statsTrendTitle = 'Personal best trend';
-  static const statsTrendSubtitle = 'Last 30 days';
-  static const statsTrendEmpty =
-      'Clear a puzzle in the next few days to start your trend.';
-  static const statsTrendTimes = 'Clear time';
-  static const statsTrendBest = 'Personal best';
-  static const statsTrendToday = 'Today';
+  ) => _t.statsTimesBucketSemantics(fromSeconds, toSeconds, count);
+  static String statsClearCount(int count) => _t.statsClearCount(count);
+  static String get statsCalendarTitle => _t.statsCalendarTitle;
+  static String get statsCalendarEmpty => _t.statsCalendarEmpty;
+  static String statsCalendarCleared(int days) => _t.statsCalendarCleared(days);
+  static String get statsCalendarPrevious => _t.statsCalendarPrevious;
+  static String get statsCalendarNext => _t.statsCalendarNext;
+  static String get statsTrendTitle => _t.statsTrendTitle;
+  static String get statsTrendSubtitle => _t.statsTrendSubtitle;
+  static String get statsTrendEmpty => _t.statsTrendEmpty;
+  static String get statsTrendTimes => _t.statsTrendTimes;
+  static String get statsTrendBest => _t.statsTrendBest;
+  static String get statsTrendToday => _t.statsTrendToday;
   static String statsTrendSemantics({
     required int clears,
     required int? bestSeconds,
-  }) => [
-    'Last 30 days: ${statsClearCount(clears)}',
-    if (bestSeconds != null) 'personal best ${formatPlayTime(bestSeconds)}',
-  ].join(', ');
+  }) => _t.statsTrendSemantics(clears: clears, bestSeconds: bestSeconds);
 
   // Achievements
-  static const achievementsTitle = 'Badges';
+  static String get achievementsTitle => _t.achievementsTitle;
   static String achievementsProgress(int unlocked, int total) =>
-      '$unlocked of $total';
-  static const achievementLocked = 'Locked';
-  static String achievementFirstClearTitle(String game) => 'First $game';
+      _t.achievementsProgress(unlocked, total);
+  static String get achievementLocked => _t.achievementLocked;
+  static String achievementFirstClearTitle(String game) =>
+      _t.achievementFirstClearTitle(game);
   static String achievementFirstClearCondition(String game) =>
-      'Clear your first $game';
+      _t.achievementFirstClearCondition(game);
   static String achievementStreakTitle(int days, String game) =>
-      '$days-day $game streak';
+      _t.achievementStreakTitle(days, game);
   static String achievementStreakCondition(int days, String game) =>
-      'Clear $game $days days in a row';
-  static const achievementZipUnderMinuteTitle = 'Under a minute';
-  static const achievementZipUnderMinuteCondition =
-      'Clear a Zip in under a minute';
-  static const achievementHintFreeWeekTitle = 'Hint-free week';
-  static const achievementHintFreeWeekCondition =
-      'Clear one game 7 days in a row without hints';
-  static const achievementFlawlessSudokusTitle = 'Flawless ten';
-  static const achievementFlawlessSudokusCondition =
-      'Clear 10 Sudokus with no hints or mistakes';
-  static const achievementPerfectDayTitle = 'Perfect day';
-  static const achievementPerfectDayCondition =
-      'Clear all three games on the same day';
+      _t.achievementStreakCondition(days, game);
+  static String get achievementZipUnderMinuteTitle =>
+      _t.achievementZipUnderMinuteTitle;
+  static String get achievementZipUnderMinuteCondition =>
+      _t.achievementZipUnderMinuteCondition;
+  static String get achievementHintFreeWeekTitle =>
+      _t.achievementHintFreeWeekTitle;
+  static String get achievementHintFreeWeekCondition =>
+      _t.achievementHintFreeWeekCondition;
+  static String get achievementFlawlessSudokusTitle =>
+      _t.achievementFlawlessSudokusTitle;
+  static String get achievementFlawlessSudokusCondition =>
+      _t.achievementFlawlessSudokusCondition;
+  static String get achievementPerfectDayTitle => _t.achievementPerfectDayTitle;
+  static String get achievementPerfectDayCondition =>
+      _t.achievementPerfectDayCondition;
   static String newAchievementsTitle(int count) =>
-      count == 1 ? 'New badge unlocked' : '$count new badges unlocked';
-
-  /// "First Zip", "First Zip and Perfect day", "First Zip, Perfect day and
-  /// 2 more".
-  static String newAchievementsList(List<String> titles) {
-    if (titles.length <= 1) return titles.join();
-    if (titles.length == 2) return '${titles[0]} and ${titles[1]}';
-    return '${titles[0]}, ${titles[1]} and ${titles.length - 2} more';
-  }
+      _t.newAchievementsTitle(count);
+  static String newAchievementsList(List<String> titles) =>
+      _t.newAchievementsList(titles);
 
   // Force update / soft update
-  static const updateRequiredTitle = 'Update required';
-  static const updateAvailableTitle = 'Update available';
-  static const updateRequiredBody =
-      'A new version of Winklo is required to continue. Please update from the Play Store.';
-  static const updateAvailableBody =
-      'A new version of Winklo is available. Please update for the latest fixes and puzzles.';
-  static const updateNow = 'Update now';
-  static const updateCantSkip = "This update can't be skipped.";
-  static const updateSnooze = 'Hide for a day';
-  static const updateDownloading = 'Downloading…';
-  static const updateRestart = 'Restart to update';
-
-  static String updateVersionRow(String current, String requiredLabel) {
-    return '$current → $requiredLabel';
-  }
+  static String get updateRequiredTitle => _t.updateRequiredTitle;
+  static String get updateAvailableTitle => _t.updateAvailableTitle;
+  static String get updateRequiredBody => _t.updateRequiredBody;
+  static String get updateAvailableBody => _t.updateAvailableBody;
+  static String get updateNow => _t.updateNow;
+  static String get updateCantSkip => _t.updateCantSkip;
+  static String get updateSnooze => _t.updateSnooze;
+  static String get updateDownloading => _t.updateDownloading;
+  static String get updateRestart => _t.updateRestart;
+  static String updateVersionRow(String current, String requiredLabel) =>
+      _t.updateVersionRow(current, requiredLabel);
 
   // Auth / leaderboard
-  static const playSignInTitle = 'Sign in to play';
-  static const playSignInBody =
-      'Sign in with Google to play today’s puzzles and save your time on the board.';
-  static const signInTitle = 'Sign in to join the board';
-  static const signInBody =
-      'Browse live rankings anytime. Sign in with Google to play and save your scores.';
-  static const signInWithGoogle = 'Continue with Google';
-  static const signInCancel = 'Not now';
-  static const signInRequired = 'Sign in to join the board';
-  static const signOut = 'Sign out';
-  static const signOutConfirmTitle = 'Sign out?';
-  static const signOutConfirmBody =
-      'You’ll need to sign in again to play. You can still view the live leaderboard signed out.';
-  static const signOutConfirmCancel = 'Cancel';
-  static const signOutConfirmNote =
-      'Your streaks & stats stay safe in the cloud.';
-  static const deleteAccount = 'Delete account';
-  static const deleteAccountConfirmTitle = 'Delete your account?';
-  static const deleteAccountConfirmBody =
-      'You’ll finish on our website: sign in there with the same Google account and confirm. Your profile, leaderboard entries and synced progress are deleted for good.';
-  static const deleteAccountConfirmNote =
-      'We’ll sign you out here first, then open the page in your browser.';
-  static const deleteAccountConfirmContinue = 'Continue';
-  static const deleteAccountOpenFailed =
-      'Couldn’t open your browser. Visit winklo.pages.dev/delete-account to delete your account.';
-  static const leaderboardTitle = 'Leaderboard';
-  static const leaderboardDaily = 'Daily';
-  static const leaderboardAllTime = 'All-time';
-  static const leaderboardEmpty = 'No scores yet. Be the first!';
-  static const leaderboardFailed = 'Could not load the leaderboard.';
-  static const leaderboardSignInHint = 'Sign in to view live rankings.';
-  static const seeFullLeaderboard = 'See full leaderboard';
-  static const leaderboardGapEllipsis = '…';
-  static const youLabel = 'You';
-  static const leaderboardNoHintChip = 'Hint-free';
-  static const leaderboardNoMistakesChip = 'Flawless';
+  static String get playSignInTitle => _t.playSignInTitle;
+  static String get playSignInBody => _t.playSignInBody;
+  static String get signInTitle => _t.signInTitle;
+  static String get signInBody => _t.signInBody;
+  static String get signInWithGoogle => _t.signInWithGoogle;
+  static String get signInCancel => _t.signInCancel;
+  static String get signInRequired => _t.signInRequired;
+  static String get signOut => _t.signOut;
+  static String get signOutConfirmTitle => _t.signOutConfirmTitle;
+  static String get signOutConfirmBody => _t.signOutConfirmBody;
+  static String get signOutConfirmCancel => _t.signOutConfirmCancel;
+  static String get signOutConfirmNote => _t.signOutConfirmNote;
+  static String get deleteAccount => _t.deleteAccount;
+  static String get deleteAccountConfirmTitle => _t.deleteAccountConfirmTitle;
+  static String get deleteAccountConfirmBody => _t.deleteAccountConfirmBody;
+  static String get deleteAccountConfirmNote => _t.deleteAccountConfirmNote;
+  static String get deleteAccountConfirmContinue =>
+      _t.deleteAccountConfirmContinue;
+  static String get deleteAccountOpenFailed => _t.deleteAccountOpenFailed;
+  static String get leaderboardTitle => _t.leaderboardTitle;
+  static String get leaderboardDaily => _t.leaderboardDaily;
+  static String get leaderboardAllTime => _t.leaderboardAllTime;
+  static String get leaderboardEmpty => _t.leaderboardEmpty;
+  static String get leaderboardFailed => _t.leaderboardFailed;
+  static String get leaderboardSignInHint => _t.leaderboardSignInHint;
+  static String get seeFullLeaderboard => _t.seeFullLeaderboard;
+  static String get leaderboardGapEllipsis => _t.leaderboardGapEllipsis;
+  static String get youLabel => _t.youLabel;
+  static String get leaderboardNoHintChip => _t.leaderboardNoHintChip;
+  static String get leaderboardNoMistakesChip => _t.leaderboardNoMistakesChip;
 
   // Leaderboard: past days, the weekly board and leagues (roadmap area C)
-  static const leaderboardThisWeek = 'This week';
-  static const leaderboardToday = 'Today';
-  static const leaderboardYesterday = 'Yesterday';
-  static const _shortMonths = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
+  static String get leaderboardThisWeek => _t.leaderboardThisWeek;
+  static String get leaderboardToday => _t.leaderboardToday;
+  static String get leaderboardYesterday => _t.leaderboardYesterday;
   static String leaderboardShortDate(int day, int month) =>
-      '$day ${_shortMonths[month - 1]}';
+      _t.leaderboardShortDate(day, month);
   static String leaderboardDaysCleared(int days) =>
-      days == 1 ? '1 day' : '$days days';
+      _t.leaderboardDaysCleared(days);
   static String leaderboardWeeklyRow(int days, String time) =>
-      '${leaderboardDaysCleared(days)} · $time';
-  static const leaderboardPastDayEmpty = 'No times on this day.';
-  static const leaderboardWeeklyEmpty =
-      'No one has cleared a day this week yet.';
-  static const leaderboardWeeklyDebugNote =
-      'The server fills in the weekly board, so debug builds show it empty.';
-  static const leaderboardLeagueEmpty =
-      'No one in this league has a time here yet.';
-  static const leaderboardScopeEveryone = 'Everyone';
-  static const leaderboardLeagues = 'Leagues';
-  static String playerCardRank(int rank) => 'Rank #$rank';
-  static const playerCardTime = 'Time';
-  static const playerCardWeekTotal = 'Week total';
-  static const playerCardDays = 'Days cleared';
-  static const gamePaused = 'Paused';
-  static const gamePausedResume = 'Tap to resume';
-  static const leaguesTitle = 'Leagues';
-  static const leaguesIntro =
-      'A board for friends, family or a team. Share the code, and everyone '
-      'who joins shows up on it.';
-  static const leaguesEmpty = 'You’re not in a league yet.';
-  static const leaguesFailed = 'Could not load your leagues.';
-  static const leaguesSignIn = 'Sign in to make or join a league.';
-  static const leaguesCreate = 'Create a league';
-  static const leaguesJoin = 'Join with a code';
-  static const leagueNameLabel = 'League name';
-  static const leagueNameHint = 'Family, office, book club…';
-  static const leagueNameInvalid = 'Use 1 to 30 characters.';
-  static const leagueCodeLabel = 'Invite code';
-  static const leagueCodeHint = 'ABC234';
-  static const leagueCodeInvalid = 'A code is 6 letters and digits.';
-  static const leagueCreateAction = 'Create';
-  static const leagueJoinAction = 'Join';
-  static const leagueCancel = 'Cancel';
-  static const leagueSave = 'Save';
-  static String leagueMembers(int count) =>
-      count == 1 ? '1 player' : '$count players';
-  static const leagueOwner = 'Owner';
-  static String leagueCode(String code) => 'Code $code';
-  static const leagueShareInvite = 'Share invite';
-  static const leagueCopyCode = 'Copy code';
-  static const leagueCodeCopied = 'Code copied';
+      _t.leaderboardWeeklyRow(days, time);
+  static String get leaderboardPastDayEmpty => _t.leaderboardPastDayEmpty;
+  static String get leaderboardWeeklyEmpty => _t.leaderboardWeeklyEmpty;
+  static String get leaderboardWeeklyDebugNote => _t.leaderboardWeeklyDebugNote;
+  static String get leaderboardLeagueEmpty => _t.leaderboardLeagueEmpty;
+  static String get leaderboardScopeEveryone => _t.leaderboardScopeEveryone;
+  static String get leaderboardLeagues => _t.leaderboardLeagues;
+  static String playerCardRank(int rank) => _t.playerCardRank(rank);
+  static String get playerCardTime => _t.playerCardTime;
+  static String get playerCardWeekTotal => _t.playerCardWeekTotal;
+  static String get playerCardDays => _t.playerCardDays;
+  static String get gamePaused => _t.gamePaused;
+  static String get gamePausedResume => _t.gamePausedResume;
+  static String get leaguesTitle => _t.leaguesTitle;
+  static String get leaguesIntro => _t.leaguesIntro;
+  static String get leaguesEmpty => _t.leaguesEmpty;
+  static String get leaguesFailed => _t.leaguesFailed;
+  static String get leaguesSignIn => _t.leaguesSignIn;
+  static String get leaguesCreate => _t.leaguesCreate;
+  static String get leaguesJoin => _t.leaguesJoin;
+  static String get leagueNameLabel => _t.leagueNameLabel;
+  static String get leagueNameHint => _t.leagueNameHint;
+  static String get leagueNameInvalid => _t.leagueNameInvalid;
+  static String get leagueCodeLabel => _t.leagueCodeLabel;
+  static String get leagueCodeHint => _t.leagueCodeHint;
+  static String get leagueCodeInvalid => _t.leagueCodeInvalid;
+  static String get leagueCreateAction => _t.leagueCreateAction;
+  static String get leagueJoinAction => _t.leagueJoinAction;
+  static String get leagueCancel => _t.leagueCancel;
+  static String get leagueSave => _t.leagueSave;
+  static String leagueMembers(int count) => _t.leagueMembers(count);
+  static String get leagueOwner => _t.leagueOwner;
+  static String leagueCode(String code) => _t.leagueCode(code);
+  static String get leagueShareInvite => _t.leagueShareInvite;
+  static String get leagueCopyCode => _t.leagueCopyCode;
+  static String get leagueCodeCopied => _t.leagueCodeCopied;
   static String leagueInviteText(String name, String url) =>
-      'Join my Winklo league “$name”: $url';
-  static const leagueMembersHeading = 'Players';
-  static const leagueMemberFallbackName = 'Player';
-  static const leagueLoadFailed = 'Could not load this league.';
-  static const leagueRename = 'Rename';
-  static const leagueRemove = 'Remove';
+      _t.leagueInviteText(name, url);
+  static String get leagueMembersHeading => _t.leagueMembersHeading;
+  static String get leagueMemberFallbackName => _t.leagueMemberFallbackName;
+  static String get leagueLoadFailed => _t.leagueLoadFailed;
+  static String get leagueRename => _t.leagueRename;
+  static String get leagueRemove => _t.leagueRemove;
   static String leagueRemoveConfirm(String name) =>
-      'Remove $name from the league?';
-  static const leagueLeave = 'Leave league';
-  static const leagueLeaveConfirm =
-      'Leave this league? You can join again with its code.';
-  static const leagueDelete = 'Delete league';
-  static const leagueDeleteConfirm =
-      'Delete this league for everyone? This can’t be undone.';
-  static const leagueGone = 'This league no longer exists.';
-  static const leagueSeeBoard = 'See the board';
-  static const leagueActionFailed = 'Something went wrong. Try again.';
-  static const joinLeagueTitle = 'Join a league';
-  static const joinLeagueSignIn = 'Sign in to join this league.';
-  static String joinLeagueNotFound(String code) =>
-      'No league has the code $code.';
-  static const joinLeagueBadCode = 'That isn’t a league code.';
-  static const joinLeagueFull = 'That league is full (30 players).';
-  static const joinLeagueButton = 'Join league';
-  static const joinLeagueAlreadyIn = 'You’re in this league.';
-
-  /// Compact game-tab label (full title stays [pathWordsTitle]).
-  static const pathWordsTab = 'Path';
+      _t.leagueRemoveConfirm(name);
+  static String get leagueLeave => _t.leagueLeave;
+  static String get leagueLeaveConfirm => _t.leagueLeaveConfirm;
+  static String get leagueDelete => _t.leagueDelete;
+  static String get leagueDeleteConfirm => _t.leagueDeleteConfirm;
+  static String get leagueGone => _t.leagueGone;
+  static String get leagueSeeBoard => _t.leagueSeeBoard;
+  static String get leagueActionFailed => _t.leagueActionFailed;
+  static String get joinLeagueTitle => _t.joinLeagueTitle;
+  static String get joinLeagueSignIn => _t.joinLeagueSignIn;
+  static String joinLeagueNotFound(String code) => _t.joinLeagueNotFound(code);
+  static String get joinLeagueBadCode => _t.joinLeagueBadCode;
+  static String get joinLeagueFull => _t.joinLeagueFull;
+  static String get joinLeagueButton => _t.joinLeagueButton;
+  static String get joinLeagueAlreadyIn => _t.joinLeagueAlreadyIn;
+  static String get pathWordsTab => _t.pathWordsTab;
 
   // Notifications
-  static const notifDailyReadyTitle = 'Today’s puzzles are ready';
-  static const notifDailyReadyBody =
-      'Play Zip, Path Words and Sudoku to keep your streaks going.';
-  static const notifStreakAtRiskTitle = 'Streak at risk';
+  static String get notifDailyReadyTitle => _t.notifDailyReadyTitle;
+  static String get notifDailyReadyBody => _t.notifDailyReadyBody;
+  static String get notifStreakAtRiskTitle => _t.notifStreakAtRiskTitle;
 
   // Habit: freezes, reminders, weekly recap, home-screen widget, Settings
-  static String gameTitle(String gameId) => switch (gameId) {
-    GameIds.zip => zipTitle,
-    GameIds.pathWords => pathWordsTitle,
-    GameIds.sudoku => sudokuTitle,
-    GameIds.wordMatch => wordMatch,
-    GameIds.categoryRace => categoryRace,
-    _ => gameId,
-  };
-  static String streakFreezesReady(int count) =>
-      '$count streak freezes ready: miss a day and your streak carries on.';
-  static String freezeCountLabel(int count) => '×$count';
+  static String gameTitle(String gameId) => _t.gameTitle(gameId);
+  static String streakFreezesReady(int count) => _t.streakFreezesReady(count);
+  static String freezeCountLabel(int count) => _t.freezeCountLabel(count);
   static String freezeSavedStreak(String gameId, int days) =>
-      'Your freeze saved your $days-day ${gameTitle(gameId)} streak';
-  static const dismiss = 'Dismiss';
-
-  /// "Your 12-day Zip streak ends at midnight", or "… and 2 more end …".
+      _t.freezeSavedStreak(gameId, days);
+  static String get dismiss => _t.dismiss;
   static String notifStreakEndsTonight(
     String gameId,
     int days, {
     int others = 0,
-  }) {
-    final streak = '$days-day ${gameTitle(gameId)} streak';
-    if (others <= 0) return 'Your $streak ends at midnight';
-    return 'Your $streak and $others more end at midnight';
-  }
-
-  static const notifWeeklyRecapTitle = 'Your week in Winklo';
-
-  /// "This week: 18 of 21 cleared, best Zip 0:58, 5-day Sudoku streak".
-  static String weeklyRecapLine(WeeklyRecap recap, {bool lastWeek = false}) {
-    final best = recap.bestGameId;
-    final bestSeconds = recap.bestSeconds;
-    final streak = recap.streakGameId;
-    final parts = [
-      '${recap.cleared} of ${recap.possible} cleared',
-      if (best != null && bestSeconds != null)
-        'best ${gameTitle(best)} ${formatPlayTime(bestSeconds)}',
-      if (streak != null) '${recap.streakDays}-day ${gameTitle(streak)} streak',
-    ];
-    return '${lastWeek ? 'Last week' : 'This week'}: ${parts.join(', ')}';
-  }
-
-  static const homeRecapTitle = 'Your week';
+  }) => _t.notifStreakEndsTonight(gameId, days, others: others);
+  static String get notifWeeklyRecapTitle => _t.notifWeeklyRecapTitle;
+  static String weeklyRecapLine(WeeklyRecap recap, {bool lastWeek = false}) =>
+      _t.weeklyRecapLine(recap, lastWeek: lastWeek);
+  static String get homeRecapTitle => _t.homeRecapTitle;
 
   // Android notification channels
-  static const channelRemindersName = 'Reminders';
-  static const channelRemindersDescription =
-      'Daily puzzles, streaks at risk and your weekly recap.';
-  static const channelAnnouncementsName = 'Announcements';
-  static const channelAnnouncementsDescription = 'News and app updates.';
+  static String get channelRemindersName => _t.channelRemindersName;
+  static String get channelRemindersDescription =>
+      _t.channelRemindersDescription;
+  static String get channelAnnouncementsName => _t.channelAnnouncementsName;
+  static String get channelAnnouncementsDescription =>
+      _t.channelAnnouncementsDescription;
 
   // Home-screen widget
-  static const widgetCleared = '✓';
-  static String widgetStreak(int days) => '🔥$days';
-  static const widgetPlay = 'Play';
-  static const widgetFooter = 'New puzzle at midnight';
+  static String get widgetCleared => _t.widgetCleared;
+  static String widgetStreak(int days) => _t.widgetStreak(days);
+  static String get widgetPlay => _t.widgetPlay;
+  static String get widgetFooter => _t.widgetFooter;
 
   // Settings
-  static const profileSettings = 'Settings';
-  static const settingsTitle = 'Settings';
-  static const settingsSoundSection = 'Sound and vibration';
-  static const settingsRemindersSection = 'Reminders';
-  static const settingsLanguageSection = 'Language';
-  static const settingsDailyReady = 'Daily puzzles ready';
-  static const settingsDailyReadyHint = 'When today’s puzzles are out';
-  static const settingsStreakAtRisk = 'Streak at risk';
-  static const settingsStreakAtRiskHint = 'Only when a streak is at stake';
-  static const settingsWeeklyRecap = 'Weekly recap';
-  static String settingsWeeklyRecapHint(String time) => 'Sundays at $time';
-  static const settingsAnnouncements = 'Announcements';
-  static const settingsAnnouncementsHint = 'News about Winklo';
-  static const settingsReminderTime = 'Time';
+  static String get profileSettings => _t.profileSettings;
+  static String get settingsTitle => _t.settingsTitle;
+  static String get settingsSoundSection => _t.settingsSoundSection;
+  static String get settingsRemindersSection => _t.settingsRemindersSection;
+  static String get settingsLanguageSection => _t.settingsLanguageSection;
+  static String get settingsDailyReady => _t.settingsDailyReady;
+  static String get settingsDailyReadyHint => _t.settingsDailyReadyHint;
+  static String get settingsStreakAtRisk => _t.settingsStreakAtRisk;
+  static String get settingsStreakAtRiskHint => _t.settingsStreakAtRiskHint;
+  static String get settingsWeeklyRecap => _t.settingsWeeklyRecap;
+  static String settingsWeeklyRecapHint(String time) =>
+      _t.settingsWeeklyRecapHint(time);
+  static String get settingsAnnouncements => _t.settingsAnnouncements;
+  static String get settingsAnnouncementsHint => _t.settingsAnnouncementsHint;
+  static String get settingsReminderTime => _t.settingsReminderTime;
   static String settingsReminderTimeLabel(String reminder, String time) =>
-      '$reminder time, $time';
+      _t.settingsReminderTimeLabel(reminder, time);
 
   // Dashboard nav
-  static const navHome = 'Home';
-  static const navLeaderboard = 'Leaderboard';
-  static const navProfile = 'Profile';
+  static String get navHome => _t.navHome;
+  static String get navLeaderboard => _t.navLeaderboard;
+  static String get navProfile => _t.navProfile;
 
   // Profile
-  static const profileTitle = 'Profile';
-  static const profileSignedOutTitle = 'Your profile';
-  static const profileSignedOutBody =
-      'Sign in to set your name and avatar for the leaderboard.';
-  static const profileEditName = 'Display name';
-  static const profileNameHint = 'Enter a display name';
-  static const profileNameEmpty = 'Name can’t be empty.';
-  static const profileNameTooLong = 'Name must be 24 characters or fewer.';
-  static const profileSave = 'Save';
-  static const profileEditAvatar = 'Edit avatar';
-  static const profileChoosePhoto = 'Choose from photos';
-  static const profilePresets = 'Presets';
-  static const profileSaveFailed = 'Could not save profile. Try again.';
-  static const profilePhotoTooLarge =
-      'That photo is too large to upload (2 MB at most). Try another one.';
-  static const profileUploadFailed = 'Could not upload photo. Try again.';
-  static const profilePermissionDenied =
-      'Photo access was denied. Enable it in Settings to upload an avatar.';
-  static const profileEditDisplayName = 'Edit display name';
-  static const profileSoundEffects = 'Sound effects';
-  static const profileVibration = 'Vibration';
-  static const profilePrivacyPolicy = 'Privacy policy';
-  static const profileAboutGame = 'About the game';
-  static const profileReportIssue = 'Report an issue';
-  static const profileAboutBody =
-      'Winklo is a daily puzzle app with solo mini-games you can clear at your own pace.';
-  static const profileAboutGamesHeading = 'Games';
-  static const profileAboutDailyHeading = 'Daily play';
-  static const profileAboutDailyBody =
-      'Each day brings fresh puzzles for Zip, Path Words, and Sudoku. '
-      'Clear them to climb the leaderboard and keep your streak alive.';
-  static String profileAboutVersion(String version) => 'Version $version';
-  static const profileReportTitleLabel = 'Title';
-  static const profileReportTitleHint = 'Short summary';
-  static const profileReportDescriptionLabel = 'Description';
-  static const profileReportDescriptionHint =
-      'What went wrong or what you’d like to see?';
-  static const profileReportTitleEmpty = 'Title can’t be empty.';
-  static const profileReportTitleTooLong =
-      'Title must be 80 characters or fewer.';
-  static const profileReportDescriptionEmpty = 'Description can’t be empty.';
-  static const profileReportDescriptionTooLong =
-      'Description must be 2000 characters or fewer.';
-  static const profileReportSend = 'Send';
-  static const profileReportSent = 'Thanks — your report was sent.';
-  static const profileReportFailed = 'Could not send report. Try again.';
-  static const profilePrivacyFailed = 'Could not load the privacy policy.';
-  static const profilePrivacyRetry = 'Retry';
+  static String get profileTitle => _t.profileTitle;
+  static String get profileSignedOutTitle => _t.profileSignedOutTitle;
+  static String get profileSignedOutBody => _t.profileSignedOutBody;
+  static String get profileEditName => _t.profileEditName;
+  static String get profileNameHint => _t.profileNameHint;
+  static String get profileNameEmpty => _t.profileNameEmpty;
+  static String get profileNameTooLong => _t.profileNameTooLong;
+  static String get profileSave => _t.profileSave;
+  static String get profileEditAvatar => _t.profileEditAvatar;
+  static String get profileChoosePhoto => _t.profileChoosePhoto;
+  static String get profilePresets => _t.profilePresets;
+  static String get profileSaveFailed => _t.profileSaveFailed;
+  static String get profilePhotoTooLarge => _t.profilePhotoTooLarge;
+  static String get profileUploadFailed => _t.profileUploadFailed;
+  static String get profilePermissionDenied => _t.profilePermissionDenied;
+  static String get profileEditDisplayName => _t.profileEditDisplayName;
+  static String get profileSoundEffects => _t.profileSoundEffects;
+  static String get profileVibration => _t.profileVibration;
+  static String get profilePrivacyPolicy => _t.profilePrivacyPolicy;
+  static String get profileAboutGame => _t.profileAboutGame;
+  static String get profileReportIssue => _t.profileReportIssue;
+  static String get profileAboutBody => _t.profileAboutBody;
+  static String get profileAboutGamesHeading => _t.profileAboutGamesHeading;
+  static String get profileAboutDailyHeading => _t.profileAboutDailyHeading;
+  static String get profileAboutDailyBody => _t.profileAboutDailyBody;
+  static String profileAboutVersion(String version) =>
+      _t.profileAboutVersion(version);
+  static String get profileReportTitleLabel => _t.profileReportTitleLabel;
+  static String get profileReportTitleHint => _t.profileReportTitleHint;
+  static String get profileReportDescriptionLabel =>
+      _t.profileReportDescriptionLabel;
+  static String get profileReportDescriptionHint =>
+      _t.profileReportDescriptionHint;
+  static String get profileReportTitleEmpty => _t.profileReportTitleEmpty;
+  static String get profileReportTitleTooLong => _t.profileReportTitleTooLong;
+  static String get profileReportDescriptionEmpty =>
+      _t.profileReportDescriptionEmpty;
+  static String get profileReportDescriptionTooLong =>
+      _t.profileReportDescriptionTooLong;
+  static String get profileReportSend => _t.profileReportSend;
+  static String get profileReportSent => _t.profileReportSent;
+  static String get profileReportFailed => _t.profileReportFailed;
+  static String get profilePrivacyFailed => _t.profilePrivacyFailed;
+  static String get profilePrivacyRetry => _t.profilePrivacyRetry;
 
   // More ways to play: archive, practice and bonus games (roadmap area F)
-  static const moreWaysTitle = 'More ways to play';
-  static const moreWaysEntryHint = 'Archive · Practice · Bonus games';
-  static const archiveTitle = 'Archive';
-  static const archiveHint = 'Replay any past daily. No streak or board.';
-  static const practiceTitle = 'Practice';
-  static const practiceHint = 'Endless offline boards. Hints on the house.';
-  static const bonusGamesTitle = 'Bonus games';
-  static const bonusGamesHint = 'Quick word games, just for fun.';
-  static String archiveRunLabel(DateTime day) =>
-      'Archive · ${leaderboardShortDate(day.day, day.month)}';
-  static const practiceRunLabel = 'Practice';
-  static const practiceNewBoard = 'New board';
-  static const hintUnlimited = 'Hint';
-  static String localBest(String time) => 'Best $time';
-  static String archiveBest(String time) => 'Archive best $time';
-  static const newLocalBest = 'New best';
-  static const backToArchive = 'Back to archive';
-  static const archivePickGame = 'Game';
-  static String archiveMonthCleared(int days) =>
-      days == 1 ? '1 day cleared' : '$days days cleared';
-  static const archiveDayCleared = 'Cleared';
-  static const archiveDayOpen = 'Not played';
-  static const archivePrevious = 'Previous month';
-  static const archiveNext = 'Next month';
-  static const archiveLegend = 'Cleared in the daily or the archive';
-  static String pathWordsThemeOf(String theme) => 'Theme: $theme';
-  static const archiveOpenHint = 'Pick a day to play it again.';
-  static const practicePickGame = 'Pick a game for a fresh board.';
-  static const wordMatchHint = 'Drag each word to its pair.';
-  static const categoryRaceHint = 'Name words that fit, against the clock.';
-  static const archiveEmpty = 'The archive opens tomorrow.';
-  static String bonusRunLabel(String game, String item) => '$game · $item';
-  static const bonusLoadFailed = 'Couldn’t load this game. Try again.';
-  static const resultsPairsLabel = 'pairs';
-  static String bonusSecondsLeft(int seconds) => '${seconds}s';
-  static String wordMatchPairs(int n) => n == 1 ? '1 pair' : '$n pairs';
-  static const wordMatchNoDecks = 'No decks yet. Check back soon.';
-  static const wordMatchDeckMissing = 'This deck isn’t available any more.';
-  static const wordMatchInstruction = 'Drag a word onto its pair';
-  static const wordMatchCleared = 'All matched!';
-  static const wordMatchTimeUp = 'Time up';
+  static String get moreWaysTitle => _t.moreWaysTitle;
+  static String get moreWaysEntryHint => _t.moreWaysEntryHint;
+  static String get archiveTitle => _t.archiveTitle;
+  static String get archiveHint => _t.archiveHint;
+  static String get practiceTitle => _t.practiceTitle;
+  static String get practiceHint => _t.practiceHint;
+  static String get bonusGamesTitle => _t.bonusGamesTitle;
+  static String get bonusGamesHint => _t.bonusGamesHint;
+  static String archiveRunLabel(DateTime day) => _t.archiveRunLabel(day);
+  static String get practiceRunLabel => _t.practiceRunLabel;
+  static String get practiceNewBoard => _t.practiceNewBoard;
+  static String get hintUnlimited => _t.hintUnlimited;
+  static String localBest(String time) => _t.localBest(time);
+  static String archiveBest(String time) => _t.archiveBest(time);
+  static String get newLocalBest => _t.newLocalBest;
+  static String get backToArchive => _t.backToArchive;
+  static String get archivePickGame => _t.archivePickGame;
+  static String archiveMonthCleared(int days) => _t.archiveMonthCleared(days);
+  static String get archiveDayCleared => _t.archiveDayCleared;
+  static String get archiveDayOpen => _t.archiveDayOpen;
+  static String get archivePrevious => _t.archivePrevious;
+  static String get archiveNext => _t.archiveNext;
+  static String get archiveLegend => _t.archiveLegend;
+  static String pathWordsThemeOf(String theme) => _t.pathWordsThemeOf(theme);
+  static String get archiveOpenHint => _t.archiveOpenHint;
+  static String get practicePickGame => _t.practicePickGame;
+  static String get wordMatchHint => _t.wordMatchHint;
+  static String get categoryRaceHint => _t.categoryRaceHint;
+  static String get archiveEmpty => _t.archiveEmpty;
+  static String bonusRunLabel(String game, String item) =>
+      _t.bonusRunLabel(game, item);
+  static String get bonusLoadFailed => _t.bonusLoadFailed;
+  static String get resultsPairsLabel => _t.resultsPairsLabel;
+  static String bonusSecondsLeft(int seconds) => _t.bonusSecondsLeft(seconds);
+  static String wordMatchPairs(int n) => _t.wordMatchPairs(n);
+  static String get wordMatchNoDecks => _t.wordMatchNoDecks;
+  static String get wordMatchDeckMissing => _t.wordMatchDeckMissing;
+  static String get wordMatchInstruction => _t.wordMatchInstruction;
+  static String get wordMatchCleared => _t.wordMatchCleared;
+  static String get wordMatchTimeUp => _t.wordMatchTimeUp;
   static String wordMatchMatched(int matched, int total) =>
-      'Matched $matched of $total';
-  static const wordMatchHowToBody =
-      'Drag each word onto the word it pairs with. Match every pair before '
-      'the clock runs out. Your best time for each deck stays on this '
-      'device; there is no streak or leaderboard.';
-  static const categoryRaceHowToBody =
-      'You get a category and a letter. Type as many words as you can that '
-      'fit the category and start with that letter before time runs out. '
-      'Your best count stays on this device; there is no streak or '
-      'leaderboard.';
-  static String categoryRaceStart(int seconds) => 'Start · ${seconds}s';
+      _t.wordMatchMatched(matched, total);
+  static String get wordMatchHowToBody => _t.wordMatchHowToBody;
+  static String get categoryRaceHowToBody => _t.categoryRaceHowToBody;
+  static String categoryRaceStart(int seconds) => _t.categoryRaceStart(seconds);
   static String categoryRaceInstruction(String letter) =>
-      'Type words that fit the category and start with $letter';
-  static const categoryRaceYourWord = 'Your word';
-  static const categoryRaceSubmit = 'Submit word';
-  static String categoryRaceAccepted(int n) => 'Accepted ($n)';
+      _t.categoryRaceInstruction(letter);
+  static String get categoryRaceYourWord => _t.categoryRaceYourWord;
+  static String get categoryRaceSubmit => _t.categoryRaceSubmit;
+  static String categoryRaceAccepted(int n) => _t.categoryRaceAccepted(n);
   static String categoryRaceMustStart(String letter) =>
-      'Must start with $letter';
-  static String categoryRaceNotIn(String category) => 'Not in $category';
-  static const categoryRaceAlreadyUsed = 'Already used';
-  static const categoryRaceRoundOver = 'Round over';
-  static const categoryRaceNoCategories = 'No categories yet. Check back soon.';
-  static const resultsWordsLabel = 'words';
-  static String localBestScore(int words) =>
-      words == 1 ? 'Best 1 word' : 'Best $words words';
+      _t.categoryRaceMustStart(letter);
+  static String categoryRaceNotIn(String category) =>
+      _t.categoryRaceNotIn(category);
+  static String get categoryRaceAlreadyUsed => _t.categoryRaceAlreadyUsed;
+  static String get categoryRaceRoundOver => _t.categoryRaceRoundOver;
+  static String get categoryRaceNoCategories => _t.categoryRaceNoCategories;
+  static String get resultsWordsLabel => _t.resultsWordsLabel;
+  static String localBestScore(int words) => _t.localBestScore(words);
 
   // Copy moved out of widgets and repositories (roadmap area G)
-  static const resultsTitle = 'Results';
-  static const resultsNextPuzzle = 'Next puzzle';
-  static const leaderboardYourRank = 'Your Rank';
-  static String leaderboardPlayGame(String game) => 'Play $game';
-
-  /// Shown for a player with no name on a board or in a league.
-  static const playerFallbackName = 'Player';
-
-  /// The first line of a shared result: "Winklo Zip · 9 Oct".
+  static String get resultsTitle => _t.resultsTitle;
+  static String get resultsNextPuzzle => _t.resultsNextPuzzle;
+  static String get leaderboardYourRank => _t.leaderboardYourRank;
+  static String leaderboardPlayGame(String game) =>
+      _t.leaderboardPlayGame(game);
+  static String get playerFallbackName => _t.playerFallbackName;
   static String shareHeadline(String game, DateTime day) =>
-      'Winklo $game · ${leaderboardShortDate(day.day, day.month)}';
-  static const signInFailed = 'Couldn’t sign in. Try again.';
-  static const serviceUnavailable = 'Firebase is unavailable. Try again later.';
-  static const signInRequiredShort = 'Sign in required.';
-  static const profileUpdateFailed = 'Could not update profile.';
-  static const avatarUploadUnavailable = 'Avatar upload is not configured.';
-  static const avatarInvalid = 'Invalid avatar.';
-  static const leaguesSignedOut = 'Sign in to use leagues.';
-  static const leagueLookupFailed = 'Could not look up that code.';
-  static const leagueCreateFailed = 'Could not create the league.';
-  static const leagueCreateRetry = 'Could not create the league. Try again.';
-  static const leagueJoinFailed = 'Could not join the league.';
-  static const leagueLeaveFailed = 'Could not leave the league.';
-  static const leagueRemoveFailed = 'Could not remove that player.';
-  static const leagueRenameFailed = 'Could not rename the league.';
-  static const leagueDeleteFailed = 'Could not delete the league.';
-  static const leagueNameLength = 'League names are 1 to 30 characters.';
-  static const leagueCodeNotFound = 'No league has that code.';
+      _t.shareHeadline(game, day);
+  static String get signInFailed => _t.signInFailed;
+  static String get serviceUnavailable => _t.serviceUnavailable;
+  static String get signInRequiredShort => _t.signInRequiredShort;
+  static String get profileUpdateFailed => _t.profileUpdateFailed;
+  static String get avatarUploadUnavailable => _t.avatarUploadUnavailable;
+  static String get avatarInvalid => _t.avatarInvalid;
+  static String get leaguesSignedOut => _t.leaguesSignedOut;
+  static String get leagueLookupFailed => _t.leagueLookupFailed;
+  static String get leagueCreateFailed => _t.leagueCreateFailed;
+  static String get leagueCreateRetry => _t.leagueCreateRetry;
+  static String get leagueJoinFailed => _t.leagueJoinFailed;
+  static String get leagueLeaveFailed => _t.leagueLeaveFailed;
+  static String get leagueRemoveFailed => _t.leagueRemoveFailed;
+  static String get leagueRenameFailed => _t.leagueRenameFailed;
+  static String get leagueDeleteFailed => _t.leagueDeleteFailed;
+  static String get leagueNameLength => _t.leagueNameLength;
+  static String get leagueCodeNotFound => _t.leagueCodeNotFound;
 }

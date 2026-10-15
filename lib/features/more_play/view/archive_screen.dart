@@ -64,7 +64,7 @@ class _ArchiveView extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const MorePlayHeader(title: AppStrings.archiveTitle),
+                  MorePlayHeader(title: AppStrings.archiveTitle),
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),

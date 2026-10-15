@@ -115,7 +115,7 @@ class _LeaguesView extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: () => _join(context),
                       icon: const Icon(Icons.vpn_key_rounded),
-                      label: const Text(AppStrings.leaguesJoin),
+                      label: Text(AppStrings.leaguesJoin),
                     ),
                   ],
                 );

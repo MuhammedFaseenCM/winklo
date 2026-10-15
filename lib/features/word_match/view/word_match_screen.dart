@@ -231,7 +231,7 @@ class _ProgressBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
               AppStrings.wordMatchInstruction,
               style: TextStyle(

@@ -31,7 +31,8 @@ class AndroidNotificationDisplay {
   /// Accent tint for the small icon (matches [ZipColors.ember]).
   static const Color accentColor = Color(0xFFFF6B2C);
 
-  static const AndroidNotificationChannel remindersChannel =
+  // Getters, not constants: the names follow the app's language.
+  static AndroidNotificationChannel get remindersChannel =>
       AndroidNotificationChannel(
         remindersChannelId,
         AppStrings.channelRemindersName,
@@ -41,7 +42,7 @@ class AndroidNotificationDisplay {
         enableVibration: true,
       );
 
-  static const AndroidNotificationChannel announcementsChannel =
+  static AndroidNotificationChannel get announcementsChannel =>
       AndroidNotificationChannel(
         announcementsChannelId,
         AppStrings.channelAnnouncementsName,
@@ -52,7 +53,10 @@ class AndroidNotificationDisplay {
       );
 
   /// Created at start-up.
-  static const channels = [remindersChannel, announcementsChannel];
+  static List<AndroidNotificationChannel> get channels => [
+    remindersChannel,
+    announcementsChannel,
+  ];
 
   static NotificationDetails reminderDetails() => _details(remindersChannel);
 

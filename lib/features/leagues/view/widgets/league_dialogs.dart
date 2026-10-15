@@ -65,7 +65,7 @@ Future<bool> showLeagueConfirmDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text(AppStrings.leagueCancel),
+          child: Text(AppStrings.leagueCancel),
         ),
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -155,7 +155,7 @@ class _TextEntryDialogState extends State<_TextEntryDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text(AppStrings.leagueCancel),
+          child: Text(AppStrings.leagueCancel),
         ),
         TextButton(onPressed: _submit, child: Text(widget.actionLabel)),
       ],

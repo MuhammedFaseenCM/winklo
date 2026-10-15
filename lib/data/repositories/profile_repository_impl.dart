@@ -13,7 +13,7 @@ import '../../domain/repositories/profile_repository.dart';
 import '../leaderboard_identity.dart';
 import '../leaderboard_root.dart';
 
-const _profileUnavailable = Failure(AppStrings.serviceUnavailable);
+Failure get _profileUnavailable => Failure(AppStrings.serviceUnavailable);
 
 /// Games whose leaderboard rows get name / avatar refreshes.
 const leaderboardIdentityGameIds = [
@@ -78,7 +78,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
   User _requireAuthUser() {
     final user = _firebaseAuth?.currentUser;
     if (user == null) {
-      throw const Failure(AppStrings.signInRequiredShort);
+      throw Failure(AppStrings.signInRequiredShort);
     }
     return user;
   }
@@ -171,16 +171,16 @@ class ProfileRepositoryImpl implements ProfileRepository {
     final authUser = _requireAuthUser();
     final uploader = _avatarUploadClient;
     if (uploader == null) {
-      throw const Failure(AppStrings.avatarUploadUnavailable);
+      throw Failure(AppStrings.avatarUploadUnavailable);
     }
     try {
       // v1: only JPEG path is supported by Worker.
       if (contentType != 'image/jpeg' && contentType != 'image/jpg') {
-        throw const Failure(AppStrings.profileUpdateFailed);
+        throw Failure(AppStrings.profileUpdateFailed);
       }
       final idToken = await authUser.getIdToken();
       if (idToken == null || idToken.isEmpty) {
-        throw const Failure(AppStrings.signInRequiredShort);
+        throw Failure(AppStrings.signInRequiredShort);
       }
       final photoUri = await uploader.uploadJpeg(
         idToken: idToken,
@@ -218,7 +218,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     final snap = await db.collection('users').doc(uid).get();
     final profile = mapUserProfile(uid, snap.data());
     if (profile == null) {
-      throw const Failure(AppStrings.profileUpdateFailed);
+      throw Failure(AppStrings.profileUpdateFailed);
     }
     return profile;
   }

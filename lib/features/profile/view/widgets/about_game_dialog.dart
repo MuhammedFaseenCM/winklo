@@ -92,7 +92,7 @@ class _AboutGameSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              const _AboutGameCard(
+              _AboutGameCard(
                 title: AppStrings.zipTitle,
                 description: AppStrings.zipTagline,
                 icon: Icons.bolt_rounded,
@@ -101,7 +101,7 @@ class _AboutGameSheet extends StatelessWidget {
                 gradient: ZipColors.emberGradient,
               ),
               const SizedBox(height: 10),
-              const _AboutGameCard(
+              _AboutGameCard(
                 title: AppStrings.pathWordsTitle,
                 description: AppStrings.pathWordsTagline,
                 icon: Icons.route_rounded,
@@ -110,7 +110,7 @@ class _AboutGameSheet extends StatelessWidget {
                 gradient: ZipColors.skyGradient,
               ),
               const SizedBox(height: 10),
-              const _AboutGameCard(
+              _AboutGameCard(
                 title: AppStrings.sudokuTitle,
                 description: AppStrings.sudokuTagline,
                 icon: Icons.grid_on_rounded,
@@ -156,7 +156,7 @@ class _AboutGameSheet extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(AppStrings.tutorialGotIt),
+                  child: Text(AppStrings.tutorialGotIt),
                 ),
               ),
             ],

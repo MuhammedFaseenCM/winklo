@@ -40,14 +40,14 @@ class StatsScreen extends StatelessWidget {
         child: Scaffold(
           backgroundColor: ZipColors.ink,
           appBar: AppBar(
-            title: const Text(
+            title: Text(
               AppStrings.statsTitle,
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             backgroundColor: Colors.transparent,
             elevation: 0,
             foregroundColor: ZipColors.onInk,
-            bottom: const TabBar(
+            bottom: TabBar(
               indicatorColor: ZipColors.ember,
               indicatorSize: TabBarIndicatorSize.label,
               labelColor: ZipColors.onInk,

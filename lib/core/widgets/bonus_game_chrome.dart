@@ -24,7 +24,7 @@ abstract final class BonusHowToPlay {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text(AppStrings.tutorialGotIt),
+            child: Text(AppStrings.tutorialGotIt),
           ),
         ],
       ),
@@ -192,7 +192,7 @@ class BonusGameMessage extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text(AppStrings.retry),
+                label: Text(AppStrings.retry),
               ),
             ],
           ],

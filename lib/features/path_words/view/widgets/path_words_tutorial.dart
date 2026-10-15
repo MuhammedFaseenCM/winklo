@@ -40,7 +40,7 @@ abstract final class PathWordsTutorial {
 
   static const thirdWord = 'RUN';
 
-  static const captions = <String>[
+  static List<String> get captions => <String>[
     AppStrings.pathWordsTutorialMatchList,
     AppStrings.pathWordsTutorialFindEveryWord,
     AppStrings.pathWordsTutorialFillEveryCell,

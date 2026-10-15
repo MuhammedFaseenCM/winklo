@@ -36,7 +36,7 @@ abstract final class ZipTutorial {
     Cell(2, 2),
   ];
 
-  static const captions = <String>[
+  static List<String> get captions => <String>[
     AppStrings.zipTutorialStart,
     AppStrings.zipTutorialFinish,
     AppStrings.zipTutorialFillEveryCell,

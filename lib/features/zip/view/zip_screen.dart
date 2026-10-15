@@ -311,7 +311,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                       ZipEvent.started(date: widget.date),
                                     ),
                                     icon: const Icon(Icons.refresh_rounded),
-                                    label: const Text(AppStrings.retry),
+                                    label: Text(AppStrings.retry),
                                   ),
                                 ],
                               ),
@@ -386,7 +386,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                           }
                                         : null,
                                     icon: const Icon(Icons.undo_rounded),
-                                    label: const Text(AppStrings.zipUndo),
+                                    label: Text(AppStrings.zipUndo),
                                   ),
                                 ),
                                 const SizedBox(width: 12),

@@ -15,9 +15,9 @@ class GameTutorialOverlay extends StatefulWidget {
     required this.demoBuilder,
     required this.onGotIt,
     this.beatDuration = const Duration(milliseconds: 2200),
-    this.gotItLabel = AppStrings.tutorialGotIt,
-    this.skipLabel = AppStrings.tutorialSkip,
-    this.nextLabel = AppStrings.tutorialNext,
+    this.gotItLabel,
+    this.skipLabel,
+    this.nextLabel,
   });
 
   final String title;
@@ -25,9 +25,11 @@ class GameTutorialOverlay extends StatefulWidget {
   final TutorialDemoBuilder demoBuilder;
   final VoidCallback onGotIt;
   final Duration beatDuration;
-  final String gotItLabel;
-  final String skipLabel;
-  final String nextLabel;
+
+  /// The button labels; null reads the shared tutorial copy.
+  final String? gotItLabel;
+  final String? skipLabel;
+  final String? nextLabel;
 
   static Future<void> show({
     required BuildContext context,
@@ -36,9 +38,9 @@ class GameTutorialOverlay extends StatefulWidget {
     required TutorialDemoBuilder demoBuilder,
     required Future<void> Function() onDismissed,
     Duration beatDuration = const Duration(milliseconds: 2200),
-    String gotItLabel = AppStrings.tutorialGotIt,
-    String skipLabel = AppStrings.tutorialSkip,
-    String nextLabel = AppStrings.tutorialNext,
+    String? gotItLabel,
+    String? skipLabel,
+    String? nextLabel,
   }) {
     var completed = false;
     Future<void> completeOnce() async {
@@ -203,7 +205,9 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                             width: double.infinity,
                             child: FilledButton(
                               onPressed: widget.onGotIt,
-                              child: Text(widget.gotItLabel),
+                              child: Text(
+                                widget.gotItLabel ?? AppStrings.tutorialGotIt,
+                              ),
                             ),
                           )
                         else
@@ -211,13 +215,17 @@ class _GameTutorialOverlayState extends State<GameTutorialOverlay>
                             children: [
                               TextButton(
                                 onPressed: widget.onGotIt,
-                                child: Text(widget.skipLabel),
+                                child: Text(
+                                  widget.skipLabel ?? AppStrings.tutorialSkip,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: FilledButton(
                                   onPressed: _goNext,
-                                  child: Text(widget.nextLabel),
+                                  child: Text(
+                                    widget.nextLabel ?? AppStrings.tutorialNext,
+                                  ),
                                 ),
                               ),
                             ],

@@ -33,12 +33,12 @@ class MorePlayScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const MorePlayHeader(title: AppStrings.moreWaysTitle),
+              MorePlayHeader(title: AppStrings.moreWaysTitle),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   children: [
-                    const MorePlaySectionTitle(title: AppStrings.archiveTitle),
+                    MorePlaySectionTitle(title: AppStrings.archiveTitle),
                     MorePlayCard(
                       icon: Icons.calendar_month_rounded,
                       title: AppStrings.archiveTitle,
@@ -48,7 +48,7 @@ class MorePlayScreen extends StatelessWidget {
                       onTap: () => context.push(archiveLocation()),
                     ),
                     const SizedBox(height: 12),
-                    const MorePlaySectionTitle(
+                    MorePlaySectionTitle(
                       title: AppStrings.practiceTitle,
                       hint: AppStrings.practiceHint,
                     ),
@@ -71,11 +71,11 @@ class MorePlayScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const MorePlaySectionTitle(
+                    MorePlaySectionTitle(
                       title: AppStrings.bonusGamesTitle,
                       hint: AppStrings.bonusGamesHint,
                     ),
-                    for (final (gameId, subtitle, location) in const [
+                    for (final (gameId, subtitle, location) in [
                       (
                         GameIds.wordMatch,
                         AppStrings.wordMatchHint,

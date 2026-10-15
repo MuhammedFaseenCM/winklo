@@ -41,7 +41,7 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: ZipColors.ink,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           AppStrings.profileTitle,
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
@@ -91,7 +91,7 @@ class _SignedOutBody extends StatelessWidget {
           const SizedBox(height: 8),
           FilledButton(
             onPressed: () => showSignInSheet(context),
-            child: const Text(AppStrings.signInWithGoogle),
+            child: Text(AppStrings.signInWithGoogle),
           ),
         ],
       ),
@@ -178,7 +178,7 @@ class _SignedInBodyState extends State<_SignedInBody> {
     final opened = await links.open(Uri.parse(AppUrls.accountDeletion));
     if (!opened) {
       messenger.showSnackBar(
-        const SnackBar(content: Text(AppStrings.deleteAccountOpenFailed)),
+        SnackBar(content: Text(AppStrings.deleteAccountOpenFailed)),
       );
     }
   }
@@ -300,7 +300,7 @@ class _SignedInBodyState extends State<_SignedInBody> {
                         size: 15,
                         color: ZipColors.ember,
                       ),
-                      label: const Text(
+                      label: Text(
                         AppStrings.profileEditDisplayName,
                         style: TextStyle(
                           color: ZipColors.ember,

@@ -52,7 +52,7 @@ class _JoinLeagueView extends StatelessWidget {
             JoinLeagueStatus.joined => const Center(
               child: CircularProgressIndicator(),
             ),
-            JoinLeagueStatus.badCode => const CenteredMessageBody(
+            JoinLeagueStatus.badCode => CenteredMessageBody(
               message: AppStrings.joinLeagueBadCode,
             ),
             JoinLeagueStatus.signedOut => CenteredMessageBody(
@@ -63,7 +63,7 @@ class _JoinLeagueView extends StatelessWidget {
             JoinLeagueStatus.notFound => CenteredMessageBody(
               message: AppStrings.joinLeagueNotFound(state.code),
             ),
-            JoinLeagueStatus.full => const CenteredMessageBody(
+            JoinLeagueStatus.full => CenteredMessageBody(
               message: AppStrings.joinLeagueFull,
             ),
             JoinLeagueStatus.failure => CenteredMessageBody(

@@ -133,9 +133,7 @@ class _CategoryRaceScreenState extends State<CategoryRaceScreen> {
     }
     final category = state.category;
     if (category == null) {
-      return const BonusGameMessage(
-        message: AppStrings.categoryRaceNoCategories,
-      );
+      return BonusGameMessage(message: AppStrings.categoryRaceNoCategories);
     }
     final started = state.status == CategoryRaceStatus.playing;
     final theme = Theme.of(context);

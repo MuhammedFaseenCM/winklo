@@ -207,7 +207,7 @@ GoRouter buildRouter({
           final extra = state.extra;
           final args = extra is ResultsArgs
               ? extra
-              : const ResultsArgs(
+              : ResultsArgs(
                   title: AppStrings.resultsTitle,
                   subtitle: '',
                   timeSeconds: 0,

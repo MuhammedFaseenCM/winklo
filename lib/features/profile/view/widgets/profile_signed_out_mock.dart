@@ -12,7 +12,7 @@ import 'profile_settings_list.dart';
 class ProfileSignedOutMock extends StatelessWidget {
   const ProfileSignedOutMock({super.key});
 
-  static const _mockName = AppStrings.playerFallbackName;
+  static String get _mockName => AppStrings.playerFallbackName;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +21,7 @@ class ProfileSignedOutMock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Center(child: UserAvatar(displayName: _mockName, radius: 56)),
+          Center(child: UserAvatar(displayName: _mockName, radius: 56)),
           const SizedBox(height: 16),
           Text(
             _mockName,

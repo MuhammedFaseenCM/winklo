@@ -31,7 +31,7 @@ class WordMatchSelectScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const BonusGameHeader(
+                    BonusGameHeader(
                       title: AppStrings.wordMatch,
                       gameId: GameIds.wordMatch,
                       howToPlayBody: AppStrings.wordMatchHowToBody,
@@ -71,7 +71,7 @@ class _DeckList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return const BonusGameMessage(message: AppStrings.wordMatchNoDecks);
+      return BonusGameMessage(message: AppStrings.wordMatchNoDecks);
     }
 
     return ListView.separated(

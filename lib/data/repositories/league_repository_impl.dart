@@ -73,7 +73,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
 
   FirebaseFirestore _db() {
     if (!FirebaseBootstrap.isReady) {
-      throw const Failure(AppStrings.serviceUnavailable);
+      throw Failure(AppStrings.serviceUnavailable);
     }
     return _firestore ?? FirebaseFirestore.instance;
   }
@@ -83,10 +83,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
         ? (_auth ?? FirebaseAuth.instance).currentUser?.uid
         : null;
     if (uid == null) {
-      throw const LeagueFailure(
-        LeagueProblem.signedOut,
-        AppStrings.leaguesSignedOut,
-      );
+      throw LeagueFailure(LeagueProblem.signedOut, AppStrings.leaguesSignedOut);
     }
     return uid;
   }
@@ -163,7 +160,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
       _guard(AppStrings.leagueCreateFailed, () async {
         final cleaned = cleanLeagueName(name);
         if (cleaned == null) {
-          throw const Failure(AppStrings.leagueNameLength);
+          throw Failure(AppStrings.leagueNameLength);
         }
         final uid = _uid();
         final db = _db();
@@ -194,7 +191,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
             memberUids: [uid],
           );
         }
-        throw const Failure(AppStrings.leagueCreateRetry);
+        throw Failure(AppStrings.leagueCreateRetry);
       });
 
   @override
@@ -203,7 +200,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
         final uid = _uid();
         final league = await findByCode(code);
         if (league == null) {
-          throw const LeagueFailure(
+          throw LeagueFailure(
             LeagueProblem.notFound,
             AppStrings.leagueCodeNotFound,
           );
@@ -218,17 +215,14 @@ class LeagueRepositoryImpl implements LeagueRepository {
               ? leagueFromDoc(snap.id, snap.data())
               : null;
           if (current == null) {
-            throw const LeagueFailure(
+            throw LeagueFailure(
               LeagueProblem.notFound,
               AppStrings.leagueCodeNotFound,
             );
           }
           if (current.hasMember(uid)) return current;
           if (current.isFull) {
-            throw const LeagueFailure(
-              LeagueProblem.full,
-              AppStrings.joinLeagueFull,
-            );
+            throw LeagueFailure(LeagueProblem.full, AppStrings.joinLeagueFull);
           }
           tx.update(ref, {
             'memberUids': FieldValue.arrayUnion([uid]),
@@ -268,7 +262,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
       _guard(AppStrings.leagueRenameFailed, () async {
         final cleaned = cleanLeagueName(name);
         if (cleaned == null) {
-          throw const Failure(AppStrings.leagueNameLength);
+          throw Failure(AppStrings.leagueNameLength);
         }
         _uid();
         await _leagues(_db()).doc(leagueId).update({'name': cleaned});

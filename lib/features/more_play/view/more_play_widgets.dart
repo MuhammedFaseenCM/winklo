@@ -20,31 +20,31 @@ class MorePlayGameStyle {
   final Color accentSoft;
 
   static MorePlayGameStyle of(String gameId) => switch (gameId) {
-    GameIds.pathWords => const MorePlayGameStyle(
+    GameIds.pathWords => MorePlayGameStyle(
       title: AppStrings.pathWordsTitle,
       icon: Icons.text_fields_rounded,
       accent: ZipColors.sky,
       accentSoft: ZipColors.skySoft,
     ),
-    GameIds.sudoku => const MorePlayGameStyle(
+    GameIds.sudoku => MorePlayGameStyle(
       title: AppStrings.sudokuTitle,
       icon: Icons.grid_on_rounded,
       accent: ZipColors.success,
       accentSoft: ZipColors.successSoft,
     ),
-    GameIds.wordMatch => const MorePlayGameStyle(
+    GameIds.wordMatch => MorePlayGameStyle(
       title: AppStrings.wordMatch,
       icon: Icons.compare_arrows_rounded,
       accent: ZipColors.number,
       accentSoft: Color(0xFF3B1E2A),
     ),
-    GameIds.categoryRace => const MorePlayGameStyle(
+    GameIds.categoryRace => MorePlayGameStyle(
       title: AppStrings.categoryRace,
       icon: Icons.bolt_rounded,
       accent: Color(0xFFFBBF24),
       accentSoft: Color(0xFF3A3018),
     ),
-    _ => const MorePlayGameStyle(
+    _ => MorePlayGameStyle(
       title: AppStrings.zipTitle,
       icon: Icons.route_rounded,
       accent: ZipColors.ember,

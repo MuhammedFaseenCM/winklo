@@ -49,9 +49,7 @@ class ResultsActions extends StatelessWidget {
         ),
       );
     } on Failure {
-      messenger?.showSnackBar(
-        const SnackBar(content: Text(AppStrings.shareFailed)),
-      );
+      messenger?.showSnackBar(SnackBar(content: Text(AppStrings.shareFailed)));
       return;
     }
     if (shared) await analytics.logShare(gameId: _gameId);
@@ -127,7 +125,7 @@ class ResultsActions extends StatelessWidget {
                   context.go('/leaderboard?game=$_gameId');
                 },
                 icon: const Icon(Icons.leaderboard_rounded),
-                label: const Text(
+                label: Text(
                   AppStrings.resultsFullBoard,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

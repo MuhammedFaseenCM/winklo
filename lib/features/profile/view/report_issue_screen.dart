@@ -126,7 +126,7 @@ class _ReportIssueFormState extends State<_ReportIssueForm> {
     return Scaffold(
       backgroundColor: ZipColors.ink,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           AppStrings.profileReportIssue,
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
@@ -140,7 +140,7 @@ class _ReportIssueFormState extends State<_ReportIssueForm> {
         listener: (context, state) {
           if (state.status == ReportIssueStatus.success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text(AppStrings.profileReportSent)),
+              SnackBar(content: Text(AppStrings.profileReportSent)),
             );
             if (context.canPop()) context.pop();
             return;
@@ -169,7 +169,7 @@ class _ReportIssueFormState extends State<_ReportIssueForm> {
                   maxLength: 80,
                   maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   style: const TextStyle(color: ZipColors.onInk),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: AppStrings.profileReportTitleLabel,
                     hintText: AppStrings.profileReportTitleHint,
                   ),
@@ -184,7 +184,7 @@ class _ReportIssueFormState extends State<_ReportIssueForm> {
                   maxLength: 2000,
                   maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   style: const TextStyle(color: ZipColors.onInk),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: AppStrings.profileReportDescriptionLabel,
                     hintText: AppStrings.profileReportDescriptionHint,
                     alignLabelWithHint: true,
@@ -194,7 +194,7 @@ class _ReportIssueFormState extends State<_ReportIssueForm> {
                 SizedBox(height: layout.space(16)),
                 FilledButton(
                   onPressed: canSend ? () => unawaited(_submit()) : null,
-                  child: const Text(AppStrings.profileReportSend),
+                  child: Text(AppStrings.profileReportSend),
                 ),
               ],
             );

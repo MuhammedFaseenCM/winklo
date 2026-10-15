@@ -120,7 +120,7 @@ class LocalResultsView extends StatelessWidget {
                         if (!context.mounted) return;
                         context.go('/');
                       },
-                      child: const Text(AppStrings.backHome),
+                      child: Text(AppStrings.backHome),
                     ).animate().fadeIn(delay: 380.ms),
                   ],
                 ),

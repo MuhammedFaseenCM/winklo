@@ -67,7 +67,7 @@ class _LeagueDetailView extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text(AppStrings.shareFailed)));
+      ).showSnackBar(SnackBar(content: Text(AppStrings.shareFailed)));
     }
   }
 
@@ -76,7 +76,7 @@ class _LeagueDetailView extends StatelessWidget {
     if (!context.mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text(AppStrings.leagueCodeCopied)));
+    ).showSnackBar(SnackBar(content: Text(AppStrings.leagueCodeCopied)));
   }
 
   Future<void> _leaveOrDelete(BuildContext context, bool owner) async {
@@ -180,12 +180,12 @@ class _LeagueDetailView extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: () => _share(context, league),
                     icon: const Icon(Icons.share_rounded),
-                    label: const Text(AppStrings.leagueShareInvite),
+                    label: Text(AppStrings.leagueShareInvite),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => _copyCode(context, league),
                     icon: const Icon(Icons.copy_rounded),
-                    label: const Text(AppStrings.leagueCopyCode),
+                    label: Text(AppStrings.leagueCopyCode),
                   ),
                 ],
               ),

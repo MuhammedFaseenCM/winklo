@@ -79,7 +79,7 @@ void main() {
     ),
     act: (cubit) => cubit.submit(),
     expect: () => [
-      const ReportIssueState(
+      ReportIssueState(
         status: ReportIssueStatus.failure,
         titleDraft: '',
         descriptionDraft: 'Broken button',
@@ -156,7 +156,7 @@ void main() {
         titleDraft: 'Bug',
         descriptionDraft: 'Broken button',
       ),
-      const ReportIssueState(
+      ReportIssueState(
         status: ReportIssueStatus.failure,
         titleDraft: 'Bug',
         descriptionDraft: 'Broken button',
