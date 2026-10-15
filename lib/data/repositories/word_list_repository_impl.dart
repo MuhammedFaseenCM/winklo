@@ -11,6 +11,7 @@ class WordListRepositoryImpl implements WordListRepository {
   WordListRepositoryImpl({
     this.assetPath = 'assets/words/en_bonus_words.txt',
     this.nounAssetPath = 'assets/words/en_nouns.txt',
+    this.practiceAssetPath = 'assets/words/en_practice_words.txt',
     this._prefs,
     this._nounsClient,
     this._bundle,
@@ -19,12 +20,14 @@ class WordListRepositoryImpl implements WordListRepository {
   /// The English word list: ENABLE, 4–8 letters (see [loadBonusWords]).
   final String assetPath;
   final String nounAssetPath;
+  final String practiceAssetPath;
   final SharedPreferences? _prefs;
   final PathWordsNounsClient? _nounsClient;
   final AssetBundle? _bundle;
 
   List<String>? _englishCache;
   Future<Set<String>>? _bonusWords;
+  Future<List<String>>? _practiceWords;
   final Map<String, List<String>> _dailyMemory = {};
 
   AssetBundle get _assets => _bundle ?? rootBundle;
@@ -44,6 +47,20 @@ class WordListRepositoryImpl implements WordListRepository {
     final raw = await _assets.loadString(assetPath, cache: false);
     // About 79,000 lines: split them off the UI isolate.
     return Set<String>.unmodifiable(await compute(_parseBonusWords, raw));
+  }
+
+  @override
+  Future<List<String>> loadPracticeWords() {
+    return _practiceWords ??= _loadAsset(practiceAssetPath, cacheEnglish: false)
+        .then(
+          (words) => List<String>.unmodifiable(
+            words.where((w) => w.length >= 5 && w.length <= 6),
+          ),
+        )
+        .catchError((Object error, StackTrace stack) {
+          _practiceWords = null;
+          Error.throwWithStackTrace(error, stack);
+        });
   }
 
   static String prefsKey(String dateId) => 'path_words_nouns_$dateId';

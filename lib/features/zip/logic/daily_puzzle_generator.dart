@@ -127,6 +127,39 @@ class DailyPuzzleGenerator {
   static ZipLevel today([DateTime? now, Duration period = PlayPeriod.daily]) =>
       forDate(now ?? DateTime.now(), period: period);
 
+  /// Size of a practice board, as the cron's hard dailies.
+  static const practiceSize = 8;
+
+  /// An endless practice board, in the style the daily cron publishes
+  /// (winklo-admin `generate_zip.ts`, hard): 8×8, 6–7 numbers from the
+  /// solution's start to its end, and 16–20 walls on edges the solution
+  /// doesn't cross. The same [seed] always gives the same board.
+  static ZipLevel practice({required int seed}) {
+    final rng = Random(seed);
+    const size = practiceSize;
+    var path = _orientedSerpentine(size, rng);
+    for (var i = 0; i < size * size * 8; i++) {
+      final next = _tryBackbite(path, size, rng);
+      if (next != null) path = next;
+      if (rng.nextInt(4) == 0) path = path.reversed.toList();
+    }
+    final count = 6 + rng.nextInt(2);
+    final walls = _placeWalls(
+      size,
+      path,
+      rng,
+      minCount: 2 * size,
+      maxCount: 2 * size + size ~/ 2,
+    );
+    return ZipLevel(
+      id: 'practice_$seed',
+      size: size,
+      numbers: _placeNumbers(path, count),
+      walls: walls,
+      solution: path,
+    );
+  }
+
   static int _numberCountFor(int size, Random rng) {
     final cells = size * size;
     final minCount = size <= 6 ? 6 : 8;
@@ -252,7 +285,13 @@ class DailyPuzzleGenerator {
     return numbers;
   }
 
-  static List<Wall> _placeWalls(int size, List<Cell> path, Random rng) {
+  static List<Wall> _placeWalls(
+    int size,
+    List<Cell> path,
+    Random rng, {
+    int? minCount,
+    int? maxCount,
+  }) {
     final onPath = <String>{};
     for (var i = 0; i < path.length - 1; i++) {
       onPath.add(_edgeKey(path[i], path[i + 1]));
@@ -278,7 +317,9 @@ class DailyPuzzleGenerator {
     }
 
     candidates.shuffle(rng);
-    final wallCount = min(candidates.length, 2 + rng.nextInt(size));
+    final lo = minCount ?? 2;
+    final hi = maxCount ?? size + 1;
+    final wallCount = min(candidates.length, lo + rng.nextInt(hi - lo + 1));
     return candidates.take(wallCount).toList();
   }
 

@@ -97,6 +97,9 @@ class _FakeWordList implements WordListRepository {
       throw UnimplementedError();
 
   @override
+  Future<List<String>> loadPracticeWords() => throw UnimplementedError();
+
+  @override
   Future<List<String>> loadEnglishWords({int minLen = 4, int maxLen = 10}) =>
       throw UnimplementedError();
 }
