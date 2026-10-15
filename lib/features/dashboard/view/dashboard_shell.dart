@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../domain/entities/app_update_decision.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/app_update_repository.dart';
+import '../../../domain/repositories/in_app_update_repository.dart';
 import '../../../domain/usecases/check_app_update.dart';
 import '../../app_update/cubit/app_update_cubit.dart';
 import '../../app_update/cubit/app_update_state.dart';
@@ -23,6 +24,7 @@ class DashboardShell extends StatelessWidget {
       create: (context) => AppUpdateCubit(
         checkAppUpdate: context.read<CheckAppUpdate>(),
         appUpdateRepository: context.read<AppUpdateRepository>(),
+        inAppUpdates: context.read<InAppUpdateRepository?>(),
         analytics: context.read<AnalyticsRepository>(),
       )..check(),
       child: _DashboardShellView(navigationShell: navigationShell),
@@ -84,7 +86,7 @@ class _DashboardShellView extends StatelessWidget {
               ),
               if (forced)
                 HomeForceUpdateOverlay(
-                  onUpdate: () => context.read<AppUpdateCubit>().openStore(),
+                  onUpdate: () => context.read<AppUpdateCubit>().startUpdate(),
                 ),
             ],
           );
