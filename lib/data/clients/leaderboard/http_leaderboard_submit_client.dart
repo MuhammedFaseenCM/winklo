@@ -53,7 +53,15 @@ class HttpLeaderboardSubmitClient implements LeaderboardSubmitClient {
     final decoded = _decode(response.body);
     if (status >= 400) {
       final code = decoded?['error'];
-      throw LeaderboardSubmitRejected(status, code is String ? code : '');
+      // Only the Worker's own verdicts are final. Anything else (a 404 page
+      // before the Worker is deployed, a 429 from Cloudflare) means nothing
+      // was decided, so the clear is written another way.
+      if ((status == 400 || status == 401 || status == 422) &&
+          code is String &&
+          leaderboardSubmitRefusalCodes.contains(code)) {
+        throw LeaderboardSubmitRejected(status, code);
+      }
+      throw LeaderboardSubmitUnavailable('HTTP $status');
     }
     if (status < 200 || status >= 300 || decoded?['accepted'] != true) {
       throw LeaderboardSubmitUnavailable('unexpected reply ($status)');

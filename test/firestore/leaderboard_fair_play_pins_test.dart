@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winklo/data/clients/leaderboard/leaderboard_submit_client.dart';
 import 'package:winklo/data/leaderboard_identity.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/league_repository_impl.dart';
@@ -142,5 +143,18 @@ void main() {
     );
     expect(rules, contains('after.size() <= $leaguesMaxMembers'));
     expect(rules, contains('name.size() <= $leagueNameMaxLength'));
+  });
+
+  test('the app knows every refusal the Worker can answer', () {
+    final submit = read('workers/leaderboard/src/submit.ts');
+    final start = submit.indexOf('export type SubmitErrorCode =');
+    expect(start, isNot(-1));
+    final union = submit.substring(start, submit.indexOf(';', start));
+    expect(quoted(union), isNotEmpty);
+    expect(
+      read('workers/leaderboard/src/index.ts'),
+      contains("'unauthorized'"),
+    );
+    expect({...quoted(union), 'unauthorized'}, leaderboardSubmitRefusalCodes);
   });
 }

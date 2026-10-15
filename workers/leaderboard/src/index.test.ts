@@ -1,5 +1,6 @@
+import { errors } from 'jose';
 import { describe, expect, it, vi } from 'vitest';
-import { MAX_BODY_BYTES, route, type Env } from './index';
+import { MAX_BODY_BYTES, isBadTokenError, route, type Env } from './index';
 
 const env: Env = { FIREBASE_PROJECT_ID: 'p', FIREBASE_SERVICE_ACCOUNT_JSON: '' };
 
@@ -20,13 +21,29 @@ describe('route', () => {
 
   it('401s a missing or bad token before reading the body', async () => {
     const verify = vi.fn(async () => {
-      throw new Error('bad');
+      throw new errors.JWSSignatureVerificationFailed();
     });
     expect((await route(post('{}'), env, verify)).status).toBe(401);
     expect(verify).not.toHaveBeenCalled();
     const res = await route(post('{}', { Authorization: 'Bearer nope' }), env, verify);
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'unauthorized' });
+  });
+
+  it('503s when the token cannot be checked, so the app falls back', async () => {
+    const verify = vi.fn(async () => {
+      throw new TypeError('fetch failed');
+    });
+    const res = await route(post('{}', { Authorization: 'Bearer t' }), env, verify);
+    expect(res.status).toBe(503);
+  });
+
+  it('tells bad tokens from failed checks', () => {
+    expect(isBadTokenError(new errors.JWTExpired('expired', {}))).toBe(true);
+    expect(isBadTokenError(new errors.JWTClaimValidationFailed('aud', {}))).toBe(true);
+    expect(isBadTokenError(new Error('missing sub'))).toBe(true);
+    expect(isBadTokenError(new errors.JWKSTimeout())).toBe(false);
+    expect(isBadTokenError(new TypeError('fetch failed'))).toBe(false);
   });
 
   it('400s a body that is not JSON or too big', async () => {

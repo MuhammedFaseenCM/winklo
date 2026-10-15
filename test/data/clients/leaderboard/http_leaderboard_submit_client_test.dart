@@ -60,6 +60,21 @@ void main() {
     );
   });
 
+  test('a 4xx that is not the Worker\'s verdict is not final', () async {
+    for (final response in [
+      http.Response('<html>There is nothing here yet</html>', 404),
+      http.Response(jsonEncode({'error': 'rate_limited'}), 429),
+      http.Response(jsonEncode({'error': 'something_new'}), 422),
+    ]) {
+      final client = clientFor((_) async => response);
+      await expectLater(
+        client.submit(idToken: 'tok', body: body),
+        throwsA(isA<LeaderboardSubmitUnavailable>()),
+        reason: response.body,
+      );
+    }
+  });
+
   test('a 5xx means the Worker is unavailable', () async {
     final client = clientFor(
       (_) async => http.Response(jsonEncode({'error': 'busy'}), 503),

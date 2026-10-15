@@ -18,6 +18,17 @@ class LeaderboardSubmitResult {
   final bool improved;
 }
 
+/// The `error` codes the Worker answers a refused clear with
+/// (workers/leaderboard/src/submit.ts and index.ts).
+const leaderboardSubmitRefusalCodes = {
+  'bad_request',
+  'not_live',
+  'too_fast',
+  'bad_proof',
+  'unknown_puzzle',
+  'unauthorized',
+};
+
 /// The Worker checked the clear and refused it.
 class LeaderboardSubmitRejected implements Exception {
   const LeaderboardSubmitRejected(this.statusCode, this.code);

@@ -1,3 +1,5 @@
+import { errors } from 'jose';
+
 import { verifyFirebaseIdToken } from './firebase_auth';
 import { getGoogleAccessToken, parseServiceAccountJson } from './google_auth';
 import { handleSubmit } from './submit';
@@ -11,6 +13,27 @@ export interface Env {
 export const MAX_BODY_BYTES = 32 * 1024;
 
 type Verify = (token: string, projectId: string) => Promise<{ uid: string }>;
+
+/** jose errors that mean the token itself is bad, not that checking it failed. */
+const BAD_TOKEN_CODES = new Set([
+  'ERR_JWT_EXPIRED',
+  'ERR_JWT_CLAIM_VALIDATION_FAILED',
+  'ERR_JWT_INVALID',
+  'ERR_JWS_INVALID',
+  'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',
+  'ERR_JWKS_NO_MATCHING_KEY',
+  'ERR_JOSE_ALG_NOT_ALLOWED',
+  'ERR_JOSE_NOT_SUPPORTED',
+]);
+
+/**
+ * A bad token is a 401 (final for the app). Anything else, such as Google's
+ * key set not loading, is a 503 so the app writes the clear another way.
+ */
+export function isBadTokenError(error: unknown): boolean {
+  if (error instanceof errors.JOSEError) return BAD_TOKEN_CODES.has(error.code);
+  return error instanceof Error && error.message === 'missing sub';
+}
 
 function parseBearer(request: Request): string | null {
   const header = request.headers.get('Authorization');
@@ -42,8 +65,10 @@ export async function route(
   let uid: string;
   try {
     ({ uid } = await verify(token, env.FIREBASE_PROJECT_ID));
-  } catch {
-    return json({ error: 'unauthorized' }, 401);
+  } catch (e) {
+    if (isBadTokenError(e)) return json({ error: 'unauthorized' }, 401);
+    console.error('token_check_failed', e instanceof Error ? e.message : e);
+    return json({ error: 'unavailable' }, 503);
   }
 
   const declared = Number(request.headers.get('Content-Length') ?? '0');
