@@ -155,6 +155,96 @@ abstract final class AppStrings {
 
   static String longestStreakLabel(int days) => 'Longest streak $days';
 
+  // Stats
+  static const statsTitle = 'Stats';
+  static const statsProfileRow = 'Your stats';
+  static const statsProfileRowHint = 'Times, streaks and cleared days';
+  static const statsFailed = 'Could not load your stats.';
+  static const statsLocalOnly =
+      'Showing this phone’s clears only. Pull down to try again.';
+  static const statsClears = 'Clears';
+  static const statsCurrentStreak = 'Streak';
+  static const statsLongestStreak = 'Longest';
+  static const statsBestTime = 'Best';
+  static const statsAverageTime = 'Average';
+  static const statsHintFree = 'Hint-free';
+  static const statsNoValue = '–';
+  static String statsPercent(double share) => '${(share * 100).round()}%';
+  static const statsTimesTitle = 'Clear times';
+  static const statsTimesEmpty = 'Clear a puzzle to see your times here.';
+
+  /// Lower edge of a histogram bar; the open-ended last bar reads "4:00+".
+  static String statsTimesBucket(int fromSeconds, {required bool open}) =>
+      open ? '${formatPlayTime(fromSeconds)}+' : formatPlayTime(fromSeconds);
+  static String statsTimesBucketSemantics(
+    int fromSeconds,
+    int? toSeconds,
+    int count,
+  ) {
+    final range = toSeconds == null
+        ? '${formatPlayTime(fromSeconds)} or more'
+        : '${formatPlayTime(fromSeconds)} to ${formatPlayTime(toSeconds)}';
+    return '$range: ${statsClearCount(count)}';
+  }
+
+  static String statsClearCount(int count) =>
+      count == 1 ? '1 clear' : '$count clears';
+  static const statsCalendarTitle = 'Cleared days';
+  static const statsCalendarEmpty = 'Your cleared days will show here.';
+  static String statsCalendarCleared(int days) =>
+      days == 1 ? '1 day cleared' : '$days days cleared';
+  static const statsCalendarPrevious = 'Previous month';
+  static const statsCalendarNext = 'Next month';
+  static const statsTrendTitle = 'Personal best trend';
+  static const statsTrendSubtitle = 'Last 30 days';
+  static const statsTrendEmpty =
+      'Clear a puzzle in the next few days to start your trend.';
+  static const statsTrendTimes = 'Clear time';
+  static const statsTrendBest = 'Personal best';
+  static const statsTrendToday = 'Today';
+  static String statsTrendSemantics({
+    required int clears,
+    required int? bestSeconds,
+  }) => [
+    'Last 30 days: ${statsClearCount(clears)}',
+    if (bestSeconds != null) 'personal best ${formatPlayTime(bestSeconds)}',
+  ].join(', ');
+
+  // Achievements
+  static const achievementsTitle = 'Badges';
+  static String achievementsProgress(int unlocked, int total) =>
+      '$unlocked of $total';
+  static const achievementLocked = 'Locked';
+  static String achievementFirstClearTitle(String game) => 'First $game';
+  static String achievementFirstClearCondition(String game) =>
+      'Clear your first $game';
+  static String achievementStreakTitle(int days, String game) =>
+      '$days-day $game streak';
+  static String achievementStreakCondition(int days, String game) =>
+      'Clear $game $days days in a row';
+  static const achievementZipUnderMinuteTitle = 'Under a minute';
+  static const achievementZipUnderMinuteCondition =
+      'Clear a Zip in under a minute';
+  static const achievementHintFreeWeekTitle = 'Hint-free week';
+  static const achievementHintFreeWeekCondition =
+      'Clear one game 7 days in a row without hints';
+  static const achievementFlawlessSudokusTitle = 'Flawless ten';
+  static const achievementFlawlessSudokusCondition =
+      'Clear 10 Sudokus with no hints or mistakes';
+  static const achievementPerfectDayTitle = 'Perfect day';
+  static const achievementPerfectDayCondition =
+      'Clear all three games on the same day';
+  static String newAchievementsTitle(int count) =>
+      count == 1 ? 'New badge unlocked' : '$count new badges unlocked';
+
+  /// "First Zip", "First Zip and Perfect day", "First Zip, Perfect day and
+  /// 2 more".
+  static String newAchievementsList(List<String> titles) {
+    if (titles.length <= 1) return titles.join();
+    if (titles.length == 2) return '${titles[0]} and ${titles[1]}';
+    return '${titles[0]}, ${titles[1]} and ${titles.length - 2} more';
+  }
+
   // Force update / soft update
   static const updateRequiredTitle = 'Update required';
   static const updateAvailableTitle = 'Update available';
