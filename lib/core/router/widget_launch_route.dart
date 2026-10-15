@@ -1,5 +1,10 @@
 /// Launch URIs of the home-screen widget's rows: `winkloapp://play/<game>`.
-/// Flutter hands the launch intent's URI to the router as a deep link.
+/// Flutter hands the launch intent's URI to the router as a deep link, both
+/// on a cold start (the initial route) and on a tap while the app is running
+/// (`onNewIntent` -> `pushRouteInformation`; MainActivity is singleTop). So
+/// the app doesn't also listen to home_widget's
+/// `initiallyLaunchedFromHomeWidget` or `widgetClicked`: they carry the same
+/// tap and would open the game twice.
 const widgetLaunchScheme = 'winkloapp';
 
 /// URI game segment -> app route (`WinkloWidgetProvider.kt` uses the keys).
