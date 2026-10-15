@@ -112,6 +112,19 @@ class PathWordsRules {
     return false;
   }
 
+  /// Index of the latest stroke that found no word, or null when every
+  /// stroke is a found word. Undo takes back only these.
+  static int? lastIncorrectIndex(List<PathWordsStroke> strokes) {
+    for (var i = strokes.length - 1; i >= 0; i--) {
+      if (!strokes[i].isCorrect) return i;
+    }
+    return null;
+  }
+
+  /// The letters [cells] spell on [puzzle], in order (lower case).
+  static String spell(PathWordsPuzzle puzzle, List<Cell> cells) =>
+      cells.map(puzzle.letterAt).join();
+
   static List<PathWordsStroke> withoutIncorrect(List<PathWordsStroke> strokes) {
     return [
       for (final stroke in strokes)

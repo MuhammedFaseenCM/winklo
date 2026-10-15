@@ -260,9 +260,11 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                 (state.status == PathWordsStatus.ready ||
                     state.status == PathWordsStatus.playing) &&
                 puzzle != null;
+            // Found words are locked, so only a live or wrong stroke undoes.
             final canUndo =
                 isReadyToPlay &&
-                (state.activePath.isNotEmpty || state.placedPaths.isNotEmpty);
+                (state.activePath.isNotEmpty ||
+                    PathWordsRules.hasIncorrectStroke(state.placedPaths));
             final canHint = isReadyToPlay && state.hintsRemaining > 0;
 
             return Scaffold(

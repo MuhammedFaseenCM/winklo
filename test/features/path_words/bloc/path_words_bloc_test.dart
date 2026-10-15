@@ -1120,24 +1120,12 @@ void main() {
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
-    'undo of a found word unlocks that word',
+    'undo never unlocks a found word',
     build: () {
       when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
-      return PathWordsBloc(
-        inProgressRuns: _MemoryInProgressRuns(),
-        generateDailyPathWords: generateDaily,
-        submitScore: submitScore,
-        submitLeaderboardTime: submitLeaderboardTime,
-        recordDailyClear: recordDailyClear,
-        getBestPoints: getBestPoints,
-        getBestTimeSeconds: getBestTimeSeconds,
-        isNewPersonalBest: isNewPersonalBest,
-        analytics: analytics,
-        hintQuota: hintQuota,
-        now: () => DateTime(2026, 9, 17, 0, 0, 0),
-      );
+      return buildBloc();
     },
     act: (b) async {
       b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
@@ -1169,11 +1157,104 @@ void main() {
       isA<PathWordsState>()
           .having((s) => s.completedTargetIds, 'completedTargetIds', {'t0'})
           .having((s) => s.placedPaths, 'placedPaths', hasLength(1)),
-      isA<PathWordsState>()
-          .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty)
-          .having((s) => s.placedPaths, 'placedPaths', isEmpty),
+      // Undo has nothing to take back: no new state.
     ],
+    verify: (b) {
+      expect(b.state.completedTargetIds, {'t0'});
+      expect(b.state.placedPaths, hasLength(1));
+    },
   );
+
+  test(
+    'undo removes the last wrong stroke and keeps a word found after it',
+    () async {
+      // a b c   <- "abc"
+      // d e f   <- free letters
+      // g h i   <- "ghi"
+      final puzzle = PathWordsPuzzle(
+        id: 'lock',
+        day: DateTime(2026, 9, 17),
+        size: 3,
+        letters: const ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'],
+        targets: const [
+          PathWordsTarget(
+            id: 't0',
+            word: 'abc',
+            start: Cell(0, 0),
+            path: [Cell(0, 0), Cell(0, 1), Cell(0, 2)],
+            colorIndex: 0,
+          ),
+          PathWordsTarget(
+            id: 't1',
+            word: 'ghi',
+            start: Cell(2, 0),
+            path: [Cell(2, 0), Cell(2, 1), Cell(2, 2)],
+            colorIndex: 1,
+          ),
+        ],
+      );
+      when(
+        () => generateDaily(day: any(named: 'day')),
+      ).thenAnswer((_) async => puzzle);
+      final drafts = _MemoryInProgressRuns();
+      final bloc = buildBloc(drafts: drafts);
+      bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+
+      // A wrong stroke, then a found word.
+      bloc.add(const PathWordsEvent.pointerDown(Cell(1, 0)));
+      bloc.add(const PathWordsEvent.pointerEnter(Cell(1, 1)));
+      bloc.add(const PathWordsEvent.pointerUp());
+      bloc.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+      bloc.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+      bloc.add(const PathWordsEvent.pointerEnter(Cell(0, 2)));
+      bloc.add(const PathWordsEvent.pointerUp());
+      await bloc.stream.firstWhere((s) => s.completedTargetIds.contains('t0'));
+      expect(bloc.state.placedPaths, hasLength(2));
+
+      bloc.add(const PathWordsEvent.undo());
+      await bloc.stream.firstWhere((s) => s.placedPaths.length == 1);
+      expect(bloc.state.placedPaths.single.targetId, 't0');
+      expect(bloc.state.completedTargetIds, {'t0'});
+      await pumpEventQueue();
+      final saved = drafts.runs['${GameIds.pathWords}_20260917'];
+      expect(saved?.board['completedTargetIds'], ['t0']);
+      expect(saved?.board['placedPaths'], hasLength(1));
+
+      // Nothing wrong is left, so a second undo changes nothing.
+      bloc.add(const PathWordsEvent.undo());
+      await pumpEventQueue();
+      expect(bloc.state.completedTargetIds, {'t0'});
+      expect(bloc.state.placedPaths, hasLength(1));
+
+      // While a stroke is being drawn, undo shortens it and leaves the board.
+      bloc.add(const PathWordsEvent.pointerDown(Cell(1, 0)));
+      bloc.add(const PathWordsEvent.pointerEnter(Cell(1, 1)));
+      await pumpEventQueue();
+      bloc.add(const PathWordsEvent.undo());
+      await pumpEventQueue();
+      expect(bloc.state.activePath, [const Cell(1, 0)]);
+      expect(bloc.state.placedPaths, hasLength(1));
+      await bloc.close();
+    },
+  );
+
+  test('reset still clears found words', () async {
+    when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+      (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+    );
+    final bloc = buildBloc();
+    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+    await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+    bloc.add(const PathWordsEvent.pointerDown(Cell(0, 0)));
+    bloc.add(const PathWordsEvent.pointerEnter(Cell(0, 1)));
+    bloc.add(const PathWordsEvent.pointerUp());
+    await bloc.stream.firstWhere((s) => s.completedTargetIds.contains('t0'));
+    bloc.add(const PathWordsEvent.reset());
+    await bloc.stream.firstWhere((s) => s.completedTargetIds.isEmpty);
+    expect(bloc.state.placedPaths, isEmpty);
+    await bloc.close();
+  });
 
   blocTest<PathWordsBloc, PathWordsState>(
     'hint clears incorrect placed paths before revealing',
@@ -1612,54 +1693,59 @@ void main() {
     },
   );
 
-  test('a word traced along another route counts, saves and undoes', () async {
-    // Hand-made 3x3: "cat" stored as c(0,1) a(0,0) t(1,0), "ox" elsewhere,
-    // and a spare "a" and "t" on the right that belong to no word.
-    final puzzle = PathWordsPuzzle(
-      id: 'alt',
-      day: DateTime(2026, 9, 17),
-      size: 3,
-      letters: const ['a', 'c', 'a', 't', '', 't', 'o', 'x', ''],
-      targets: const [
-        PathWordsTarget(
-          id: 't0',
-          word: 'cat',
-          start: Cell(0, 1),
-          path: [Cell(0, 1), Cell(0, 0), Cell(1, 0)],
-          colorIndex: 0,
-        ),
-        PathWordsTarget(
-          id: 't1',
-          word: 'ox',
-          start: Cell(2, 0),
-          path: [Cell(2, 0), Cell(2, 1)],
-          colorIndex: 1,
-        ),
-      ],
-    );
-    when(
-      () => generateDaily(day: any(named: 'day')),
-    ).thenAnswer((_) async => puzzle);
-    final drafts = _MemoryInProgressRuns();
-    final bloc = buildBloc(drafts: drafts);
-    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
-    await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+  test(
+    'a word traced along another route counts, saves and stays found',
+    () async {
+      // Hand-made 3x3: "cat" stored as c(0,1) a(0,0) t(1,0), "ox" elsewhere,
+      // and a spare "a" and "t" on the right that belong to no word.
+      final puzzle = PathWordsPuzzle(
+        id: 'alt',
+        day: DateTime(2026, 9, 17),
+        size: 3,
+        letters: const ['a', 'c', 'a', 't', '', 't', 'o', 'x', ''],
+        targets: const [
+          PathWordsTarget(
+            id: 't0',
+            word: 'cat',
+            start: Cell(0, 1),
+            path: [Cell(0, 1), Cell(0, 0), Cell(1, 0)],
+            colorIndex: 0,
+          ),
+          PathWordsTarget(
+            id: 't1',
+            word: 'ox',
+            start: Cell(2, 0),
+            path: [Cell(2, 0), Cell(2, 1)],
+            colorIndex: 1,
+          ),
+        ],
+      );
+      when(
+        () => generateDaily(day: any(named: 'day')),
+      ).thenAnswer((_) async => puzzle);
+      final drafts = _MemoryInProgressRuns();
+      final bloc = buildBloc(drafts: drafts);
+      bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
 
-    bloc.add(const PathWordsEvent.pointerDown(Cell(0, 1)));
-    bloc.add(const PathWordsEvent.pointerEnter(Cell(0, 2)));
-    bloc.add(const PathWordsEvent.pointerEnter(Cell(1, 2)));
-    bloc.add(const PathWordsEvent.pointerUp());
-    await bloc.stream.firstWhere((s) => s.completedTargetIds.contains('t0'));
-    await pumpEventQueue();
+      bloc.add(const PathWordsEvent.pointerDown(Cell(0, 1)));
+      bloc.add(const PathWordsEvent.pointerEnter(Cell(0, 2)));
+      bloc.add(const PathWordsEvent.pointerEnter(Cell(1, 2)));
+      bloc.add(const PathWordsEvent.pointerUp());
+      await bloc.stream.firstWhere((s) => s.completedTargetIds.contains('t0'));
+      await pumpEventQueue();
 
-    final saved = drafts.runs['${GameIds.pathWords}_20260917'];
-    expect(saved?.board['completedTargetIds'], ['t0']);
+      final saved = drafts.runs['${GameIds.pathWords}_20260917'];
+      expect(saved?.board['completedTargetIds'], ['t0']);
 
-    bloc.add(const PathWordsEvent.undo());
-    await bloc.stream.firstWhere((s) => s.completedTargetIds.isEmpty);
-    expect(bloc.state.placedPaths, isEmpty);
-    await bloc.close();
-  });
+      // Found words are locked: undo can't take it back.
+      bloc.add(const PathWordsEvent.undo());
+      await pumpEventQueue();
+      expect(bloc.state.completedTargetIds, {'t0'});
+      expect(bloc.state.placedPaths, hasLength(1));
+      await bloc.close();
+    },
+  );
 
   test('returning to a saved run logs game_started as resumed', () async {
     when(() => generateDaily(day: any(named: 'day'))).thenAnswer(

@@ -32,6 +32,38 @@ PathWordsPuzzle tinyPuzzle() {
 void main() {
   final puzzle = tinyPuzzle();
 
+  group('undo and spelling helpers', () {
+    const found = PathWordsStroke(
+      cells: [Cell(0, 0), Cell(0, 1)],
+      colorIndex: 0,
+      targetId: 't0',
+    );
+    const wrong = PathWordsStroke(
+      cells: [Cell(1, 0), Cell(1, 1)],
+      colorIndex: 1,
+    );
+
+    test('lastIncorrectIndex finds the latest wrong stroke only', () {
+      expect(PathWordsRules.lastIncorrectIndex(const []), isNull);
+      expect(PathWordsRules.lastIncorrectIndex(const [found]), isNull);
+      expect(PathWordsRules.lastIncorrectIndex(const [wrong, found]), 0);
+      expect(PathWordsRules.lastIncorrectIndex(const [found, wrong]), 1);
+      expect(PathWordsRules.lastIncorrectIndex(const [wrong, found, wrong]), 2);
+    });
+
+    test('spell reads the letters along the cells', () {
+      expect(
+        PathWordsRules.spell(puzzle, const [
+          Cell(1, 1),
+          Cell(0, 1),
+          Cell(0, 0),
+        ]),
+        'dba',
+      );
+      expect(PathWordsRules.spell(puzzle, const []), '');
+    });
+  });
+
   test('tryBegin allows any letter cell that is not locked', () {
     expect(
       PathWordsRules.tryBegin(

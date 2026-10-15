@@ -494,6 +494,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     }
   }
 
+  /// Takes back the stroke being drawn (one cell at a time) or else the last
+  /// wrong stroke. A found word is locked: undo never removes it (reset does).
   void _onUndo(PathWordsUndo event, Emitter<PathWordsState> emit) {
     if (state.finished) return;
     if (state.status != PathWordsStatus.ready &&
@@ -501,32 +503,27 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       return;
     }
 
-    if (state.placedPaths.isNotEmpty) {
-      final placed = state.placedPaths.sublist(0, state.placedPaths.length - 1);
+    if (state.activePath.isNotEmpty) {
+      final undone = PathWordsRules.undoActive(state.activePath);
       emit(
         state.copyWith(
           status: PathWordsStatus.playing,
-          placedPaths: placed,
-          completedTargetIds: {
-            for (final stroke in placed)
-              if (stroke.targetId != null) stroke.targetId!,
-          },
+          activePath: undone,
           hintFlashCell: null,
-          ruleTip: null,
         ),
       );
       unawaited(_persistDraft());
       return;
     }
 
-    if (state.activePath.isEmpty) return;
-
-    final undone = PathWordsRules.undoActive(state.activePath);
+    final wrong = PathWordsRules.lastIncorrectIndex(state.placedPaths);
+    if (wrong == null) return;
     emit(
       state.copyWith(
         status: PathWordsStatus.playing,
-        activePath: undone,
+        placedPaths: [...state.placedPaths]..removeAt(wrong),
         hintFlashCell: null,
+        ruleTip: null,
       ),
     );
     unawaited(_persistDraft());

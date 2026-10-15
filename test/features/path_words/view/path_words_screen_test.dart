@@ -38,6 +38,35 @@ PathWordsPuzzle _tinyPuzzle({required DateTime day}) {
   );
 }
 
+Future<void> _pumpScreen(WidgetTester tester, PathWordsState state) async {
+  final bloc = _MockPathWordsBloc();
+  when(() => bloc.state).thenReturn(state);
+  whenListen(bloc, const Stream<PathWordsState>.empty(), initialState: state);
+  final tutorials = _MockTutorialRepository();
+  when(
+    () => tutorials.hasSeen(GameIds.pathWords),
+  ).thenAnswer((_) async => true);
+  when(() => tutorials.markSeen(GameIds.pathWords)).thenAnswer((_) async {});
+  await tester.pumpWidget(
+    RepositoryProvider<TutorialRepository>.value(
+      value: tutorials,
+      child: MaterialApp(home: PathWordsScreen(bloc: bloc, autoStart: false)),
+    ),
+  );
+  await tester.pump();
+  await tester.pump();
+  // Lets the board's entrance animations finish.
+  await tester.pump(const Duration(seconds: 2));
+}
+
+OutlinedButton _undoButton(WidgetTester tester) =>
+    tester.widget<OutlinedButton>(
+      find.ancestor(
+        of: find.text(AppStrings.pathWordsUndo),
+        matching: find.byWidgetPredicate((w) => w is OutlinedButton),
+      ),
+    );
+
 void main() {
   setUpAll(() {
     registerFallbackValue(const PathWordsEvent.pointerUp());
@@ -92,5 +121,62 @@ void main() {
     expect(find.byType(GameTutorialOverlay), findsOneWidget);
     expect(find.text(AppStrings.pathWordsTutorialMatchList), findsOneWidget);
     expect(find.byType(ListView), findsNothing);
+  });
+
+  group('Undo', () {
+    final day = DateTime(2026, 9, 17);
+    const found = PathWordsStroke(
+      cells: [Cell(0, 0), Cell(0, 1)],
+      colorIndex: 0,
+      targetId: 't0',
+    );
+    const wrong = PathWordsStroke(
+      cells: [Cell(1, 0), Cell(1, 1)],
+      colorIndex: 1,
+    );
+
+    testWidgets('is off when the board holds only found words', (tester) async {
+      await _pumpScreen(
+        tester,
+        PathWordsState(
+          day: day,
+          puzzle: _tinyPuzzle(day: day),
+          status: PathWordsStatus.playing,
+          placedPaths: const [found],
+          completedTargetIds: const {'t0'},
+          resumedAt: day,
+        ),
+      );
+      expect(_undoButton(tester).onPressed, isNull);
+    });
+
+    testWidgets('is on for a wrong stroke or a stroke being drawn', (
+      tester,
+    ) async {
+      await _pumpScreen(
+        tester,
+        PathWordsState(
+          day: day,
+          puzzle: _tinyPuzzle(day: day),
+          status: PathWordsStatus.playing,
+          placedPaths: const [found, wrong],
+          completedTargetIds: const {'t0'},
+          resumedAt: day,
+        ),
+      );
+      expect(_undoButton(tester).onPressed, isNotNull);
+
+      await _pumpScreen(
+        tester,
+        PathWordsState(
+          day: day,
+          puzzle: _tinyPuzzle(day: day),
+          status: PathWordsStatus.playing,
+          activePath: const [Cell(1, 0)],
+          resumedAt: day,
+        ),
+      );
+      expect(_undoButton(tester).onPressed, isNotNull);
+    });
   });
 }
