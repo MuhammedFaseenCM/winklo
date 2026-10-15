@@ -581,8 +581,13 @@ abstract final class AppStrings {
   static const archiveDayOpen = 'Not played';
   static const archivePrevious = 'Previous month';
   static const archiveNext = 'Next month';
-  static const archiveLegend = '✓ cleared in the daily or the archive';
+  static const archiveLegend = 'Cleared in the daily or the archive';
   static String pathWordsThemeOf(String theme) => 'Theme: $theme';
+  static const archiveOpenHint = 'Pick a day to play it again.';
+  static const practicePickGame = 'Pick a game for a fresh board.';
+  static const wordMatchHint = 'Drag each word to its pair.';
+  static const categoryRaceHint = 'Name words that fit, against the clock.';
+  static const archiveEmpty = 'The archive opens tomorrow.';
   static const resultsWordsLabel = 'words';
   static String localBestScore(int words) =>
       words == 1 ? 'Best 1 word' : 'Best $words words';

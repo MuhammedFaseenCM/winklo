@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/haptics/haptics_service.dart';
+import '../../../core/router/play_mode_route.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/zip_ui.dart';
@@ -12,10 +13,6 @@ import '../../path_words/view/widgets/path_words_results_panel.dart';
 import '../results_args.dart';
 import 'counting_play_time.dart';
 import 'ember_burst.dart';
-
-/// Where "Back to archive" goes when nothing is under Results.
-String archiveLocationFor(String? gameId) =>
-    gameId == null ? '/more/archive' : '/more/archive?game=$gameId';
 
 /// Results of a run off the dailies (archive, practice, bonus games): the
 /// time (or score), what kind of run it was, and the local best. There is
@@ -99,7 +96,7 @@ class LocalResultsView extends StatelessWidget {
                         onPressed: () async {
                           await _log(context, 'archive');
                           if (!context.mounted) return;
-                          _back(context, archiveLocationFor(args.gameId));
+                          _back(context, archiveLocation(args.gameId));
                         },
                       ).animate().fadeIn(delay: 300.ms)
                     else if (again != null)

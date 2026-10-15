@@ -8,6 +8,8 @@ import '../../features/dashboard/view/dashboard_shell.dart';
 import '../../features/home/view/home_screen.dart';
 import '../../features/leaderboard/view/leaderboard_screen.dart';
 import '../../features/leagues/view/league_routes.dart';
+import '../../features/more_play/view/archive_screen.dart';
+import '../../features/more_play/view/more_play_screen.dart';
 import '../../features/path_words/view/path_words_screen.dart';
 import '../../features/profile/view/privacy_webview_screen.dart';
 import '../../features/profile/view/profile_screen.dart';
@@ -24,6 +26,7 @@ import '../../domain/game_ids.dart';
 import '../errors/client_error_route_observer.dart';
 import '../firebase/analytics_route_observer.dart';
 import 'auth_router_refresh.dart';
+import 'play_mode_route.dart';
 import 'widget_launch_route.dart';
 
 bool isPlayableLocation(String path) {
@@ -131,20 +134,43 @@ GoRouter buildRouter({
           ),
         ],
       ),
+      // `?mode=archive&day=yyyy-MM-dd` or `?mode=practice`; no mode is the
+      // daily, so App Links and the widget are unchanged.
       GoRoute(
         path: '/zip',
         name: 'zip',
-        builder: (context, state) => const ZipScreen(),
+        redirect: (context, state) =>
+            playModeRedirect(state.uri, gameId: GameIds.zip),
+        builder: (context, state) => ZipScreen(mode: playModeOf(state.uri)),
       ),
       GoRoute(
         path: '/path-words',
         name: 'path_words',
-        builder: (context, state) => const PathWordsScreen(),
+        redirect: (context, state) =>
+            playModeRedirect(state.uri, gameId: GameIds.pathWords),
+        builder: (context, state) =>
+            PathWordsScreen(mode: playModeOf(state.uri)),
       ),
       GoRoute(
         path: '/sudoku',
         name: 'sudoku',
-        builder: (context, state) => const SudokuScreen(),
+        redirect: (context, state) =>
+            playModeRedirect(state.uri, gameId: GameIds.sudoku),
+        builder: (context, state) => SudokuScreen(mode: playModeOf(state.uri)),
+      ),
+      GoRoute(
+        path: moreWaysLocation,
+        name: 'more_play',
+        builder: (context, state) => const MorePlayScreen(),
+        routes: [
+          GoRoute(
+            path: 'archive',
+            name: 'archive',
+            builder: (context, state) => ArchiveScreen(
+              initialGameId: state.uri.queryParameters['game'] ?? GameIds.zip,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: '/word-match',
