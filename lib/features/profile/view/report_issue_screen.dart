@@ -136,72 +136,72 @@ class _ReportIssueFormState extends State<_ReportIssueForm> {
       ),
       body: ZipAtmosphere(
         child: BlocListener<ReportIssueCubit, ReportIssueState>(
-          listenWhen: (previous, next) => previous.status != next.status,
-          listener: (context, state) {
-            if (state.status == ReportIssueStatus.success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text(AppStrings.profileReportSent)),
-              );
-              if (context.canPop()) context.pop();
-              return;
-            }
-            if (state.status != ReportIssueStatus.failure) return;
-            final message = state.error;
-            if (message == null) return;
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(message)));
+        listenWhen: (previous, next) => previous.status != next.status,
+        listener: (context, state) {
+          if (state.status == ReportIssueStatus.success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(AppStrings.profileReportSent)),
+            );
+            if (context.canPop()) context.pop();
+            return;
+          }
+          if (state.status != ReportIssueStatus.failure) return;
+          final message = state.error;
+          if (message == null) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
+        },
+        child: BlocBuilder<ReportIssueCubit, ReportIssueState>(
+          builder: (context, state) {
+            final isSubmitting = state.status == ReportIssueStatus.submitting;
+            final isFormValid =
+                state.titleDraft.trim().isNotEmpty &&
+                state.descriptionDraft.trim().isNotEmpty;
+            final canSend = isFormValid && !isSubmitting;
+            return ListView(
+              padding: layout.pagePadding,
+              children: [
+                TextField(
+                  enabled: !isSubmitting,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.sentences,
+                  maxLength: 80,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  style: const TextStyle(color: ZipColors.onInk),
+                  decoration: const InputDecoration(
+                    labelText: AppStrings.profileReportTitleLabel,
+                    hintText: AppStrings.profileReportTitleHint,
+                  ),
+                  onChanged: context.read<ReportIssueCubit>().setTitle,
+                ),
+                SizedBox(height: layout.space(12)),
+                TextField(
+                  enabled: !isSubmitting,
+                  textCapitalization: TextCapitalization.sentences,
+                  minLines: 5,
+                  maxLines: 8,
+                  maxLength: 2000,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  style: const TextStyle(color: ZipColors.onInk),
+                  decoration: const InputDecoration(
+                    labelText: AppStrings.profileReportDescriptionLabel,
+                    hintText: AppStrings.profileReportDescriptionHint,
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: context.read<ReportIssueCubit>().setDescription,
+                ),
+                SizedBox(height: layout.space(16)),
+                FilledButton(
+                  onPressed: canSend ? () => unawaited(_submit()) : null,
+                  child: const Text(AppStrings.profileReportSend),
+                ),
+              ],
+            );
           },
-          child: BlocBuilder<ReportIssueCubit, ReportIssueState>(
-            builder: (context, state) {
-              final isSubmitting = state.status == ReportIssueStatus.submitting;
-              final isFormValid =
-                  state.titleDraft.trim().isNotEmpty &&
-                  state.descriptionDraft.trim().isNotEmpty;
-              final canSend = isFormValid && !isSubmitting;
-              return ListView(
-                padding: layout.pagePadding,
-                children: [
-                  TextField(
-                    enabled: !isSubmitting,
-                    textInputAction: TextInputAction.next,
-                    textCapitalization: TextCapitalization.sentences,
-                    maxLength: 80,
-                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                    style: const TextStyle(color: ZipColors.onInk),
-                    decoration: const InputDecoration(
-                      labelText: AppStrings.profileReportTitleLabel,
-                      hintText: AppStrings.profileReportTitleHint,
-                    ),
-                    onChanged: context.read<ReportIssueCubit>().setTitle,
-                  ),
-                  SizedBox(height: layout.space(12)),
-                  TextField(
-                    enabled: !isSubmitting,
-                    textCapitalization: TextCapitalization.sentences,
-                    minLines: 5,
-                    maxLines: 8,
-                    maxLength: 2000,
-                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                    style: const TextStyle(color: ZipColors.onInk),
-                    decoration: const InputDecoration(
-                      labelText: AppStrings.profileReportDescriptionLabel,
-                      hintText: AppStrings.profileReportDescriptionHint,
-                      alignLabelWithHint: true,
-                    ),
-                    onChanged: context.read<ReportIssueCubit>().setDescription,
-                  ),
-                  SizedBox(height: layout.space(16)),
-                  FilledButton(
-                    onPressed: canSend ? () => unawaited(_submit()) : null,
-                    child: const Text(AppStrings.profileReportSend),
-                  ),
-                ],
-              );
-            },
-          ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
