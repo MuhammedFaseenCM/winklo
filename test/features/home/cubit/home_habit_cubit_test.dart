@@ -145,6 +145,27 @@ void main() {
       verify: (_) => verify(() => habit.takeFreezeSavedNotices()).called(2),
     );
 
+    test('Home shows the newest, then the next once it is dismissed', () async {
+      now = DateTime(2026, 10, 20, 8);
+      pending = [
+        const FreezeSavedNotice(gameId: GameIds.zip, days: 12),
+        const FreezeSavedNotice(gameId: GameIds.pathWords, days: 5),
+        const FreezeSavedNotice(gameId: GameIds.sudoku, days: 30),
+      ];
+      final cubit = build();
+      addTearDown(cubit.close);
+      await cubit.load(currentStreaks: const {});
+
+      String? shown() => cubit.state.shownFreezeNotice?.gameId;
+      expect(shown(), GameIds.sudoku);
+      cubit.dismissNotice(GameIds.sudoku);
+      expect(shown(), GameIds.pathWords);
+      cubit.dismissNotice(GameIds.pathWords);
+      expect(shown(), GameIds.zip);
+      cubit.dismissNotice(GameIds.zip);
+      expect(shown(), isNull);
+    });
+
     blocTest<HomeHabitCubit, HomeHabitState>(
       'a newer notice for a game replaces the shown one',
       setUp: () => now = DateTime(2026, 10, 20, 8),

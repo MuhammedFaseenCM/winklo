@@ -11,6 +11,7 @@ class HomeHabitState {
     this.recapIsLastWeek = false,
   });
 
+  /// Streaks a freeze saved, oldest first.
   final List<FreezeSavedNotice> freezeNotices;
 
   /// The recap card's week (Sunday: this week, Monday: the one that ended).
@@ -18,6 +19,11 @@ class HomeHabitState {
   final bool recapIsLastWeek;
 
   bool get isEmpty => freezeNotices.isEmpty && recap == null;
+
+  /// The one notice Home shows: the most recent. Dismissing it brings up the
+  /// next, so a few saved streaks don't stack up above the tiles.
+  FreezeSavedNotice? get shownFreezeNotice =>
+      freezeNotices.isEmpty ? null : freezeNotices.last;
 
   HomeHabitState copyWith({
     List<FreezeSavedNotice>? freezeNotices,

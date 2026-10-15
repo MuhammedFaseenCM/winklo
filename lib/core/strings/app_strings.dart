@@ -274,8 +274,7 @@ abstract final class AppStrings {
   static const updateAvailableTitle = 'Update available';
   static const updateRequiredBody =
       'A new version of Winklo is required to continue. Please update from the Play Store.';
-  static const updateAvailableBody =
-      'A new version of Winklo is available. Please update for the latest fixes and puzzles.';
+  static const updateAvailableBody = 'Get the latest fixes and puzzles.';
   static const updateNow = 'Update now';
   static const updateCantSkip = "This update can't be skipped.";
   static const updateSnooze = 'Hide for a day';
