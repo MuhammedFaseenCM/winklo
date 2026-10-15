@@ -16,7 +16,7 @@ class _MockInAppUpdates extends Mock implements InAppUpdateRepository {}
 class _MockAppUpdateRepository extends Mock implements AppUpdateRepository {}
 
 class _MemorySnooze implements UpdateBannerSnoozeRepository {
-  _MemorySnooze([this.until]);
+  _MemorySnooze();
   DateTime? until;
 
   @override
