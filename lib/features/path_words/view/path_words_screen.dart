@@ -13,6 +13,7 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
+import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/path_words/path_words_rules.dart';
@@ -286,9 +287,9 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                               icon: const Icon(Icons.arrow_back_rounded),
                             ),
                             Expanded(
-                              child: Text(
-                                AppStrings.pathWordsTitle,
-                                style: Theme.of(context).textTheme.titleLarge,
+                              child: GameScreenTitle(
+                                title: AppStrings.pathWordsTitle,
+                                special: puzzle?.special,
                               ),
                             ),
                             if (isReadyToPlay)

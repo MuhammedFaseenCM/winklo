@@ -166,6 +166,7 @@ void main() {
       );
       expect(_undoButton(tester).onPressed, isNotNull);
 
+      await tester.pumpWidget(const SizedBox());
       await _pumpScreen(
         tester,
         PathWordsState(
@@ -178,5 +179,41 @@ void main() {
       );
       expect(_undoButton(tester).onPressed, isNotNull);
     });
+  });
+
+  testWidgets('a weekend special says so in the header', (tester) async {
+    final day = DateTime(2026, 10, 17);
+    final base = _tinyPuzzle(day: day);
+    final weekend = PathWordsPuzzle(
+      id: base.id,
+      day: day,
+      size: base.size,
+      letters: base.letters,
+      targets: base.targets,
+      special: 'weekend',
+    );
+    await _pumpScreen(
+      tester,
+      PathWordsState(
+        day: day,
+        puzzle: weekend,
+        status: PathWordsStatus.ready,
+        resumedAt: day,
+      ),
+    );
+    expect(find.text(AppStrings.weekendSpecial), findsOneWidget);
+
+    // A fresh screen, so it reads the new bloc.
+    await tester.pumpWidget(const SizedBox());
+    await _pumpScreen(
+      tester,
+      PathWordsState(
+        day: day,
+        puzzle: base,
+        status: PathWordsStatus.ready,
+        resumedAt: day,
+      ),
+    );
+    expect(find.text(AppStrings.weekendSpecial), findsNothing);
   });
 }
