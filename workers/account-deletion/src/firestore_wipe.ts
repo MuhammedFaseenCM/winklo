@@ -21,10 +21,11 @@ const LIST_PAGE_SIZE = 300;
 const QUERY_PAGE_SIZE = 300;
 
 /**
- * Deletes per `batchWrite` call. Each call is one Worker subrequest (the Free
- * plan allows 50 per request), so the wipe makes a few dozen calls at most.
+ * Writes per `batchWrite` call, the most it takes. Each call is one Worker
+ * subrequest (the Free plan allows 50 per request), and the doc count grows
+ * with every day played, so batches are as large as Firestore allows.
  */
-export const DELETE_BATCH_SIZE = 100;
+export const DELETE_BATCH_SIZE = 500;
 
 /** Firebase uids are short alphanumeric strings; anything else is refused. */
 const UID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;

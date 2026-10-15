@@ -263,6 +263,10 @@ describe('the owner', () => {
     await assertSucceeds(batch.commit());
   });
 
+  it('cannot delete the league and leave its code behind', async () => {
+    await assertFails(deleteDoc(doc(db('owner'), 'leagues/L1')));
+  });
+
   it('is the only one who can', async () => {
     await assertFails(
       updateDoc(doc(db('member'), 'leagues/L1'), {

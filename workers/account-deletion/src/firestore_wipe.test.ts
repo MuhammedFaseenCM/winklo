@@ -266,7 +266,7 @@ describe('wipeUserFirestore', () => {
 
   it('deletes in batches of DELETE_BATCH_SIZE', async () => {
     const zipDays = Array.from(
-      { length: 150 },
+      { length: DELETE_BATCH_SIZE + 50 },
       (_, i) => `2026-${String(1 + Math.floor(i / 28)).padStart(2, '0')}-${String(1 + (i % 28)).padStart(2, '0')}`,
     );
     const fake = fakeFirestore({ zipDays });

@@ -513,7 +513,10 @@ service cloud.firestore {
           || leavesLeague()
           || ownerRemovesMembers()
           || ownerRenamesLeague());
-      allow delete: if isLeagueOwner();
+      // With its code doc in the same batch, so no code is left pointing
+      // nowhere (its own delete rule reads the league).
+      allow delete: if isLeagueOwner()
+        && !existsAfter(leagueCodeDoc(resource.data.code));
     }
 
     match /league_codes/{code} {
