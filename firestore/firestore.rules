@@ -202,12 +202,14 @@ service cloud.firestore {
             && data.timeSeconds < stored.timeSeconds));
     }
 
+    // freezeCount (banked freezes, 0-2) is optional: older builds write only
+    // freezeAvailable, which new builds keep writing as freezeCount > 0.
     function validGameStreak(gameId) {
       let data = request.resource.data;
       return validGame(gameId)
         && data.keys().hasOnly([
           'current', 'longest', 'lastClearedDateId', 'freezeAvailable',
-          'updatedAt'
+          'freezeCount', 'updatedAt'
         ])
         && data.current is int
         && data.current >= 0
@@ -217,6 +219,8 @@ service cloud.firestore {
           || (data.lastClearedDateId is string
             && data.lastClearedDateId.matches('^[0-9]{8}$')))
         && data.freezeAvailable is bool
+        && (!('freezeCount' in data) || (data.freezeCount is int
+          && data.freezeCount >= 0 && data.freezeCount <= 2))
         && data.updatedAt == request.time
         && (resource == null || gameStreakDoesNotRegress(data, resource.data));
     }

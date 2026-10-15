@@ -62,7 +62,7 @@ GameDayRecord _flagsWinner(GameDayRecord local, GameDayRecord remote) {
 ///
 /// The copy with the later `lastClearedDateId` wins (null is oldest); a tie
 /// goes to the higher `current`, then [local]. `longest` is the max of both
-/// copies and the winning `current`.
+/// copies and the winning `current`. Freezes go with the winner.
 GameStreak mergeStreak(GameStreak local, GameStreak? remote) {
   if (remote == null) return local;
 
@@ -74,7 +74,7 @@ GameStreak mergeStreak(GameStreak local, GameStreak? remote) {
     current: winner.current,
     longest: longest,
     lastClearedDateId: winner.lastClearedDateId,
-    freezeAvailable: winner.freezeAvailable,
+    freezeCount: winner.freezeCount,
   );
 }
 
@@ -184,6 +184,7 @@ String streakSignature(GameStreak streak) {
     'l=${streak.longest}',
     'd=${streak.lastClearedDateId ?? '-'}',
     'f=${_boolSig(streak.freezeAvailable)}',
+    'n=${streak.freezeCount}',
   ].join('|');
 }
 

@@ -7,6 +7,7 @@ import '../../domain/entities/game_streak.dart';
 import '../../domain/failures.dart';
 import '../../domain/game_ids.dart';
 import '../../domain/repositories/progress_remote_repository.dart';
+import '../../domain/streak_calculator.dart';
 import '../progress_collections.dart';
 
 const _syncedGameIds = {GameIds.zip, GameIds.pathWords, GameIds.sudoku};
@@ -44,6 +45,7 @@ const streakFirestoreKeys = {
   'longest',
   'lastClearedDateId',
   'freezeAvailable',
+  'freezeCount',
   'updatedAt',
 };
 
@@ -94,13 +96,21 @@ GameDayRecord? gameDayFromFirestore(
 
 /// Firestore payload for [streak]. `lastClearedDateId` is always written (null
 /// clears it); `isOnFreeze` is display-only and never stored.
-Map<String, dynamic> streakToFirestore(GameStreak streak) => {
-  'current': streak.current < 0 ? 0 : streak.current,
-  'longest': streak.longest < 0 ? 0 : streak.longest,
-  'lastClearedDateId': streak.lastClearedDateId,
-  'freezeAvailable': streak.freezeAvailable,
-  'updatedAt': FieldValue.serverTimestamp(),
-};
+///
+/// `freezeAvailable` is still written, as `freezeCount > 0`, for older
+/// builds, which read only the flag (and merge-write it without touching
+/// `freezeCount`; see [StreakCalculator.storedFreezeCount]).
+Map<String, dynamic> streakToFirestore(GameStreak streak) {
+  final freezes = streak.freezeCount.clamp(0, GameStreak.maxFreezes).toInt();
+  return {
+    'current': streak.current < 0 ? 0 : streak.current,
+    'longest': streak.longest < 0 ? 0 : streak.longest,
+    'lastClearedDateId': streak.lastClearedDateId,
+    'freezeAvailable': freezes > 0,
+    'freezeCount': freezes,
+    'updatedAt': FieldValue.serverTimestamp(),
+  };
+}
 
 /// Parses a streak doc for [gameId]. Returns null when [data] is null.
 GameStreak? streakFromFirestore(
@@ -116,7 +126,10 @@ GameStreak? streakFromFirestore(
     lastClearedDateId: last is String && _dateIdPattern.hasMatch(last)
         ? last
         : null,
-    freezeAvailable: _boolOrNull(data['freezeAvailable']) ?? true,
+    freezeCount: StreakCalculator.storedFreezeCount(
+      count: _intOrNull(data['freezeCount']),
+      available: _boolOrNull(data['freezeAvailable']),
+    ),
   );
 }
 
@@ -148,6 +161,15 @@ int? _nonNegativeInt(Object? value) {
 }
 
 bool? _boolOrNull(Object? value) => value is bool ? value : null;
+
+/// Whole numbers only (Firestore may hand back a double for an int).
+int? _intOrNull(Object? value) {
+  if (value is int) return value;
+  if (value is num && value.isFinite && value == value.truncate()) {
+    return value.toInt();
+  }
+  return null;
+}
 
 String? _boardOrNull(Object? value) =>
     value is String && value.isNotEmpty && value.length <= maxBoardLength

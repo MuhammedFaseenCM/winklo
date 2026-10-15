@@ -1,5 +1,6 @@
 import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
+import 'package:winklo/domain/streak_calculator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StreakRepositoryImpl implements StreakRepository {
@@ -17,6 +18,10 @@ class StreakRepositoryImpl implements StreakRepository {
   static String _lastKey(String gameId) => 'streak_last_$gameId';
   static String _freezeKey(String gameId) => 'streak_freeze_$gameId';
 
+  /// The freeze count. Older builds only know [_freezeKey] (a bool), which is
+  /// still written as `count > 0`.
+  static String _freezesKey(String gameId) => 'streak_freezes_$gameId';
+
   @override
   Future<GameStreak> getStreak(String gameId) async {
     return GameStreak(
@@ -24,7 +29,10 @@ class StreakRepositoryImpl implements StreakRepository {
       current: _prefs.getInt(_currentKey(gameId)) ?? 0,
       longest: _prefs.getInt(_longestKey(gameId)) ?? 0,
       lastClearedDateId: _prefs.getString(_lastKey(gameId)),
-      freezeAvailable: _prefs.getBool(_freezeKey(gameId)) ?? true,
+      freezeCount: StreakCalculator.storedFreezeCount(
+        count: _prefs.getInt(_freezesKey(gameId)),
+        available: _prefs.getBool(_freezeKey(gameId)),
+      ),
     );
   }
 
@@ -37,17 +45,18 @@ class StreakRepositoryImpl implements StreakRepository {
   @override
   Future<bool> restoreStreak(GameStreak streak) => _write(streak);
 
-  /// Writes all four keys when any stored value differs; returns whether it
-  /// wrote.
+  /// Writes every key when any stored value differs (or the count key is
+  /// still missing); returns whether it wrote.
   Future<bool> _write(GameStreak streak) async {
     final stored = await getStreak(streak.gameId);
     final same =
         _prefs.containsKey(_currentKey(streak.gameId)) &&
         _prefs.containsKey(_freezeKey(streak.gameId)) &&
+        _prefs.containsKey(_freezesKey(streak.gameId)) &&
         stored.current == streak.current &&
         stored.longest == streak.longest &&
         stored.lastClearedDateId == streak.lastClearedDateId &&
-        stored.freezeAvailable == streak.freezeAvailable;
+        stored.freezeCount == streak.freezeCount;
     if (same) return false;
     await _prefs.setInt(_currentKey(streak.gameId), streak.current);
     await _prefs.setInt(_longestKey(streak.gameId), streak.longest);
@@ -57,6 +66,7 @@ class StreakRepositoryImpl implements StreakRepository {
     } else {
       await _prefs.setString(_lastKey(streak.gameId), last);
     }
+    await _prefs.setInt(_freezesKey(streak.gameId), streak.freezeCount);
     await _prefs.setBool(_freezeKey(streak.gameId), streak.freezeAvailable);
     return true;
   }

@@ -612,6 +612,33 @@ void main() {
     });
   });
 
+  group('mergeStreak freeze count', () {
+    test("the winner's count is kept", () {
+      const local = GameStreak(
+        gameId: 'zip',
+        current: 14,
+        longest: 14,
+        lastClearedDateId: '20261014',
+        freezeCount: 2,
+      );
+      const remote = GameStreak(
+        gameId: 'zip',
+        current: 13,
+        longest: 13,
+        lastClearedDateId: '20261013',
+        freezeCount: 1,
+      );
+      expect(mergeStreak(local, remote).freezeCount, 2);
+      expect(mergeStreak(remote, local).freezeCount, 2);
+    });
+  });
+
+  test('streakSignature tells freeze counts apart', () {
+    const one = GameStreak(gameId: 'zip', current: 14, freezeCount: 1);
+    const two = GameStreak(gameId: 'zip', current: 14, freezeCount: 2);
+    expect(streakSignature(one), isNot(streakSignature(two)));
+  });
+
   group('streakSignature', () {
     test('is equal for equal synced fields and ignores isOnFreeze', () {
       final a = _streak(current: 2, longest: 3, last: '20261007');
