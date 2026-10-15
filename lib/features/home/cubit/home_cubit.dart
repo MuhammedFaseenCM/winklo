@@ -8,6 +8,7 @@ import '../../../domain/game_ids.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/app_update_repository.dart';
+import '../../../domain/repositories/update_banner_snooze_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/check_app_update.dart';
 import '../../../domain/usecases/get_best_daily_time_seconds.dart';
@@ -30,6 +31,7 @@ class HomeCubit extends Cubit<HomeState> {
     required this.appUpdateRepository,
     this.scheduleEngagementNotifications,
     required this.zipLevelRepository,
+    this.updateBannerSnooze,
     DateTime? now,
     DateTime Function()? clock,
     this.playPeriod = PlayPeriod.daily,
@@ -57,6 +59,9 @@ class HomeCubit extends Cubit<HomeState> {
   final AppUpdateRepository appUpdateRepository;
   final ScheduleEngagementNotifications? scheduleEngagementNotifications;
   final ZipLevelRepository zipLevelRepository;
+
+  /// A closed soft banner isn't shown, so it isn't logged as shown.
+  final UpdateBannerSnoozeRepository? updateBannerSnooze;
   final DateTime? _now;
   final DateTime Function()? _clockFn;
   final Duration playPeriod;
@@ -169,8 +174,11 @@ class HomeCubit extends Cubit<HomeState> {
 
   /// Home reloads on every visit; count the banner once per appearance.
   void _logSoftUpdateShown(AppUpdateStatus next) {
+    final snoozedUntil = updateBannerSnooze?.snoozedUntil();
+    final snoozed = snoozedUntil != null && _clock.isBefore(snoozedUntil);
     if (next == AppUpdateStatus.soft &&
-        state.updateStatus != AppUpdateStatus.soft) {
+        state.updateStatus != AppUpdateStatus.soft &&
+        !snoozed) {
       unawaited(analytics.logUpdatePromptShown(forced: false));
     }
   }

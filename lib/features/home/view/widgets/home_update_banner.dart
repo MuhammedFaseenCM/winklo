@@ -10,11 +10,21 @@ class HomeUpdateBanner extends StatelessWidget {
     required this.currentLabel,
     required this.requiredLabel,
     required this.onUpdate,
+    this.updateLabel = AppStrings.updateNow,
+    this.updateIcon = Icons.download_rounded,
+    this.onSnooze,
   });
 
   final String currentLabel;
   final String requiredLabel;
-  final VoidCallback onUpdate;
+
+  /// Null disables the button (while an update downloads).
+  final VoidCallback? onUpdate;
+  final String updateLabel;
+  final IconData updateIcon;
+
+  /// Shows a close button that hides the banner for a while.
+  final VoidCallback? onSnooze;
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +36,7 @@ class HomeUpdateBanner extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2C221D),
-            ZipColors.wall,
-          ],
+          colors: [Color(0xFF2C221D), ZipColors.wall],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
@@ -76,6 +83,14 @@ class HomeUpdateBanner extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (onSnooze != null)
+                  IconButton(
+                    tooltip: AppStrings.updateSnooze,
+                    onPressed: onSnooze,
+                    visualDensity: VisualDensity.compact,
+                    color: ZipColors.inkSoft,
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                  ),
               ],
             ),
             const SizedBox(height: 10),
@@ -89,7 +104,10 @@ class HomeUpdateBanner extends StatelessWidget {
             if (hasVersions) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(8),
@@ -107,8 +125,8 @@ class HomeUpdateBanner extends StatelessWidget {
             ],
             const SizedBox(height: 14),
             ZipPrimaryButton(
-              label: AppStrings.updateNow,
-              icon: Icons.download_rounded,
+              label: updateLabel,
+              icon: updateIcon,
               onPressed: onUpdate,
             ),
           ],

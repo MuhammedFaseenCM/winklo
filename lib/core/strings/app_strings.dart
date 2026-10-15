@@ -176,6 +176,9 @@ abstract final class AppStrings {
       'A new version of Winklo is available. Please update for the latest fixes and puzzles.';
   static const updateNow = 'Update now';
   static const updateCantSkip = "This update can't be skipped.";
+  static const updateSnooze = 'Hide for a day';
+  static const updateDownloading = 'Downloading…';
+  static const updateRestart = 'Restart to update';
 
   static String updateVersionRow(String current, String requiredLabel) {
     return '$current → $requiredLabel';

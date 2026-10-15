@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/config/avatar_upload_config.dart';
 import 'package:winklo/core/config/path_words_nouns_config.dart';
 import 'package:winklo/core/dev_flags.dart';
+import 'package:winklo/core/di/update_and_prefetch_providers.dart';
 import 'package:winklo/core/firebase/firebase_bootstrap.dart';
 import 'package:winklo/core/lifecycle/progress_change_signal.dart';
 import 'package:winklo/core/haptics/haptics_service.dart';
@@ -223,6 +224,7 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<CheckAppUpdate>(
       create: (context) => CheckAppUpdate(context.read<AppUpdateRepository>()),
     ),
+    ...buildUpdateAndPrefetchProviders(),
     RepositoryProvider<ScoreRepository>(
       create: (context) => ScoreRepositoryImpl(
         context.read<SharedPreferences>(),
