@@ -1,3 +1,5 @@
+import '../habit/engagement_reminder.dart';
+
 abstract class NotificationRepository {
   Future<void> initialize();
 
@@ -5,20 +7,19 @@ abstract class NotificationRepository {
 
   Future<bool> areNotificationsEnabled();
 
-  /// Persist FCM token on `users/{uid}` and subscribe to product topics.
+  /// Persist FCM token on `users/{uid}` and subscribe to product topics
+  /// (announcements only while the player wants them).
   Future<void> syncTokenForUser(String uid);
 
   Future<void> clearTokenOnSignOut({String? uid});
 
-  Future<void> refreshEngagementSchedules({
-    required bool zipClearedToday,
-    required bool pathWordsClearedToday,
-    required bool sudokuClearedToday,
-    required String dailyReadyTitle,
-    required String dailyReadyBody,
-    required String streakAtRiskTitle,
-    required String streakAtRiskBody,
-  });
+  /// Cancels every local engagement notification, then schedules
+  /// [reminders]. Never throws.
+  Future<void> replaceEngagementSchedules(List<EngagementReminder> reminders);
+
+  /// Subscribes to or unsubscribes from the announcements topic. Never
+  /// throws.
+  Future<void> setAnnouncementsSubscribed(bool subscribed);
 
   Stream<NotificationTap> watchTaps();
 }

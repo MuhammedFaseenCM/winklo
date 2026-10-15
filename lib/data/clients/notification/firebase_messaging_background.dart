@@ -35,7 +35,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         AndroidFlutterLocalNotificationsPlugin
       >();
   await androidPlugin?.createNotificationChannel(
-    AndroidNotificationDisplay.channel,
+    AndroidNotificationDisplay.announcementsChannel,
   );
 
   final type = _stringData(message.data, 'type') ?? 'general';
@@ -47,7 +47,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     id: id,
     title: title,
     body: body,
-    notificationDetails: AndroidNotificationDisplay.notificationDetails(),
+    notificationDetails: AndroidNotificationDisplay.announcementDetails(),
     payload: jsonEncode({
       'id': message.messageId ?? id.toString(),
       'title': title ?? '',

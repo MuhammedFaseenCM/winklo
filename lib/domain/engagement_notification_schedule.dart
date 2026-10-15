@@ -1,28 +1,38 @@
-/// Pure helpers for engagement notification schedule times (device local).
+import 'app_calendar.dart';
+
+/// Pure helpers for engagement notification times (device local). Times of
+/// day are minutes after local midnight.
 abstract final class EngagementNotificationSchedule {
-  /// Next local DateTime at [hour]:00 today, or tomorrow if that time has passed.
-  static DateTime nextDailyAtHour(int hour, {DateTime? now}) {
-    final clock = now ?? DateTime.now();
-    final local = DateTime(clock.year, clock.month, clock.day, hour);
-    if (!local.isAfter(clock)) {
-      return local.add(const Duration(days: 1));
-    }
-    return local;
+  /// [dayOffset] days after [day]'s local date, at [minutes].
+  static DateTime atMinutes(DateTime day, int minutes, {int dayOffset = 0}) {
+    final local = AppCalendar.localWallClock(day);
+    return DateTime(
+      local.year,
+      local.month,
+      local.day + dayOffset,
+      minutes ~/ 60,
+      minutes % 60,
+    );
   }
 
-  /// The day after [now] at [hour]:00 (local).
-  static DateTime tomorrowAtHour(int hour, {DateTime? now}) {
+  /// The next time the clock shows [minutes]: today if it is still ahead,
+  /// otherwise tomorrow.
+  static DateTime nextDailyAt(int minutes, {DateTime? now}) {
     final clock = now ?? DateTime.now();
-    return DateTime(clock.year, clock.month, clock.day + 1, hour);
+    final today = atMinutes(clock, minutes);
+    return today.isAfter(clock)
+        ? today
+        : atMinutes(clock, minutes, dayOffset: 1);
   }
 
-  /// Whether to schedule streak-at-risk for today/tonight.
-  /// True when at least one enabled game is still uncleared today.
-  static bool shouldScheduleStreakAtRisk({
-    required bool zipClearedToday,
-    required bool pathWordsClearedToday,
-    required bool sudokuClearedToday,
-  }) {
-    return !(zipClearedToday && pathWordsClearedToday && sudokuClearedToday);
+  /// The next [weekday] (`DateTime.monday`…`DateTime.sunday`) at [minutes]:
+  /// today when it is that day and the time is still ahead.
+  static DateTime nextWeekdayAt(int weekday, int minutes, {DateTime? now}) {
+    final clock = now ?? DateTime.now();
+    final local = AppCalendar.localWallClock(clock);
+    final ahead = (weekday - local.weekday) % DateTime.daysPerWeek;
+    final candidate = atMinutes(clock, minutes, dayOffset: ahead);
+    if (candidate.isAfter(clock)) return candidate;
+    return atMinutes(clock, minutes, dayOffset: ahead + DateTime.daysPerWeek);
   }
 }

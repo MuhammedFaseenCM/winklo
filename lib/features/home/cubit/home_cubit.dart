@@ -14,8 +14,6 @@ import '../../../domain/usecases/get_best_daily_time_seconds.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
-import '../../../domain/usecases/schedule_engagement_notifications.dart';
-import '../../../core/strings/app_strings.dart';
 import '../../zip/logic/daily_puzzle_generator.dart';
 import 'home_state.dart';
 
@@ -28,7 +26,6 @@ class HomeCubit extends Cubit<HomeState> {
     required this.analytics,
     required this.checkAppUpdate,
     required this.appUpdateRepository,
-    this.scheduleEngagementNotifications,
     required this.zipLevelRepository,
     DateTime? now,
     DateTime Function()? clock,
@@ -55,7 +52,6 @@ class HomeCubit extends Cubit<HomeState> {
   final AnalyticsRepository analytics;
   final CheckAppUpdate checkAppUpdate;
   final AppUpdateRepository appUpdateRepository;
-  final ScheduleEngagementNotifications? scheduleEngagementNotifications;
   final ZipLevelRepository zipLevelRepository;
   final DateTime? _now;
   final DateTime Function()? _clockFn;
@@ -156,18 +152,6 @@ class HomeCubit extends Cubit<HomeState> {
       ),
     );
     _scheduleRollover(now);
-
-    unawaited(
-      scheduleEngagementNotifications?.call(
-        zipClearedToday: zipPts > 0 || zipTime != null,
-        pathWordsClearedToday: pathPts > 0 || pathTime != null,
-        sudokuClearedToday: sudokuPts > 0 || sudokuTime != null,
-        dailyReadyTitle: AppStrings.notifDailyReadyTitle,
-        dailyReadyBody: AppStrings.notifDailyReadyBody,
-        streakAtRiskTitle: AppStrings.notifStreakAtRiskTitle,
-        streakAtRiskBody: AppStrings.notifStreakAtRiskBody,
-      ),
-    );
   }
 
   /// Home reloads on every visit; count the banner once per appearance.

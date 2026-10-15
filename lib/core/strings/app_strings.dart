@@ -1,4 +1,5 @@
 import '../../domain/game_ids.dart';
+import '../../domain/habit/weekly_recap.dart';
 
 abstract final class AppStrings {
   static const appTitle = 'Winklo';
@@ -217,8 +218,6 @@ abstract final class AppStrings {
   static const notifDailyReadyBody =
       'Play Zip, Path Words and Sudoku to keep your streaks going.';
   static const notifStreakAtRiskTitle = 'Streak at risk';
-  static const notifStreakAtRiskBody =
-      'You haven’t finished today’s puzzles yet. Play before midnight.';
 
   // Habit: freezes, reminders, weekly recap, home-screen widget, Settings
   static String gameTitle(String gameId) => switch (gameId) {
@@ -235,6 +234,48 @@ abstract final class AppStrings {
   static String freezeSavedStreak(String gameId, int days) =>
       'Your freeze saved your $days-day ${gameTitle(gameId)} streak';
   static const dismiss = 'Dismiss';
+
+  /// "Your 12-day Zip streak ends at midnight", or "… and 2 more end …".
+  static String notifStreakEndsTonight(
+    String gameId,
+    int days, {
+    int others = 0,
+  }) {
+    final streak = '$days-day ${gameTitle(gameId)} streak';
+    if (others <= 0) return 'Your $streak ends at midnight';
+    return 'Your $streak and $others more end at midnight';
+  }
+
+  static const notifWeeklyRecapTitle = 'Your week in Winklo';
+
+  /// "This week: 18 of 21 cleared, best Zip 0:58, 5-day Sudoku streak".
+  static String weeklyRecapLine(WeeklyRecap recap, {bool lastWeek = false}) {
+    final best = recap.bestGameId;
+    final bestSeconds = recap.bestSeconds;
+    final streak = recap.streakGameId;
+    final parts = [
+      '${recap.cleared} of ${recap.possible} cleared',
+      if (best != null && bestSeconds != null)
+        'best ${gameTitle(best)} ${formatPlayTime(bestSeconds)}',
+      if (streak != null) '${recap.streakDays}-day ${gameTitle(streak)} streak',
+    ];
+    return '${lastWeek ? 'Last week' : 'This week'}: ${parts.join(', ')}';
+  }
+
+  static const homeRecapTitle = 'Your week';
+
+  // Android notification channels
+  static const channelRemindersName = 'Reminders';
+  static const channelRemindersDescription =
+      'Daily puzzles, streaks at risk and your weekly recap.';
+  static const channelAnnouncementsName = 'Announcements';
+  static const channelAnnouncementsDescription = 'News and app updates.';
+
+  // Home-screen widget
+  static const widgetCleared = '✓';
+  static String widgetStreak(int days) => '🔥$days';
+  static const widgetPlay = 'Play';
+  static const widgetFooter = 'New puzzle at midnight';
 
   // Dashboard nav
   static const navHome = 'Home';
