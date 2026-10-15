@@ -80,6 +80,30 @@ void main() {
     },
   );
 
+  testWidgets('a word with a meaning is a button screen readers can tap', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      const PathWordsResultsPanel(
+        summary: PathWordsClearSummary(
+          words: ['ladle'],
+          definitions: {'ladle': 'A deep spoon with a long handle'},
+        ),
+      ),
+    );
+    expect(
+      tester.getSemantics(find.byKey(const Key('pathWordsResultWord_ladle'))),
+      containsSemantics(
+        label: 'LADLE, tap for its meaning',
+        isButton: true,
+        hasTapAction: true,
+      ),
+    );
+    semantics.dispose();
+  });
+
   testWidgets('leaves out what the day does not have', (tester) async {
     await _pump(
       tester,

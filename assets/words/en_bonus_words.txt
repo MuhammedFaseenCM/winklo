@@ -6854,6 +6854,8 @@ bistro
 bistroic
 bistros
 bitable
+bitchery
+bitchily
 bite
 biteable
 biter
@@ -7590,7 +7592,6 @@ bolling
 bollix
 bollixed
 bollixes
-bollocks
 bollox
 bolloxed
 bolloxes
@@ -7724,9 +7725,6 @@ bony
 bonze
 bonzer
 bonzes
-boobed
-boobing
-boobish
 booboo
 booboos
 booby
@@ -9040,10 +9038,6 @@ bugbears
 bugeye
 bugeyes
 bugged
-bugger
-buggered
-buggers
-buggery
 buggier
 buggies
 buggiest
@@ -9156,7 +9150,6 @@ bullpout
 bullring
 bullrush
 bulls
-bullshit
 bullshot
 bullweed
 bullwhip
@@ -12085,7 +12078,6 @@ chining
 chinked
 chinkier
 chinking
-chinky
 chinless
 chinned
 chinning
@@ -14435,8 +14427,6 @@ cooled
 cooler
 coolers
 coolest
-coolie
-coolies
 cooling
 coolish
 coolly
@@ -15277,7 +15267,7 @@ crape
 craped
 crapes
 craping
-crappier
+crappie
 crappies
 crases
 crash
@@ -16852,8 +16842,6 @@ darkener
 darkens
 darker
 darkest
-darkey
-darkeys
 darking
 darkish
 darkle
@@ -18504,7 +18492,6 @@ dichroic
 dicier
 diciest
 dicing
-dicked
 dickens
 dicker
 dickered
@@ -18512,11 +18499,7 @@ dickers
 dickey
 dickeys
 dickie
-dickier
-dickies
 dickiest
-dicking
-dicky
 dicliny
 dicot
 dicots
@@ -18672,6 +18655,7 @@ dilative
 dilator
 dilators
 dilatory
+dildoe
 dilemma
 dilemmas
 dilemmic
@@ -23609,17 +23593,8 @@ faenas
 faerie
 faeries
 faery
-fagged
-fagging
-faggy
 fagin
 fagins
-fagot
-fagoted
-fagoter
-fagoters
-fagoting
-fagots
 fahlband
 faience
 faiences
@@ -29031,9 +29006,7 @@ golfs
 golgotha
 goliard
 goliards
-golliwog
 golly
-gollywog
 golosh
 goloshe
 goloshes
@@ -30341,8 +30314,6 @@ gyniatry
 gynoecia
 gyplure
 gyplures
-gypper
-gyppers
 gypseian
 gypseous
 gypsied
@@ -32479,8 +32450,6 @@ honk
 honked
 honker
 honkers
-honkey
-honkeys
 honking
 honks
 honor
@@ -35394,7 +35363,6 @@ jettons
 jetty
 jettying
 jeux
-jewed
 jewel
 jeweled
 jeweler
@@ -35405,7 +35373,6 @@ jeweller
 jewelry
 jewels
 jewfish
-jewing
 jews
 jezail
 jezails
@@ -35434,8 +35401,6 @@ jiff
 jiffies
 jiffs
 jiffy
-jigaboo
-jigaboos
 jigged
 jigger
 jiggered
@@ -35964,11 +35929,7 @@ kaddish
 kadi
 kadis
 kaes
-kaffir
-kaffirs
 kaffiyeh
-kafir
-kafirs
 kafs
 kaftan
 kaftans
@@ -38473,9 +38434,6 @@ lexicons
 lexis
 leys
 lezzes
-lezzie
-lezzies
-lezzy
 liable
 liaise
 liaised
@@ -43779,8 +43737,6 @@ mukluk
 mukluks
 muktuk
 muktuks
-mulatto
-mulattos
 mulberry
 mulch
 mulched
@@ -44638,7 +44594,6 @@ neglects
 neglige
 negligee
 negliges
-negroids
 negroni
 negronis
 negus
@@ -44953,8 +44908,6 @@ nifties
 niftiest
 niftily
 nifty
-niggard
-niggards
 niggle
 niggled
 niggler
@@ -51709,12 +51662,8 @@ pood
 poodle
 poodles
 poods
-poof
-poofs
 pooftah
 pooftahs
-poofter
-poofters
 poofy
 pooh
 poohed
@@ -53652,6 +53601,7 @@ puslike
 puss
 pusses
 pussier
+pussies
 pussiest
 pussley
 pussleys
@@ -54704,8 +54654,6 @@ rants
 ranula
 ranulas
 rapacity
-raper
-rapers
 rapeseed
 raphae
 raphe
@@ -59237,8 +59185,6 @@ sambhar
 sambhars
 sambhur
 sambhurs
-sambo
-sambos
 sambuca
 sambucas
 sambuke
@@ -61814,6 +61760,8 @@ shirts
 shirty
 shist
 shists
+shitake
+shitakes
 shiv
 shiva
 shivah
@@ -64939,8 +64887,6 @@ spicier
 spiciest
 spicily
 spicing
-spick
-spicks
 spicula
 spiculae
 spicular
@@ -70442,7 +70388,6 @@ titter
 tittered
 titterer
 titters
-tittie
 tittle
 tittles
 tittup
@@ -77282,8 +77227,8 @@ whopper
 whoppers
 whopping
 whops
-whoring
-whorish
+whoredom
+whoreson
 whorl
 whorled
 whorls
@@ -77811,7 +77756,6 @@ woes
 woesome
 woful
 wofully
-wogs
 woke
 woken
 woks
@@ -78589,7 +78533,6 @@ yeuking
 yeuks
 yeuky
 yews
-yids
 yield
 yielded
 yielder

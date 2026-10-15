@@ -49,8 +49,12 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
 
-  Future<void> pumpHome(WidgetTester tester, {String? special}) async {
-    SharedPreferences.setMockInitialValues({});
+  Future<void> pumpHome(
+    WidgetTester tester, {
+    String? special,
+    Map<String, Object> prefsValues = const {},
+  }) async {
+    SharedPreferences.setMockInitialValues(prefsValues);
     final prefs = await SharedPreferences.getInstance();
     const user = AppUser(uid: 'test', displayName: 'Tester');
     final auth = _MockAuthRepository();
@@ -93,5 +97,28 @@ void main() {
     await pumpHome(tester);
     expect(find.text(AppStrings.weekendSpecial), findsNothing);
     expect(find.text(AppStrings.today), findsNWidgets(3));
+  });
+
+  testWidgets('the badge fits a narrow tile next to a streak and a freeze', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final today = PlayPeriod.id(DateTime.now(), PlayPeriod.daily);
+    await pumpHome(
+      tester,
+      special: 'weekend',
+      prefsValues: {
+        for (final game in ['zip', 'path_words', 'sudoku']) ...{
+          'streak_current_$game': 123,
+          'streak_longest_$game': 123,
+          'streak_last_$game': today,
+        },
+      },
+    );
+    expect(find.text(AppStrings.weekendSpecial), findsNWidgets(3));
+    expect(find.byTooltip(AppStrings.streakFreezeReady), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 }

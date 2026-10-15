@@ -89,10 +89,15 @@ class _WordChip extends StatelessWidget {
         shape: shape,
       );
     }
+    void open() =>
+        showPathWordsDefinition(context, word: word, definition: meaning);
+    // The label replaces the chip's own, so the tap is given again here for
+    // screen readers.
     return Semantics(
       label: AppStrings.pathWordsWordWithMeaningLabel(word),
       button: true,
       excludeSemantics: true,
+      onTap: open,
       child: ActionChip(
         key: Key('pathWordsResultWord_$word'),
         label: label,
@@ -103,8 +108,7 @@ class _WordChip extends StatelessWidget {
         ),
         backgroundColor: ZipColors.skySoft,
         shape: shape,
-        onPressed: () =>
-            showPathWordsDefinition(context, word: word, definition: meaning),
+        onPressed: open,
       ),
     );
   }

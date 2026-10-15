@@ -50,8 +50,17 @@ void main() {
 
   test('the bonus list leaves out slurs and profanity', () async {
     final words = await WordListRepositoryImpl().loadBonusWords();
-    for (final word in ['fuck', 'shit', 'cunt', 'bitch', 'whore', 'nigger']) {
-      expect(words, isNot(contains(word)));
+    for (final word in [
+      'fuck', 'shit', 'cunt', 'bitch', 'whore', 'nigger', //
+      // Other forms of a blocked word go too.
+      'bitches', 'whoring', 'bullshit', 'wogs', 'yids', 'kaffirs', 'jewed',
+      'lezzies', 'spicks', 'chinky', 'negroids', 'gyppers', 'fagots',
+    ]) {
+      expect(words, isNot(contains(word)), reason: word);
+    }
+    // Innocent words that look like them stay.
+    for (final word in ['spicy', 'rapier', 'titter', 'snigger', 'cocker']) {
+      expect(words, contains(word), reason: word);
     }
   });
 

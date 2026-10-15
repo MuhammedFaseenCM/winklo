@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -41,11 +42,8 @@ class WordListRepositoryImpl implements WordListRepository {
 
   Future<Set<String>> _readBonusWords() async {
     final raw = await _assets.loadString(assetPath, cache: false);
-    final pattern = RegExp(r'^[a-z]{4,8}$');
-    return Set<String>.unmodifiable({
-      for (final line in raw.split('\n'))
-        if (pattern.hasMatch(line.trim())) line.trim(),
-    });
+    // About 79,000 lines: split them off the UI isolate.
+    return Set<String>.unmodifiable(await compute(_parseBonusWords, raw));
   }
 
   static String prefsKey(String dateId) => 'path_words_nouns_$dateId';
@@ -142,4 +140,13 @@ class WordListRepositoryImpl implements WordListRepository {
     if (cacheEnglish) _englishCache = parsed;
     return parsed;
   }
+}
+
+/// The bonus list's words: one per line, 4–8 lowercase letters.
+Set<String> _parseBonusWords(String raw) {
+  final pattern = RegExp(r'^[a-z]{4,8}$');
+  return {
+    for (final line in raw.split('\n'))
+      if (pattern.hasMatch(line.trim())) line.trim(),
+  };
 }
