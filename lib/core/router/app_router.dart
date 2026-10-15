@@ -21,6 +21,7 @@ import '../../domain/game_ids.dart';
 import '../errors/client_error_route_observer.dart';
 import '../firebase/analytics_route_observer.dart';
 import 'auth_router_refresh.dart';
+import 'widget_launch_route.dart';
 
 bool isPlayableLocation(String path) {
   if (path == '/zip' ||
@@ -52,11 +53,13 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: '/',
     refreshListenable: refresh,
-    redirect: (context, state) => playAuthRedirect(
-      status: authCubit.state.status,
-      isSignedIn: authCubit.isSignedIn,
-      matchedLocation: state.matchedLocation,
-    ),
+    redirect: (context, state) =>
+        widgetLaunchLocation(state.uri) ??
+        playAuthRedirect(
+          status: authCubit.state.status,
+          isSignedIn: authCubit.isSignedIn,
+          matchedLocation: state.matchedLocation,
+        ),
     observers: [AnalyticsRouteObserver(analytics), ClientErrorRouteObserver()],
     routes: [
       StatefulShellRoute.indexedStack(
