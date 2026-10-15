@@ -405,6 +405,135 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Private leagues. A league doc lists its members' uids (1 to 30), and
+    // league_codes/{CODE} points an invite code at it. Anyone signed in can
+    // get either by id, which is how a code is joined, but not list them;
+    // members list their own leagues with array-contains. Field list:
+    // leagueFirestoreKeys in lib/data/repositories/league_repository_impl.dart.
+    function validLeagueCode(code) {
+      return code is string
+        && code.matches('^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$');
+    }
+
+    function validLeagueName(name) {
+      return name is string
+        && name.size() >= 1
+        && name.size() <= 30
+        && name.trim().size() > 0;
+    }
+
+    function leagueDoc(leagueId) {
+      return /databases/$(database)/documents/leagues/$(leagueId);
+    }
+
+    function leagueCodeDoc(code) {
+      return /databases/$(database)/documents/league_codes/$(code);
+    }
+
+    // The owner is the only member, and the code doc that points here is
+    // written in the same batch.
+    function validLeagueCreate(leagueId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'name', 'ownerUid', 'code', 'memberUids', 'createdAt'
+        ])
+        && data.keys().hasAll([
+          'name', 'ownerUid', 'code', 'memberUids', 'createdAt'
+        ])
+        && validLeagueName(data.name)
+        && data.ownerUid == request.auth.uid
+        && data.memberUids == [request.auth.uid]
+        && validLeagueCode(data.code)
+        && data.createdAt == request.time
+        && getAfter(leagueCodeDoc(data.code)).data.leagueId == leagueId;
+    }
+
+    function onlyMembersChange() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['memberUids']);
+    }
+
+    // Joining adds your own uid and nothing else; a league holds 30 at most.
+    function joinsLeague() {
+      let before = resource.data.memberUids;
+      let after = request.resource.data.memberUids;
+      return onlyMembersChange()
+        && !(request.auth.uid in before)
+        && after is list
+        && after.size() == before.size() + 1
+        && after.hasAll(before)
+        && request.auth.uid in after
+        && after.size() <= 30;
+    }
+
+    // Leaving removes your own uid and nothing else. The owner can't leave
+    // (they delete the league instead), so a league always has its owner.
+    function leavesLeague() {
+      let before = resource.data.memberUids;
+      let after = request.resource.data.memberUids;
+      return onlyMembersChange()
+        && request.auth.uid != resource.data.ownerUid
+        && request.auth.uid in before
+        && after is list
+        && after.size() == before.size() - 1
+        && before.hasAll(after)
+        && !(request.auth.uid in after);
+    }
+
+    function isLeagueOwner() {
+      return isSignedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // The owner removes other players; they stay in themselves.
+    function ownerRemovesMembers() {
+      let before = resource.data.memberUids;
+      let after = request.resource.data.memberUids;
+      return isLeagueOwner()
+        && onlyMembersChange()
+        && after is list
+        && after.size() < before.size()
+        && before.hasAll(after)
+        && request.auth.uid in after;
+    }
+
+    function ownerRenamesLeague() {
+      return isLeagueOwner()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name'])
+        && validLeagueName(request.resource.data.name);
+    }
+
+    match /leagues/{leagueId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn()
+        && request.auth.uid in resource.data.memberUids;
+      allow create: if isSignedIn() && validLeagueCreate(leagueId);
+      allow update: if isSignedIn()
+        && (joinsLeague()
+          || leavesLeague()
+          || ownerRemovesMembers()
+          || ownerRenamesLeague());
+      allow delete: if isLeagueOwner();
+    }
+
+    match /league_codes/{code} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      // Only alongside a new league of yours that carries this code.
+      allow create: if isSignedIn()
+        && validLeagueCode(code)
+        && request.resource.data.keys().hasOnly(['leagueId'])
+        && request.resource.data.leagueId is string
+        && !exists(leagueDoc(request.resource.data.leagueId))
+        && getAfter(leagueDoc(request.resource.data.leagueId)).data.code == code
+        && getAfter(leagueDoc(request.resource.data.leagueId)).data.ownerUid
+          == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn()
+        && get(leagueDoc(resource.data.leagueId)).data.ownerUid
+          == request.auth.uid;
+    }
+
     match /issue_reports/{reportId} {
       allow create: if isSignedIn()
         && request.auth.uid == request.resource.data.uid

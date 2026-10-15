@@ -9,7 +9,10 @@ import '../../domain/entities/leaderboard_period.dart';
 import '../../domain/entities/leaderboard_proof.dart';
 import '../../domain/failures.dart';
 import '../../domain/game_ids.dart';
+import '../../domain/iso_week.dart';
 import '../../domain/leaderboard_limits.dart';
+import '../../domain/leaderboard_ranking.dart';
+import '../../domain/league_code.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
 import '../clients/leaderboard/leaderboard_submit_client.dart';
 import '../leaderboard_identity.dart';
@@ -118,6 +121,46 @@ List<LeaderboardEntry> mapLeaderboardRows(
         usedHints: usedHints is bool ? usedHints : null,
         hadMistakes: hadMistakes is bool ? hadMistakes : null,
         currentStreak: currentStreak is int ? currentStreak : null,
+      ),
+    );
+  }
+  return entries;
+}
+
+/// Maps weekly rows (already ordered by days cleared, then total time, then
+/// `updatedAt`) to ranked entries whose [LeaderboardEntry.timeSeconds] is the
+/// week's total. Equal days and totals share a dense rank.
+List<LeaderboardEntry> mapWeeklyLeaderboardRows(
+  Iterable<({String id, Map<String, dynamic> data})> rows,
+) {
+  final entries = <LeaderboardEntry>[];
+  var rank = 0;
+  (int, int)? previous;
+  for (final row in rows) {
+    final data = row.data;
+    final days = data['daysCleared'];
+    final total = data['totalSeconds'];
+    if (days is! int || days <= 0 || total is! int || total <= 0) continue;
+    final updatedAtRaw = data['updatedAt'];
+    final name = data['displayName'];
+    final photo = data['photoUrl'];
+    final avatar = data['avatarId'];
+    if (previous != (days, total)) rank += 1;
+    previous = (days, total);
+    entries.add(
+      LeaderboardEntry(
+        uid: row.id,
+        displayName: name is String && name.trim().isNotEmpty
+            ? name.trim()
+            : 'Player',
+        photoUrl: photo is String && photo.isNotEmpty ? photo : null,
+        avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
+        timeSeconds: total,
+        updatedAt: updatedAtRaw is Timestamp
+            ? updatedAtRaw.toDate()
+            : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        rank: rank,
+        daysCleared: days,
       ),
     );
   }
@@ -263,13 +306,28 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     required String? dayId,
   }) {
     final gameRef = db.collection(_root).doc(gameId);
+    final day = dayId ?? leaderboardDayId();
     switch (period) {
       case LeaderboardPeriod.allTime:
         return gameRef.collection('all_time');
       case LeaderboardPeriod.daily:
-        final id = dayId ?? leaderboardDayId();
-        return gameRef.collection('daily').doc(id).collection('entries');
+        return gameRef.collection('daily').doc(day).collection('entries');
+      case LeaderboardPeriod.weekly:
+        return gameRef
+            .collection('weekly')
+            .doc(isoWeekIdForDayId(day))
+            .collection('entries');
     }
+  }
+
+  List<LeaderboardEntry> _mapRows(
+    LeaderboardPeriod period,
+    QuerySnapshot<Map<String, dynamic>> snap,
+  ) {
+    final rows = snap.docs.map((d) => (id: d.id, data: d.data()));
+    return period == LeaderboardPeriod.weekly
+        ? mapWeeklyLeaderboardRows(rows)
+        : mapLeaderboardRows(rows);
   }
 
   @override
@@ -283,6 +341,10 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     if (db == null) {
       return Stream.error(const Failure('Firebase is unavailable.'));
     }
+    // Only the Worker writes weekly totals, and only on the release boards.
+    if (period == LeaderboardPeriod.weekly && !_isReleaseRoot) {
+      return Stream.value(const []);
+    }
 
     // Daily path uses a subcollection under the day doc so queries stay flat.
     final collection = _boardCollection(
@@ -292,16 +354,45 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       dayId: dayId,
     );
 
-    return collection
-        .orderBy('timeSeconds')
-        .orderBy('updatedAt')
-        .limit(50)
+    final Query<Map<String, dynamic>> ordered =
+        period == LeaderboardPeriod.weekly
+        ? collection
+              .orderBy('daysCleared', descending: true)
+              .orderBy('totalSeconds')
+              .orderBy('updatedAt')
+        : collection.orderBy('timeSeconds').orderBy('updatedAt');
+
+    return ordered.limit(50).snapshots().map((snap) => _mapRows(period, snap));
+  }
+
+  @override
+  Stream<List<LeaderboardEntry>> watchMembersBoard({
+    required String gameId,
+    required LeaderboardPeriod period,
+    required List<String> memberUids,
+    String? dayId,
+  }) {
+    _assertGameId(gameId);
+    final db = _db;
+    if (db == null) {
+      return Stream.error(const Failure('Firebase is unavailable.'));
+    }
+    final uids = memberUids.toSet().take(leaguesMaxMembers).toList();
+    if (uids.isEmpty ||
+        (period == LeaderboardPeriod.weekly && !_isReleaseRoot)) {
+      return Stream.value(const []);
+    }
+    // A league has at most 30 members, the most `whereIn` takes; the board is
+    // ranked here with the server boards' rules.
+    return _boardCollection(
+          db: db,
+          gameId: gameId,
+          period: period,
+          dayId: dayId,
+        )
+        .where(FieldPath.documentId, whereIn: uids)
         .snapshots()
-        .map(
-          (snap) => mapLeaderboardRows(
-            snap.docs.map((d) => (id: d.id, data: d.data())),
-          ),
-        );
+        .map((snap) => rankLeaderboardEntries(_mapRows(period, snap), period));
   }
 
   @override

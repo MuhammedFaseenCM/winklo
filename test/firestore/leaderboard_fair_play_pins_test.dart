@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/data/leaderboard_identity.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
+import 'package:winklo/data/repositories/league_repository_impl.dart';
 import 'package:winklo/domain/leaderboard_limits.dart';
+import 'package:winklo/domain/league_code.dart';
 
 /// The leaderboard Worker, the rules and the app each hold a copy of the fair
 /// play limits and the entry field lists. A mismatch means the Worker writes
@@ -125,5 +127,20 @@ void main() {
       ).hasMatch(rules),
       isTrue,
     );
+  });
+
+  test('league docs, codes and limits match the rules', () {
+    final header = rules.indexOf('function validLeagueCreate(');
+    expect(header, isNot(-1));
+    final keys = RegExp(
+      r'hasOnly\(\[([^\]]*)\]\)',
+    ).firstMatch(rules.substring(header))!.group(1)!;
+    expect(quoted(keys), leagueFirestoreKeys);
+    expect(
+      rules,
+      contains("code.matches('^[$leagueCodeAlphabet]{$leagueCodeLength}\$')"),
+    );
+    expect(rules, contains('after.size() <= $leaguesMaxMembers'));
+    expect(rules, contains('name.size() <= $leagueNameMaxLength'));
   });
 }
