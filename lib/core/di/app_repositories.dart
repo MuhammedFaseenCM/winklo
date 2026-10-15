@@ -16,6 +16,7 @@ import 'package:winklo/data/clients/notification/firebase_notification_client.da
 import 'package:winklo/data/clients/notification/notification_client.dart';
 import 'package:winklo/data/clients/path_words/http_path_words_nouns_client.dart';
 import 'package:winklo/data/clients/path_words/path_words_nouns_client.dart';
+import 'package:winklo/data/repositories/achievement_repository_impl.dart';
 import 'package:winklo/data/repositories/activity_repository_impl.dart';
 import 'package:winklo/data/repositories/app_update_repository_impl.dart';
 import 'package:winklo/data/repositories/external_link_repository_impl.dart';
@@ -39,6 +40,7 @@ import 'package:winklo/data/repositories/tutorial_repository_impl.dart';
 import 'package:winklo/data/repositories/word_list_repository_impl.dart';
 import 'package:winklo/data/repositories/word_match_repository_impl.dart';
 import 'package:winklo/data/repositories/zip_level_repository_impl.dart';
+import 'package:winklo/domain/repositories/achievement_repository.dart';
 import 'package:winklo/domain/repositories/activity_repository.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/share_repository.dart';
@@ -64,6 +66,7 @@ import 'package:winklo/domain/repositories/word_list_repository.dart';
 import 'package:winklo/domain/repositories/word_match_repository.dart';
 import 'package:winklo/domain/repositories/zip_level_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
+import 'package:winklo/domain/usecases/claim_new_achievements.dart';
 import 'package:winklo/domain/usecases/clear_notification_token.dart';
 import 'package:winklo/domain/usecases/ensure_signed_in.dart';
 import 'package:winklo/domain/usecases/fetch_categories.dart';
@@ -292,6 +295,16 @@ List<SingleChildWidget> buildRepositoryProviders({
         streaks: context.read<StreakRepository>(),
         remote: context.read<ProgressRemoteRepository>(),
         isRemoteAvailable: () => FirebaseBootstrap.isReady,
+      ),
+    ),
+    RepositoryProvider<AchievementRepository>(
+      create: (context) =>
+          AchievementRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<ClaimNewAchievements>(
+      create: (context) => ClaimNewAchievements(
+        loadHistory: context.read<LoadGameHistory>(),
+        store: context.read<AchievementRepository>(),
       ),
     ),
     RepositoryProvider<TutorialRepository>(

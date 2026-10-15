@@ -15,6 +15,8 @@ import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/share_repository.dart';
+import 'package:winklo/domain/achievements/achievement.dart';
+import 'package:winklo/domain/usecases/claim_new_achievements.dart';
 import 'package:winklo/domain/usecases/next_uncleared_daily.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
@@ -42,6 +44,8 @@ class _MockSignOut extends Mock implements SignOut {}
 class _MockNextUnclearedDaily extends Mock implements NextUnclearedDaily {}
 
 class _MockShareRepository extends Mock implements ShareRepository {}
+
+class _MockClaimNewAchievements extends Mock implements ClaimNewAchievements {}
 
 /// What the daily Results actions read; the app always provides them.
 List<RepositoryProvider<Object>> _actionProviders() {
@@ -866,5 +870,63 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('word-match'), findsOneWidget);
+  });
+
+  testWidgets('a new badge shows under the daily result', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final auth = _MockAuthRepository();
+    const me = AppUser(uid: 'u1', displayName: 'Tester');
+    when(() => auth.currentUser).thenReturn(me);
+    when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(me));
+    final watch = _MockWatchLeaderboard();
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => Stream.value(const []));
+    final claim = _MockClaimNewAchievements();
+    when(
+      () => claim(),
+    ).thenAnswer((_) async => [Achievements.byId('perfect_day')!]);
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<WatchLeaderboard>.value(value: watch),
+          RepositoryProvider<AuthRepository>.value(value: auth),
+          RepositoryProvider<ClaimNewAchievements>.value(value: claim),
+          ..._actionProviders(),
+        ],
+        child: BlocProvider(
+          create: (_) => AuthCubit(
+            authRepository: auth,
+            signInWithGoogle: _MockSignInWithGoogle(),
+            signOut: _MockSignOut(),
+          ),
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: ResultsScreen(
+              args: ResultsArgs(
+                title: 'Puzzle cleared!',
+                subtitle: '',
+                timeSeconds: 72,
+                improved: false,
+                replayDaily: true,
+                gameId: GameIds.sudoku,
+                day: DateTime.now(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.newAchievementsTitle(1)), findsOneWidget);
+    expect(find.text(AppStrings.achievementPerfectDayTitle), findsOneWidget);
+    verify(() => claim()).called(1);
   });
 }

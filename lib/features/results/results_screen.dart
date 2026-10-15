@@ -15,6 +15,7 @@ import '../../domain/game_ids.dart';
 import '../../domain/play_period.dart';
 import '../../domain/repositories/analytics_repository.dart';
 import '../../domain/usecases/submit_leaderboard_time.dart';
+import '../achievements/view/new_achievements_banner.dart';
 import '../auth/cubit/auth_cubit.dart';
 import '../auth/view/sign_in_sheet.dart';
 import 'results_args.dart';
@@ -347,6 +348,7 @@ class _CelebrateAndClaimResults extends StatelessWidget {
             .slideY(begin: 0.12, curve: Curves.easeOutCubic),
         SizedBox(height: compact ? 10 : 14),
         _NextPuzzleLine(day: args.day).animate().fadeIn(delay: 700.ms),
+        const NewAchievementsBanner(),
       ],
     );
   }
