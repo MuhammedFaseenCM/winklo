@@ -34,6 +34,7 @@ import '../cubit/home_state.dart';
 import '../logic/today_summary.dart';
 import 'widgets/home_freeze_badge.dart';
 import 'widgets/home_habit_cards.dart';
+import 'widgets/home_more_play_entry.dart';
 import 'widgets/home_soft_update_section.dart';
 import 'widgets/home_today_summary.dart';
 
@@ -296,6 +297,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                 .fadeIn(delay: 240.ms, duration: 450.ms)
                 .slideY(begin: 0.1, curve: Curves.easeOutCubic),
           ],
+          const HomeMorePlayEntry(),
         ];
 
         return Scaffold(
