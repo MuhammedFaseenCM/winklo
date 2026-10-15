@@ -21,8 +21,12 @@ abstract class ProgressRemoteRepository {
   Future<void> saveStreak({required String uid, required GameStreak streak});
 
   /// Every stored day of the daily games for [uid] (malformed docs skipped).
-  /// Throws when the remote copy can't be read.
-  Future<List<GameDayRecord>> fetchAllDays({required String uid});
+  /// With [fromServer] the read never falls back to the offline cache, so
+  /// it throws while offline. Throws when the remote copy can't be read.
+  Future<List<GameDayRecord>> fetchAllDays({
+    required String uid,
+    bool fromServer = false,
+  });
 
   /// Writes [records] (at most [maxDayBatch]) as one batch of merge writes.
   /// When the rules reject the batch, each record is written on its own and

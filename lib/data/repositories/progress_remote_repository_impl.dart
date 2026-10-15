@@ -340,7 +340,10 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
   }
 
   @override
-  Future<List<GameDayRecord>> fetchAllDays({required String uid}) async {
+  Future<List<GameDayRecord>> fetchAllDays({
+    required String uid,
+    bool fromServer = false,
+  }) async {
     if (uid.isEmpty) throw const Failure('Sign in required to sync progress.');
     final db = _db;
     if (db == null) throw _unavailable;
@@ -349,7 +352,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
           .collection('users')
           .doc(uid)
           .collection(progressCollections().gameDays)
-          .get()
+          .get(fromServer ? const GetOptions(source: Source.server) : null)
           .timeout(historyTimeout);
       return gameDaysFromFirestoreDocs([
         for (final doc in snap.docs) (doc.id, doc.data()),

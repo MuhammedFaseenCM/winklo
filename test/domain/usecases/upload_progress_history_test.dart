@@ -38,7 +38,10 @@ void main() {
     batches = [];
     rejectedPerBatch = 0;
     when(
-      () => remote.fetchAllDays(uid: any(named: 'uid')),
+      () => remote.fetchAllDays(
+        uid: any(named: 'uid'),
+        fromServer: any(named: 'fromServer'),
+      ),
     ).thenAnswer((_) async => remoteDays);
     when(
       () => remote.saveDayBatch(
@@ -118,7 +121,7 @@ void main() {
       ),
     ]);
     expect(local.isHistoryUploaded(_uid), isTrue);
-    verify(() => remote.fetchAllDays(uid: _uid)).called(1);
+    verify(() => remote.fetchAllDays(uid: _uid, fromServer: true)).called(1);
   });
 
   test('the same day in several games is one doc per game', () async {
@@ -244,7 +247,12 @@ void main() {
     });
     await upload(_uid);
     expect(batches, isEmpty);
-    verifyNever(() => remote.fetchAllDays(uid: any(named: 'uid')));
+    verifyNever(
+      () => remote.fetchAllDays(
+        uid: any(named: 'uid'),
+        fromServer: any(named: 'fromServer'),
+      ),
+    );
   });
 
   test('sets the flag when the rules rejected some writes', () async {
@@ -262,7 +270,10 @@ void main() {
   test('a failed read leaves the flag unset', () async {
     await build({'best_time_zip_daily_20260901': 42});
     when(
-      () => remote.fetchAllDays(uid: any(named: 'uid')),
+      () => remote.fetchAllDays(
+        uid: any(named: 'uid'),
+        fromServer: any(named: 'fromServer'),
+      ),
     ).thenThrow(const Failure('offline'));
     await expectLater(upload(_uid), throwsA(isA<Failure>()));
     expect(local.isHistoryUploaded(_uid), isFalse);

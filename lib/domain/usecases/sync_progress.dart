@@ -252,8 +252,10 @@ class _Run {
           await _attempt(() => _syncLeaderboard(day));
         }
       }
+      // Skipped after any failure this run (likely offline): it retries on
+      // the next full sync instead of holding this one.
       final upload = _s._uploadHistory;
-      if (_pull && upload != null) {
+      if (_pull && upload != null && _failures == 0) {
         await _attempt(() async {
           await upload(
             _uid,

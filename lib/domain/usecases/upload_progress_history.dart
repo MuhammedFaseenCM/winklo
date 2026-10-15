@@ -74,7 +74,13 @@ class UploadProgressHistory {
     if (localDays.isNotEmpty) {
       if (cancelled()) return const UploadProgressHistoryResult();
       final remoteDays = {
-        for (final day in await _remote.fetchAllDays(uid: uid)) _key(day): day,
+        // The server copy, never the offline cache: offline, the upload
+        // fails fast instead of queueing writes against a stale view.
+        for (final day in await _remote.fetchAllDays(
+          uid: uid,
+          fromServer: true,
+        ))
+          _key(day): day,
       };
       pending = [
         for (final day in localDays) ?_toWrite(day, remoteDays[_key(day)]),

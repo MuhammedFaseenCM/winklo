@@ -294,6 +294,24 @@ void main() {
       expect(result.failures, 1);
     });
 
+    test('it waits for a run without failures', () async {
+      when(
+        () => remote.saveDay(
+          uid: any(named: 'uid'),
+          record: any(named: 'record'),
+        ),
+      ).thenThrow(const Failure('offline', reportable: false));
+      await build(
+        initial: {'best_time_zip_daily_$_today': 30},
+        uploadHistory: upload,
+      );
+
+      final result = await sync();
+
+      expect(result.failures, greaterThan(0));
+      verifyNever(() => upload(any(), isCancelled: any(named: 'isCancelled')));
+    });
+
     test('it does not run when the remote is unavailable', () async {
       remoteAvailable = false;
       await build(uploadHistory: upload);
