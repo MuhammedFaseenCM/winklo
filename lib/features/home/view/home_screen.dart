@@ -30,6 +30,8 @@ import '../../../domain/repositories/zip_level_repository.dart';
 import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
+import '../logic/today_summary.dart';
+import 'widgets/home_today_summary.dart';
 import 'widgets/home_update_banner.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -319,6 +321,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                               ),
                             ],
                             SizedBox(height: layout.sectionGap),
+                            HomeTodaySummary(summary: TodaySummary.of(state)),
                             Expanded(child: _HomeGamesPane(tiles: gameTiles)),
                           ],
                         ),

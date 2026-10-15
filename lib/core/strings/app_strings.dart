@@ -46,6 +46,17 @@ abstract final class AppStrings {
     if (longestStreak >= 2) longestStreakLabel(longestStreak),
   ].join(' · ');
 
+  /// "2 of 3 cleared · 3:41 total" above the Home tiles.
+  static String homeTodaySummary({
+    required int cleared,
+    required int total,
+    int? totalSeconds,
+  }) => [
+    '$cleared of $total cleared',
+    if (totalSeconds != null) '${formatPlayTime(totalSeconds)} total',
+  ].join(' · ');
+  static const homePerfectDayBadge = 'Perfect day';
+
   // Path Words
   static const pathWordsTitle = 'Path Words';
   static const pathWordsTagline = 'Trace every word across the grid.';
