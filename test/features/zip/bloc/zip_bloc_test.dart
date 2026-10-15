@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
@@ -96,6 +97,7 @@ void main() {
         currentStreak: any(named: 'currentStreak'),
         dayId: any(named: 'dayId'),
         playId: any(named: 'playId'),
+        proof: any(named: 'proof'),
       ),
     ).thenAnswer((_) async {});
   });
@@ -186,6 +188,7 @@ void main() {
           currentStreak: 1,
           dayId: '2026-09-13',
           playId: '20260913',
+          proof: any(named: 'proof'),
         ),
       ).called(1);
       verify(
@@ -237,6 +240,7 @@ void main() {
       bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
       await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
 
+      bloc.add(ZipEvent.pathChanged(path: const [Cell(0, 0), Cell(0, 1)]));
       now = DateTime.utc(2026, 9, 13, 0, 0, 12);
       bloc.add(const ZipEvent.completed());
       await bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
@@ -264,8 +268,21 @@ void main() {
           currentStreak: 3,
           dayId: '2026-09-13',
           playId: '20260913',
+          proof: any(
+            named: 'proof',
+            that: isA<ZipLeaderboardProof>().having(
+              (p) => p.path,
+              'path',
+              const [Cell(0, 0), Cell(0, 1)],
+            ),
+          ),
         ),
       ).called(1);
+      // Results keeps the proof for a guest who signs in to save the time.
+      expect(
+        bloc.state.resultsExtra?.leaderboardProof,
+        isA<ZipLeaderboardProof>(),
+      );
       await bloc.close();
     },
   );

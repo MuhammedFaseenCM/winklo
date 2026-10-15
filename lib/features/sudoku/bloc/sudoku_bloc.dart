@@ -8,6 +8,7 @@ import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
+import '../../../domain/entities/leaderboard_proof.dart';
 import '../../../domain/entities/sudoku_puzzle.dart';
 import '../../../domain/failures.dart';
 import '../../../domain/game_ids.dart';
@@ -568,6 +569,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       dateId: dateId,
     );
 
+    final proof = SudokuLeaderboardProof(state.grid);
     try {
       await submitLeaderboardTime(
         gameId: GameIds.sudoku,
@@ -579,6 +581,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         dayId: leaderboardDayId(state.day),
         // Lets a successful submit mark this clear as posted for the sync.
         playId: playId,
+        proof: proof,
       );
     } catch (_) {
       // Best-effort remote sync; local score already saved.
@@ -613,6 +616,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           usedHints: state.usedHintsThisRun,
           hadMistakes: state.hadMistakesThisRun,
           day: state.day,
+          leaderboardProof: proof,
         ),
       ),
     );

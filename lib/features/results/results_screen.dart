@@ -197,6 +197,8 @@ class _CelebrateAndClaimResults extends StatelessWidget {
         usedHints: args.usedHints ?? true,
         hadMistakes: args.hadMistakes ?? true,
         currentStreak: args.currentStreak ?? 0,
+        dayId: args.leaderboardDay,
+        proof: args.leaderboardProof,
       );
     } catch (_) {
       // Best-effort remote sync; signed-in UI still shows live board.
@@ -225,6 +227,8 @@ class _CelebrateAndClaimResults extends StatelessWidget {
                         hadMistakes: args.hadMistakes,
                         currentStreak: args.currentStreak,
                         footer: ResultsActions(args: args),
+                        dayId: args.leaderboardDay,
+                        leaderboardProof: args.leaderboardProof,
                       );
                       if (height < _minHeaderHeight + 12 + _minBoardHeight) {
                         // Sideways or split screen: no room for both, so the
