@@ -28,6 +28,13 @@ void main() {
     ).called(1);
   });
 
+  test('opens Settings', () {
+    expect(
+      handle(const NotificationTap(type: 'x', route: '/profile/settings')),
+      '/profile/settings',
+    );
+  });
+
   test('defaults empty route to home', () {
     expect(handle(const NotificationTap(type: 'x', route: '')), '/');
     expect(handle(const NotificationTap(type: 'x', route: '  ')), '/');

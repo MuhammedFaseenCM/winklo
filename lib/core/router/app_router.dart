@@ -13,6 +13,7 @@ import '../../features/profile/view/profile_screen.dart';
 import '../../features/profile/view/report_issue_screen.dart';
 import '../../features/results/results_args.dart';
 import '../../features/results/results_screen.dart';
+import '../../features/settings/view/settings_screen.dart';
 import '../../features/sudoku/view/sudoku_screen.dart';
 import '../../features/word_match/view/word_match_screen.dart';
 import '../../features/word_match/view/word_match_select_screen.dart';
@@ -109,6 +110,11 @@ GoRouter buildRouter({
                     path: 'report',
                     name: 'profile_report',
                     builder: (context, state) => const ReportIssueScreen(),
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    name: 'profile_settings',
+                    builder: (context, state) => const SettingsScreen(),
                   ),
                 ],
               ),

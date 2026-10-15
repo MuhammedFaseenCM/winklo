@@ -277,6 +277,25 @@ abstract final class AppStrings {
   static const widgetPlay = 'Play';
   static const widgetFooter = 'New puzzle at midnight';
 
+  // Settings
+  static const profileSettings = 'Settings';
+  static const settingsTitle = 'Settings';
+  static const settingsSoundSection = 'Sound and vibration';
+  static const settingsRemindersSection = 'Reminders';
+  static const settingsLanguageSection = 'Language';
+  static const settingsDailyReady = 'Daily puzzles ready';
+  static const settingsDailyReadyHint = 'When today’s puzzles are out';
+  static const settingsStreakAtRisk = 'Streak at risk';
+  static const settingsStreakAtRiskHint =
+      'Only when a streak is at stake';
+  static const settingsWeeklyRecap = 'Weekly recap';
+  static String settingsWeeklyRecapHint(String time) => 'Sundays at $time';
+  static const settingsAnnouncements = 'Announcements';
+  static const settingsAnnouncementsHint = 'News about Winklo';
+  static const settingsReminderTime = 'Time';
+  static String settingsReminderTimeLabel(String reminder, String time) =>
+      '$reminder time, $time';
+
   // Dashboard nav
   static const navHome = 'Home';
   static const navLeaderboard = 'Leaderboard';
