@@ -14,7 +14,11 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$LeaderboardState {
 
- String get gameId; LeaderboardPeriod get period; LeaderboardStatus get status; List<LeaderboardEntry> get entries; String? get currentUid; String? get error;
+ String get gameId; LeaderboardPeriod get period; LeaderboardStatus get status; List<LeaderboardEntry> get entries; String? get currentUid; String? get error;/// The daily board's day (`yyyy-MM-dd`); null is today. Past days are
+/// read-only snapshots of the same board.
+ String? get dayId;/// The league whose members the board shows; null is everyone.
+ String? get leagueId;/// The signed-in player's leagues, for the scope picker.
+ List<League> get leagues;
 /// Create a copy of LeaderboardState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +29,16 @@ $LeaderboardStateCopyWith<LeaderboardState> get copyWith => _$LeaderboardStateCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LeaderboardState&&(identical(other.gameId, gameId) || other.gameId == gameId)&&(identical(other.period, period) || other.period == period)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.entries, entries)&&(identical(other.currentUid, currentUid) || other.currentUid == currentUid)&&(identical(other.error, error) || other.error == error));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LeaderboardState&&(identical(other.gameId, gameId) || other.gameId == gameId)&&(identical(other.period, period) || other.period == period)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.entries, entries)&&(identical(other.currentUid, currentUid) || other.currentUid == currentUid)&&(identical(other.error, error) || other.error == error)&&(identical(other.dayId, dayId) || other.dayId == dayId)&&(identical(other.leagueId, leagueId) || other.leagueId == leagueId)&&const DeepCollectionEquality().equals(other.leagues, leagues));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,gameId,period,status,const DeepCollectionEquality().hash(entries),currentUid,error);
+int get hashCode => Object.hash(runtimeType,gameId,period,status,const DeepCollectionEquality().hash(entries),currentUid,error,dayId,leagueId,const DeepCollectionEquality().hash(leagues));
 
 @override
 String toString() {
-  return 'LeaderboardState(gameId: $gameId, period: $period, status: $status, entries: $entries, currentUid: $currentUid, error: $error)';
+  return 'LeaderboardState(gameId: $gameId, period: $period, status: $status, entries: $entries, currentUid: $currentUid, error: $error, dayId: $dayId, leagueId: $leagueId, leagues: $leagues)';
 }
 
 
@@ -45,7 +49,7 @@ abstract mixin class $LeaderboardStateCopyWith<$Res>  {
   factory $LeaderboardStateCopyWith(LeaderboardState value, $Res Function(LeaderboardState) _then) = _$LeaderboardStateCopyWithImpl;
 @useResult
 $Res call({
- String gameId, LeaderboardPeriod period, LeaderboardStatus status, List<LeaderboardEntry> entries, String? currentUid, String? error
+ String gameId, LeaderboardPeriod period, LeaderboardStatus status, List<LeaderboardEntry> entries, String? currentUid, String? error, String? dayId, String? leagueId, List<League> leagues
 });
 
 
@@ -62,7 +66,7 @@ class _$LeaderboardStateCopyWithImpl<$Res>
 
 /// Create a copy of LeaderboardState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? gameId = null,Object? period = null,Object? status = null,Object? entries = null,Object? currentUid = freezed,Object? error = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? gameId = null,Object? period = null,Object? status = null,Object? entries = null,Object? currentUid = freezed,Object? error = freezed,Object? dayId = freezed,Object? leagueId = freezed,Object? leagues = null,}) {
   return _then(_self.copyWith(
 gameId: null == gameId ? _self.gameId : gameId // ignore: cast_nullable_to_non_nullable
 as String,period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
@@ -70,7 +74,10 @@ as LeaderboardPeriod,status: null == status ? _self.status : status // ignore: c
 as LeaderboardStatus,entries: null == entries ? _self.entries : entries // ignore: cast_nullable_to_non_nullable
 as List<LeaderboardEntry>,currentUid: freezed == currentUid ? _self.currentUid : currentUid // ignore: cast_nullable_to_non_nullable
 as String?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,dayId: freezed == dayId ? _self.dayId : dayId // ignore: cast_nullable_to_non_nullable
+as String?,leagueId: freezed == leagueId ? _self.leagueId : leagueId // ignore: cast_nullable_to_non_nullable
+as String?,leagues: null == leagues ? _self.leagues : leagues // ignore: cast_nullable_to_non_nullable
+as List<League>,
   ));
 }
 
@@ -152,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String gameId,  LeaderboardPeriod period,  LeaderboardStatus status,  List<LeaderboardEntry> entries,  String? currentUid,  String? error)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String gameId,  LeaderboardPeriod period,  LeaderboardStatus status,  List<LeaderboardEntry> entries,  String? currentUid,  String? error,  String? dayId,  String? leagueId,  List<League> leagues)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LeaderboardState() when $default != null:
-return $default(_that.gameId,_that.period,_that.status,_that.entries,_that.currentUid,_that.error);case _:
+return $default(_that.gameId,_that.period,_that.status,_that.entries,_that.currentUid,_that.error,_that.dayId,_that.leagueId,_that.leagues);case _:
   return orElse();
 
 }
@@ -173,10 +180,10 @@ return $default(_that.gameId,_that.period,_that.status,_that.entries,_that.curre
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String gameId,  LeaderboardPeriod period,  LeaderboardStatus status,  List<LeaderboardEntry> entries,  String? currentUid,  String? error)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String gameId,  LeaderboardPeriod period,  LeaderboardStatus status,  List<LeaderboardEntry> entries,  String? currentUid,  String? error,  String? dayId,  String? leagueId,  List<League> leagues)  $default,) {final _that = this;
 switch (_that) {
 case _LeaderboardState():
-return $default(_that.gameId,_that.period,_that.status,_that.entries,_that.currentUid,_that.error);}
+return $default(_that.gameId,_that.period,_that.status,_that.entries,_that.currentUid,_that.error,_that.dayId,_that.leagueId,_that.leagues);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -190,10 +197,10 @@ return $default(_that.gameId,_that.period,_that.status,_that.entries,_that.curre
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String gameId,  LeaderboardPeriod period,  LeaderboardStatus status,  List<LeaderboardEntry> entries,  String? currentUid,  String? error)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String gameId,  LeaderboardPeriod period,  LeaderboardStatus status,  List<LeaderboardEntry> entries,  String? currentUid,  String? error,  String? dayId,  String? leagueId,  List<League> leagues)?  $default,) {final _that = this;
 switch (_that) {
 case _LeaderboardState() when $default != null:
-return $default(_that.gameId,_that.period,_that.status,_that.entries,_that.currentUid,_that.error);case _:
+return $default(_that.gameId,_that.period,_that.status,_that.entries,_that.currentUid,_that.error,_that.dayId,_that.leagueId,_that.leagues);case _:
   return null;
 
 }
@@ -204,8 +211,8 @@ return $default(_that.gameId,_that.period,_that.status,_that.entries,_that.curre
 /// @nodoc
 
 
-class _LeaderboardState implements LeaderboardState {
-  const _LeaderboardState({this.gameId = GameIds.zip, this.period = LeaderboardPeriod.daily, this.status = LeaderboardStatus.loading, final  List<LeaderboardEntry> entries = const <LeaderboardEntry>[], this.currentUid, this.error}): _entries = entries;
+class _LeaderboardState extends LeaderboardState {
+  const _LeaderboardState({this.gameId = GameIds.zip, this.period = LeaderboardPeriod.daily, this.status = LeaderboardStatus.loading, final  List<LeaderboardEntry> entries = const <LeaderboardEntry>[], this.currentUid, this.error, this.dayId, this.leagueId, final  List<League> leagues = const <League>[]}): _entries = entries,_leagues = leagues,super._();
   
 
 @override@JsonKey() final  String gameId;
@@ -220,6 +227,20 @@ class _LeaderboardState implements LeaderboardState {
 
 @override final  String? currentUid;
 @override final  String? error;
+/// The daily board's day (`yyyy-MM-dd`); null is today. Past days are
+/// read-only snapshots of the same board.
+@override final  String? dayId;
+/// The league whose members the board shows; null is everyone.
+@override final  String? leagueId;
+/// The signed-in player's leagues, for the scope picker.
+ final  List<League> _leagues;
+/// The signed-in player's leagues, for the scope picker.
+@override@JsonKey() List<League> get leagues {
+  if (_leagues is EqualUnmodifiableListView) return _leagues;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_leagues);
+}
+
 
 /// Create a copy of LeaderboardState
 /// with the given fields replaced by the non-null parameter values.
@@ -231,16 +252,16 @@ _$LeaderboardStateCopyWith<_LeaderboardState> get copyWith => __$LeaderboardStat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LeaderboardState&&(identical(other.gameId, gameId) || other.gameId == gameId)&&(identical(other.period, period) || other.period == period)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._entries, _entries)&&(identical(other.currentUid, currentUid) || other.currentUid == currentUid)&&(identical(other.error, error) || other.error == error));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LeaderboardState&&(identical(other.gameId, gameId) || other.gameId == gameId)&&(identical(other.period, period) || other.period == period)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._entries, _entries)&&(identical(other.currentUid, currentUid) || other.currentUid == currentUid)&&(identical(other.error, error) || other.error == error)&&(identical(other.dayId, dayId) || other.dayId == dayId)&&(identical(other.leagueId, leagueId) || other.leagueId == leagueId)&&const DeepCollectionEquality().equals(other._leagues, _leagues));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,gameId,period,status,const DeepCollectionEquality().hash(_entries),currentUid,error);
+int get hashCode => Object.hash(runtimeType,gameId,period,status,const DeepCollectionEquality().hash(_entries),currentUid,error,dayId,leagueId,const DeepCollectionEquality().hash(_leagues));
 
 @override
 String toString() {
-  return 'LeaderboardState(gameId: $gameId, period: $period, status: $status, entries: $entries, currentUid: $currentUid, error: $error)';
+  return 'LeaderboardState(gameId: $gameId, period: $period, status: $status, entries: $entries, currentUid: $currentUid, error: $error, dayId: $dayId, leagueId: $leagueId, leagues: $leagues)';
 }
 
 
@@ -251,7 +272,7 @@ abstract mixin class _$LeaderboardStateCopyWith<$Res> implements $LeaderboardSta
   factory _$LeaderboardStateCopyWith(_LeaderboardState value, $Res Function(_LeaderboardState) _then) = __$LeaderboardStateCopyWithImpl;
 @override @useResult
 $Res call({
- String gameId, LeaderboardPeriod period, LeaderboardStatus status, List<LeaderboardEntry> entries, String? currentUid, String? error
+ String gameId, LeaderboardPeriod period, LeaderboardStatus status, List<LeaderboardEntry> entries, String? currentUid, String? error, String? dayId, String? leagueId, List<League> leagues
 });
 
 
@@ -268,7 +289,7 @@ class __$LeaderboardStateCopyWithImpl<$Res>
 
 /// Create a copy of LeaderboardState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? gameId = null,Object? period = null,Object? status = null,Object? entries = null,Object? currentUid = freezed,Object? error = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? gameId = null,Object? period = null,Object? status = null,Object? entries = null,Object? currentUid = freezed,Object? error = freezed,Object? dayId = freezed,Object? leagueId = freezed,Object? leagues = null,}) {
   return _then(_LeaderboardState(
 gameId: null == gameId ? _self.gameId : gameId // ignore: cast_nullable_to_non_nullable
 as String,period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
@@ -276,7 +297,10 @@ as LeaderboardPeriod,status: null == status ? _self.status : status // ignore: c
 as LeaderboardStatus,entries: null == entries ? _self._entries : entries // ignore: cast_nullable_to_non_nullable
 as List<LeaderboardEntry>,currentUid: freezed == currentUid ? _self.currentUid : currentUid // ignore: cast_nullable_to_non_nullable
 as String?,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,dayId: freezed == dayId ? _self.dayId : dayId // ignore: cast_nullable_to_non_nullable
+as String?,leagueId: freezed == leagueId ? _self.leagueId : leagueId // ignore: cast_nullable_to_non_nullable
+as String?,leagues: null == leagues ? _self._leagues : leagues // ignore: cast_nullable_to_non_nullable
+as List<League>,
   ));
 }
 

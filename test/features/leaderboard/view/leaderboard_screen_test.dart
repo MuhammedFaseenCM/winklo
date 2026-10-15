@@ -27,6 +27,11 @@ class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
 
 class _MockSignOut extends Mock implements SignOut {}
 
+/// The board itself, not the day strip or the scope bar above it.
+final _boardList = find.byWidgetPredicate(
+  (w) => w is ListView && w.scrollDirection == Axis.vertical,
+);
+
 void main() {
   setUpAll(() {
     registerFallbackValue(LeaderboardPeriod.daily);
@@ -439,7 +444,7 @@ void main() {
     expect(find.text('Your Rank'), findsOneWidget);
 
     // Scroll down 1200 pixels towards rank 20
-    await tester.drag(find.byType(ListView), const Offset(0, -1200));
+    await tester.drag(_boardList, const Offset(0, -1200));
     await tester.pumpAndSettle();
 
     // Now user has scrolled and reached rank 20; pinned tile hides
@@ -542,7 +547,7 @@ void main() {
     expect(find.byKey(const Key('leaderboard_sign_in_fab')), findsNothing);
   });
 
-  testWidgets('hides All-time period when showAllTimeLeaderboard is false', (
+  testWidgets('hides only All-time when showAllTimeLeaderboard is false', (
     tester,
   ) async {
     final auth = _MockAuthRepository();
@@ -580,7 +585,9 @@ void main() {
     await tester.pump();
 
     expect(find.text(AppStrings.leaderboardAllTime), findsNothing);
-    expect(find.text(AppStrings.leaderboardDaily), findsNothing);
+    // Daily and This week stay: the weekly board isn't behind the flag.
+    expect(find.text(AppStrings.leaderboardDaily), findsOneWidget);
+    expect(find.text(AppStrings.leaderboardThisWeek), findsOneWidget);
     expect(periods, isNotEmpty);
     expect(periods, everyElement(LeaderboardPeriod.daily));
   });
