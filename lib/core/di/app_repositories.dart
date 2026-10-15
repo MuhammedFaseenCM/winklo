@@ -33,6 +33,7 @@ import 'package:winklo/data/repositories/issue_report_repository_impl.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/league_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
+import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
 import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_remote_repository_impl.dart';
@@ -61,6 +62,8 @@ import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/league_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
+import 'package:winklo/domain/repositories/play_mode_record_repository.dart';
+import 'package:winklo/domain/play_mode_hints.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/progress_local_repository.dart';
 import 'package:winklo/domain/repositories/progress_remote_repository.dart';
@@ -260,6 +263,17 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) => HintQuotaRepositoryImpl(
         context.read<SharedPreferences>(),
         onChanged: context.read<ProgressChangeSignal>().notify,
+      ),
+    ),
+    // Archive, practice and bonus runs: local only, never synced.
+    RepositoryProvider<PlayModeRecordRepository>(
+      create: (context) =>
+          PlayModeRecordRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<HintQuotaForMode>(
+      create: (context) => HintQuotaForMode(
+        daily: context.read<HintQuotaRepository>(),
+        records: context.read<PlayModeRecordRepository>(),
       ),
     ),
     RepositoryProvider<StreakRepository>(
