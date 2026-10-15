@@ -175,4 +175,269 @@ void main() {
       expect(result.shouldPersist, isTrue);
     });
   });
+
+  GameStreak counted({
+    int current = 0,
+    int longest = 0,
+    String? last,
+    int freezes = 1,
+  }) {
+    return GameStreak(
+      gameId: gameId,
+      current: current,
+      longest: longest,
+      lastClearedDateId: last,
+      freezeCount: freezes,
+    );
+  }
+
+  group('earning freezes', () {
+    test('a clear reaching day 7 earns a freeze', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 6, longest: 6, last: '20260914', freezes: 0),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 7);
+      expect(result.streak.freezeCount, 1);
+      expect(result.freezeSpent, isFalse);
+      expect(result.freezeEarned, isTrue);
+    });
+
+    test('day 14 earns a second one', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 13, longest: 13, last: '20260914'),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 14);
+      expect(result.streak.freezeCount, 2);
+    });
+
+    test('the count never passes 2', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 20, longest: 20, last: '20260914', freezes: 2),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 21);
+      expect(result.streak.freezeCount, 2);
+      expect(result.freezeEarned, isFalse);
+    });
+
+    test('day 8 earns nothing', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 7, longest: 7, last: '20260914'),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 8);
+      expect(result.streak.freezeCount, 1);
+      expect(result.freezeEarned, isFalse);
+    });
+
+    test('a reset to 1 earns nothing', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 6, longest: 6, last: '20260910', freezes: 0),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 1);
+      expect(result.streak.freezeCount, 0);
+    });
+
+    test('clearing the same day twice earns once', () {
+      final first = StreakCalculator.dailyClear(
+        streak: counted(current: 6, longest: 6, last: '20260914', freezes: 0),
+        todayId: '20260915',
+      );
+      final again = StreakCalculator.dailyClear(
+        streak: first.streak,
+        todayId: '20260915',
+      );
+      expect(again.streak.current, 7);
+      expect(again.streak.freezeCount, 1);
+      expect(again.freezeEarned, isFalse);
+      expect(again.freezeSpent, isFalse);
+    });
+
+    test('a first clear keeps the starting freeze', () {
+      final result = StreakCalculator.dailyClear(
+        streak: const GameStreak(gameId: gameId),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 1);
+      expect(result.streak.freezeCount, 1);
+    });
+  });
+
+  group('spending freezes', () {
+    test('a 2-day gap spends one and keeps the streak', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 4, longest: 4, last: '20260913'),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 5);
+      expect(result.streak.freezeCount, 0);
+      expect(result.freezeSpent, isTrue);
+    });
+
+    test('a 2-day gap with two freezes leaves one', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 15, longest: 15, last: '20260913', freezes: 2),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 16);
+      expect(result.streak.freezeCount, 1);
+      expect(result.freezeSpent, isTrue);
+    });
+
+    test('a 2-day gap with none resets to 1', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 4, longest: 4, last: '20260913', freezes: 0),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 1);
+      expect(result.streak.longest, 4);
+      expect(result.freezeSpent, isFalse);
+    });
+
+    test('a 3-day gap resets even with freezes and keeps them', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 9, longest: 9, last: '20260912', freezes: 2),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 1);
+      expect(result.streak.freezeCount, 2);
+      expect(result.freezeSpent, isFalse);
+    });
+
+    test('a spend that lands on day 14 earns it back', () {
+      final result = StreakCalculator.dailyClear(
+        streak: counted(current: 13, longest: 13, last: '20260913'),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 14);
+      expect(result.streak.freezeCount, 1);
+      expect(result.freezeSpent, isTrue);
+      expect(result.freezeEarned, isTrue);
+    });
+
+    test('applyDailyClear returns the same streak as dailyClear', () {
+      final input = counted(current: 6, longest: 6, last: '20260914');
+      expect(
+        StreakCalculator.applyDailyClear(
+          streak: input,
+          todayId: '20260915',
+        ).freezeCount,
+        StreakCalculator.dailyClear(
+          streak: input,
+          todayId: '20260915',
+        ).streak.freezeCount,
+      );
+    });
+  });
+
+  group('lazy decay and the count', () {
+    test('keeps the count while on a freeze', () {
+      final result = StreakCalculator.applyLazyDecay(
+        streak: counted(current: 9, longest: 9, last: '20260913', freezes: 2),
+        todayId: '20260915',
+      );
+      expect(result.streak.isOnFreeze, isTrue);
+      expect(result.streak.freezeCount, 2);
+    });
+
+    test('keeps the count when a streak resets', () {
+      final result = StreakCalculator.applyLazyDecay(
+        streak: counted(current: 9, longest: 9, last: '20260901', freezes: 2),
+        todayId: '20260915',
+      );
+      expect(result.streak.current, 0);
+      expect(result.streak.freezeCount, 2);
+    });
+
+    test('keeps the count of a streak that was never cleared', () {
+      final result = StreakCalculator.applyLazyDecay(
+        streak: counted(freezes: 0),
+        todayId: '20260915',
+      );
+      expect(result.streak.freezeCount, 0);
+    });
+  });
+
+  group('storedFreezeCount', () {
+    int read({int? count, bool? available}) =>
+        StreakCalculator.storedFreezeCount(count: count, available: available);
+
+    test('a missing count reads freezeAvailable', () {
+      expect(read(available: true), 1);
+      expect(read(available: false), 0);
+      expect(read(), 1);
+    });
+
+    test('a consistent count is used', () {
+      expect(read(count: 2, available: true), 2);
+      expect(read(count: 1, available: true), 1);
+      expect(read(count: 0, available: false), 0);
+      expect(read(count: 2), 2);
+    });
+
+    test('out-of-range counts clamp to 0..2', () {
+      expect(read(count: 5, available: true), 2);
+      expect(read(count: -1, available: false), 0);
+    });
+
+    test('true with a count of 0 (an older build wrote after) reads 1', () {
+      expect(read(count: 0, available: true), 1);
+    });
+
+    test('false with a count (an older build spent one) reads one less', () {
+      expect(read(count: 2, available: false), 1);
+      expect(read(count: 1, available: false), 0);
+    });
+  });
+
+  group('atStakeTomorrow', () {
+    const today = '20260915';
+
+    test('a streak cleared today is at stake tomorrow', () {
+      expect(
+        StreakCalculator.atStakeTomorrow(
+          streak: counted(current: 5, longest: 5, last: today, freezes: 0),
+          todayId: today,
+        ),
+        5,
+      );
+    });
+
+    test('a streak last cleared yesterday survives only with a freeze', () {
+      expect(
+        StreakCalculator.atStakeTomorrow(
+          streak: counted(current: 5, longest: 5, last: '20260914'),
+          todayId: today,
+        ),
+        5,
+      );
+      expect(
+        StreakCalculator.atStakeTomorrow(
+          streak: counted(current: 5, longest: 5, last: '20260914', freezes: 0),
+          todayId: today,
+        ),
+        0,
+      );
+    });
+
+    test('a streak on a freeze today is gone tomorrow', () {
+      expect(
+        StreakCalculator.atStakeTomorrow(
+          streak: counted(current: 5, longest: 5, last: '20260913'),
+          todayId: today,
+        ),
+        0,
+      );
+    });
+
+    test('no clear means nothing at stake', () {
+      expect(
+        StreakCalculator.atStakeTomorrow(streak: counted(), todayId: today),
+        0,
+      );
+    });
+  });
 }
