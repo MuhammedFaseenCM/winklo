@@ -12,8 +12,8 @@ class WordListRepositoryImpl implements WordListRepository {
     this.nounAssetPath = 'assets/words/en_nouns.txt',
     this._prefs,
     this._nounsClient,
-    AssetBundle? bundle,
-  }) : _bundle = bundle;
+    this._bundle,
+  });
 
   /// The English word list: ENABLE, 4–8 letters (see [loadBonusWords]).
   final String assetPath;
