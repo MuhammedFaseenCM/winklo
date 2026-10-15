@@ -555,4 +555,31 @@ abstract final class AppStrings {
   static const profileReportFailed = 'Could not send report. Try again.';
   static const profilePrivacyFailed = 'Could not load the privacy policy.';
   static const profilePrivacyRetry = 'Retry';
+
+  // More ways to play: archive, practice and bonus games (roadmap area F)
+  static const moreWaysTitle = 'More ways to play';
+  static const moreWaysEntryHint = 'Archive · Practice · Bonus games';
+  static const archiveTitle = 'Archive';
+  static const archiveHint = 'Replay any past daily. No streak or board.';
+  static const practiceTitle = 'Practice';
+  static const practiceHint = 'Endless offline boards. Hints on the house.';
+  static const bonusGamesTitle = 'Bonus games';
+  static const bonusGamesHint = 'Quick word games, just for fun.';
+  static String archiveRunLabel(DateTime day) =>
+      'Archive · ${leaderboardShortDate(day.day, day.month)}';
+  static const practiceRunLabel = 'Practice';
+  static const practiceNewBoard = 'New board';
+  static const hintUnlimited = 'Hint';
+  static String localBest(String time) => 'Best $time';
+  static String archiveBest(String time) => 'Archive best $time';
+  static const newLocalBest = 'New best';
+  static const backToArchive = 'Back to archive';
+  static const archivePickGame = 'Game';
+  static String archiveMonthCleared(int days) =>
+      days == 1 ? '1 day cleared' : '$days days cleared';
+  static const archiveDayCleared = 'Cleared';
+  static const archiveDayOpen = 'Not played';
+  static const archivePrevious = 'Previous month';
+  static const archiveNext = 'Next month';
+  static const archiveLegend = '✓ cleared in the daily or the archive';
 }

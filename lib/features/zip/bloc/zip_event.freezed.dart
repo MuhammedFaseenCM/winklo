@@ -55,7 +55,7 @@ extension ZipEventPatterns on ZipEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ZipStarted value)?  started,TResult Function( ZipPathChanged value)?  pathChanged,TResult Function( ZipCompleted value)?  completed,TResult Function( ZipHint value)?  hint,TResult Function( ZipReset value)?  reset,TResult Function( ZipPauseRun value)?  pauseRun,TResult Function( ZipResumeRun value)?  resumeRun,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ZipStarted value)?  started,TResult Function( ZipPathChanged value)?  pathChanged,TResult Function( ZipCompleted value)?  completed,TResult Function( ZipHint value)?  hint,TResult Function( ZipReset value)?  reset,TResult Function( ZipPauseRun value)?  pauseRun,TResult Function( ZipResumeRun value)?  resumeRun,TResult Function( ZipNewBoard value)?  newBoard,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
@@ -65,7 +65,8 @@ return completed(_that);case ZipHint() when hint != null:
 return hint(_that);case ZipReset() when reset != null:
 return reset(_that);case ZipPauseRun() when pauseRun != null:
 return pauseRun(_that);case ZipResumeRun() when resumeRun != null:
-return resumeRun(_that);case _:
+return resumeRun(_that);case ZipNewBoard() when newBoard != null:
+return newBoard(_that);case _:
   return orElse();
 
 }
@@ -83,7 +84,7 @@ return resumeRun(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ZipStarted value)  started,required TResult Function( ZipPathChanged value)  pathChanged,required TResult Function( ZipCompleted value)  completed,required TResult Function( ZipHint value)  hint,required TResult Function( ZipReset value)  reset,required TResult Function( ZipPauseRun value)  pauseRun,required TResult Function( ZipResumeRun value)  resumeRun,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ZipStarted value)  started,required TResult Function( ZipPathChanged value)  pathChanged,required TResult Function( ZipCompleted value)  completed,required TResult Function( ZipHint value)  hint,required TResult Function( ZipReset value)  reset,required TResult Function( ZipPauseRun value)  pauseRun,required TResult Function( ZipResumeRun value)  resumeRun,required TResult Function( ZipNewBoard value)  newBoard,}){
 final _that = this;
 switch (_that) {
 case ZipStarted():
@@ -93,7 +94,8 @@ return completed(_that);case ZipHint():
 return hint(_that);case ZipReset():
 return reset(_that);case ZipPauseRun():
 return pauseRun(_that);case ZipResumeRun():
-return resumeRun(_that);}
+return resumeRun(_that);case ZipNewBoard():
+return newBoard(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -107,7 +109,7 @@ return resumeRun(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ZipStarted value)?  started,TResult? Function( ZipPathChanged value)?  pathChanged,TResult? Function( ZipCompleted value)?  completed,TResult? Function( ZipHint value)?  hint,TResult? Function( ZipReset value)?  reset,TResult? Function( ZipPauseRun value)?  pauseRun,TResult? Function( ZipResumeRun value)?  resumeRun,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ZipStarted value)?  started,TResult? Function( ZipPathChanged value)?  pathChanged,TResult? Function( ZipCompleted value)?  completed,TResult? Function( ZipHint value)?  hint,TResult? Function( ZipReset value)?  reset,TResult? Function( ZipPauseRun value)?  pauseRun,TResult? Function( ZipResumeRun value)?  resumeRun,TResult? Function( ZipNewBoard value)?  newBoard,}){
 final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
@@ -117,7 +119,8 @@ return completed(_that);case ZipHint() when hint != null:
 return hint(_that);case ZipReset() when reset != null:
 return reset(_that);case ZipPauseRun() when pauseRun != null:
 return pauseRun(_that);case ZipResumeRun() when resumeRun != null:
-return resumeRun(_that);case _:
+return resumeRun(_that);case ZipNewBoard() when newBoard != null:
+return newBoard(_that);case _:
   return null;
 
 }
@@ -134,7 +137,7 @@ return resumeRun(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( List<Cell> path)?  pathChanged,TResult Function()?  completed,TResult Function( int hintsRemaining)?  hint,TResult Function()?  reset,TResult Function()?  pauseRun,TResult Function()?  resumeRun,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( List<Cell> path)?  pathChanged,TResult Function()?  completed,TResult Function( int hintsRemaining)?  hint,TResult Function()?  reset,TResult Function()?  pauseRun,TResult Function()?  resumeRun,TResult Function()?  newBoard,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
 return started(_that.date);case ZipPathChanged() when pathChanged != null:
@@ -143,7 +146,8 @@ return completed();case ZipHint() when hint != null:
 return hint(_that.hintsRemaining);case ZipReset() when reset != null:
 return reset();case ZipPauseRun() when pauseRun != null:
 return pauseRun();case ZipResumeRun() when resumeRun != null:
-return resumeRun();case _:
+return resumeRun();case ZipNewBoard() when newBoard != null:
+return newBoard();case _:
   return orElse();
 
 }
@@ -161,7 +165,7 @@ return resumeRun();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( List<Cell> path)  pathChanged,required TResult Function()  completed,required TResult Function( int hintsRemaining)  hint,required TResult Function()  reset,required TResult Function()  pauseRun,required TResult Function()  resumeRun,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( List<Cell> path)  pathChanged,required TResult Function()  completed,required TResult Function( int hintsRemaining)  hint,required TResult Function()  reset,required TResult Function()  pauseRun,required TResult Function()  resumeRun,required TResult Function()  newBoard,}) {final _that = this;
 switch (_that) {
 case ZipStarted():
 return started(_that.date);case ZipPathChanged():
@@ -170,7 +174,8 @@ return completed();case ZipHint():
 return hint(_that.hintsRemaining);case ZipReset():
 return reset();case ZipPauseRun():
 return pauseRun();case ZipResumeRun():
-return resumeRun();}
+return resumeRun();case ZipNewBoard():
+return newBoard();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -184,7 +189,7 @@ return resumeRun();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( List<Cell> path)?  pathChanged,TResult? Function()?  completed,TResult? Function( int hintsRemaining)?  hint,TResult? Function()?  reset,TResult? Function()?  pauseRun,TResult? Function()?  resumeRun,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( List<Cell> path)?  pathChanged,TResult? Function()?  completed,TResult? Function( int hintsRemaining)?  hint,TResult? Function()?  reset,TResult? Function()?  pauseRun,TResult? Function()?  resumeRun,TResult? Function()?  newBoard,}) {final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
 return started(_that.date);case ZipPathChanged() when pathChanged != null:
@@ -193,7 +198,8 @@ return completed();case ZipHint() when hint != null:
 return hint(_that.hintsRemaining);case ZipReset() when reset != null:
 return reset();case ZipPauseRun() when pauseRun != null:
 return pauseRun();case ZipResumeRun() when resumeRun != null:
-return resumeRun();case _:
+return resumeRun();case ZipNewBoard() when newBoard != null:
+return newBoard();case _:
   return null;
 
 }
@@ -525,6 +531,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
   return 'ZipEvent.resumeRun()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class ZipNewBoard implements ZipEvent {
+  const ZipNewBoard();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ZipNewBoard);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'ZipEvent.newBoard()';
 }
 
 

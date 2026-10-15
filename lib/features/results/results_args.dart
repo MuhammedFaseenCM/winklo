@@ -21,6 +21,7 @@ class ResultsArgs {
     this.day,
     this.leaderboardProof,
     this.pathWords,
+    this.local,
   });
 
   final String title;
@@ -55,4 +56,42 @@ class ResultsArgs {
 
   /// Path Words only: the theme, found words and bonus words to show.
   final PathWordsClearSummary? pathWords;
+
+  /// Set for runs off the dailies (archive, practice, bonus games): Results
+  /// then shows the time (or score) and the local best only, with no board,
+  /// streak, share or achievements.
+  final LocalResultInfo? local;
+}
+
+/// Which kind of run off the dailies a [LocalResultInfo] describes.
+enum LocalResultKind { archive, practice, bonus }
+
+/// What Results shows for a run off the dailies.
+class LocalResultInfo {
+  const LocalResultInfo({
+    required this.kind,
+    required this.label,
+    this.bestSeconds,
+    this.score,
+    this.bestScore,
+    this.againLocation,
+  });
+
+  final LocalResultKind kind;
+
+  /// "Archive · 9 Oct", "Practice", "Word Match · Opposites".
+  final String label;
+
+  /// The local best time after this run; null for score-only games.
+  final int? bestSeconds;
+
+  /// A score shown instead of the time (Category Race: words found).
+  final int? score;
+
+  /// The local best [score] after this run.
+  final int? bestScore;
+
+  /// Where "New board" or "Play again" goes; null for none (the archive
+  /// goes back to its calendar).
+  final String? againLocation;
 }
