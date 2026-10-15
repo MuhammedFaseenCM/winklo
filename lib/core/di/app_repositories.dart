@@ -82,6 +82,7 @@ import 'package:winklo/domain/usecases/get_clear_meta.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/domain/usecases/handle_notification_tap.dart';
 import 'package:winklo/domain/usecases/initialize_notifications.dart';
+import 'package:winklo/domain/usecases/load_game_history.dart';
 import 'package:winklo/domain/usecases/record_app_open.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/report_client_error.dart';
@@ -280,6 +281,16 @@ List<SingleChildWidget> buildRepositoryProviders({
             ? null
             : ReportClientError(clientErrorRepository),
         uploadHistory: context.read<UploadProgressHistory>(),
+        isRemoteAvailable: () => FirebaseBootstrap.isReady,
+      ),
+    ),
+    RepositoryProvider<LoadGameHistory>(
+      create: (context) => LoadGameHistory(
+        auth: context.read<AuthRepository>(),
+        scores: context.read<ScoreRepository>(),
+        hintQuota: context.read<HintQuotaRepository>(),
+        streaks: context.read<StreakRepository>(),
+        remote: context.read<ProgressRemoteRepository>(),
         isRemoteAvailable: () => FirebaseBootstrap.isReady,
       ),
     ),
