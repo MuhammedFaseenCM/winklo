@@ -99,7 +99,7 @@ final class AppTextMl implements AppText {
   String get zipTipVisitInOrder => 'നമ്പറുകൾ ക്രമത്തിൽ തൊടൂ';
 
   @override
-  String get zipClearedTitle => 'പസിൽ പൂർത്തിയായി!';
+  String get zipClearedTitle => 'പൂർത്തിയായി!';
 
   @override
   String get zipLoading => 'ഇന്നത്തെ പസിൽ ഒരുക്കുന്നു…';
@@ -154,6 +154,9 @@ final class AppTextMl implements AppText {
   @override
   String get homePerfectDayBadge => 'സമ്പൂർണ ദിനം';
 
+  @override
+  String get homeDailyBadge => 'ദിവസേന';
+
   // Path Words
   @override
   String get pathWordsTitle => 'Path Words';
@@ -201,7 +204,7 @@ final class AppTextMl implements AppText {
       '${letters.toUpperCase()} വരയ്ക്കുന്നു';
 
   @override
-  String get pathWordsClearedTitle => 'പസിൽ പൂർത്തിയായി!';
+  String get pathWordsClearedTitle => 'പൂർത്തിയായി!';
 
   @override
   String get pathWordsLoading => 'ഇന്നത്തെ പസിൽ ഒരുക്കുന്നു…';
@@ -310,7 +313,7 @@ final class AppTextMl implements AppText {
   String get sudokuHowToPlayGotIt => 'മനസ്സിലായി';
 
   @override
-  String get sudokuClearedTitle => 'പസിൽ പൂർത്തിയായി!';
+  String get sudokuClearedTitle => 'പൂർത്തിയായി!';
 
   @override
   String get sudokuLoading => 'ഇന്നത്തെ പസിൽ ഒരുക്കുന്നു…';
@@ -342,8 +345,9 @@ final class AppTextMl implements AppText {
   @override
   String get newPuzzleReady => 'പുതിയ പസിൽ റെഡി';
 
-  /// "പുതിയ പസിലിന് ഇനി 6 മണിക്കൂർ 12 മിനിറ്റ്" ("6 h 12 min to the new
-  /// puzzle"), which needs no case ending. Minutes round up, as in English.
+  /// "പുതിയ പസിലിന് ഇനി 6 മ. 12 മി." ("6 h 12 min to the new puzzle"),
+  /// which needs no case ending; മ. and മി. are CLDR's short hour and
+  /// minute. Minutes round up, as in English.
   @override
   String newPuzzleIn(Duration remaining) {
     if (remaining <= Duration.zero) return newPuzzleReady;
@@ -351,10 +355,7 @@ final class AppTextMl implements AppText {
     final minutes = (remaining.inMicroseconds + minute - 1) ~/ minute;
     final h = minutes ~/ 60;
     final m = minutes % 60;
-    final parts = [
-      if (h > 0) '$h മണിക്കൂർ',
-      if (m > 0 || h == 0) '$m മിനിറ്റ്',
-    ];
+    final parts = [if (h > 0) '$h മ.', if (m > 0 || h == 0) '$m മി.'];
     return 'പുതിയ പസിലിന് ഇനി ${parts.join(' ')}';
   }
 
@@ -375,7 +376,7 @@ final class AppTextMl implements AppText {
       'പങ്കിടാനുള്ള ഓപ്ഷൻ തുറക്കാനായില്ല. വീണ്ടും ശ്രമിക്കൂ.';
 
   @override
-  String get resultsFullBoard => 'മുഴുവൻ ബോർഡ്';
+  String get resultsFullBoard => 'ബോർഡ്';
 
   @override
   String clearedIn(String time) => '$time-ൽ പൂർത്തിയാക്കി';
@@ -385,6 +386,9 @@ final class AppTextMl implements AppText {
 
   @override
   String get resultsTimeLabel => 'സമയം';
+
+  @override
+  String get resultsPointsLabel => 'പോയിന്റ്';
 
   @override
   String saveTimeToBoard(String timeLabel) =>
@@ -432,7 +436,7 @@ final class AppTextMl implements AppText {
       'വലിക്കൂ.';
 
   @override
-  String get statsClears => 'പൂർത്തിയാക്കി';
+  String get statsClears => 'തീർത്തവ';
 
   @override
   String get statsCurrentStreak => 'സ്ട്രീക്ക്';
@@ -447,7 +451,7 @@ final class AppTextMl implements AppText {
   String get statsAverageTime => 'ശരാശരി';
 
   @override
-  String get statsHintFree => 'സൂചനയില്ലാതെ';
+  String get statsHintFree => 'സ്വന്തമായി';
 
   @override
   String get statsNoValue => '–';
@@ -536,7 +540,7 @@ final class AppTextMl implements AppText {
 
   @override
   String achievementFirstClearCondition(String game) =>
-      'ആദ്യത്തെ $game പൂർത്തിയാക്കൂ';
+      'ആദ്യത്തെ $game തീർക്കൂ';
 
   @override
   String achievementStreakTitle(int days, String game) =>
@@ -544,35 +548,34 @@ final class AppTextMl implements AppText {
 
   @override
   String achievementStreakCondition(int days, String game) =>
-      'തുടർച്ചയായി $days ദിവസം $game പൂർത്തിയാക്കൂ';
+      '$game തുടർച്ചയായി $days ദിവസം തീർക്കൂ';
 
   @override
   String get achievementZipUnderMinuteTitle => 'ഒരു മിനിറ്റിനുള്ളിൽ';
 
   @override
   String get achievementZipUnderMinuteCondition =>
-      'ഒരു Zip ഒരു മിനിറ്റിനുള്ളിൽ പൂർത്തിയാക്കൂ';
+      'ഒരു Zip ഒരു മിനിറ്റിനുള്ളിൽ തീർക്കൂ';
 
   @override
   String get achievementHintFreeWeekTitle => 'സൂചനയില്ലാത്ത ആഴ്ച';
 
   @override
   String get achievementHintFreeWeekCondition =>
-      'ഒരു ഗെയിം സൂചനയില്ലാതെ തുടർച്ചയായി 7 ദിവസം പൂർത്തിയാക്കൂ';
+      'സൂചനയില്ലാതെ തുടർച്ചയായി 7 ദിവസം';
 
   @override
   String get achievementFlawlessSudokusTitle => 'പിഴവില്ലാത്ത പത്ത്';
 
   @override
   String get achievementFlawlessSudokusCondition =>
-      'സൂചനയും തെറ്റുമില്ലാതെ 10 Sudoku പൂർത്തിയാക്കൂ';
+      'സൂചനയും തെറ്റുമില്ലാതെ 10 Sudoku';
 
   @override
   String get achievementPerfectDayTitle => 'സമ്പൂർണ ദിനം';
 
   @override
-  String get achievementPerfectDayCondition =>
-      'ഒരേ ദിവസം മൂന്ന് ഗെയിമുകളും പൂർത്തിയാക്കൂ';
+  String get achievementPerfectDayCondition => 'ഒരു ദിവസം മൂന്നും തീർക്കൂ';
 
   @override
   String newAchievementsTitle(int count) =>
@@ -1058,7 +1061,7 @@ final class AppTextMl implements AppText {
   String get languageMalayalam => 'മലയാളം';
 
   @override
-  String get settingsDailyReady => 'ഇന്നത്തെ പസിലുകൾ റെഡി';
+  String get settingsDailyReady => 'പസിലുകൾ റെഡി';
 
   @override
   String get settingsDailyReadyHint => 'ഇന്നത്തെ പസിലുകൾ എത്തുമ്പോൾ';
@@ -1067,7 +1070,7 @@ final class AppTextMl implements AppText {
   String get settingsStreakAtRisk => 'സ്ട്രീക്ക് അപകടത്തിൽ';
 
   @override
-  String get settingsStreakAtRiskHint => 'സ്ട്രീക്ക് പോകാനിരിക്കുമ്പോൾ മാത്രം';
+  String get settingsStreakAtRiskHint => 'സ്ട്രീക്ക് പോകുമെങ്കിൽ മാത്രം';
 
   @override
   String get settingsWeeklyRecap => 'ആഴ്ചയിലെ ചുരുക്കം';
@@ -1079,7 +1082,7 @@ final class AppTextMl implements AppText {
   String get settingsAnnouncements => 'അറിയിപ്പുകൾ';
 
   @override
-  String get settingsAnnouncementsHint => 'Winklo-യെക്കുറിച്ചുള്ള വാർത്തകൾ';
+  String get settingsAnnouncementsHint => 'Winklo വാർത്തകൾ';
 
   @override
   String get settingsReminderTime => 'സമയം';
@@ -1232,7 +1235,7 @@ final class AppTextMl implements AppText {
 
   // More ways to play: archive, practice and bonus games (roadmap area F)
   @override
-  String get moreWaysTitle => 'കളിക്കാൻ കൂടുതൽ വഴികൾ';
+  String get moreWaysTitle => 'കൂടുതൽ കളികൾ';
 
   @override
   String get moreWaysEntryHint => 'ആർക്കൈവ് · പരിശീലനം · ബോണസ് ഗെയിമുകൾ';
@@ -1242,7 +1245,7 @@ final class AppTextMl implements AppText {
 
   @override
   String get archiveHint =>
-      'പഴയ ഏത് ദിവസത്തെ പസിലും വീണ്ടും കളിക്കൂ. സ്ട്രീക്കും ബോർഡുമില്ല.';
+      'പഴയ ഏത് പസിലും വീണ്ടും കളിക്കൂ. സ്ട്രീക്കും ബോർഡുമില്ല.';
 
   @override
   String get practiceTitle => 'പരിശീലനം';

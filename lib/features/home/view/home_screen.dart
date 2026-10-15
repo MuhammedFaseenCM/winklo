@@ -401,7 +401,7 @@ class _HomeHeader extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      'DAILY',
+                      AppStrings.homeDailyBadge,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: ZipColors.ember,
                         fontWeight: FontWeight.w800,

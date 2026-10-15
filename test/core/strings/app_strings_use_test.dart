@@ -56,11 +56,11 @@ void main() {
     test('the new-puzzle countdown needs no case ending', () {
       expect(
         AppStrings.newPuzzleIn(const Duration(hours: 6, minutes: 12)),
-        'പുതിയ പസിലിന് ഇനി 6 മണിക്കൂർ 12 മിനിറ്റ്',
+        'പുതിയ പസിലിന് ഇനി 6 മ. 12 മി.',
       );
       expect(
         AppStrings.newPuzzleIn(const Duration(seconds: 5)),
-        'പുതിയ പസിലിന് ഇനി 1 മിനിറ്റ്',
+        'പുതിയ പസിലിന് ഇനി 1 മി.',
       );
       expect(AppStrings.newPuzzleIn(Duration.zero), AppStrings.newPuzzleReady);
     });

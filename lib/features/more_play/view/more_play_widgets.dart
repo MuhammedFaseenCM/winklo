@@ -104,7 +104,7 @@ class MorePlaySectionTitle extends StatelessWidget {
             style: theme.textTheme.labelMedium?.copyWith(
               color: ZipColors.inkSoft,
               fontWeight: FontWeight.w800,
-              letterSpacing: 1.4,
+              letterSpacing: latinTracking(1.4),
             ),
           ),
           if (hint != null) ...[

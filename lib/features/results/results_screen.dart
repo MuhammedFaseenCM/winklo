@@ -526,7 +526,7 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               color: ZipColors.inkSoft,
               fontWeight: FontWeight.w700,
-              letterSpacing: 2.5,
+              letterSpacing: latinTracking(2.5),
             ),
           ),
           if (widget.points != null) ...[
@@ -553,7 +553,7 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
                           ),
                     ),
                     Text(
-                      'points',
+                      AppStrings.resultsPointsLabel,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: ZipColors.inkSoft,
                         fontWeight: FontWeight.w700,

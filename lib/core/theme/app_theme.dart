@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../strings/app_strings.dart';
+
 /// Dark Ink & Ember — canvas matches app icon ink; ember path accent.
 abstract final class ZipColors {
   /// App canvas / scaffold (app icon background).
@@ -79,6 +81,11 @@ abstract final class ZipColors {
   static const skyGlow = Color(0x4D38BDF8);
   static const glassBorder = Color(0x3394A3B8);
 }
+
+/// [spacing] for a Latin label, and none in Malayalam: tracking pulls
+/// Malayalam's conjuncts apart.
+double latinTracking(double spacing) =>
+    AppStrings.languageCode == 'ml' ? 0 : spacing;
 
 /// [style] with Noto Sans Malayalam after its own fallbacks: Lexend has no
 /// Malayalam. The font is bundled under `assets/google_fonts/`, so

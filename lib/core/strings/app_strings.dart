@@ -84,6 +84,7 @@ abstract final class AppStrings {
     totalSeconds: totalSeconds,
   );
   static String get homePerfectDayBadge => _t.homePerfectDayBadge;
+  static String get homeDailyBadge => _t.homeDailyBadge;
 
   // Path Words
   static String get pathWordsTitle => _t.pathWordsTitle;
@@ -163,6 +164,7 @@ abstract final class AppStrings {
   static String clearedIn(String time) => _t.clearedIn(time);
   static String rankToday(int rank) => _t.rankToday(rank);
   static String get resultsTimeLabel => _t.resultsTimeLabel;
+  static String get resultsPointsLabel => _t.resultsPointsLabel;
   static String saveTimeToBoard(String timeLabel) =>
       _t.saveTimeToBoard(timeLabel);
   static String get saveTimeSignInTitle => _t.saveTimeSignInTitle;

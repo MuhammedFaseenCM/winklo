@@ -254,7 +254,7 @@ class _LocalResultCardState extends State<_LocalResultCard> {
             style: theme.textTheme.titleSmall?.copyWith(
               color: ZipColors.inkSoft,
               fontWeight: FontWeight.w700,
-              letterSpacing: 2.5,
+              letterSpacing: latinTracking(2.5),
             ),
           ),
           if (args.improved) ...[

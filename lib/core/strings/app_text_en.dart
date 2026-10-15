@@ -148,6 +148,9 @@ final class AppTextEn implements AppText {
   @override
   String get homePerfectDayBadge => 'Perfect day';
 
+  @override
+  String get homeDailyBadge => 'DAILY';
+
   // Path Words
   @override
   String get pathWordsTitle => 'Path Words';
@@ -354,6 +357,9 @@ final class AppTextEn implements AppText {
 
   @override
   String get resultsTimeLabel => 'time';
+
+  @override
+  String get resultsPointsLabel => 'points';
 
   @override
   String saveTimeToBoard(String timeLabel) =>

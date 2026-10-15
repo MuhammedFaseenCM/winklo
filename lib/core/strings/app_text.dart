@@ -60,6 +60,9 @@ abstract interface class AppText {
   });
   String get homePerfectDayBadge;
 
+  /// The small chip next to the Home title.
+  String get homeDailyBadge;
+
   // Path Words
   String get pathWordsTitle;
   String get pathWordsTagline;
@@ -130,6 +133,7 @@ abstract interface class AppText {
   String clearedIn(String time);
   String rankToday(int rank);
   String get resultsTimeLabel;
+  String get resultsPointsLabel;
   String saveTimeToBoard(String timeLabel);
   String get saveTimeSignInTitle;
   String get saveTimeSignInBody;
