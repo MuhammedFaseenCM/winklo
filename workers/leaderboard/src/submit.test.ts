@@ -231,6 +231,43 @@ describe('handleSubmit', () => {
     expect(weekly.update.fields.totalSeconds).toEqual({ integerValue: '42' });
   });
 
+  it('skips the commit when a replay changes nothing', async () => {
+    const entry = {
+      timeSeconds: 30,
+      currentStreak: 1,
+      displayName: 'Ada',
+      photoUrl: null,
+      avatarId: 'preset_01',
+    };
+    const fake = fakeFirestore({
+      ...zipDoc,
+      [`${DOCS}/leaderboards/zip/daily/2026-10-15/entries/u1`]: {
+        fields: encodeFields(entry),
+        updateTime: 'D1',
+      },
+      [`${DOCS}/leaderboards/zip/all_time/u1`]: {
+        fields: encodeFields(entry),
+        updateTime: 'A1',
+      },
+      [`${DOCS}/leaderboards/zip/weekly/2026-W42/entries/u1`]: {
+        fields: encodeFields({
+          days: { '2026-10-15': 30 },
+          daysCleared: 1,
+          totalSeconds: 30,
+          displayName: 'Ada',
+          photoUrl: null,
+          avatarId: 'preset_01',
+        }),
+        updateTime: 'W1',
+      },
+    });
+
+    const res = await handleSubmit(deps, 'u1', body({ timeSeconds: 42 }));
+
+    expect(res).toEqual({ status: 200, body: { accepted: true, improved: false, rank: null } });
+    expect(fake.commits).toHaveLength(0);
+  });
+
   it('checks Sudoku against the older id too', async () => {
     const fake = fakeFirestore({
       [`${DOCS}/sudoku_levels/sudoku_20261015`]: {

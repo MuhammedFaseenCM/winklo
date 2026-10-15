@@ -66,6 +66,16 @@ void main() {
     );
     expect(worker, leaderboardMinSeconds);
     expect(rulesMap, leaderboardMinSeconds);
+    final purge = read('tools/purge_fast_leaderboard_times.mjs');
+    expect(
+      numberMap(
+        purge
+            .substring(purge.indexOf('const MIN_SECONDS = {'))
+            .split(';')
+            .first,
+      ),
+      leaderboardMinSeconds,
+    );
     expect(tsNumber(limits, 'MAX_SECONDS'), leaderboardMaxSeconds);
   });
 

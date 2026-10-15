@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { planEntryWrite, planWeeklyWrite, toCommitWrite, type Submission } from './entries';
+import {
+  changesNothing,
+  planEntryWrite,
+  planWeeklyWrite,
+  toCommitWrite,
+  type Submission,
+} from './entries';
 
 const identity = { displayName: 'Ada', photoUrl: null, avatarId: 'preset_01' };
 
@@ -132,5 +138,51 @@ describe('toCommitWrite', () => {
     const write = toCommitWrite('doc', planEntryWrite(stored({ timeSeconds: 1 }), submission));
     expect(write.updateTransforms).toBeUndefined();
     expect(write.currentDocument).toEqual({ updateTime: 'T1' });
+  });
+});
+
+describe('planEntryWrite with the game minimum', () => {
+  it('replaces a stored time under the minimum, even with a slower one', () => {
+    const plan = planEntryWrite(stored({ timeSeconds: 3 }), submission, 10);
+    expect(plan.improved).toBe(true);
+    expect(plan.fields.timeSeconds).toBe(40);
+    expect(plan.touchUpdatedAt).toBe(true);
+  });
+
+  it('keeps a stored time at the minimum', () => {
+    expect(planEntryWrite(stored({ timeSeconds: 10 }), submission, 10).improved).toBe(false);
+  });
+});
+
+describe('changesNothing', () => {
+  it('skips a replay that leaves the entry as it is', () => {
+    const existing = stored({
+      timeSeconds: 30,
+      currentStreak: 3,
+      displayName: 'Ada',
+      photoUrl: null,
+      avatarId: 'preset_01',
+    });
+    expect(changesNothing(existing, planEntryWrite(existing, submission))).toBe(true);
+  });
+
+  it('writes when the streak or identity changed, or the doc is new', () => {
+    const existing = stored({ timeSeconds: 30, currentStreak: 2, displayName: 'Ada' });
+    expect(changesNothing(existing, planEntryWrite(existing, submission))).toBe(false);
+    expect(changesNothing(null, planEntryWrite(null, submission))).toBe(false);
+  });
+
+  it('compares weekly days by value', () => {
+    const existing = stored({
+      days: { '2026-10-12': 61 },
+      daysCleared: 1,
+      totalSeconds: 61,
+    });
+    expect(
+      changesNothing(existing, planWeeklyWrite(existing, '2026-10-12', 90, null)),
+    ).toBe(true);
+    expect(
+      changesNothing(existing, planWeeklyWrite(existing, '2026-10-13', 90, null)),
+    ).toBe(false);
   });
 });

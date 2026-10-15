@@ -10,7 +10,13 @@
  */
 
 import { compactDateId, isDayLive, isoWeekId, parseDayId } from './days';
-import { planEntryWrite, planWeeklyWrite, toCommitWrite, type Submission } from './entries';
+import {
+  changesNothing,
+  planEntryWrite,
+  planWeeklyWrite,
+  toCommitWrite,
+  type Submission,
+} from './entries';
 import {
   ContentionError,
   batchGet,
@@ -161,26 +167,31 @@ export async function handleSubmit(
       currentStreak: cappedStreak(parsed.currentStreak, docs.get(paths.streak) ?? null),
     };
 
+    const minSeconds = MIN_SECONDS[parsed.gameId];
     let entries = docs;
     for (let attempt = 0; ; attempt++) {
-      const daily = planEntryWrite(entries.get(paths.daily) ?? null, submission);
-      const allTime = planEntryWrite(entries.get(paths.allTime) ?? null, submission);
+      const stored = (name: string) => entries.get(name) ?? null;
+      const daily = planEntryWrite(stored(paths.daily), submission, minSeconds);
+      const allTime = planEntryWrite(stored(paths.allTime), submission, minSeconds);
       const weekly = planWeeklyWrite(
-        entries.get(paths.weekly) ?? null,
+        stored(paths.weekly),
         parsed.dayId,
         parsed.timeSeconds,
         submission.identity,
       );
+      const writes = (
+        [
+          [paths.daily, daily],
+          [paths.allTime, allTime],
+          [paths.weekly, weekly],
+        ] as const
+      )
+        .filter(([name, plan]) => !changesNothing(stored(name), plan))
+        .map(([name, plan]) => toCommitWrite(name, plan));
       try {
-        await commit({
-          projectId: deps.projectId,
-          accessToken,
-          writes: [
-            toCommitWrite(paths.daily, daily),
-            toCommitWrite(paths.allTime, allTime),
-            toCommitWrite(paths.weekly, weekly),
-          ],
-        });
+        if (writes.length > 0) {
+          await commit({ projectId: deps.projectId, accessToken, writes });
+        }
         return {
           status: 200,
           body: { accepted: true, improved: daily.improved, rank: null },
