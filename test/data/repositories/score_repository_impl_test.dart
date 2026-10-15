@@ -127,6 +127,26 @@ void main() {
       expect(repo.getClearMeta('zip_x'), isNull);
     });
 
+    test('submitScore stores the bonus words with the flags', () async {
+      final (repo, _) = await build();
+      await repo.submitScore(
+        modeKey: 'path_words_20261017',
+        points: 900,
+        timeSeconds: 40,
+        usedHints: false,
+        hadMistakes: false,
+        bonusWords: const ['stare', 'tears'],
+      );
+      expect(
+        repo.getClearMeta('path_words_20261017'),
+        const ClearMeta(
+          usedHints: false,
+          hadMistakes: false,
+          bonusWords: ['stare', 'tears'],
+        ),
+      );
+    });
+
     test('submitScore ignores partial flags', () async {
       final (repo, _) = await build();
       await repo.submitScore(

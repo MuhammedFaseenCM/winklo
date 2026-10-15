@@ -1,3 +1,5 @@
+import '../../domain/entities/path_words_clear_summary.dart';
+
 class ResultsArgs {
   const ResultsArgs({
     required this.title,
@@ -15,6 +17,7 @@ class ResultsArgs {
     this.usedHints,
     this.hadMistakes,
     this.day,
+    this.pathWords,
   });
 
   final String title;
@@ -36,4 +39,7 @@ class ResultsArgs {
 
   /// The daily this run cleared, for the share text.
   final DateTime? day;
+
+  /// Path Words only: the theme, found words and bonus words to show.
+  final PathWordsClearSummary? pathWords;
 }

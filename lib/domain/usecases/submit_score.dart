@@ -11,6 +11,7 @@ class SubmitScore {
     bool? usedHints,
     bool? hadMistakes,
     String? board,
+    List<String>? bonusWords,
   }) => _repo.submitScore(
     modeKey: modeKey,
     points: points,
@@ -18,5 +19,6 @@ class SubmitScore {
     usedHints: usedHints,
     hadMistakes: hadMistakes,
     board: board,
+    bonusWords: bonusWords,
   );
 }

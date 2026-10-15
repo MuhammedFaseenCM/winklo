@@ -17,9 +17,9 @@ abstract class ScoreRepository {
   int? getBestDailyTimeSeconds(String gameId, {String? excludingPlayId});
 
   /// Improve-only. When both [usedHints] and [hadMistakes] are given with a
-  /// [timeSeconds], they are stored as [ClearMeta] if this submit sets a new
-  /// best time or the best time has no meta yet. [board] follows the same
-  /// rule.
+  /// [timeSeconds], they are stored as [ClearMeta] (with [bonusWords]) if
+  /// this submit sets a new best time or the best time has no meta yet.
+  /// [board] follows the same rule.
   ///
   /// Returns whether points or time improved.
   Future<bool> submitScore({
@@ -29,6 +29,7 @@ abstract class ScoreRepository {
     bool? usedHints,
     bool? hadMistakes,
     String? board,
+    List<String>? bonusWords,
   });
 
   /// Improve-only restore from another copy (e.g. remote progress): points

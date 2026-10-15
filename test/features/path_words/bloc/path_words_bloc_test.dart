@@ -10,6 +10,7 @@ import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/hint_quota_repository.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
+import 'package:winklo/domain/repositories/word_list_repository.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
 import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
@@ -74,6 +75,57 @@ class _FakeHintQuota implements HintQuotaRepository {
   @override
   Future<bool> restoreUsed(String gameId, String playId, int used) async =>
       false;
+}
+
+class _FakeWordList implements WordListRepository {
+  _FakeWordList(this.words, {this.fails = false});
+
+  final Set<String> words;
+  final bool fails;
+  var loads = 0;
+
+  @override
+  Future<Set<String>> loadBonusWords() async {
+    loads++;
+    if (fails) throw StateError('no list');
+    return words;
+  }
+
+  @override
+  Future<List<String>> loadDailyNouns({required String dateId}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<String>> loadEnglishWords({int minLen = 4, int maxLen = 10}) =>
+      throw UnimplementedError();
+}
+
+/// w o r      "word" runs w-o-r and down to d; no target uses those cells.
+/// x s d      target t1 "xs"
+/// g h i      target t0 "ghi"
+PathWordsPuzzle _bonusPuzzle({required DateTime day}) {
+  return PathWordsPuzzle(
+    id: 'bonus',
+    day: day,
+    size: 3,
+    letters: const ['w', 'o', 'r', 'x', 's', 'd', 'g', 'h', 'i'],
+    targets: const [
+      PathWordsTarget(
+        id: 't0',
+        word: 'ghi',
+        start: Cell(2, 0),
+        path: [Cell(2, 0), Cell(2, 1), Cell(2, 2)],
+        colorIndex: 0,
+      ),
+      PathWordsTarget(
+        id: 't1',
+        word: 'xs',
+        start: Cell(1, 0),
+        path: [Cell(1, 0), Cell(1, 1)],
+        colorIndex: 1,
+      ),
+    ],
+  );
 }
 
 class _FakeClock {
@@ -175,8 +227,10 @@ void main() {
     _MemoryInProgressRuns? drafts,
     SfxService? sfx,
     HapticsService? haptics,
+    WordListRepository? wordList,
   }) {
     return PathWordsBloc(
+      wordList: wordList,
       inProgressRuns: drafts ?? _MemoryInProgressRuns(),
       generateDailyPathWords: generateDaily,
       submitScore: submitScore,
@@ -2195,4 +2249,248 @@ void main() {
       verifyNever(() => b.sfx!.play(SfxId.reject));
     },
   );
+
+  group('bonus words', () {
+    const word = [Cell(0, 0), Cell(0, 1), Cell(0, 2), Cell(1, 2)];
+
+    void trace(PathWordsBloc bloc, List<Cell> cells) {
+      bloc.add(PathWordsEvent.pointerDown(cells.first));
+      for (final cell in cells.skip(1)) {
+        bloc.add(PathWordsEvent.pointerEnter(cell));
+      }
+      bloc.add(const PathWordsEvent.pointerUp());
+    }
+
+    Future<PathWordsBloc> ready({
+      WordListRepository? wordList,
+      _MemoryInProgressRuns? drafts,
+      HapticsService? haptics,
+    }) async {
+      when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+        (inv) async => _bonusPuzzle(day: inv.namedArguments[#day] as DateTime),
+      );
+      final bloc = buildBloc(
+        wordList: wordList,
+        drafts: drafts,
+        haptics: haptics,
+        wait: (_) async {},
+      );
+      bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+      await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+      await pumpEventQueue();
+      return bloc;
+    }
+
+    test(
+      'a real word that is not a target is a bonus, not a wrong stroke',
+      () async {
+        final haptics = _MockHaptics();
+        final drafts = _MemoryInProgressRuns();
+        final words = _FakeWordList({'word', 'words'});
+        final bloc = await ready(
+          wordList: words,
+          drafts: drafts,
+          haptics: haptics,
+        );
+
+        trace(bloc, word);
+        await bloc.stream.firstWhere((s) => s.bonusWords.isNotEmpty);
+        expect(bloc.state.bonusWords, ['word']);
+        expect(bloc.state.placedPaths, isEmpty);
+        expect(bloc.state.activePath, isEmpty);
+        expect(bloc.state.ruleTip, isNull);
+        verify(() => haptics.play(HapticKind.light)).called(1);
+        await pumpEventQueue();
+        expect(
+          drafts.runs['${GameIds.pathWords}_20260917']?.board['bonusWords'],
+          ['word'],
+        );
+        expect(words.loads, 1);
+        await bloc.close();
+      },
+    );
+
+    test('the same word twice is a wrong stroke the second time', () async {
+      final bloc = await ready(wordList: _FakeWordList({'word'}));
+      trace(bloc, word);
+      await bloc.stream.firstWhere((s) => s.bonusWords.isNotEmpty);
+      trace(bloc, word);
+      await bloc.stream.firstWhere((s) => s.placedPaths.isNotEmpty);
+      expect(bloc.state.bonusWords, ['word']);
+      expect(bloc.state.placedPaths.single.isCorrect, isFalse);
+      await bloc.close();
+    });
+
+    test(
+      'a stroke that spells no word, or a short one, is a wrong stroke',
+      () async {
+        final bloc = await ready(
+          wordList: _FakeWordList({'word', 'xsdr', 'sdr'}),
+        );
+        // "dro" is not in the list.
+        trace(bloc, const [Cell(1, 2), Cell(0, 2), Cell(0, 1)]);
+        await bloc.stream.firstWhere((s) => s.placedPaths.length == 1);
+        expect(bloc.state.bonusWords, isEmpty);
+        await bloc.close();
+      },
+    );
+
+    test('without the word list loaded, strokes work as before', () async {
+      for (final wordList in [
+        null,
+        _FakeWordList({'word'}, fails: true),
+      ]) {
+        final bloc = await ready(wordList: wordList);
+        trace(bloc, word);
+        await bloc.stream.firstWhere((s) => s.placedPaths.isNotEmpty);
+        expect(bloc.state.bonusWords, isEmpty);
+        await bloc.close();
+      }
+    });
+
+    test('bonus words come back with a saved run', () async {
+      final drafts = _MemoryInProgressRuns();
+      drafts.runs['${GameIds.pathWords}_20260917'] = const InProgressRun(
+        gameId: GameIds.pathWords,
+        playId: '20260917',
+        elapsedMs: 3000,
+        board: {
+          'activePath': <List<int>>[],
+          'placedPaths': <Map<String, Object>>[],
+          'completedTargetIds': <String>[],
+          'hintRevealLength': 0,
+          'bonusWords': ['word', 7],
+        },
+      );
+      final bloc = await ready(
+        wordList: _FakeWordList({'word'}),
+        drafts: drafts,
+      );
+      expect(bloc.state.bonusWords, ['word']);
+      // Already found, so it is a wrong stroke now.
+      trace(bloc, word);
+      await bloc.stream.firstWhere((s) => s.placedPaths.isNotEmpty);
+      expect(bloc.state.bonusWords, ['word']);
+      await bloc.close();
+    });
+
+    test('undo leaves bonus words, reset clears them', () async {
+      final bloc = await ready(wordList: _FakeWordList({'word'}));
+      trace(bloc, word);
+      await bloc.stream.firstWhere((s) => s.bonusWords.isNotEmpty);
+      bloc.add(const PathWordsEvent.undo());
+      await pumpEventQueue();
+      expect(bloc.state.bonusWords, ['word']);
+      bloc.add(const PathWordsEvent.reset());
+      await bloc.stream.firstWhere((s) => s.bonusWords.isEmpty);
+      await bloc.close();
+    });
+
+    test(
+      'the clear saves them with the clear meta and leaves the flags, time and leaderboard alone',
+      () async {
+        when(
+          () => submitScore(
+            modeKey: any(named: 'modeKey'),
+            points: any(named: 'points'),
+            timeSeconds: any(named: 'timeSeconds'),
+            usedHints: any(named: 'usedHints'),
+            hadMistakes: any(named: 'hadMistakes'),
+            bonusWords: any(named: 'bonusWords'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => recordDailyClear(
+            gameId: any(named: 'gameId'),
+            dateId: any(named: 'dateId'),
+          ),
+        ).thenAnswer(
+          (_) async => const GameStreak(
+            gameId: GameIds.pathWords,
+            current: 1,
+            longest: 1,
+            lastClearedDateId: '20260917',
+          ),
+        );
+        final bloc = await ready(wordList: _FakeWordList({'word'}));
+        trace(bloc, word);
+        await bloc.stream.firstWhere((s) => s.bonusWords.isNotEmpty);
+        trace(bloc, const [Cell(1, 0), Cell(1, 1)]);
+        trace(bloc, const [Cell(2, 0), Cell(2, 1), Cell(2, 2)]);
+        await bloc.stream.firstWhere(
+          (s) => s.status == PathWordsStatus.navigating,
+        );
+
+        verify(
+          () => submitScore(
+            modeKey: 'path_words_20260917',
+            points: any(named: 'points'),
+            timeSeconds: any(named: 'timeSeconds'),
+            usedHints: false,
+            hadMistakes: false,
+            bonusWords: any(named: 'bonusWords', that: equals(['word'])),
+          ),
+        ).called(1);
+        verify(
+          () => submitLeaderboardTime(
+            gameId: GameIds.pathWords,
+            timeSeconds: any(named: 'timeSeconds'),
+            usedHints: false,
+            hadMistakes: false,
+            currentStreak: 1,
+            dayId: any(named: 'dayId'),
+            playId: '20260917',
+          ),
+        ).called(1);
+        final summary = bloc.state.resultsExtra?.pathWords;
+        expect(summary?.bonusWords, ['word']);
+        expect(summary?.words, ['xs', 'ghi']);
+        await bloc.close();
+      },
+    );
+
+    test('a clear without bonus words sends none', () async {
+      when(
+        () => submitScore(
+          modeKey: any(named: 'modeKey'),
+          points: any(named: 'points'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          bonusWords: any(named: 'bonusWords'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => recordDailyClear(
+          gameId: any(named: 'gameId'),
+          dateId: any(named: 'dateId'),
+        ),
+      ).thenAnswer(
+        (_) async => const GameStreak(
+          gameId: GameIds.pathWords,
+          current: 1,
+          longest: 1,
+          lastClearedDateId: '20260917',
+        ),
+      );
+      final bloc = await ready(wordList: _FakeWordList({'word'}));
+      trace(bloc, const [Cell(1, 0), Cell(1, 1)]);
+      trace(bloc, const [Cell(2, 0), Cell(2, 1), Cell(2, 2)]);
+      await bloc.stream.firstWhere(
+        (s) => s.status == PathWordsStatus.navigating,
+      );
+      verify(
+        () => submitScore(
+          modeKey: 'path_words_20260917',
+          points: any(named: 'points'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: false,
+          hadMistakes: false,
+          bonusWords: null,
+        ),
+      ).called(1);
+      expect(bloc.state.resultsExtra?.pathWords?.bonusWords, isEmpty);
+      await bloc.close();
+    });
+  });
 }

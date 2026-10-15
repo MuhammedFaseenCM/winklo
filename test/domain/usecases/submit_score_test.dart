@@ -62,4 +62,37 @@ void main() {
       ),
     ).called(1);
   });
+
+  test('forwards bonus words', () async {
+    when(
+      () => repo.submitScore(
+        modeKey: 'path_words_20261017',
+        points: 900,
+        timeSeconds: 40,
+        usedHints: false,
+        hadMistakes: false,
+        bonusWords: const ['stare'],
+      ),
+    ).thenAnswer((_) async => true);
+
+    await usecase(
+      modeKey: 'path_words_20261017',
+      points: 900,
+      timeSeconds: 40,
+      usedHints: false,
+      hadMistakes: false,
+      bonusWords: const ['stare'],
+    );
+
+    verify(
+      () => repo.submitScore(
+        modeKey: 'path_words_20261017',
+        points: 900,
+        timeSeconds: 40,
+        usedHints: false,
+        hadMistakes: false,
+        bonusWords: const ['stare'],
+      ),
+    ).called(1);
+  });
 }
