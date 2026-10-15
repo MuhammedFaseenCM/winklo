@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:bloc/bloc.dart';
 
@@ -14,6 +15,8 @@ import '../../../domain/entities/path_words_clear_summary.dart';
 import '../../../domain/entities/path_words_puzzle.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/logic/run_rollover.dart';
+import '../../../domain/path_words/path_words_generator.dart';
+import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/path_words/path_words_rules.dart';
@@ -21,6 +24,7 @@ import '../../../domain/path_words/path_words_scoring.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/repositories/word_list_repository.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
@@ -53,7 +57,21 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     this.sfx,
     this.haptics,
     this.wordList,
-  }) : _now = now ?? DateTime.now,
+    this.mode = PlayMode.daily,
+    this.modeRecords,
+    this.practiceWords,
+    PathWordsPuzzle Function(int seed, List<String> words)? practicePuzzle,
+    int Function()? newPracticeSeed,
+  }) : assert(
+         mode == PlayMode.daily || modeRecords != null,
+         'Archive and practice runs keep their bests in modeRecords',
+       ),
+       practicePuzzle =
+           practicePuzzle ??
+           ((seed, words) =>
+               PathWordsGenerator.practice(seed: seed, words: words)),
+       _newPracticeSeed = newPracticeSeed ?? (() => Random().nextInt(1 << 31)),
+       _now = now ?? DateTime.now,
        _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
        super(PathWordsState.initial((now ?? DateTime.now)())) {
     on<PathWordsStarted>(_onStarted);
@@ -65,6 +83,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     on<PathWordsReset>(_onReset);
     on<PathWordsPauseRun>(_onPauseRun);
     on<PathWordsResumeRun>(_onResumeRun);
+    on<PathWordsNewBoard>(_onNewBoard);
   }
 
   final GenerateDailyPathWords generateDailyPathWords;
@@ -85,6 +104,23 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   /// Bonus words come from its list; without it every non-target stroke is
   /// a wrong stroke, as before.
   final WordListRepository? wordList;
+
+  /// Daily, archive or practice. Only daily runs touch streaks, boards, the
+  /// daily best and the cleared lock; [hintQuota] is the mode's own.
+  final PlayMode mode;
+
+  /// Bests of archive and practice runs; required for those modes.
+  final PlayModeRecordRepository? modeRecords;
+
+  /// Practice words; the bundled list from [wordList] by default.
+  final Future<List<String>> Function()? practiceWords;
+
+  /// Builds a practice board from a seed.
+  final PathWordsPuzzle Function(int seed, List<String> words) practicePuzzle;
+  final int Function() _newPracticeSeed;
+
+  /// Seed of the practice board on screen, kept in its draft.
+  int? _practiceSeed;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   String? _playId;
@@ -107,6 +143,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     PathWordsStarted event,
     Emitter<PathWordsState> emit,
   ) async {
+    if (!mode.isDaily) return _startOffDaily(emit);
     final seed = event.date ?? _now();
     final day = DateTime(seed.year, seed.month, seed.day);
     final playId = PlayPeriod.id(seed, playPeriod);
@@ -688,8 +725,11 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     final now = _now();
     final playId = _playId;
     // A run left open over midnight finishes for its own day; one older than
-    // that gives way to today's puzzle.
-    if (playId != null && !canFinishRun(playId, now, playPeriod)) {
+    // that gives way to today's puzzle. Archive and practice runs have no
+    // day to leave behind.
+    if (mode.isDaily &&
+        playId != null &&
+        !canFinishRun(playId, now, playPeriod)) {
       await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
       add(PathWordsEvent.started(date: now));
       return;
@@ -708,6 +748,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         state.status == PathWordsStatus.navigating) {
       return;
     }
+    if (!mode.isDaily) return _finishOffDaily(emit);
     final now = _now();
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     final elapsed = clock.displayedSeconds(at: now);
@@ -816,6 +857,209 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     );
   }
 
+  Future<void> _onNewBoard(
+    PathWordsNewBoard event,
+    Emitter<PathWordsState> emit,
+  ) async {
+    if (!mode.isPractice) return;
+    if (state.status == PathWordsStatus.celebrating ||
+        state.status == PathWordsStatus.submitting ||
+        state.status == PathWordsStatus.navigating) {
+      return;
+    }
+    await _startOffDaily(emit, freshPractice: true);
+  }
+
+  /// Starts (or resumes) an archive or practice run. It never reads the
+  /// daily lock or today's draft: the run has its own id ([PlayMode.runId]).
+  Future<void> _startOffDaily(
+    Emitter<PathWordsState> emit, {
+    bool freshPractice = false,
+  }) async {
+    final runId = mode.runId(dailyPlayId: '');
+    _playId = runId;
+    _clock = null;
+    final today = _now();
+    final day = mode.day ?? DateTime(today.year, today.month, today.day);
+    emit(
+      state.copyWith(
+        status: PathWordsStatus.loading,
+        day: day,
+        puzzle: null,
+        activePath: const [],
+        placedPaths: const [],
+        completedTargetIds: const {},
+        bonusWords: const [],
+        hintsRemaining: hintQuota.remaining(GameIds.pathWords, runId),
+        hintRevealLength: 0,
+        usedHintsThisRun: false,
+        elapsedMs: 0,
+        resumedAt: null,
+        hintFlashCell: null,
+        errorMessage: null,
+        ruleTip: null,
+        finished: false,
+        points: null,
+        timeSeconds: null,
+        improved: null,
+        resultsExtra: null,
+      ),
+    );
+
+    try {
+      if (freshPractice) {
+        await inProgressRuns.clear(gameId: GameIds.pathWords, playId: runId);
+        if (emit.isDone) return;
+      }
+      var draft = freshPractice
+          ? null
+          : await inProgressRuns.load(gameId: GameIds.pathWords, playId: runId);
+      if (emit.isDone) return;
+
+      final PathWordsPuzzle puzzle;
+      if (mode.isArchive) {
+        // Past days are always live and read by id, like the dailies.
+        puzzle = await generateDailyPathWords(
+          day: day,
+          period: PlayPeriod.daily,
+        );
+      } else {
+        final saved = draft?.board['seed'];
+        final seed = saved is num ? saved.toInt() : _newPracticeSeed();
+        _practiceSeed = seed;
+        final words =
+            await (practiceWords?.call() ??
+                wordList?.loadPracticeWords() ??
+                Future<List<String>>.error(StateError('No practice words')));
+        puzzle = practicePuzzle(seed, words);
+      }
+      if (emit.isDone) return;
+
+      if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
+        await inProgressRuns.clear(gameId: GameIds.pathWords, playId: runId);
+        if (emit.isDone) return;
+        draft = null;
+      }
+      if (draft == null && mode.isArchive) {
+        // A fresh archive run gets a full set of hints.
+        await modeRecords!.clearHints(GameIds.pathWords, runId);
+        if (emit.isDone) return;
+      }
+
+      unawaited(_loadBonusWordList());
+      final now = _now();
+      final restored = draft == null ? null : _restoreFromDraft(draft);
+      _clock = draft == null
+          ? PlayRunClock.start(at: now)
+          : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+      emit(
+        state.copyWith(
+          status: PathWordsStatus.ready,
+          puzzle: puzzle,
+          elapsedMs: draft?.elapsedMs ?? 0,
+          resumedAt: now,
+          hintsRemaining: hintQuota.remaining(GameIds.pathWords, runId),
+          hintRevealLength: restored?.hintRevealLength ?? 0,
+          usedHintsThisRun: draft?.usedHintsThisRun ?? false,
+          activePath: restored?.activePath ?? const [],
+          placedPaths: restored?.placedPaths ?? const [],
+          completedTargetIds: restored?.completedTargetIds ?? const {},
+          bonusWords: restored?.bonusWords ?? const [],
+        ),
+      );
+      // Keep the practice seed, so leaving and coming back finds this board.
+      if (draft == null && mode.isPractice) await _persistDraft();
+      await analytics.logGameStarted(
+        gameId: GameIds.pathWords,
+        dayId: runId,
+        resumed: draft != null,
+      );
+    } catch (_) {
+      if (emit.isDone) return;
+      emit(
+        state.copyWith(
+          status: PathWordsStatus.failed,
+          errorMessage: AppStrings.pathWordsFailed,
+        ),
+      );
+    }
+  }
+
+  /// Finishes an archive or practice run: a local best, no score, streak,
+  /// leaderboard or daily best.
+  Future<void> _finishOffDaily(Emitter<PathWordsState> emit) async {
+    final now = _now();
+    final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
+    final elapsed = clock.displayedSeconds(at: now);
+    _clock = clock.pause(at: now);
+    final points = PathWordsScoring.pointsForElapsed(elapsed);
+    final runId = mode.runId(dailyPlayId: '');
+
+    emit(
+      state.copyWith(
+        finished: true,
+        status: PathWordsStatus.celebrating,
+        points: points,
+        timeSeconds: elapsed,
+        elapsedMs: _clock!.elapsedMs,
+        resumedAt: null,
+        hintFlashCell: null,
+      ),
+    );
+
+    await inProgressRuns.clear(gameId: GameIds.pathWords, playId: runId);
+    await _wait(celebrationDuration);
+    if (emit.isDone) return;
+    emit(state.copyWith(status: PathWordsStatus.submitting));
+
+    final records = modeRecords!;
+    final best = await records.recordTime(
+      mode.recordKey(GameIds.pathWords),
+      elapsed,
+    );
+    if (mode.isArchive) await records.clearHints(GameIds.pathWords, runId);
+
+    await analytics.logGameCompleted(
+      gameId: GameIds.pathWords,
+      points: points,
+      timeSeconds: elapsed,
+      dayId: runId,
+      usedHints: state.usedHintsThisRun,
+    );
+    if (emit.isDone) return;
+
+    emit(
+      state.copyWith(
+        improved: best.improved,
+        status: PathWordsStatus.navigating,
+        resultsExtra: ResultsArgs(
+          title: AppStrings.pathWordsClearedTitle,
+          subtitle: '',
+          timeSeconds: elapsed,
+          improved: best.improved,
+          points: points,
+          gameId: GameIds.pathWords,
+          usedHints: state.usedHintsThisRun,
+          hadMistakes: false,
+          day: mode.day,
+          pathWords: _clearSummary(),
+          local: LocalResultInfo(
+            kind: mode.isArchive
+                ? LocalResultKind.archive
+                : LocalResultKind.practice,
+            label: mode.isArchive
+                ? AppStrings.archiveRunLabel(mode.day!)
+                : AppStrings.practiceRunLabel,
+            bestSeconds: best.best,
+            againLocation: mode.isPractice
+                ? PlayMode.practice.location('/path-words')
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+
   PathWordsClearSummary? _clearSummary() {
     final puzzle = state.puzzle;
     if (puzzle == null) return null;
@@ -887,6 +1131,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           'completedTargetIds': state.completedTargetIds.toList(),
           'hintRevealLength': state.hintRevealLength,
           if (state.bonusWords.isNotEmpty) 'bonusWords': state.bonusWords,
+          if (mode.isPractice && _practiceSeed != null) 'seed': _practiceSeed,
         },
       ),
     );

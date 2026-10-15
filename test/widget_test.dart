@@ -32,7 +32,10 @@ class _MockSignOut extends Mock implements SignOut {}
 /// Daily puzzles come only from Firestore, which tests don't have.
 class _FixedPathWords extends GenerateDailyPathWords {
   @override
-  Future<PathWordsPuzzle> call({required DateTime day}) async {
+  Future<PathWordsPuzzle> call({
+    required DateTime day,
+    Duration? period,
+  }) async {
     return PathWordsPuzzle(
       id: 'daily_test',
       day: day,
