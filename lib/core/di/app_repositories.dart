@@ -32,6 +32,7 @@ import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_remote_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
+import 'package:winklo/data/repositories/settings_repository_impl.dart';
 import 'package:winklo/data/repositories/habit_repository_impl.dart';
 import 'package:winklo/data/repositories/haptics_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/sfx_settings_repository_impl.dart';
@@ -99,6 +100,8 @@ import 'package:winklo/domain/usecases/update_avatar.dart';
 import 'package:winklo/domain/usecases/update_display_name.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 
+import 'habit_providers.dart';
+
 /// [clientErrorRepository] is registered first when given so providers in this
 /// list (e.g. [SyncProgress]) can report handled errors; tests may omit it.
 List<SingleChildWidget> buildRepositoryProviders({
@@ -145,6 +148,10 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<NotificationRepository>(
       create: (context) => NotificationRepositoryImpl(
         notificationClient: context.read<NotificationClient>(),
+        announcementsEnabled: () =>
+            SettingsRepositoryImpl.announcementsEnabledIn(
+              context.read<SharedPreferences>(),
+            ),
       ),
     ),
     RepositoryProvider<InitializeNotifications>(
@@ -364,5 +371,6 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<GenerateDailySudoku>(
       create: (_) => GenerateDailySudoku(period: DevFlags.playPeriod),
     ),
+    ...buildHabitProviders(),
   ];
 }

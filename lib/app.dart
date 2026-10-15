@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/lifecycle/app_open_lifecycle.dart';
+import 'core/lifecycle/habit_refresh_lifecycle.dart';
 import 'core/lifecycle/progress_change_signal.dart';
 import 'core/lifecycle/progress_sync_lifecycle.dart';
 import 'core/router/app_router.dart';
@@ -17,6 +18,7 @@ import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/notification_repository.dart';
 import 'domain/usecases/handle_notification_tap.dart';
 import 'domain/usecases/record_app_open.dart';
+import 'domain/usecases/refresh_habit_surfaces.dart';
 import 'domain/usecases/sync_progress.dart';
 import 'features/auth/cubit/auth_cubit.dart';
 
@@ -33,6 +35,7 @@ class _WinkloAppState extends State<WinkloApp> {
   bool _tapListening = false;
   AppOpenLifecycle? _appOpenLifecycle;
   ProgressSyncLifecycle? _progressSyncLifecycle;
+  HabitRefreshLifecycle? _habitRefreshLifecycle;
 
   @override
   void didChangeDependencies() {
@@ -40,6 +43,7 @@ class _WinkloAppState extends State<WinkloApp> {
     _ensureTapListening();
     _ensureAppOpenLifecycle();
     _ensureProgressSyncLifecycle();
+    _ensureHabitRefreshLifecycle();
   }
 
   void _ensureAppOpenLifecycle() {
@@ -63,6 +67,18 @@ class _WinkloAppState extends State<WinkloApp> {
     lifecycle.start();
   }
 
+  /// Reminders and the home-screen widget follow clears, syncs and midnight.
+  void _ensureHabitRefreshLifecycle() {
+    if (_habitRefreshLifecycle != null) return;
+    final lifecycle = HabitRefreshLifecycle(
+      refresh: context.read<RefreshHabitSurfaces>().call,
+      localChanges: context.read<ProgressChangeSignal>().changes,
+      restored: _progressSyncLifecycle?.restored,
+    );
+    _habitRefreshLifecycle = lifecycle;
+    lifecycle.start();
+  }
+
   void _ensureTapListening() {
     if (_tapListening) return;
     _tapListening = true;
@@ -82,6 +98,8 @@ class _WinkloAppState extends State<WinkloApp> {
     _appOpenLifecycle = null;
     _progressSyncLifecycle?.dispose();
     _progressSyncLifecycle = null;
+    _habitRefreshLifecycle?.dispose();
+    _habitRefreshLifecycle = null;
     super.dispose();
   }
 
