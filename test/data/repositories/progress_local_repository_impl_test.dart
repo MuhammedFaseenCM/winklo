@@ -110,6 +110,15 @@ void main() {
       expect(repo.ownerUid, 'u1');
     });
 
+    test('removes the announced achievements with the progress', () async {
+      final (repo, prefs) = await build({
+        'achievements_seen': ['first_clear_zip'],
+        'history_uploaded_u1': true,
+      });
+      await repo.purgeUserProgress();
+      expect(prefs.getKeys(), {'history_uploaded_u1'});
+    });
+
     test('purged keys are gone after a reload', () async {
       final (repo, _) = await build({'best_time_sudoku_20261007': 80});
       await repo.purgeUserProgress();
@@ -122,6 +131,31 @@ void main() {
       final (repo, prefs) = await build();
       await repo.purgeUserProgress();
       expect(prefs.getKeys(), isEmpty);
+    });
+  });
+
+  group('history upload flag', () {
+    test('is unset until set, per uid', () async {
+      final (repo, prefs) = await build();
+      expect(repo.isHistoryUploaded('u1'), isFalse);
+      await repo.setHistoryUploaded('u1');
+      expect(repo.isHistoryUploaded('u1'), isTrue);
+      expect(repo.isHistoryUploaded('u2'), isFalse);
+      expect(prefs.getBool('history_uploaded_u1'), isTrue);
+    });
+
+    test('survives a purge and a stash restore', () async {
+      final (repo, _) = await build({'best_time_zip_daily_20261007': 12});
+      await repo.setHistoryUploaded('u1');
+      await repo.stashUserProgress('u1');
+      await repo.purgeUserProgress();
+      await repo.restoreStashedProgress('u1');
+      expect(repo.isHistoryUploaded('u1'), isTrue);
+    });
+
+    test('an empty uid is never uploaded', () async {
+      final (repo, _) = await build({'history_uploaded_': true});
+      expect(repo.isHistoryUploaded(''), isFalse);
     });
   });
 

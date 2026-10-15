@@ -95,6 +95,7 @@ import 'package:winklo/domain/usecases/sync_fcm_token.dart';
 import 'package:winklo/domain/usecases/sync_progress.dart';
 import 'package:winklo/domain/usecases/update_avatar.dart';
 import 'package:winklo/domain/usecases/update_display_name.dart';
+import 'package:winklo/domain/usecases/upload_progress_history.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 
 /// [clientErrorRepository] is registered first when given so providers in this
@@ -257,6 +258,14 @@ List<SingleChildWidget> buildRepositoryProviders({
         progress: context.read<ProgressLocalRepository>(),
       ),
     ),
+    RepositoryProvider<UploadProgressHistory>(
+      create: (context) => UploadProgressHistory(
+        scores: context.read<ScoreRepository>(),
+        hintQuota: context.read<HintQuotaRepository>(),
+        local: context.read<ProgressLocalRepository>(),
+        remote: context.read<ProgressRemoteRepository>(),
+      ),
+    ),
     RepositoryProvider<SyncProgress>(
       create: (context) => SyncProgress(
         auth: context.read<AuthRepository>(),
@@ -270,6 +279,7 @@ List<SingleChildWidget> buildRepositoryProviders({
         reportClientError: clientErrorRepository == null
             ? null
             : ReportClientError(clientErrorRepository),
+        uploadHistory: context.read<UploadProgressHistory>(),
         isRemoteAvailable: () => FirebaseBootstrap.isReady,
       ),
     ),

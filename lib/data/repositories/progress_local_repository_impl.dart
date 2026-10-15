@@ -6,7 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/repositories/progress_local_repository.dart';
 
 /// Prefixes of every per-user progress key on the device: scores, clear meta
-/// and boards, streaks, hint quota, run drafts and sync markers.
+/// and boards, streaks, hint quota, run drafts, sync markers and the
+/// achievements already announced.
 const userProgressKeyPrefixes = [
   'best_',
   'clear_meta_',
@@ -15,6 +16,7 @@ const userProgressKeyPrefixes = [
   'hints_used_',
   'in_progress_',
   'sync_',
+  'achievements_',
 ];
 
 class ProgressLocalRepositoryImpl implements ProgressLocalRepository {
@@ -123,5 +125,19 @@ class ProgressLocalRepositoryImpl implements ProgressLocalRepository {
   @override
   Future<void> setPushedSignature(String key, String signature) async {
     await _prefs.setString(_markerKey(key), signature);
+  }
+
+  /// Not a [userProgressKeyPrefixes] prefix: each uid keeps its flag when
+  /// another account's progress replaces the live keys.
+  static String _historyUploadedKey(String uid) => 'history_uploaded_$uid';
+
+  @override
+  bool isHistoryUploaded(String uid) =>
+      uid.isNotEmpty && (_prefs.getBool(_historyUploadedKey(uid)) ?? false);
+
+  @override
+  Future<void> setHistoryUploaded(String uid) async {
+    if (uid.isEmpty) return;
+    await _prefs.setBool(_historyUploadedKey(uid), true);
   }
 }

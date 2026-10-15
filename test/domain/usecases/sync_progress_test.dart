@@ -20,6 +20,7 @@ import 'package:winklo/domain/repositories/progress_remote_repository.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/domain/usecases/report_client_error.dart';
 import 'package:winklo/domain/usecases/sync_progress.dart';
+import 'package:winklo/domain/usecases/upload_progress_history.dart';
 
 class _MockAuth extends Mock implements AuthRepository {}
 
@@ -28,6 +29,8 @@ class _MockRemote extends Mock implements ProgressRemoteRepository {}
 class _MockLeaderboard extends Mock implements LeaderboardRepository {}
 
 class _MockClientErrors extends Mock implements ClientErrorRepository {}
+
+class _MockUploadHistory extends Mock implements UploadProgressHistory {}
 
 const _uid = 'u1';
 const _today = '20261007';
@@ -69,6 +72,7 @@ void main() {
     DateTime? at,
     DateTime Function()? clockFn,
     Duration leaderboardTimeout = const Duration(seconds: 20),
+    UploadProgressHistory? uploadHistory,
   }) async {
     SharedPreferences.setMockInitialValues(initial);
     prefs = await SharedPreferences.getInstance();
@@ -87,6 +91,7 @@ void main() {
       isRemoteAvailable: () => remoteAvailable,
       now: clockFn ?? () => clock,
       leaderboardTimeout: leaderboardTimeout,
+      uploadHistory: uploadHistory,
     );
   }
 
@@ -223,6 +228,79 @@ void main() {
       // No purge without a remote copy to restore from.
       expect(prefs.getInt('best_time_zip_daily_$_today'), 30);
       expect(local.ownerUid, 'someone_else');
+    });
+  });
+
+  group('history upload', () {
+    late _MockUploadHistory upload;
+    bool Function()? lastIsCancelled;
+
+    setUp(() {
+      upload = _MockUploadHistory();
+      lastIsCancelled = null;
+      when(
+        () => upload(any(), isCancelled: any(named: 'isCancelled')),
+      ).thenAnswer((inv) async {
+        lastIsCancelled = inv.namedArguments[#isCancelled] as bool Function()?;
+        return const UploadProgressHistoryResult(ran: true);
+      });
+    });
+
+    test(
+      'a full sync runs it for the signed-in uid after the window',
+      () async {
+        await build(
+          initial: {'best_time_zip_daily_$_today': 30},
+          uploadHistory: upload,
+        );
+
+        final result = await sync();
+
+        expect(result.failures, 0);
+        verifyInOrder([
+          () => remote.saveDay(
+            uid: _uid,
+            record: any(named: 'record'),
+          ),
+          () => upload(_uid, isCancelled: any(named: 'isCancelled')),
+        ]);
+        expect(lastIsCancelled!(), isFalse);
+        when(
+          () => auth.currentUser,
+        ).thenReturn(const AppUser(uid: 'other', displayName: 'Bo'));
+        expect(lastIsCancelled!(), isTrue);
+      },
+    );
+
+    test('a push-only sync skips it', () async {
+      await build(
+        initial: {'best_time_zip_daily_$_today': 30},
+        uploadHistory: upload,
+      );
+
+      await sync(pull: false);
+
+      verifyNever(() => upload(any(), isCancelled: any(named: 'isCancelled')));
+    });
+
+    test('a failed upload counts as a failure', () async {
+      when(
+        () => upload(any(), isCancelled: any(named: 'isCancelled')),
+      ).thenThrow(const Failure('offline', reportable: false));
+      await build(uploadHistory: upload);
+
+      final result = await sync();
+
+      expect(result.failures, 1);
+    });
+
+    test('it does not run when the remote is unavailable', () async {
+      remoteAvailable = false;
+      await build(uploadHistory: upload);
+
+      await sync();
+
+      verifyNever(() => upload(any(), isCancelled: any(named: 'isCancelled')));
     });
   });
 

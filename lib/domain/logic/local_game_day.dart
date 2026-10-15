@@ -42,6 +42,22 @@ GameDayRecord readLocalGameDay({
   return withLegacyClearFlags(cleared);
 }
 
+/// Every cleared daily period of the [dailyProgressGameIds] stored on this
+/// device (daily mode keys only), by game then period.
+List<GameDayRecord> readLocalDailyHistory({
+  required ScoreRepository scores,
+  required HintQuotaRepository hintQuota,
+}) => [
+  for (final gameId in dailyProgressGameIds)
+    for (final playId in scores.dailyPlayIds(gameId))
+      readLocalGameDay(
+        scores: scores,
+        hintQuota: hintQuota,
+        gameId: gameId,
+        playId: playId,
+      ),
+];
+
 /// Cleared records without real flags get the conservative legacy guess
 /// ([legacyClearFlags], recomputed from [GameDayRecord.hintsUsed]).
 GameDayRecord withLegacyClearFlags(GameDayRecord record) {

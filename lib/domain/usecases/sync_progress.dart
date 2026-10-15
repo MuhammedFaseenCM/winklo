@@ -17,6 +17,7 @@ import '../repositories/score_repository.dart';
 import '../repositories/streak_repository.dart';
 import '../streak_calculator.dart';
 import 'report_client_error.dart';
+import 'upload_progress_history.dart';
 
 /// Outcome of one [SyncProgress] run.
 class SyncProgressResult {
@@ -49,7 +50,8 @@ class SyncProgressResult {
 ///
 /// Per run: ownership (claim / stash + purge on account switch) -> the
 /// current period's days -> streaks -> the previous period's days (pull +
-/// merge, restore local, push) -> leaderboard for each cleared day. Restores
+/// merge, restore local, push) -> leaderboard for each cleared day -> on a
+/// full run, the one-time history upload (`UploadProgressHistory`). Restores
 /// come first so the sign-in gate (`ensureSignedInForPlay`) sees today's
 /// locks as early as possible. Every item is best-effort; "last pushed"
 /// markers are written only after the remote write succeeded, so failures
@@ -70,6 +72,7 @@ class SyncProgress {
     required this._leaderboard,
     required this._playPeriod,
     this._reportClientError,
+    this._uploadHistory,
     bool Function()? isRemoteAvailable,
     DateTime Function()? now,
     this.leaderboardTimeout = const Duration(seconds: 20),
@@ -91,6 +94,10 @@ class SyncProgress {
   final LeaderboardRepository _leaderboard;
   final Duration _playPeriod;
   final ReportClientError? _reportClientError;
+
+  /// Uploads this device's older daily clears once per account, at the end
+  /// of a full (pull) run.
+  final UploadProgressHistory? _uploadHistory;
 
   /// Domain cannot see Firebase; DI passes e.g. `() => FirebaseBootstrap.isReady`.
   final bool Function() _isRemoteAvailable;
@@ -244,6 +251,15 @@ class _Run {
           if (day == null || _leaderboardStalled) continue;
           await _attempt(() => _syncLeaderboard(day));
         }
+      }
+      final upload = _s._uploadHistory;
+      if (_pull && upload != null) {
+        await _attempt(() async {
+          await upload(
+            _uid,
+            isCancelled: () => _s._auth.currentUser?.uid != _uid,
+          );
+        });
       }
     }
 

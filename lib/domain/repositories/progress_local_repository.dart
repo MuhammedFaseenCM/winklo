@@ -35,4 +35,10 @@ abstract class ProgressLocalRepository {
   String? pushedSignature(String key);
 
   Future<void> setPushedSignature(String key, String signature);
+
+  /// Whether this device's daily history was uploaded once for [uid]
+  /// (`UploadProgressHistory`). Kept per uid across purges.
+  bool isHistoryUploaded(String uid);
+
+  Future<void> setHistoryUploaded(String uid);
 }

@@ -77,6 +77,34 @@ void main() {
     });
   });
 
+  group('readLocalDailyHistory', () {
+    test('reads every daily clear of the three games only', () async {
+      SharedPreferences.setMockInitialValues({
+        'best_time_zip_daily_20261001': 42,
+        'best_time_zip_daily_20261002': 50,
+        'best_time_path_words_20261001': 61,
+        'best_time_sudoku_20261003': 99,
+        'hints_used_sudoku_20261003': 2,
+        'best_time_zip_archive_20261001': 10,
+        'best_time_zip_practice': 10,
+        'best_time_match_deck1': 10,
+        'hints_used_zip_20261009': 1, // hints but no clear
+      });
+      final p = await SharedPreferences.getInstance();
+      final days = readLocalDailyHistory(
+        scores: ScoreRepositoryImpl(p),
+        hintQuota: HintQuotaRepositoryImpl(p),
+      );
+      expect(days.map((d) => (d.gameId, d.playId, d.timeSeconds)), [
+        (GameIds.zip, '20261001', 42),
+        (GameIds.zip, '20261002', 50),
+        (GameIds.pathWords, '20261001', 61),
+        (GameIds.sudoku, '20261003', 99),
+      ]);
+      expect(days.last.usedHints, isTrue);
+    });
+  });
+
   group('withLegacyClearFlags', () {
     test('fills legacy flags from the hint count', () {
       const day = GameDayRecord(
