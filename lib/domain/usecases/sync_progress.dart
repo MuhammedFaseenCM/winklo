@@ -312,7 +312,7 @@ class _Run {
     final owner = _s._local.ownerUid;
     if (owner == _uid) return;
     if (owner != null) {
-      if (await _hasUnpushedProgress()) {
+      if (await _hasUnpushedProgress() || _hasUnuploadedHistory(owner)) {
         await _s._local.stashUserProgress(owner);
       }
       await _s._local.purgeUserProgress();
@@ -323,6 +323,19 @@ class _Run {
     if (owner != null && await _s._local.restoreStashedProgress(_uid)) {
       _localChanged = true;
     }
+  }
+
+  /// Whether [owner] has daily clears on this device that the one-time
+  /// history upload hasn't sent yet (older than the sync window, so
+  /// [_hasUnpushedProgress] doesn't see them).
+  bool _hasUnuploadedHistory(String owner) {
+    if (_s._uploadHistory == null || _s._local.isHistoryUploaded(owner)) {
+      return false;
+    }
+    return readLocalDailyHistory(
+      scores: _s._scores,
+      hintQuota: _s._hintQuota,
+    ).any((day) => day.cleared);
   }
 
   /// Whether a streak, window day or window leaderboard time of the current

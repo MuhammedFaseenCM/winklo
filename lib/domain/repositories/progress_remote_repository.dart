@@ -21,8 +21,9 @@ abstract class ProgressRemoteRepository {
   Future<void> saveStreak({required String uid, required GameStreak streak});
 
   /// Every stored day of the daily games for [uid] (malformed docs skipped).
-  /// With [fromServer] the read never falls back to the offline cache, so
-  /// it throws while offline. Throws when the remote copy can't be read.
+  /// With [fromServer] the read never falls back to the offline cache (it
+  /// throws while offline) and throws while this device has unacknowledged
+  /// writes to the collection. Throws when the remote copy can't be read.
   Future<List<GameDayRecord>> fetchAllDays({
     required String uid,
     bool fromServer = false,

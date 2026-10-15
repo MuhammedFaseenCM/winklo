@@ -245,6 +245,50 @@ void main() {
     });
   });
 
+  group('confirmedGameDays', () {
+    final docs = [
+      (
+        'zip_20261001',
+        <String, dynamic>{'gameId': 'zip', 'playId': '20261001'},
+      ),
+    ];
+
+    test('parses a confirmed read', () {
+      expect(
+        confirmedGameDays(
+          docs,
+          requireConfirmed: true,
+          hasPendingWrites: false,
+        ).single.playId,
+        '20261001',
+      );
+    });
+
+    test('throws a non-reportable failure for unconfirmed writes', () {
+      expect(
+        () => confirmedGameDays(
+          docs,
+          requireConfirmed: true,
+          hasPendingWrites: true,
+        ),
+        throwsA(
+          isA<Failure>().having((f) => f.reportable, 'reportable', false),
+        ),
+      );
+    });
+
+    test('a display read takes pending writes as they are', () {
+      expect(
+        confirmedGameDays(
+          docs,
+          requireConfirmed: false,
+          hasPendingWrites: true,
+        ),
+        hasLength(1),
+      );
+    });
+  });
+
   group('streakToFirestore', () {
     test('writes exactly the documented keys', () {
       expect(streakToFirestore(fullStreak).keys.toSet(), streakFirestoreKeys);

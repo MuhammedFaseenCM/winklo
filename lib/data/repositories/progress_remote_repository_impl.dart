@@ -112,6 +112,25 @@ List<GameDayRecord> gameDaysFromFirestoreDocs(
   return days;
 }
 
+/// [gameDaysFromFirestoreDocs] of a collection read. With
+/// [requireConfirmed], throws while the read shows this device's
+/// unacknowledged writes (even a server read does, e.g. a history batch that
+/// timed out but is still queued): comparing with them could skip days the
+/// server later rejects, so the caller retries later.
+List<GameDayRecord> confirmedGameDays(
+  Iterable<(String, Map<String, dynamic>)> docs, {
+  required bool requireConfirmed,
+  required bool hasPendingWrites,
+}) {
+  if (requireConfirmed && hasPendingWrites) {
+    throw const Failure(
+      'Progress history has unconfirmed local writes.',
+      reportable: false,
+    );
+  }
+  return gameDaysFromFirestoreDocs(docs);
+}
+
 /// Firestore payload for [streak]. `lastClearedDateId` is always written (null
 /// clears it); `isOnFreeze` is display-only and never stored.
 Map<String, dynamic> streakToFirestore(GameStreak streak) => {
@@ -354,12 +373,15 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
           .collection(progressCollections().gameDays)
           .get(fromServer ? const GetOptions(source: Source.server) : null)
           .timeout(historyTimeout);
-      return gameDaysFromFirestoreDocs([
-        for (final doc in snap.docs) (doc.id, doc.data()),
-      ]);
+      return confirmedGameDays(
+        [for (final doc in snap.docs) (doc.id, doc.data())],
+        requireConfirmed: fromServer,
+        hasPendingWrites: snap.metadata.hasPendingWrites,
+      );
     } catch (e, st) {
       debugPrint('Progress fetchAllDays failed: $e');
       debugPrint('$st');
+      if (e is Failure) rethrow;
       throw Failure('Could not load progress history.', cause: e);
     }
   }

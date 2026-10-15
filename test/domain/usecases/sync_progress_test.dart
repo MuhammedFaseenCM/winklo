@@ -312,6 +312,43 @@ void main() {
       verifyNever(() => upload(any(), isCancelled: any(named: 'isCancelled')));
     });
 
+    test(
+      'an account switch stashes history the owner never uploaded',
+      () async {
+        await build(
+          initial: {
+            'progress_owner_uid': 'previous',
+            'best_time_zip_daily_20260901': 50,
+          },
+          uploadHistory: upload,
+        );
+
+        await sync();
+
+        expect(prefs.getInt('best_time_zip_daily_20260901'), isNull);
+        expect(prefs.getString('progress_stash_previous'), isNotNull);
+      },
+    );
+
+    test(
+      'an account switch purges history the owner already uploaded',
+      () async {
+        await build(
+          initial: {
+            'progress_owner_uid': 'previous',
+            'history_uploaded_previous': true,
+            'best_time_zip_daily_20260901': 50,
+          },
+          uploadHistory: upload,
+        );
+
+        await sync();
+
+        expect(prefs.getInt('best_time_zip_daily_20260901'), isNull);
+        expect(prefs.getString('progress_stash_previous'), isNull);
+      },
+    );
+
     test('it does not run when the remote is unavailable', () async {
       remoteAvailable = false;
       await build(uploadHistory: upload);
