@@ -60,6 +60,8 @@ GoRouter buildRouter({
     ),
     observers: [AnalyticsRouteObserver(analytics), ClientErrorRouteObserver()],
     routes: [
+      // First, so `/join/{code}` reaches the join screen.
+      ...leagueRoutes(),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return DashboardShell(navigationShell: navigationShell);
@@ -161,7 +163,6 @@ GoRouter buildRouter({
           return ResultsScreen(args: args);
         },
       ),
-      ...leagueRoutes(),
     ],
   );
 }

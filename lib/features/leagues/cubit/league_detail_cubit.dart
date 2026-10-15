@@ -52,22 +52,38 @@ class LeagueDetailCubit extends Cubit<LeagueDetailState> {
     required String leagueId,
     required LeagueRepository leagueRepository,
     required AuthRepository authRepository,
-  }) : _leagues = leagueRepository,
+  }) : _leagueId = leagueId,
+       _leagues = leagueRepository,
        super(LeagueDetailState(uid: authRepository.currentUser?.uid)) {
+    _watch();
+  }
+
+  final String _leagueId;
+  final LeagueRepository _leagues;
+  StreamSubscription? _sub;
+  Set<String> _profilesFor = const {};
+
+  /// Only the newest names lookup may land.
+  int _profilesRequest = 0;
+
+  void _watch() {
+    unawaited(_sub?.cancel());
     _sub = _leagues
-        .watchLeague(leagueId)
+        .watchLeague(_leagueId)
         .listen(
           _onLeague,
           onError: (Object _) {
             if (isClosed) return;
+            _profilesFor = const {};
             emit(state.copyWith(status: LeagueDetailStatus.failure));
           },
         );
   }
 
-  final LeagueRepository _leagues;
-  StreamSubscription? _sub;
-  Set<String> _profilesFor = const {};
+  void retry() {
+    emit(state.copyWith(status: LeagueDetailStatus.loading));
+    _watch();
+  }
 
   Future<void> _onLeague(League? league) async {
     if (isClosed) return;
@@ -86,8 +102,9 @@ class LeagueDetailCubit extends Cubit<LeagueDetailState> {
       return;
     }
     _profilesFor = uids;
+    final request = ++_profilesRequest;
     final members = await _leagues.memberProfiles(league.memberUids);
-    if (isClosed) return;
+    if (isClosed || request != _profilesRequest) return;
     emit(state.copyWith(members: members));
   }
 

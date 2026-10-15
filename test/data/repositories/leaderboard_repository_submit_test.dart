@@ -76,7 +76,7 @@ void main() {
     when(() => user.uid).thenReturn('u1');
     when(() => user.displayName).thenReturn('Ada G');
     when(() => user.photoURL).thenReturn(null);
-    when(() => user.getIdToken()).thenAnswer((_) async => 'id-token');
+    when(() => user.getIdToken(any())).thenAnswer((_) async => 'id-token');
     when(() => auth.currentUser).thenReturn(user);
 
     client = _MockSubmitClient();
@@ -165,7 +165,7 @@ void main() {
   });
 
   test('falls back when no ID token is available', () async {
-    when(() => user.getIdToken()).thenThrow(Exception('offline'));
+    when(() => user.getIdToken(any())).thenThrow(Exception('offline'));
 
     await submit(repo());
 
@@ -198,6 +198,41 @@ void main() {
     );
     expect(rejected.single, isA<LeaderboardSubmitRejected>());
     verifyNoDirectWrite();
+  });
+
+  test('a refused token is retried fresh, then written directly', () async {
+    when(
+      () => client.submit(
+        idToken: any(named: 'idToken'),
+        body: any(named: 'body'),
+      ),
+    ).thenThrow(const LeaderboardSubmitRejected(401, 'unauthorized'));
+
+    await submit(repo());
+
+    verify(() => user.getIdToken(false)).called(1);
+    verify(() => user.getIdToken(true)).called(1);
+    verify(() => firestore.runTransaction<_TxResult>(any())).called(2);
+  });
+
+  test('a fresh token that the Worker takes is enough', () async {
+    var calls = 0;
+    when(
+      () => client.submit(
+        idToken: any(named: 'idToken'),
+        body: any(named: 'body'),
+      ),
+    ).thenAnswer((_) async {
+      if (calls++ == 0) {
+        throw const LeaderboardSubmitRejected(401, 'unauthorized');
+      }
+      return const LeaderboardSubmitResult(improved: true);
+    });
+
+    await submit(repo());
+
+    verifyNoDirectWrite();
+    expect(rejected, isEmpty);
   });
 
   test('debug builds keep writing directly', () async {

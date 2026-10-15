@@ -129,11 +129,15 @@ class _LeagueDetailView extends StatelessWidget {
             LeagueDetailStatus.loading => const Center(
               child: CircularProgressIndicator(),
             ),
-            LeagueDetailStatus.gone ||
-            LeagueDetailStatus.failure => CenteredMessageBody(
+            LeagueDetailStatus.gone => CenteredMessageBody(
               message: AppStrings.leagueGone,
               actionLabel: AppStrings.leaguesTitle,
               onAction: () => _leaveScreen(context),
+            ),
+            LeagueDetailStatus.failure => CenteredMessageBody(
+              message: AppStrings.leagueLoadFailed,
+              actionLabel: AppStrings.retry,
+              onAction: context.read<LeagueDetailCubit>().retry,
             ),
             LeagueDetailStatus.ready => _body(context, state, league!),
           },
@@ -205,7 +209,9 @@ class _LeagueDetailView extends StatelessWidget {
         const SizedBox(height: 8),
         for (final uid in league.memberUids)
           _MemberRow(
-            name: state.members[uid]?.displayName ?? 'Player',
+            name:
+                state.members[uid]?.displayName ??
+                AppStrings.leagueMemberFallbackName,
             photoUrl: state.members[uid]?.photoUrl,
             avatarId: state.members[uid]?.avatarId,
             isOwner: league.isOwner(uid),
@@ -214,7 +220,8 @@ class _LeagueDetailView extends StatelessWidget {
                 ? () => _remove(
                     context,
                     uid,
-                    state.members[uid]?.displayName ?? 'Player',
+                    state.members[uid]?.displayName ??
+                        AppStrings.leagueMemberFallbackName,
                   )
                 : null,
           ),

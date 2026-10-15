@@ -84,6 +84,10 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
   GoRouter? _router;
   String? _appliedLocation;
 
+  /// The last `league` query applied, so coming back to the tab doesn't undo
+  /// a later pick in the scope bar.
+  String? _appliedLeagueQuery;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -122,7 +126,10 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
       final cubit = context.read<LeaderboardCubit>();
       cubit.selectGame(gameId);
       // `/leaderboard?league={id}`: that league's board.
-      if (leagueId != null) cubit.selectLeague(leagueId);
+      if (leagueId != null && leagueId != _appliedLeagueQuery) {
+        cubit.selectLeague(leagueId);
+      }
+      _appliedLeagueQuery = leagueId;
     });
   }
 

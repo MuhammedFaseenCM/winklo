@@ -510,30 +510,42 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
   /// True once the Worker took the clear; false when it couldn't be reached
   /// (the caller writes directly). Throws [LeaderboardSubmitRefused] when it
   /// refused the clear.
+  ///
+  /// A refused token is tried once more with a fresh one (the cached token
+  /// can be stale when the phone's clock is off); if the Worker still won't
+  /// take it, the clear is written directly rather than lost.
   Future<bool> _postToWorker(
     LeaderboardSubmitClient client,
     User user, {
     required Map<String, Object?> body,
   }) async {
-    final String idToken;
-    try {
-      final token = await user.getIdToken();
-      if (token == null || token.isEmpty) return false;
-      idToken = token;
-    } catch (e) {
-      debugPrint('Leaderboard ID token failed: $e');
-      return false;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final String idToken;
+      try {
+        final token = await user.getIdToken(attempt > 0);
+        if (token == null || token.isEmpty) return false;
+        idToken = token;
+      } catch (e) {
+        debugPrint('Leaderboard ID token failed: $e');
+        return false;
+      }
+      try {
+        await client.submit(idToken: idToken, body: body);
+        return true;
+      } on LeaderboardSubmitRejected catch (e, st) {
+        if (e.code == 'unauthorized') {
+          if (attempt == 0) continue;
+          _reportRejected(e, st);
+          return false;
+        }
+        _reportRejected(e, st);
+        throw LeaderboardSubmitRefused(e.code);
+      } on LeaderboardSubmitUnavailable catch (e) {
+        debugPrint('Leaderboard Worker unavailable, writing directly: $e');
+        return false;
+      }
     }
-    try {
-      await client.submit(idToken: idToken, body: body);
-      return true;
-    } on LeaderboardSubmitRejected catch (e, st) {
-      _reportRejected(e, st);
-      throw LeaderboardSubmitRefused(e.code);
-    } on LeaderboardSubmitUnavailable catch (e) {
-      debugPrint('Leaderboard Worker unavailable, writing directly: $e');
-      return false;
-    }
+    return false;
   }
 
   Future<void> _writeImproveOnly(

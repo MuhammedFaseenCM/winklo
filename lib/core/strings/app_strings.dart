@@ -275,6 +275,8 @@ abstract final class AppStrings {
   static String leagueInviteText(String name, String url) =>
       'Join my Winklo league “$name”: $url';
   static const leagueMembersHeading = 'Players';
+  static const leagueMemberFallbackName = 'Player';
+  static const leagueLoadFailed = 'Could not load this league.';
   static const leagueRename = 'Rename';
   static const leagueRemove = 'Remove';
   static String leagueRemoveConfirm(String name) =>

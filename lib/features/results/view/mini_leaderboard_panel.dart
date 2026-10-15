@@ -51,7 +51,7 @@ class MiniLeaderboardPanel extends StatelessWidget {
         watchLeaderboard: context.read<WatchLeaderboard>(),
         authRepository: context.read<AuthRepository>(),
         initialGameId: gameId,
-      ),
+      )..selectDay(dayId),
       child: _MiniLeaderboardPanelBody(
         gameId: gameId,
         timeSeconds: timeSeconds,
