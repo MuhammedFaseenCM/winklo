@@ -54,7 +54,8 @@ abstract final class Achievements {
 
   static const _games = [GameIds.zip, GameIds.pathWords, GameIds.sudoku];
 
-  /// Every badge, in the order the grid shows them.
+  /// Every badge, in the order the grid shows them: the per-game ones a
+  /// row each (Zip, Path Words, Sudoku), then the cross-game ones.
   static final List<Achievement> all = List.unmodifiable([
     for (final gameId in _games)
       Achievement(
@@ -62,6 +63,14 @@ abstract final class Achievements {
         kind: AchievementKind.firstClear,
         gameId: gameId,
       ),
+    for (final days in streakLengths)
+      for (final gameId in _games)
+        Achievement(
+          id: 'streak_${days}_$gameId',
+          kind: AchievementKind.streak,
+          gameId: gameId,
+          target: days,
+        ),
     const Achievement(id: 'perfect_day', kind: AchievementKind.perfectDay),
     const Achievement(
       id: 'zip_under_minute',
@@ -80,14 +89,6 @@ abstract final class Achievements {
       gameId: GameIds.sudoku,
       target: 10,
     ),
-    for (final days in streakLengths)
-      for (final gameId in _games)
-        Achievement(
-          id: 'streak_${days}_$gameId',
-          kind: AchievementKind.streak,
-          gameId: gameId,
-          target: days,
-        ),
   ]);
 
   static Achievement? byId(String id) {

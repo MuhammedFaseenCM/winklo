@@ -31,6 +31,7 @@ import 'widgets/name_edit_sheet.dart';
 import 'widgets/profile_settings_list.dart';
 import 'widgets/profile_shimmer.dart';
 import 'widgets/profile_signed_out_mock.dart';
+import 'widgets/profile_stats_section.dart';
 import 'widgets/sign_out_confirm_dialog.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -361,6 +362,8 @@ class _SignedInBodyState extends State<_SignedInBody> {
                       ),
                     ),
                   ),
+                  SizedBox(height: layout.space(16)),
+                  const ProfileStatsSection(),
                   SizedBox(height: layout.space(16)),
                   ProfileSettingsList(
                     sfxEnabled: sfx.isEnabled,

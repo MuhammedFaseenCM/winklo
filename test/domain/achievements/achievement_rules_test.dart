@@ -260,7 +260,7 @@ void main() {
         unlocked: {'streak_7_zip', 'perfect_day', 'first_clear_zip'},
         seen: {'first_clear_zip'},
       );
-      expect(fresh.map((a) => a.id), ['perfect_day', 'streak_7_zip']);
+      expect(fresh.map((a) => a.id), ['streak_7_zip', 'perfect_day']);
     });
 
     test('ignores unknown ids', () {
