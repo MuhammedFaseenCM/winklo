@@ -177,3 +177,11 @@ class LocaleCubit extends Cubit<LocaleState> {
 ## Deviations (recorded as they are made)
 
 - No gen-l10n and no ARB files (see "Design change" above).
+- **Fonts:** google_fonts' own Noto Sans Malayalam files (Regular and Bold, checked against its hashes) are bundled under `assets/google_fonts/` rather than fetched at run time, so Malayalam renders offline and the screenshot tests measure real glyphs on CI too (+210 KB). Android's system Noto Malayalam still covers anything else. The OFL licence is registered.
+- **intl:** no direct `DateFormat`, so no `initializeDateFormatting`. Calendar titles, weekday initials, dates for screen readers and the time pickers come from `GlobalMaterialLocalizations` (intl's `ml` data). The two short dates in the tables ("ഒക്ടോ 9") are written out from CLDR's `ml` "MMM d". `intl` isn't added as a direct dependency; the lock only gains `flutter_localizations` as direct.
+- **Language row:** where area E reserved it (the last Settings section); the slot builds the whole section. Malayalam shows times in 24-hour form, as Material's `ml` localization does.
+- **The "Player" fallback:** names missing from leaderboard rows and league members read `AppStrings.playerFallbackName`; the name *stored* for a nameless player (`storedFallbackName`) stays English, since other players read it.
+- **Raw errors:** the sign-in sheet and both leaderboards show a translated message instead of Firebase's or Google's English; league, profile, avatar and issue-report failures read `AppStrings` (English unchanged). Sync and submit failures that are only logged keep their English.
+- **Bonus game names:** translated (വാക്കുജോടി, വാക്കോട്ടം); only Zip, Path Words and Sudoku stay English. Their How to play says the words are English.
+- **Found while screenshotting:** "DAILY" (Home header) and "points" (Results) were inline English; wide letter spacing is dropped in Malayalam (`latinTracking`).
+- **Notification channel names** follow the language from the next app start (channels are created at start-up); the scheduled reminders and the widget switch at once.
