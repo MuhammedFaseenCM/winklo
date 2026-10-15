@@ -73,6 +73,7 @@ class HomeCubit extends Cubit<HomeState> {
   final Timer Function(Duration wait, void Function() callback) _createTimer;
   Timer? _rolloverTimer;
   var _loadGeneration = 0;
+  var _softBannerVisible = false;
 
   DateTime get _clock => _clockFn?.call() ?? _now ?? DateTime.now();
 
@@ -182,11 +183,12 @@ class HomeCubit extends Cubit<HomeState> {
   void _logSoftUpdateShown(AppUpdateStatus next) {
     final snoozedUntil = updateBannerSnooze?.snoozedUntil();
     final snoozed = snoozedUntil != null && _clock.isBefore(snoozedUntil);
-    if (next == AppUpdateStatus.soft &&
-        state.updateStatus != AppUpdateStatus.soft &&
-        !snoozed) {
+    // A closed banner isn't shown; one back from its snooze appears again.
+    final visible = next == AppUpdateStatus.soft && !snoozed;
+    if (visible && !_softBannerVisible) {
       unawaited(analytics.logUpdatePromptShown(forced: false));
     }
+    _softBannerVisible = visible;
   }
 
   Future<void> recheckUpdate() async {

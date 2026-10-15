@@ -6,9 +6,9 @@ import '../repositories/daily_puzzle_prefetch_repository.dart';
 /// After Home loads, reads tomorrow's three dailies once they are live, so a
 /// player who is offline tomorrow still has them.
 ///
-/// Each day is tried at most once per app session, whatever the outcome:
-/// reads before a day is live are refused by the rules, and every error is
-/// ignored.
+/// Each day is tried at most once per app session, whatever the outcome,
+/// and every error is ignored: the rules may refuse a daily that isn't live
+/// yet (the fair-play rules do), and a phone may be offline.
 class PrefetchTomorrowPuzzles {
   PrefetchTomorrowPuzzles(this._repository, {this.period = PlayPeriod.daily});
 

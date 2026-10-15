@@ -7,6 +7,11 @@ class PlayInAppUpdateClient {
 
   Future<AppUpdateInfo> checkForUpdate() => InAppUpdate.checkForUpdate();
 
+  /// Play's install status changes, such as a download cancelled from its
+  /// notification.
+  Stream<InstallStatus> get installStatuses =>
+      InAppUpdate.installUpdateListener;
+
   Future<AppUpdateResult> startFlexibleUpdate() =>
       InAppUpdate.startFlexibleUpdate();
 

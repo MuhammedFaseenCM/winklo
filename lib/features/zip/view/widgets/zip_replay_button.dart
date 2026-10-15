@@ -37,10 +37,13 @@ class ZipReplayButton extends StatelessWidget {
                     ? null
                     : () {
                         if (!cubit.start()) return;
-                        game.replay(
+                        final started = game.replay(
                           cubit.path,
                           onReplayFinished: cubit.finished,
                         );
+                        // Never leave the button stuck on a replay that
+                        // didn't start.
+                        if (!started) cubit.finished();
                       },
                 style: TextButton.styleFrom(
                   foregroundColor: ZipColors.ember,

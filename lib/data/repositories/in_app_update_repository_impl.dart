@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:in_app_update/in_app_update.dart';
 import 'package:winklo/data/clients/play_in_app_update_client.dart';
 import 'package:winklo/domain/repositories/in_app_update_repository.dart';
@@ -35,14 +37,42 @@ class InAppUpdateRepositoryImpl implements InAppUpdateRepository {
           !info.flexibleUpdateAllowed) {
         return InAppUpdateOutcome.unavailable;
       }
-      // Completes once the download has finished, or the player said no.
-      return switch (await _client.startFlexibleUpdate()) {
-        AppUpdateResult.success => InAppUpdateOutcome.downloaded,
-        AppUpdateResult.userDeniedUpdate => InAppUpdateOutcome.declined,
-        AppUpdateResult.inAppUpdateFailed => InAppUpdateOutcome.unavailable,
-      };
+      return await _downloadFlexibleUpdate();
     } catch (_) {
       return InAppUpdateOutcome.unavailable;
+    }
+  }
+
+  /// Play answers the start call once the download is done, the player said
+  /// no, or an install error happened, but not when the download is
+  /// cancelled from its notification; the install status says so instead.
+  Future<InAppUpdateOutcome> _downloadFlexibleUpdate() async {
+    final outcome = Completer<InAppUpdateOutcome>();
+    void finish(InAppUpdateOutcome value) {
+      if (!outcome.isCompleted) outcome.complete(value);
+    }
+
+    final statuses = _client.installStatuses.listen((status) {
+      if (status == InstallStatus.canceled) {
+        finish(InAppUpdateOutcome.declined);
+      } else if (status == InstallStatus.failed) {
+        finish(InAppUpdateOutcome.unavailable);
+      }
+    }, onError: (Object _) {});
+    try {
+      unawaited(
+        _client.startFlexibleUpdate().then(
+          (result) => finish(switch (result) {
+            AppUpdateResult.success => InAppUpdateOutcome.downloaded,
+            AppUpdateResult.userDeniedUpdate => InAppUpdateOutcome.declined,
+            AppUpdateResult.inAppUpdateFailed => InAppUpdateOutcome.unavailable,
+          }),
+          onError: (Object _) => finish(InAppUpdateOutcome.unavailable),
+        ),
+      );
+      return await outcome.future;
+    } finally {
+      await statuses.cancel();
     }
   }
 
@@ -50,11 +80,12 @@ class InAppUpdateRepositoryImpl implements InAppUpdateRepository {
   Future<bool> completeFlexibleUpdate() async {
     try {
       await _client.checkForUpdate();
-      await _client.completeFlexibleUpdate();
-      return true;
     } catch (_) {
       return false;
     }
+    // Play restarts the app to install; the plugin never answers this call.
+    unawaited(_client.completeFlexibleUpdate().catchError((Object _) {}));
+    return true;
   }
 
   @override

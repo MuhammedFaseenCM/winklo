@@ -44,8 +44,8 @@ class DailyPuzzlePrefetchRepositoryImpl
     ]);
   }
 
-  /// Not live yet (permission-denied), offline, or missing: all the same to
-  /// a cache warm-up.
+  /// Refused (permission-denied), offline, or missing: all the same to a
+  /// cache warm-up.
   static Future<void> _quietly(Future<void> Function() read) async {
     try {
       await read();

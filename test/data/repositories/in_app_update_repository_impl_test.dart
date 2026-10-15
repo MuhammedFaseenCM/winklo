@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_update/in_app_update.dart';
@@ -40,6 +42,9 @@ void main() {
     client = _MockClient();
     repo = InAppUpdateRepositoryImpl(client: client);
     when(() => client.completeFlexibleUpdate()).thenAnswer((_) async {});
+    when(
+      () => client.installStatuses,
+    ).thenAnswer((_) => const Stream<InstallStatus>.empty());
   });
 
   void check(AppUpdateInfo info) =>
@@ -107,6 +112,42 @@ void main() {
       ).thenThrow(PlatformException(code: 'Error during installation'));
 
       expect(await repo.startFlexibleUpdate(), InAppUpdateOutcome.unavailable);
+    });
+
+    test('a download cancelled from Play is declined', () async {
+      check(_info());
+      final statuses = StreamController<InstallStatus>.broadcast();
+      addTearDown(statuses.close);
+      when(() => client.installStatuses).thenAnswer((_) => statuses.stream);
+      // Play never answers the start call when the download is cancelled.
+      when(
+        () => client.startFlexibleUpdate(),
+      ).thenAnswer((_) => Completer<AppUpdateResult>().future);
+
+      final outcome = repo.startFlexibleUpdate();
+      await pumpEventQueue();
+      statuses
+        ..add(InstallStatus.downloading)
+        ..add(InstallStatus.canceled);
+
+      expect(await outcome, InAppUpdateOutcome.declined);
+      expect(statuses.hasListener, isFalse);
+    });
+
+    test('a download Play reports as failed is unavailable', () async {
+      check(_info());
+      final statuses = StreamController<InstallStatus>.broadcast();
+      addTearDown(statuses.close);
+      when(() => client.installStatuses).thenAnswer((_) => statuses.stream);
+      when(
+        () => client.startFlexibleUpdate(),
+      ).thenAnswer((_) => Completer<AppUpdateResult>().future);
+
+      final outcome = repo.startFlexibleUpdate();
+      await pumpEventQueue();
+      statuses.add(InstallStatus.failed);
+
+      expect(await outcome, InAppUpdateOutcome.unavailable);
     });
 
     test('no plugin (tests, other platforms) is unavailable', () async {
@@ -209,6 +250,15 @@ void main() {
         () => client.checkForUpdate(),
         () => client.completeFlexibleUpdate(),
       ]);
+    });
+
+    test('does not wait for Play, which restarts the app instead', () async {
+      check(_info(installStatus: InstallStatus.downloaded));
+      when(
+        () => client.completeFlexibleUpdate(),
+      ).thenAnswer((_) => Completer<void>().future);
+
+      expect(await repo.completeFlexibleUpdate(), isTrue);
     });
 
     test('is false when Play cannot install', () async {

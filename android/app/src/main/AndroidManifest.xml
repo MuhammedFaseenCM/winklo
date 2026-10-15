@@ -37,8 +37,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <!-- App Links: winklo.pages.dev/zip etc. open the app (go_router
-                 handles the path). Verified against
-                 https://winklo.pages.dev/.well-known/assetlinks.json. -->
+                 handles the path). Android verifies them against
+                 https://winklo.pages.dev/.well-known/assetlinks.json, which
+                 must list the Play signing certificate (not in the repo yet:
+                 see the polish plan's App Links task). -->
             <meta-data
                 android:name="flutter_deeplinking_enabled"
                 android:value="true" />

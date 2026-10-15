@@ -38,7 +38,7 @@ class _MockZipLevelRepository extends Mock implements ZipLevelRepository {}
 
 class _FixedSnooze implements UpdateBannerSnoozeRepository {
   _FixedSnooze(this.until);
-  final DateTime? until;
+  DateTime? until;
 
   @override
   DateTime? snoozedUntil() => until;
@@ -133,6 +133,19 @@ void main() {
       verifyNever(
         () => analytics.logUpdatePromptShown(forced: any(named: 'forced')),
       );
+      await cubit.close();
+    });
+
+    test('a banner back from a snooze in the same session is logged', () async {
+      final snooze = _FixedSnooze(noonUtc.add(const Duration(hours: 5)));
+      final cubit = build(snooze: snooze);
+      await cubit.load();
+
+      snooze.until = noonUtc.subtract(const Duration(minutes: 1));
+      await cubit.load();
+      await cubit.load();
+
+      verify(() => analytics.logUpdatePromptShown(forced: false)).called(1);
       await cubit.close();
     });
 
