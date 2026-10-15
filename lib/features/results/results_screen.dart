@@ -17,6 +17,7 @@ import '../../domain/repositories/analytics_repository.dart';
 import '../../domain/usecases/submit_leaderboard_time.dart';
 import '../auth/cubit/auth_cubit.dart';
 import '../auth/view/sign_in_sheet.dart';
+import '../path_words/view/widgets/path_words_results_panel.dart';
 import 'results_args.dart';
 import 'view/counting_play_time.dart';
 import 'view/ember_burst.dart';
@@ -347,6 +348,12 @@ class _CelebrateAndClaimResults extends StatelessWidget {
             .slideY(begin: 0.12, curve: Curves.easeOutCubic),
         SizedBox(height: compact ? 10 : 14),
         _NextPuzzleLine(day: args.day).animate().fadeIn(delay: 700.ms),
+        if (args.pathWords != null) ...[
+          SizedBox(height: compact ? 12 : 16),
+          PathWordsResultsPanel(
+            summary: args.pathWords!,
+          ).animate().fadeIn(delay: 800.ms),
+        ],
       ],
     );
   }

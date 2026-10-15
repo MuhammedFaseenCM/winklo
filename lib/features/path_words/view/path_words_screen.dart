@@ -33,8 +33,10 @@ import '../bloc/path_words_event.dart';
 import '../bloc/path_words_state.dart';
 import '../game/path_words_board_view.dart';
 import '../game/path_words_game.dart';
+import 'widgets/path_words_bonus_toast.dart';
 import 'widgets/path_words_how_to_play.dart';
 import 'widgets/path_words_shimmer.dart';
+import 'widgets/path_words_theme_line.dart';
 import 'widgets/path_words_tutorial.dart';
 import 'widgets/path_words_word_list.dart';
 
@@ -247,6 +249,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                 prev.puzzle?.id != curr.puzzle?.id,
             listener: (context, state) => _maybeShowTutorial(state),
           ),
+          pathWordsBonusToastListener(),
         ],
         child: BlocBuilder<PathWordsBloc, PathWordsState>(
           builder: (context, state) {
@@ -399,9 +402,14 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                 placedPaths: state.placedPaths,
                                 completedTargetIds: state.completedTargetIds,
                                 palette: PathWordsGame.pathColors,
+                                definitionsEnabled: isReview,
                               ),
                             ],
                             if (isReview) ...[
+                              if (puzzle?.theme != null) ...[
+                                const SizedBox(height: 10),
+                                PathWordsThemeLine(theme: puzzle?.theme),
+                              ],
                               const SizedBox(height: 12),
                               ClearedSummaryCard(
                                 gameId: GameIds.pathWords,
