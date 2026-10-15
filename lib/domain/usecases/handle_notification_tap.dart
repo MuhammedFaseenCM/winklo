@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../league_code.dart';
 import '../repositories/analytics_repository.dart';
 import '../repositories/notification_repository.dart';
 
@@ -21,9 +22,11 @@ class HandleNotificationTap {
     '/word-match',
     '/category-race',
     '/leaderboard',
+    '/leagues',
     '/profile',
     '/profile/privacy',
     '/profile/report',
+    '/profile/stats',
     '/profile/settings',
   };
 
@@ -63,7 +66,20 @@ class HandleNotificationTap {
       return _withQuery(normalizedPath, uri);
     }
 
-    return '/';
+    return _leagueRoute(uri.pathSegments) ?? '/';
+  }
+
+  /// `/leagues/{leagueId}` with a league doc id, and `/join/{code}` with an
+  /// invite code (normalized as the join screen reads it); null otherwise.
+  static String? _leagueRoute(List<String> segments) {
+    if (segments.length != 2) return null;
+    final [section, value] = segments;
+    if (section == 'leagues' && isLeagueId(value)) return '/leagues/$value';
+    if (section == 'join') {
+      final code = normalizeLeagueCode(value);
+      if (code != null) return '/join/$code';
+    }
+    return null;
   }
 
   static String _withQuery(String path, Uri uri) {

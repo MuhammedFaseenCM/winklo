@@ -17,6 +17,12 @@ const leagueInviteBaseUrl = 'https://winklo.pages.dev/join/';
 
 final _codePattern = RegExp('^[$leagueCodeAlphabet]{$leagueCodeLength}\$');
 
+/// League docs get Firestore's generated ids: 20 letters and digits.
+final _leagueIdPattern = RegExp(r'^[A-Za-z0-9]{20}$');
+
+/// Whether [id] can be a league's doc id (`/leagues/{leagueId}`).
+bool isLeagueId(String id) => _leagueIdPattern.hasMatch(id);
+
 /// A new random code (the caller checks it isn't taken).
 String generateLeagueCode([Random? random]) {
   final rng = random ?? Random.secure();
