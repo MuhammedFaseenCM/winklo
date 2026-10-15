@@ -1,6 +1,7 @@
 import '../../domain/habit/weekly_recap.dart';
 import 'app_text.dart';
 import 'app_text_en.dart';
+import 'app_text_ml.dart';
 import 'play_time_format.dart' as play_time;
 
 /// All user-facing copy. Each member reads the table for the current
@@ -11,7 +12,7 @@ import 'play_time_format.dart' as play_time;
 /// home-screen widget, issue reports) read it without a `BuildContext`.
 abstract final class AppStrings {
   /// The languages with a table, English first (the fallback).
-  static const supportedLanguageCodes = ['en'];
+  static const supportedLanguageCodes = ['en', 'ml'];
 
   static AppText _t = const AppTextEn();
   static String _languageCode = 'en';
@@ -20,6 +21,7 @@ abstract final class AppStrings {
   /// reads English.
   static void use(String languageCode) {
     final (code, table) = switch (languageCode) {
+      'ml' => ('ml', const AppTextMl() as AppText),
       _ => ('en', const AppTextEn() as AppText),
     };
     _languageCode = code;
