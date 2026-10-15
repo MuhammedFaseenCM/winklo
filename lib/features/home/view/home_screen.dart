@@ -39,9 +39,12 @@ import 'widgets/home_soft_update_section.dart';
 import 'widgets/home_today_summary.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.now});
 
   static const permissionPromptedKey = 'notif_permission_prompted';
+
+  /// The clock, for tests.
+  final DateTime Function()? now;
 
   @override
   Widget build(BuildContext context) {
@@ -57,15 +60,18 @@ class HomeScreen extends StatelessWidget {
         zipLevelRepository: context.read<ZipLevelRepository>(),
         updateBannerSnooze: context.read<UpdateBannerSnoozeRepository>(),
         prefetchTomorrowPuzzles: context.read<PrefetchTomorrowPuzzles>(),
+        clock: now,
         playPeriod: DevFlags.playPeriod,
       )..load(),
-      child: const _HomeView(),
+      child: _HomeView(now: now),
     );
   }
 }
 
 class _HomeView extends StatefulWidget {
-  const _HomeView();
+  const _HomeView({this.now});
+
+  final DateTime Function()? now;
 
   @override
   State<_HomeView> createState() => _HomeViewState();
@@ -158,6 +164,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             state.pathWordsBestPoints > 0 ||
             state.pathWordsBestTimeSeconds != null;
         final isSoftUpdate = state.updateStatus == AppUpdateStatus.soft;
+        final clock = widget.now ?? DateTime.now;
 
         Future<void> openZip() async {
           final ok = await ensureSignedInForPlay(context);
@@ -223,6 +230,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                 // Home reads only the Zip daily; the cron marks all three
                 // of a day by the same date rule.
                 weekendSpecial: state.dailyLevel.isWeekendSpecial,
+                clock: clock,
               )
               .animate()
               .fadeIn(delay: 80.ms, duration: 450.ms)
@@ -258,6 +266,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   loadedAt: state.loadedAt,
                   cleared: pathWordsCleared,
                   weekendSpecial: state.dailyLevel.isWeekendSpecial,
+                  clock: clock,
                 )
                 .animate()
                 .fadeIn(delay: 160.ms, duration: 450.ms)
@@ -292,6 +301,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   loadedAt: state.loadedAt,
                   cleared: sudokuCleared,
                   weekendSpecial: state.dailyLevel.isWeekendSpecial,
+                  clock: clock,
                 )
                 .animate()
                 .fadeIn(delay: 240.ms, duration: 450.ms)
@@ -321,17 +331,25 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                                   begin: 0.08,
                                   curve: Curves.easeOutCubic,
                                 ),
-                            if (isSoftUpdate)
-                              HomeSoftUpdateSection(
-                                gap: layout.space(12),
-                                currentLabel: state.updateCurrentLabel,
-                                requiredLabel: state.updateRequiredLabel,
-                                storeUrl: state.updateStoreUrl,
+                            Expanded(
+                              child: _HomeScrollPane(
+                                above: [
+                                  if (isSoftUpdate)
+                                    HomeSoftUpdateSection(
+                                      gap: layout.space(12),
+                                      currentLabel: state.updateCurrentLabel,
+                                      requiredLabel: state.updateRequiredLabel,
+                                      storeUrl: state.updateStoreUrl,
+                                    ),
+                                  HomeHabitCards(now: widget.now),
+                                  SizedBox(height: layout.sectionGap),
+                                  HomeTodaySummary(
+                                    summary: TodaySummary.of(state),
+                                  ),
+                                ],
+                                tiles: gameTiles,
                               ),
-                            const HomeHabitCards(),
-                            SizedBox(height: layout.sectionGap),
-                            HomeTodaySummary(summary: TodaySummary.of(state)),
-                            Expanded(child: _HomeGamesPane(tiles: gameTiles)),
+                            ),
                           ],
                         ),
                       );
@@ -431,25 +449,29 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
-/// Packs game tiles tightly at the top; scrolls only when they cannot fit.
+/// Everything under the header, in one scroll view: the update banner, the
+/// habit cards and today's summary ([above], each empty when there's
+/// nothing to say), then the game tiles packed tightly at the top.
 ///
-/// The scroll view sizes itself to the real tiles, so a tall tile (a stats
-/// line, a large font) can never overflow a short screen.
-class _HomeGamesPane extends StatelessWidget {
-  const _HomeGamesPane({required this.tiles});
+/// It scrolls only when that can't fit, and sizes itself to the real
+/// content, so a busy day (or a tall tile, a large font) never overflows a
+/// short screen and every tile stays reachable.
+class _HomeScrollPane extends StatelessWidget {
+  const _HomeScrollPane({required this.above, required this.tiles});
 
+  final List<Widget> above;
   final List<Widget> tiles;
 
   @override
   Widget build(BuildContext context) {
     final gap = AppLayout.of(context).tileGap;
-    if (tiles.isEmpty) return const SizedBox.shrink();
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          ...above,
           for (var i = 0; i < tiles.length; i++) ...[
             if (i > 0) SizedBox(height: gap),
             tiles[i],
@@ -481,6 +503,7 @@ class _DailyGameTile extends StatelessWidget {
     this.loadedAt,
     this.cleared = false,
     this.weekendSpecial = false,
+    this.clock = DateTime.now,
   });
 
   final Color accent;
@@ -508,6 +531,9 @@ class _DailyGameTile extends StatelessWidget {
   /// The day's dailies are weekend specials: the pill says so instead of
   /// "Today".
   final bool weekendSpecial;
+
+  /// What the next-puzzle countdown counts from.
+  final DateTime Function() clock;
 
   @override
   Widget build(BuildContext context) {
@@ -692,6 +718,7 @@ class _DailyGameTile extends StatelessWidget {
                                 NextPuzzleCountdown(
                                   period: DevFlags.playPeriod,
                                   periodOf: loadedAt,
+                                  clock: clock,
                                   style: textTheme.bodySmall?.copyWith(
                                     color: accent,
                                     fontWeight: FontWeight.w700,

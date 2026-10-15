@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/app.dart';
 import 'package:winklo/core/di/app_repositories.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/app_language.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/game_day_record.dart';
@@ -34,8 +35,10 @@ import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/home/view/home_screen.dart';
+import 'package:winklo/features/home/view/widgets/home_update_banner.dart';
 import 'package:winklo/features/results/results_args.dart';
 import 'package:winklo/features/settings/cubit/locale_cubit.dart';
+import 'package:winklo/features/settings/view/app_language_scope.dart';
 import 'package:winklo/features/zip/logic/daily_puzzle_generator.dart';
 
 import '../../helpers/screenshot.dart';
@@ -387,6 +390,50 @@ void main() {
       await settle(tester);
       await check(tester, overflows, name);
     }
+  });
+
+  testWidgets('the update banner', (tester) async {
+    final overflows = <FlutterErrorDetails>[];
+    final previousOnError = FlutterError.onError;
+    FlutterError.onError = (details) {
+      if (details.toString().contains('overflowed')) overflows.add(details);
+      previousOnError?.call(details);
+    };
+    addTearDown(() => FlutterError.onError = previousOnError);
+    tester.view.physicalSize = const Size(360, 640) * 2;
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    AppStrings.use('ml');
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: boundary,
+        child: MaterialApp(
+          locale: const Locale('ml'),
+          supportedLocales: AppLanguageScope.supportedLocales,
+          localizationsDelegates: AppLanguageScope.localizationsDelegates,
+          theme: buildAppTheme(),
+          debugShowCheckedModeBanner: false,
+          home: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  HomeUpdateBanner(
+                    currentLabel: '1.0.0+18',
+                    requiredLabel: '1.1.0+19',
+                    onUpdate: () {},
+                    onSnooze: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('അപ്ഡേറ്റ് ലഭ്യമാണ്'), findsOneWidget);
+    await check(tester, overflows, 'update_banner');
   });
 
   testWidgets('Leaderboard', (tester) async {

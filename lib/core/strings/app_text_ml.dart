@@ -603,9 +603,7 @@ final class AppTextMl implements AppText {
       'ചെയ്യൂ.';
 
   @override
-  String get updateAvailableBody =>
-      'Winklo-യുടെ പുതിയ പതിപ്പ് എത്തി. പുതിയ തിരുത്തലുകൾക്കും '
-      'പസിലുകൾക്കുമായി അപ്ഡേറ്റ് ചെയ്യൂ.';
+  String get updateAvailableBody => 'പുതിയ പസിലുകളും മറ്റും.';
 
   @override
   String get updateNow => 'അപ്ഡേറ്റ് ചെയ്യൂ';

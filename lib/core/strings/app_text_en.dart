@@ -571,8 +571,7 @@ final class AppTextEn implements AppText {
       'A new version of Winklo is required to continue. Please update from the Play Store.';
 
   @override
-  String get updateAvailableBody =>
-      'A new version of Winklo is available. Please update for the latest fixes and puzzles.';
+  String get updateAvailableBody => 'Get the latest fixes and puzzles.';
 
   @override
   String get updateNow => 'Update now';

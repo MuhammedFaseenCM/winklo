@@ -49,6 +49,37 @@ void main() {
     expect(dismissed, GameIds.zip);
   });
 
+  testWidgets('shows one freeze notice at a time: the newest, then the next', (
+    tester,
+  ) async {
+    // Oldest first, as the cubit keeps them.
+    const notices = [
+      FreezeSavedNotice(gameId: GameIds.zip, days: 12),
+      FreezeSavedNotice(gameId: GameIds.pathWords, days: 5),
+      FreezeSavedNotice(gameId: GameIds.sudoku, days: 30),
+    ];
+    var state = const HomeHabitState(freezeNotices: notices);
+    String? dismissed;
+    await pump(tester, state, onDismissNotice: (id) => dismissed = id);
+
+    expect(find.textContaining('Your freeze saved'), findsOneWidget);
+    expect(
+      find.text('Your freeze saved your 30-day Sudoku streak'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byTooltip(AppStrings.dismiss));
+    expect(dismissed, GameIds.sudoku);
+
+    state = HomeHabitState(freezeNotices: notices.sublist(0, 2));
+    await pump(tester, state);
+    expect(find.textContaining('Your freeze saved'), findsOneWidget);
+    expect(
+      find.text('Your freeze saved your 5-day Path Words streak'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('shows this week’s recap, and dismisses', (tester) async {
     var dismissed = 0;
     await pump(

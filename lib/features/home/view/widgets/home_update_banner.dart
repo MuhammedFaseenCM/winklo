@@ -32,7 +32,10 @@ class HomeUpdateBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final hasVersions = currentLabel.isNotEmpty || requiredLabel.isNotEmpty;
+    final snooze = onSnooze;
 
+    // Compact: on a busy day it sits above the habit cards and today's
+    // summary, and the first daily tile should still show on a 360×640 phone.
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -40,7 +43,7 @@ class HomeUpdateBanner extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [Color(0xFF2C221D), ZipColors.wall],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: ZipColors.ember.withValues(alpha: 0.45),
           width: 1.2,
@@ -48,20 +51,21 @@ class HomeUpdateBanner extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: ZipColors.ember.withValues(alpha: 0.15),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        padding: EdgeInsets.fromLTRB(14, 12, snooze == null ? 14 : 4, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: ZipColors.emberSoft,
                     borderRadius: BorderRadius.circular(10),
@@ -72,23 +76,48 @@ class HomeUpdateBanner extends StatelessWidget {
                   child: const Icon(
                     Icons.system_update_rounded,
                     color: ZipColors.ember,
-                    size: 20,
+                    size: 18,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    AppStrings.updateAvailableTitle,
-                    style: textTheme.titleMedium?.copyWith(
-                      color: ZipColors.ember,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppStrings.updateAvailableTitle,
+                        style: textTheme.titleSmall?.copyWith(
+                          color: ZipColors.ember,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        AppStrings.updateAvailableBody,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: ZipColors.onInk,
+                          height: 1.3,
+                        ),
+                      ),
+                      if (hasVersions) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          AppStrings.updateVersionRow(
+                            currentLabel,
+                            requiredLabel,
+                          ),
+                          style: textTheme.labelSmall?.copyWith(
+                            color: ZipColors.inkSoft,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                if (onSnooze != null)
+                if (snooze != null)
                   IconButton(
                     tooltip: AppStrings.updateSnooze,
-                    onPressed: onSnooze,
+                    onPressed: snooze,
                     visualDensity: VisualDensity.compact,
                     color: ZipColors.inkSoft,
                     icon: const Icon(Icons.close_rounded, size: 20),
@@ -96,40 +125,14 @@ class HomeUpdateBanner extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            Text(
-              AppStrings.updateAvailableBody,
-              style: textTheme.bodyMedium?.copyWith(
-                color: ZipColors.onInk,
-                height: 1.35,
+            Padding(
+              padding: EdgeInsets.only(right: snooze == null ? 0 : 10),
+              child: ZipPrimaryButton(
+                label: updateLabel ?? AppStrings.updateNow,
+                icon: updateIcon,
+                compact: true,
+                onPressed: onUpdate,
               ),
-            ),
-            if (hasVersions) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
-                ),
-                child: Text(
-                  AppStrings.updateVersionRow(currentLabel, requiredLabel),
-                  style: textTheme.labelMedium?.copyWith(
-                    color: ZipColors.inkSoft,
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 14),
-            ZipPrimaryButton(
-              label: updateLabel ?? AppStrings.updateNow,
-              icon: updateIcon,
-              onPressed: onUpdate,
             ),
           ],
         ),

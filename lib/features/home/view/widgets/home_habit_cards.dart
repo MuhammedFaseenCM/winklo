@@ -17,7 +17,10 @@ import '../../cubit/home_state.dart';
 /// Home's habit cards (freeze saved, weekly recap), reloaded with Home.
 /// Sits under [HomeCubit]; takes no space when there is nothing to show.
 class HomeHabitCards extends StatelessWidget {
-  const HomeHabitCards({super.key});
+  const HomeHabitCards({super.key, this.now});
+
+  /// The clock, for tests.
+  final DateTime Function()? now;
 
   static Map<String, int> _streaks(HomeState state) => {
     GameIds.zip: state.currentStreak,
@@ -32,6 +35,7 @@ class HomeHabitCards extends StatelessWidget {
         final cubit = HomeHabitCubit(
           habit: context.read<HabitRepository>(),
           weeklyRecap: context.read<GetWeeklyRecap>(),
+          now: now,
         );
         final home = context.read<HomeCubit>().state;
         unawaited(cubit.load(currentStreaks: _streaks(home)));
@@ -73,13 +77,14 @@ class HomeHabitCardsView extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.isEmpty) return const SizedBox.shrink();
     final layout = AppLayout.of(context);
+    final notice = state.shownFreezeNotice;
     final recap = state.recap;
     return Padding(
       padding: EdgeInsets.only(top: layout.space(10)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final notice in state.freezeNotices)
+          if (notice != null)
             _HabitCard(
               icon: Icons.ac_unit_rounded,
               accent: ZipColors.sky,

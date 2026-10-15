@@ -90,9 +90,23 @@ Started from `feat/quick-wins` at `e4b3f2b`, so it holds that branch too; not me
 
 The admin console redesign (`feat/ember-glass-redesign`) is merged into winklo-admin's `main`.
 
+### Ready to merge: `feat/roadmap-batch`
+
+Started from `feat/home-review-haptics` at `8b3daff`, so it holds both branches above; not merged and not uploaded. Built 15–16 October from 33 roadmap ideas (marked **Done** below): the spec is `docs/superpowers/specs/2026-10-15-roadmap-batch-design.md`, with a plan per area in `docs/superpowers/plans/2026-10-15-rb-*.md`. It moves the version to **1.1.0+19** (`changelogs/19.txt`) and adds `in_app_update`, `home_widget` and `flutter_localizations`. Its winklo-admin half is the branch `feat/themes-definitions-weekends` (themes, definitions and weekend boards), not merged. The order matters, because the new build depends on the rules and the Worker:
+
+- [ ] Deploy the Firestore rules and indexes: `firebase deploy --only firestore:rules,firestore:indexes`. This is fair-play phase 1, safe for older builds, and it also accepts the `freezeCount` that +19 writes, so it must go first.
+- [ ] Remove stored times under the new minimums: `node tools/purge_fast_leaderboard_times.mjs` (a dry run), then again with `APPLY=1`.
+- [ ] Deploy the leaderboard Worker: `cd workers/leaderboard && npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON && npm run deploy` (the service account needs Firestore read and write). Then redeploy account deletion, which now also clears leagues and weekly entries: `cd workers/account-deletion && npm run deploy`.
+- [ ] winklo-admin: merge `feat/themes-definitions-weekends` into `main`, which deploys it, and set `WINKLO_ANDROID_NOTIFICATION_CHANNEL_ID` to `winklo_announcements`. Check that the next Path Words day has a `theme` and `definitions`, and the next Saturday's docs have `special: 'weekend'`. A weekend Sudoku can take up to about 6 s of the cron's CPU time.
+- [ ] App Links: add `docs/.well-known/assetlinks.json` for package `com.winklo.faseencm` with the SHA-256 of the Play app signing certificate (Play Console → App integrity), so the Pages deploy publishes it with the link pages. No phone was connected to read it from the Play build.
+- [ ] Have a native speaker review the Malayalam copy in `lib/core/strings/`.
+- [ ] Try on a device: the widget (add it, tap each row, the midnight turnover, dark theme), archive and practice boards from production, a first sync with a long local history (stats and badges), a league invite link, and the update banner's shorter text ("Get the latest fixes and puzzles.").
+- [ ] Merge into `master`, then build and upload **1.1.0+19**.
+- [ ] Fair-play phase 2, once most players are on +19: set Remote Config `minBuildNumber` to 19, change `directLeaderboardWritesAllowed()` in `firestore/firestore.rules` to `return false;`, update the pin test that expects `true`, and redeploy the rules. Clears that never had a proof (older ones a sync finds on a phone) then stop reaching the board; that's by design, and the sync treats the refusal as final.
+
 ### Pending
 
-- **Merge winklo-admin `fix/daily-puzzle-follow-ups`** (pushed at `acdc951`, not merged): all four follow-ups listed after [Fix first 15](#auto-generated-puzzles). Merging to its `main` deploys the SPA and the Worker, now only after their type checks and tests pass. Then check the next Path Words day the cron creates: `boardSource` should say `ai`, and `generatorMeta.aiWords` says why if it doesn't.
+- **winklo-admin `fix/daily-puzzle-follow-ups`** is merged into its `main` (`9fa3cd7`), which deploys the SPA and the Worker. Confirm that Deploy run succeeded in GitHub Actions, then check the next Path Words day the cron creates: `boardSource` should say `ai`, and `generatorMeta.aiWords` says why if it doesn't.
 - **The rest of the [feature roadmap](#feature-roadmap)**; [Suggested order](#suggested-order) says where to start.
 
 ## Feature roadmap
@@ -177,7 +191,7 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 
 #### Zip
 
-- **Replay your path.** Since `489ecff` the saved path of your best-time run keeps the order you drew the cells in, so review can animate it being drawn. It would also make a good share clip. **S**
+- **Done: replay your path.** In review mode a Replay button redraws the saved path of your best run in the order you drew it, about 12 cells a second (`ZipReplayCubit`). It's hidden when there's no saved path.
 - **Feedback at each number.** The haptic is done (quick win 6); a soft sound when the path reaches the next number isn't. (Reject sounds for illegal moves were removed on purpose in `6d243ae`.) **S**
 - **Compare with the setter's path.** Add a review toggle that overlays the stored `solution`, since many boards have more than one answer. **S**
 - **Done: even harder weekends.** `dailyPuzzleParams(game, dateId)` in winklo-admin (`feat/themes-definitions-weekends`) gives Saturdays and Sundays 4–5 numbers and 22–26 walls on the 8×8 board (weekdays 6–7 and 16–20), and the doc gets `special: 'weekend'`, which the app shows as a "Weekend special" badge.
@@ -203,40 +217,40 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 
 - **Your rank beyond the top 50.** The board loads only the top 50, and your own row is pinned only when it's among them. A Firestore `count()` of faster times gives "You're #132 of 1,204". The app gives tied times the same rank with no gap (1, 2, 2, 3), while counting gives 1, 2, 2, 4, so pick one. **S–M**
 - **Percentile on Results.** "Faster than 78% of today's players", from the same counts. Two post-game specs deferred a "you'd be #N" teaser for guests. **S**
-- **Past days' boards.** The repository and use case already take a `dayId`; the cubit never passes one. Add a date picker to the daily board. **S–M**
+- **Done: past days' boards.** The daily tab has a strip of the last 14 days; past days are read-only, from the same `watchBoard(dayId:)`.
 - **Hint-free filter.** Entries already store `usedHints` (for the best-time run), so a toggle can rank only clean runs. It needs a composite index; since Fix first 5 the flag can be trusted. **S–M**
-- **Weekly board.** Rank by total or average time across the week's clears, with a Worker cron adding up the daily boards (Spark has no Cloud Functions). **M–L**
-- **Tap a player.** Open a small card with their avatar, name and streak, all of which are already on the entry. The rules now limit names and photos (Fix first 4), but the streak on an entry still can't be checked. **S**
+- **Done: weekly board.** A "This week" tab ranks by days cleared, then total time ("5 days · 6:12"). Entries live at `leaderboards/{game}/weekly/{yyyy-Www}/entries/{uid}`, and only the leaderboard Worker writes them, on each accepted submission, so there's no cron. Release root only: debug builds show the tab empty.
+- **Done: tap a player.** A sheet with the avatar, name, time, clean-run chips and streak, all from the entry. The Worker caps the streak at the player's synced streak + 1, but that synced streak is still the player's own `game_streaks` doc.
 - **Report a player.** Names and uploaded photos are shown to every player, with no way to report or hide one, and the avatar Worker checks only the declared type and the size. Google Play's user-generated content policy expects in-app reporting and blocking. Add "Report" to leaderboard rows, check the JPEG bytes in the Worker, and keep a way to reset a name or photo. **S–M**
-- **Friends and private leagues.** Use invite codes to make a filtered board for friends, family or a team. This needs a small social graph and new rules. **L**
-- **Fair play.** The board is easy to game today. The rules accept any whole number of seconds, anyone can read a puzzle and its solution up to two days early, the leaderboard day isn't checked, and the clock stops while the app is in the background. Hide the board while paused, add a minimum time per game and block reads of future dailies in the rules, and send submissions through a Worker that checks the board. **M**
+- **Done: friends and private leagues.** Create a league (up to 30 members), share `winklo.pages.dev/join/CODE`, join with the code, leave; the owner renames it, removes members or deletes it. The leaderboard's scope picker shows Everyone or a league, and a league's daily, weekly and past-day boards are its members' entries (one `whereIn` read, ranked on the phone). The rules are tested on the emulator (`firestore/rules_test`, `npm run test:emulator`; not in CI, which has no Java). Account deletion removes the player from leagues and deletes the ones they own. A removed member can rejoin with the same code until the league is deleted.
+- **Done: fair play, staged.** Submissions go through `workers/leaderboard` (`POST /v1/submit`), which checks the ID token, that the day is live, a minimum time (Zip 10 s, Path Words and Sudoku 15 s) and a proof that solves that day's board (Zip's path, Sudoku's grid, Path Words' strokes), then writes the daily, all-time and weekly entries. Each clear's proof is kept on the phone (`clear_proof_{modeKey}`) so a sync can resend it. When the Worker can't be reached the app falls back to the old direct write, and the board is hidden while a run is paused. Phase 1 rules add the minimum time and a live-day check to direct writes and refuse reads of dailies before they go live; phase 2 turns direct writes off (see [Project status](#project-status)). Limits: a proof only shows the player had the puzzle, the clean-run flags are self-reported, and the streak cap trusts `game_streaks.current`.
 
 ### Stats, history and achievements
 
-- **Done: Stats screen.** Built in the roadmap batch: Profile → Your stats opens `/profile/stats`, fed by a one-time upload of each phone's history on the first signed-in sync. Per game: clears, current and longest streak, best and average time, how often you clear without hints, a time histogram and a calendar of cleared days. Synced history lives in `users/{uid}/game_days` (time, points, hints, mistakes) and owners can read it, but only from 1.0.0+15 on, and each sync covers only today and yesterday. Older days exist only on each phone, so the stats screen needs a one-time upload of the local history first. **M**
-- **Done: Achievements.** Built in the roadmap batch, with a banner on Results for new ones. First clear, 7/30/100-day streaks, a Zip under a minute, a week without hints, ten flawless Sudokus, a perfect day with all three cleared. Compute them from the same day records and show them on Profile. **M**
-- **Done: Personal-best trend.** On the stats screen. A small chart of clear times over the last 30 days. **S** once the stats screen exists.
-- **Today's summary on Home.** "2 of 3 cleared · 3:41 total", with a "Perfect day" badge when all three are done. **S**
+- **Done: stats screen.** Profile → Your stats opens `/profile/stats`, a tab per game: clears, current and longest streak, best and average time, the share of hint-free clears, a time histogram and a calendar of cleared days. It reads `users/{uid}/game_days` merged with the phone's history, which the first signed-in sync after the update uploads once (`history_uploaded_{uid}`). Each open reads the whole `game_days` collection once, so watch the Firestore read counts.
+- **Done: achievements.** 16 badges on Profile (first clear, 7/30/100-day streaks per game, a Zip under a minute, a week without hints, ten flawless Sudokus, a perfect day), computed in `domain/achievements/`, with a banner on Results for new ones. On a new phone or account, badges already earned are announced once.
+- **Done: personal-best trend.** A line of the last 30 days' clear times with the running best, on the stats screen.
+- **Done: today's summary on Home.** "2 of 3 cleared · 3:41 total" above the tiles, with a Perfect day badge.
 
 ### Habit and retention
 
-- **Earn freezes back.** Today each game gets one freeze for good: `GameStreak.freezeAvailable` is only ever set to false. Earn one for each 7-day streak (up to two, say), show the count on Home, and tell players when a freeze saved their streak. Add a new count field rather than retyping the bool: older builds keep writing it, and the rules only accept listed fields. **M**
-- **Smarter reminders.** The 20:00 reminder is scheduled whenever any game is uncleared, even when no streak is at stake, and its text is generic. Name the streak at risk ("Your 12-day Zip streak ends at midnight"), skip the reminder when there is nothing to lose, and let players choose the time and which reminders they get (per-type toggles were deferred in the notifications spec). Give reminders and announcements separate Android channels; one channel carries both today. **M**
-- **Home-screen widget.** Show today's status for each game, the streak and the countdown, and open straight into a game. **M–L**
-- **Weekly recap.** A Sunday notification or Home card: "This week: 18 of 21 cleared, best Zip 0:58, 5-day Sudoku streak". **M**
-- **Snooze the update banner.** The soft update banner can't be dismissed; let players hide it for a day (deferred in the force-update spec). **S**
+- **Done: earn freezes back.** A clear that brings a streak to a multiple of 7 earns a freeze, up to two (`GameStreak.freezeCount`, synced and accepted by the rules); `freezeAvailable` is still written, as `freezeCount > 0`, for older builds. Home shows the count and says once when a freeze saved a streak.
+- **Done: smarter reminders.** The evening reminder names the longest streak at risk ("Your 12-day Zip streak ends at midnight") and isn't sent when no streak is at stake. Settings sets both times and turns each type on or off (daily ready, streak at risk, weekly recap, announcements). Reminders and announcements have their own Android channels (`winklo_reminders`, `winklo_announcements`). The streak reminder is now a one-off for tonight and tomorrow evening, replanned on each open, clear and midnight, since its text names a streak.
+- **Done: home-screen widget.** An Android widget (`home_widget`, Kotlin RemoteViews) shows each game's ✓ or streak and opens the game through `winkloapp://play/{game}`. It refreshes on app open, each clear, midnight and every 30 minutes.
+- **Done: weekly recap.** A Sunday notification ("This week: 18 of 21 cleared, best Zip 0:58, 5-day Sudoku streak") and a Home card on Sunday and Monday that can be dismissed for the week. A week with no clears sends nothing.
+- **Done: snooze the update banner.** Its close button hides it for 24 hours; the forced screen can't be snoozed.
 
 ### More ways to play
 
 - **Done: archive.** Any past daily from 11 October 2026 to yesterday, from the More ways to play hub, in an archive mode that skips streaks, boards and the daily best and keeps its own best time and 3 hints per run. The date bugs are fixed: Zip's clock no longer stays at 0 for a given date, and Path Words and Sudoku no longer jump to today on resume. Archive days are always read as calendar days, so debug builds with the minute period read the real past dailies.
 - **Done: practice mode.** Endless offline boards from `DailyPuzzleGenerator.practice`, `SudokuGenerator.practice` and `PathWordsGenerator.practice`, brought up to the cron's hard rules (Zip 8×8 with 6–7 numbers and 16–20 walls; Sudoku 8–9 unique givens; Path Words 6×6 with 5–6 letter words, lone blanks and one route per word). Path Words practice words come from `assets/words/en_practice_words.txt`, the cron's fallback pool. A practice board's seed is kept in its draft, so leaving and coming back finds it; New board starts another. No leaderboard, streak or hint limit.
 - **Done: weekend specials.** Harder boards at the weekday size on Saturdays and Sundays (by the dateId's calendar date), so older builds can play them: Zip with fewer numbers and more walls, Sudoku with exactly 8 givens, Path Words with five 6-letter words and 6 blanks. The doc's `special: 'weekend'` puts a badge on the Home tiles and the game header. (The 9×9 Sudoku idea is separate.)
-- **Offline safety net.** If Firestore can't be reached and today's puzzle isn't cached, the game shows an error with Retry. The auto-generator keeps UTC today + 2 days published, so the app can prefetch tomorrow's puzzle while online (Home only warms today's Zip). Since Fix first 10, a slow connection falls back to that cached copy. **S–M**
+- **Done: offline safety net.** Once tomorrow's dailies are live (10:00 UTC the day before), Home reads all three so Firestore caches them; a refused or offline read is tried again after 10 minutes. Since Fix first 10, a slow connection falls back to the cached copy.
 - **Done: Word Match and Category Race as bonus games.** In the hub's Bonus games section, with How to play on the first round, sfx and haptics, the app's header and theme, and the shared local-best Results page (best time per deck, most words per category). Their content still comes from the CMS decks.
 
 ### Accessibility and settings
 
-- **A settings screen.** Today sound and vibration have toggles in Profile. Put sound, haptics, reminders, an optional on-screen timer and reduced motion in one place. **M**
+- **Done: a settings screen.** Profile → Settings (`/profile/settings`): sound, vibration, the reminders above and the language. An on-screen timer and reduced motion are separate ideas below.
 - **Optional visible timer.** A running clock exists but only shows in debug builds (`DevRunTimerLabel`). Offer it as an opt-in setting, in keeping with "no timer you didn't ask for". **S**
 - **Respect the system font size.** `AppTextScale` turns off OS text scaling for the whole app so layouts stay fixed. Allow scaling up to about 1.3× outside the boards, which means replacing that app-wide wrapper. **S–M**
 - **Reduced motion.** Respect the system "remove animations" setting for the ember burst, sparks and shimmer. **S**
@@ -245,8 +259,8 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 
 ### Platform and growth
 
-- **Links that open the game.** Add App Links for `winklo.pages.dev/zip` and similar (with `assetlinks.json` on Pages), so shared results and announcements open the right screen. The app only declares a launcher intent filter today. **M**
-- **Play in-app updates.** Use Play's in-app update API instead of sending players to the store page (deferred in the force-update spec). **S–M**
+- **Done: links that open the game.** App Links for `winklo.pages.dev/zip`, `/path-words`, `/sudoku`, `/leaderboard` and `/join/{code}`, with pages in `docs/` for people without the app; shared results link to their game. Back from a page a link, notification or the widget opened goes Home. Verification needs `docs/.well-known/assetlinks.json` with the Play signing certificate (see [Project status](#project-status)).
+- **Done: Play in-app updates.** The soft banner starts a flexible update and then offers "Restart to update"; the forced screen starts an immediate one. Both fall back to the store page (`in_app_update`).
 - **iOS.** There's no `ios/` folder yet, and `firebase_options.dart` throws on iOS. It needs a Firebase iOS app, APNs for push and the Google Sign-In URL scheme. App Store rules will likely require Sign in with Apple, and they require account deletion inside the app (guideline 5.1.1(v)); the deletion Worker already accepts any Firebase sign-in. **L**
 - **Done: Malayalam.** All copy goes through `AppStrings`, which stays plain Dart because notifications, the widget and issue reports read it without a `BuildContext`: each member reads the current table, `AppTextEn` or `AppTextMl` (both implement `AppText` in full, so a missing string doesn't compile). `LocaleCubit` (Settings → Language, stored in shared_preferences) switches the table and the `MaterialApp` locale together, rebuilds the app with its state kept, and replans the reminders and the widget. Dates in the calendars and time pickers come from the Material localizations; Western digits throughout. **The Malayalam copy was written without a native speaker and needs a native speaker's review before release** (`lib/core/strings/app_text_ml.dart`; `test/features/l10n/malayalam_screens_test.dart` with `WINKLO_SCREENSHOTS=1` writes screenshots of every main screen to check lengths). Another language is another `AppText` table plus its code in `AppStrings.supportedLanguageCodes` and `AppLanguage`; Path Words would also need word content in that language. **L**
 - **Revenue without ads (optional).** If it's ever needed, keep the no-ads promise, for example with a one-time supporter pack that unlocks the archive and extra avatars. **M**
@@ -273,9 +287,9 @@ These aren't features, but they affect how cheap the ideas above are:
 
 | Phase | Ideas | Why |
 |---|---|---|
-| **Now** (one to two weeks, mostly S) | Ship `feat/quick-wins` and `feat/home-review-haptics` (Fix first 13–16 and quick wins 1–6 and 8 are done there); the winklo-admin follow-ups; the review prompt (quick win 7) | Closes the Play-policy and privacy gaps, makes the chips and personal bests honest, and makes later changes measurable |
-| **Next** (2–4 weeks, mostly M) | Fair play and reporting players; Sudoku undo and highlighting; earning freezes back; smarter reminders and a settings screen; rank beyond the top 50 and percentile; past days' boards; the stats screen | Protects the leaderboard, strengthens the daily habit and gives players more reasons to come back |
-| **Later** (mostly L) | Archive; practice mode; achievements; weekend specials; home-screen widget; App Links; friends leagues; screen-reader support for the boards; iOS; other languages | Bigger bets, once the core loop can be measured |
+| **Now** | Ship `feat/roadmap-batch` (it holds `feat/quick-wins` and `feat/home-review-haptics`) in the order under [Project status](#project-status); the review prompt (quick win 7) | Everything built so far reaches players, and fair play protects the boards |
+| **Next** (mostly S–M) | Reporting players (Play's user-generated content policy); fair-play phase 2; Sudoku undo, highlighting, tidy notes and the digit counter; rank beyond the top 50 and percentile; the hint-free filter; the visible timer and reduced motion | Keeps the boards safe and makes Sudoku match the other two games |
+| **Later** (mostly L) | Screen-reader support for the boards; a colour-blind-friendly palette; Weekend 9×9 Sudoku; iOS; more languages; Flow | Bigger bets, once the core loop can be measured |
 
 ## Getting started
 
