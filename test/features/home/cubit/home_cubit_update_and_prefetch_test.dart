@@ -51,7 +51,10 @@ class _RecordingPrefetch implements DailyPuzzlePrefetchRepository {
   final List<String> days = [];
 
   @override
-  Future<void> prefetch(String dateId) async => days.add(dateId);
+  Future<bool> prefetch(String dateId) async {
+    days.add(dateId);
+    return true;
+  }
 }
 
 void main() {

@@ -35,20 +35,24 @@ class DailyPuzzlePrefetchRepositoryImpl
   }
 
   @override
-  Future<void> prefetch(String dateId) async {
+  Future<bool> prefetch(String dateId) async {
     final read = _read;
-    if (read == null) return;
-    await Future.wait([
+    if (read == null) return false;
+    final results = await Future.wait([
       for (final collection in collections)
         _quietly(() => read('$collection/daily_$dateId')),
     ]);
+    return results.every((ok) => ok);
   }
 
-  /// Refused (permission-denied), offline, or missing: all the same to a
-  /// cache warm-up.
-  static Future<void> _quietly(Future<void> Function() read) async {
+  /// Whether [read] went through. Refused (permission-denied), offline, or
+  /// missing: all the same to a cache warm-up, which tries again later.
+  static Future<bool> _quietly(Future<void> Function() read) async {
     try {
       await read();
-    } catch (_) {}
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }

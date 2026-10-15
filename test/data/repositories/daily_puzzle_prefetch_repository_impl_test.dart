@@ -8,7 +8,7 @@ void main() {
       reads.add(path);
     });
 
-    await repo.prefetch('20261016');
+    expect(await repo.prefetch('20261016'), isTrue);
 
     expect(
       reads,
@@ -31,15 +31,15 @@ void main() {
         }
       });
 
-      await expectLater(repo.prefetch('20261016'), completes);
+      await expectLater(repo.prefetch('20261016'), completion(isFalse));
 
       expect(reads, hasLength(3));
     },
   );
 
-  test('without Firebase it does nothing', () async {
+  test('without Firebase it reads nothing', () async {
     final repo = DailyPuzzlePrefetchRepositoryImpl();
 
-    await expectLater(repo.prefetch('20261016'), completes);
+    await expectLater(repo.prefetch('20261016'), completion(isFalse));
   });
 }
