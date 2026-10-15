@@ -179,15 +179,15 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 - **Replay your path.** Since `489ecff` the saved path of your best-time run keeps the order you drew the cells in, so review can animate it being drawn. It would also make a good share clip. **S**
 - **Feedback at each number.** The haptic is done (quick win 6); a soft sound when the path reaches the next number isn't. (Reject sounds for illegal moves were removed on purpose in `6d243ae`.) **S**
 - **Compare with the setter's path.** Add a review toggle that overlays the stored `solution`, since many boards have more than one answer. **S**
-- **Even harder weekends.** Since 10 October every daily is the hardest tier (Fix first 12), and the rules for all three games sit in one function in winklo-admin (`dailyPuzzleParams`). Zip is already at the largest size the app plays (8×8), so weekend boards would get harder through fewer numbers and more walls. **S–M**
+- **Done: even harder weekends.** `dailyPuzzleParams(game, dateId)` in winklo-admin (`feat/themes-definitions-weekends`) gives Saturdays and Sundays 4–5 numbers and 22–26 walls on the 8×8 board (weekdays 6–7 and 16–20), and the doc gets `special: 'weekend'`, which the app shows as a "Weekend special" badge.
 - **Make sure every level has a `solution`.** Hints are disabled when it's missing. Generated boards include one, but the sample level in `FIREBASE.md` doesn't, so check any board made by hand. **S** (content check)
 
 #### Path Words
 
-- **Lock found words.** Undo removes the last stroke even when it was a correct word, and a test ("undo of a found word unlocks that word") locks that behaviour in. Only wrong strokes should be undoable. **S**
-- **Daily theme.** Make each day's words share a theme that's revealed when you clear the puzzle ("Today: kitchen tools"). The winklo-admin cron already asks the AI for each day's words, so the theme can come from the same prompt, though today it asks for unrelated words on purpose, since a theme makes the words easier to guess. (The `path-words-nouns` Worker only produces random nouns, and the app never calls it.) **M**
-- **Word definitions.** After clearing, tap a found word to see a one-line definition, cached the same way as the noun pool. **M**
-- **Bonus words.** Count real words that aren't targets as bonus finds. This needs a bigger dictionary than the bundled `en_words.txt` (2,482 words, which no code reads today). **M**
+- **Done: lock found words.** Undo shortens the stroke being drawn or removes the last wrong stroke; a found word stays (Reset still clears everything), and Undo is off when there's nothing it can take back.
+- **Done: daily theme.** The winklo-admin cron asks the AI for a short theme and words on it; the doc's `theme` is set only when every word is the AI's. Results and review mode show "Today: Kitchen tools" after the clear, never before. The CMS editor can change it.
+- **Done: word definitions.** Each target word comes with a one-line definition in the doc's `definitions` (the AI's, or the built-in list's; every built-in word has one). After a clear, tapping a found word on Results or in review mode opens it in a sheet. They come with the puzzle doc, so Firestore's cache keeps them.
+- **Done: bonus words.** `assets/words/en_bonus_words.txt` (public-domain ENABLE, 4–8 letters, slurs and profanity removed; it replaced `en_words.txt`) loads lazily behind `WordListRepository`. A stroke that spells a word from it, isn't a target and isn't a bonus already shows "Bonus word: STARE" and clears without counting as wrong. Bonus words are saved with the draft and the clear meta, and Results shows "3 bonus words"; they don't touch the time, the leaderboard or the clean-run flags.
 
 #### Sudoku
 
@@ -229,7 +229,7 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 
 - **Archive.** Let players play any past day's puzzle. Past dailies stay in Firestore under their `daily_YYYYMMDD` ids as long as winklo-admin keeps them. The game screens take a `date`, but the routes never pass one, and the games aren't ready for it: Zip's clock stays at 0 when given a date, Path Words and Sudoku jump to today's puzzle on resume, and a past clear would post to that day's board, reset the streak and spend today's hints. Archive runs need their own mode that skips streaks and boards (and can keep its own best time). **M–L**
 - **Practice mode.** Offer endless offline puzzles from the generators already in the repo (`DailyPuzzleGenerator`, `PathWordsGenerator`, `SudokuGenerator`), whose generation code only tests use today. No leaderboard or streak. **M**
-- **Weekend specials.** A bigger or themed board on Saturday and Sunday for each game (see Zip's even harder weekends and the Sudoku 9×9 idea). **M–L**
+- **Done: weekend specials.** Harder boards at the weekday size on Saturdays and Sundays (by the dateId's calendar date), so older builds can play them: Zip with fewer numbers and more walls, Sudoku with exactly 8 givens, Path Words with five 6-letter words and 6 blanks. The doc's `special: 'weekend'` puts a badge on the Home tiles and the game header. (The 9×9 Sudoku idea is separate.)
 - **Offline safety net.** If Firestore can't be reached and today's puzzle isn't cached, the game shows an error with Retry. The auto-generator keeps UTC today + 2 days published, so the app can prefetch tomorrow's puzzle while online (Home only warms today's Zip). Since Fix first 10, a slow connection falls back to that cached copy. **S–M**
 - **Word Match and Category Race.** Both still work and are routed, but the Flow spec lists reviving them as dailies as a non-goal. Only bring them back as bonus games, with the same polish as the dailies. **L**
 
@@ -256,7 +256,7 @@ These aren't features, but they affect how cheap the ideas above are:
 
 - The generation code in `DailyPuzzleGenerator`, `PathWordsGenerator` and `SudokuGenerator` runs only in tests (`DailyPuzzleGenerator.dateId` is production code, and `SudokuGenerator` is an unused default in `SudokuBloc`). winklo-admin now has TypeScript ports of the Zip and Sudoku generators, so there are two copies to keep in step. Reuse the Dart ones for practice mode, or move `dateId` out and delete them.
 - `generate_daily_path_words.dart` and `generate_daily_sudoku.dart` sit in `lib/domain/usecases/` but import `cloud_firestore`, and they fetch rather than generate. Move them behind repositories, as Zip already is, to keep `domain/` pure Dart as CLAUDE.md asks.
-- `FetchZipLevels`, the bundled `assets/zip/levels/*` and `en_words.txt` are unreachable. `WordListRepository` and the `path-words-nouns` client are registered but never read, so that Worker is never called.
+- `FetchZipLevels` and the bundled `assets/zip/levels/*` are unreachable. `WordListRepository` serves only the bonus word list; its daily-nouns path and the `path-words-nouns` client are registered but never read, so that Worker is never called.
 - Path Words' `hintFlashCell` and Sudoku's `hintFlashIndex` (with its drawing code) are left over from older hints; today's hints are drawn another way.
 - The replay fields in `ResultsArgs` are ignored for the dailies, and guest-play code (for example `results_board_tease.dart`) remains from before sign-in became compulsory.
 - `SfxService.tapSoundEnabled` is still `false` ("muted for now").
