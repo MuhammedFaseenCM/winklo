@@ -3,20 +3,25 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../domain/entities/leaderboard_proof.dart';
+import '../../domain/logic/progress_merge.dart';
 import '../../domain/repositories/progress_local_repository.dart';
 
-/// Prefixes of every per-user progress key on the device: scores, clear meta
-/// and boards, streaks, hint quota, run drafts, sync markers and the
-/// achievements already announced.
+/// Prefixes of every per-user progress key on the device: scores, clear meta,
+/// boards and leaderboard proofs, streaks (and the freeze-saved notices),
+/// hint quota, run drafts, sync markers, the achievements already announced
+/// and the habit surfaces' state (the dismissed weekly recap).
 const userProgressKeyPrefixes = [
   'best_',
   'clear_meta_',
   'clear_board_',
+  'clear_proof_',
   'streak_',
   'hints_used_',
   'in_progress_',
   'sync_',
   'achievements_',
+  'habit_',
 ];
 
 class ProgressLocalRepositoryImpl implements ProgressLocalRepository {
@@ -120,11 +125,50 @@ class ProgressLocalRepositoryImpl implements ProgressLocalRepository {
   }
 
   @override
+  Future<void> forgetUserProgress(String uid) async {
+    final owner = ownerUid;
+    if (owner == null || owner == uid) {
+      await purgeUserProgress();
+      await _prefs.remove(_ownerKey);
+    }
+    await _prefs.remove(_stashKey(uid));
+    await _prefs.remove(_historyUploadedKey(uid));
+  }
+
+  @override
   String? pushedSignature(String key) => _prefs.getString(_markerKey(key));
 
   @override
   Future<void> setPushedSignature(String key, String signature) async {
     await _prefs.setString(_markerKey(key), signature);
+  }
+
+  /// `clear_proof_<daily mode key>`, e.g. `clear_proof_zip_daily_20261007`:
+  /// the proof's JSON, next to the clear's `clear_meta_` and `clear_board_`.
+  static String _clearProofKey(String gameId, String playId) =>
+      'clear_proof_${modeKeyFor(gameId, playId)}';
+
+  @override
+  LeaderboardProof? clearProof(String gameId, String playId) {
+    final raw = _prefs.getString(_clearProofKey(gameId, playId));
+    if (raw == null) return null;
+    try {
+      return LeaderboardProof.fromJson(gameId, jsonDecode(raw));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> setClearProof(
+    String gameId,
+    String playId,
+    LeaderboardProof proof,
+  ) async {
+    await _prefs.setString(
+      _clearProofKey(gameId, playId),
+      jsonEncode(proof.toJson()),
+    );
   }
 
   /// Not a [userProgressKeyPrefixes] prefix: each uid keeps its flag when

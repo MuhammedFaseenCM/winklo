@@ -86,6 +86,7 @@ import 'package:winklo/domain/usecases/generate_daily_sudoku.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_deck_by_id.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_decks.dart';
 import 'package:winklo/domain/usecases/fetch_zip_levels.dart';
+import 'package:winklo/domain/usecases/forget_account_progress.dart';
 import 'package:winklo/domain/usecases/get_best_daily_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
@@ -289,6 +290,10 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<ProgressLocalRepository>(
       create: (context) =>
           ProgressLocalRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<ForgetAccountProgress>(
+      create: (context) =>
+          ForgetAccountProgress(context.read<ProgressLocalRepository>()),
     ),
     RepositoryProvider<ProgressRemoteRepository>(
       create: (_) => ProgressRemoteRepositoryImpl(),

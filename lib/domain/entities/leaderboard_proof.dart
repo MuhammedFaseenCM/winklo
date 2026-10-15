@@ -1,3 +1,4 @@
+import '../game_ids.dart';
 import '../path_words/path_words_rules.dart';
 import 'cell.dart';
 import 'path_words_puzzle.dart';
@@ -9,6 +10,48 @@ sealed class LeaderboardProof {
 
   /// The `proof` field of the Worker's submit body.
   Map<String, Object?> toJson();
+
+  /// A [gameId] proof from what [toJson] wrote (a clear's saved proof); null
+  /// when [json] isn't one.
+  static LeaderboardProof? fromJson(String gameId, Object? json) {
+    if (json is! Map) return null;
+    switch (gameId) {
+      case GameIds.zip:
+        final path = _cells(json['path']);
+        return path == null ? null : ZipLeaderboardProof(path);
+      case GameIds.sudoku:
+        final grid = json['grid'];
+        if (grid is! List || grid.any((v) => v is! int)) return null;
+        return SudokuLeaderboardProof(grid.cast<int>());
+      case GameIds.pathWords:
+        final strokes = json['strokes'];
+        if (strokes is! List) return null;
+        final parsed = <PathWordsProofStroke>[];
+        for (final stroke in strokes) {
+          if (stroke is! Map) return null;
+          final targetId = stroke['targetId'];
+          final cells = _cells(stroke['cells']);
+          if (targetId is! String || cells == null) return null;
+          parsed.add(PathWordsProofStroke(targetId: targetId, cells: cells));
+        }
+        return PathWordsLeaderboardProof(parsed);
+    }
+    return null;
+  }
+
+  /// `[[row, col], …]` as cells; null when any isn't a pair of ints.
+  static List<Cell>? _cells(Object? json) {
+    if (json is! List) return null;
+    final cells = <Cell>[];
+    for (final cell in json) {
+      if (cell case [final int row, final int col]) {
+        cells.add(Cell(row, col));
+      } else {
+        return null;
+      }
+    }
+    return cells;
+  }
 }
 
 /// Zip: the cells in the order they were drawn.

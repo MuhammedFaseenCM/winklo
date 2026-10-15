@@ -246,6 +246,9 @@ class _Run {
       for (final playId in playIds) {
         if (playId != current) await syncDays(playId);
       }
+      // The upload writes the same `game_days` docs: it waits for a run whose
+      // pull and day sync went through. Leaderboard backfills don't hold it.
+      final syncFailures = _failures;
       for (final gameId in SyncProgress.gameIds) {
         for (final playId in playIds) {
           final day = days['${gameId}_$playId'];
@@ -253,10 +256,10 @@ class _Run {
           await _attempt(() => _syncLeaderboard(day));
         }
       }
-      // Skipped after any failure this run (likely offline): it retries on
-      // the next full sync instead of holding this one.
+      // Skipped after a failure above (likely offline): it retries on the
+      // next full sync instead of holding this one.
       final upload = _s._uploadHistory;
-      if (_pull && upload != null && _failures == 0) {
+      if (_pull && upload != null && syncFailures == 0) {
         await _attempt(() async {
           await upload(
             _uid,
@@ -513,6 +516,12 @@ class _Run {
   /// Posts a cleared day to its daily board (and all-time) once per best time.
   /// A 0 s (sub-second) clear is still a local clear but the board requires
   /// `timeSeconds > 0`, so it is never submitted.
+  ///
+  /// The proof saved with the clear sends it through the leaderboard Worker.
+  /// A clear from before proofs were saved is written directly, while the
+  /// rules still allow that (an older Zip clear rebuilds its proof from the
+  /// saved path instead). A refusal, the Worker's or the rules', is final:
+  /// the day is marked posted and never sent again.
   Future<void> _syncLeaderboard(GameDayRecord day) async {
     final time = day.timeSeconds;
     if (time == null || time <= 0) return;
@@ -538,20 +547,25 @@ class _Run {
             dayId: leaderboardDayIdForPlayId(day.playId),
             // The repository refuses the write if the account switched.
             expectedUid: _uid,
-            // Only Zip saves enough of the run to rebuild its proof.
-            proof: day.gameId == GameIds.zip
-                ? ZipLeaderboardProof.fromBoard(day.board)
-                : null,
+            proof: _proofFor(day),
           )
           .timeout(_s.leaderboardTimeout);
     } on TimeoutException {
       _leaderboardStalled = true;
       rethrow;
     } on LeaderboardSubmitRefused {
-      // Final: the Worker will refuse this clear every time, so stop sending it.
+      // Final: it will be refused every time, so stop sending it.
     }
     await _s._local.setPushedSignature(markerKey, signature);
   }
+
+  /// The proof saved with the clear; for an older Zip clear, the one its
+  /// saved path rebuilds.
+  LeaderboardProof? _proofFor(GameDayRecord day) =>
+      _s._local.clearProof(day.gameId, day.playId) ??
+      (day.gameId == GameIds.zip
+          ? ZipLeaderboardProof.fromBoard(day.board)
+          : null);
 
   /// Decayed current streak, as Home / `GetStreak` show it.
   Future<int> _currentStreak(String gameId) async {

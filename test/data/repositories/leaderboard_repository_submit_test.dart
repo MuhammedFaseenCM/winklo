@@ -10,6 +10,7 @@ import 'package:winklo/data/clients/leaderboard/leaderboard_submit_client.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/leaderboard_proof.dart';
+import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 
 class _MockFirestore extends Mock implements FirebaseFirestore {}
@@ -257,6 +258,62 @@ void main() {
       ),
     );
     verify(() => firestore.runTransaction<_TxResult>(any())).called(2);
+  });
+
+  group('a direct write the rules deny', () {
+    final denied = FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'permission-denied',
+    );
+
+    setUp(() {
+      when(() => firestore.runTransaction<_TxResult>(any())).thenThrow(denied);
+    });
+
+    test('is final for a clear without a proof, and not reported', () async {
+      await expectLater(
+        submit(repo(), proof: null),
+        throwsA(
+          isA<LeaderboardSubmitRefused>().having(
+            (e) => e.code,
+            'code',
+            LeaderboardSubmitRefused.permissionDenied,
+          ),
+        ),
+      );
+      expect(rejected, isEmpty);
+    });
+
+    test('retries a proven clear through the Worker later', () async {
+      when(
+        () => client.submit(
+          idToken: any(named: 'idToken'),
+          body: any(named: 'body'),
+        ),
+      ).thenThrow(const LeaderboardSubmitUnavailable('HTTP 503'));
+
+      await expectLater(
+        submit(repo()),
+        throwsA(
+          allOf(
+            isNot(isA<LeaderboardSubmitRefused>()),
+            isA<Failure>().having((e) => e.reportable, 'reportable', false),
+          ),
+        ),
+      );
+      expect(rejected, isEmpty);
+    });
+  });
+
+  test('any other direct write error is a retryable failure', () async {
+    when(() => firestore.runTransaction<_TxResult>(any())).thenThrow(
+      FirebaseException(plugin: 'cloud_firestore', code: 'unavailable'),
+    );
+
+    await expectLater(
+      submit(repo(), proof: null),
+      throwsA(allOf(isNot(isA<LeaderboardSubmitRefused>()), isA<Failure>())),
+    );
   });
 
   test('a time under the minimum is skipped on release boards', () async {

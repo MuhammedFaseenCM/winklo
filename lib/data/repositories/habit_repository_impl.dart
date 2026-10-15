@@ -15,6 +15,8 @@ class HabitRepositoryImpl implements HabitRepository {
   /// progress, so an account switch purges (or stashes) it with the streaks.
   static const freezeSavedKey = 'streak_notice_freeze_saved';
 
+  /// The `habit_` prefix makes it per-user progress too, so another account
+  /// on this phone gets its own recap card.
   static const _recapDismissedKey = 'habit_recap_dismissed_week';
 
   @override

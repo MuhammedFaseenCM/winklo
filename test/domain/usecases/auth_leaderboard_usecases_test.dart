@@ -4,8 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
 import 'package:winklo/domain/entities/app_user.dart';
+import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
 import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
@@ -229,6 +231,82 @@ void main() {
         await expectLater(run(30), throwsA(isA<Failure>()));
 
         expect(progress.pushedSignature('lb_zip_20261007'), isNull);
+      });
+
+      group('clear proof', () {
+        const proof = ZipLeaderboardProof([Cell(0, 0), Cell(0, 1)]);
+        const slower = ZipLeaderboardProof([Cell(1, 1)]);
+
+        Future<void> runWith(int time, LeaderboardProof p) => submit(
+          gameId: 'zip',
+          timeSeconds: time,
+          usedHints: false,
+          hadMistakes: false,
+          currentStreak: 1,
+          dayId: '2026-10-07',
+          playId: '20261007',
+          proof: p,
+        );
+
+        void stubRepoThrows(Object error) {
+          when(
+            () => repo.submitBestTime(
+              gameId: any(named: 'gameId'),
+              timeSeconds: any(named: 'timeSeconds'),
+              usedHints: any(named: 'usedHints'),
+              hadMistakes: any(named: 'hadMistakes'),
+              currentStreak: any(named: 'currentStreak'),
+              dayId: any(named: 'dayId'),
+              proof: any(named: 'proof'),
+            ),
+          ).thenThrow(error);
+        }
+
+        test('is saved with the clear, even when the submit fails', () async {
+          stubRepoThrows(const Failure('offline', reportable: false));
+
+          await expectLater(runWith(30, proof), throwsA(isA<Failure>()));
+
+          expect(
+            progress.clearProof('zip', '20261007')?.toJson(),
+            proof.toJson(),
+          );
+        });
+
+        test('a slower replay keeps the best run\'s proof', () async {
+          stubRepoThrows(const Failure('offline', reportable: false));
+          await expectLater(runWith(30, proof), throwsA(isA<Failure>()));
+
+          await expectLater(runWith(45, slower), throwsA(isA<Failure>()));
+
+          expect(
+            progress.clearProof('zip', '20261007')?.toJson(),
+            proof.toJson(),
+          );
+        });
+
+        test('a slower replay fills a missing proof', () async {
+          stubRepoThrows(const Failure('offline', reportable: false));
+
+          await expectLater(runWith(45, slower), throwsA(isA<Failure>()));
+
+          expect(
+            progress.clearProof('zip', '20261007')?.toJson(),
+            slower.toJson(),
+          );
+        });
+
+        test('a refused clear is marked posted, so the sync never sends it '
+            'again', () async {
+          stubRepoThrows(const LeaderboardSubmitRefused('bad_proof'));
+
+          await expectLater(
+            runWith(30, proof),
+            throwsA(isA<LeaderboardSubmitRefused>()),
+          );
+
+          expect(progress.pushedSignature('lb_zip_20261007'), '30');
+        });
       });
 
       test('without a playId no marker is written', () async {

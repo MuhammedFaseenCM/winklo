@@ -165,7 +165,8 @@ class _SignedInBodyState extends State<_SignedInBody> {
   /// Play requires an in-app path to account deletion. The deletion itself
   /// happens on the web page, which needs a real browser for Google sign-in.
   /// Signing out first stops this phone from syncing the account's progress
-  /// back after the wipe (its ID token stays valid for up to an hour).
+  /// back after the wipe (its ID token stays valid for up to an hour), and
+  /// the account's progress on this phone goes too.
   Future<void> _deleteAccount(BuildContext context) async {
     final confirmed = await showDeleteAccountConfirmDialog(context);
     if (!confirmed || !context.mounted) return;
@@ -173,7 +174,7 @@ class _SignedInBodyState extends State<_SignedInBody> {
     final messenger = ScaffoldMessenger.of(context);
     await context.read<AnalyticsRepository>().logProfileDeleteAccountOpened();
     if (!context.mounted) return;
-    await context.read<AuthCubit>().signOut();
+    await context.read<AuthCubit>().signOutForAccountDeletion();
     final opened = await links.open(Uri.parse(AppUrls.accountDeletion));
     if (!opened) {
       messenger.showSnackBar(

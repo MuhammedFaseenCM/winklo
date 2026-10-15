@@ -31,6 +31,90 @@ void main() {
     );
   });
 
+  test('each game\'s proof reads back from its JSON', () {
+    const zip = ZipLeaderboardProof([Cell(0, 0), Cell(0, 1)]);
+    const sudoku = SudokuLeaderboardProof([1, 2, 3]);
+    const pathWords = PathWordsLeaderboardProof([
+      PathWordsProofStroke(targetId: 't1', cells: [Cell(1, 2), Cell(1, 3)]),
+    ]);
+
+    expect(
+      LeaderboardProof.fromJson('zip', zip.toJson())?.toJson(),
+      zip.toJson(),
+    );
+    expect(
+      LeaderboardProof.fromJson('sudoku', sudoku.toJson())?.toJson(),
+      sudoku.toJson(),
+    );
+    expect(
+      LeaderboardProof.fromJson('path_words', pathWords.toJson())?.toJson(),
+      pathWords.toJson(),
+    );
+  });
+
+  test('JSON that is not that game\'s proof reads as none', () {
+    final bad = <(String, Object?)>[
+      ('zip', null),
+      ('zip', 'x'),
+      ('zip', {'grid': []}),
+      (
+        'zip',
+        {
+          'path': [
+            [0],
+          ],
+        },
+      ),
+      (
+        'zip',
+        {
+          'path': [
+            ['a', 0],
+          ],
+        },
+      ),
+      (
+        'sudoku',
+        {
+          'grid': ['1'],
+        },
+      ),
+      (
+        'sudoku',
+        {
+          'path': [
+            [0, 0],
+          ],
+        },
+      ),
+      (
+        'path_words',
+        {
+          'strokes': [
+            {'targetId': 3, 'cells': []},
+          ],
+        },
+      ),
+      (
+        'path_words',
+        {
+          'strokes': [
+            {
+              'targetId': 't',
+              'cells': [
+                [0, 0, 0],
+              ],
+            },
+          ],
+        },
+      ),
+      ('word_match', {'grid': []}),
+    ];
+    for (final (gameId, json) in bad) {
+      expect(LeaderboardProof.fromJson(gameId, json), isNull, reason: '$json');
+    }
+  });
+
   test('a Zip proof rebuilds from a saved board', () {
     expect(ZipLeaderboardProof.fromBoard('0,0;0,1;1,1')?.path, const [
       Cell(0, 0),

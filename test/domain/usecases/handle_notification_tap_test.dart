@@ -35,6 +35,73 @@ void main() {
     );
   });
 
+  test('opens Stats', () {
+    expect(
+      handle(const NotificationTap(type: 'x', route: '/profile/stats')),
+      '/profile/stats',
+    );
+  });
+
+  group('leagues', () {
+    const leagueId = 'Ab3dEf6hIj9lMn2pQr5t';
+
+    test('opens the leagues list and a league page', () {
+      expect(
+        handle(const NotificationTap(type: 'x', route: '/leagues')),
+        '/leagues',
+      );
+      expect(
+        handle(const NotificationTap(type: 'x', route: '/leagues/$leagueId')),
+        '/leagues/$leagueId',
+      );
+    });
+
+    test('a league id that is not one goes home', () {
+      for (final route in [
+        '/leagues/',
+        '/leagues/short',
+        '/leagues/$leagueId/extra',
+        '/leagues/Ab3dEf6hIj9lMn2pQr5t1',
+        '/leagues/Ab3dEf6hIj9lMn2pQr-t',
+        '/leagues/%20b3dEf6hIj9lMn2pQr5t',
+      ]) {
+        expect(
+          handle(NotificationTap(type: 'x', route: route)),
+          '/',
+          reason: route,
+        );
+      }
+    });
+
+    test('opens an invite, with its code as the join screen reads it', () {
+      expect(
+        handle(const NotificationTap(type: 'x', route: '/join/ABC234')),
+        '/join/ABC234',
+      );
+      expect(
+        handle(const NotificationTap(type: 'x', route: '/join/abc234')),
+        '/join/ABC234',
+      );
+    });
+
+    test('a code that is not one goes home', () {
+      for (final route in [
+        '/join',
+        '/join/',
+        '/join/ABC23',
+        '/join/ABC2345',
+        '/join/ABCDE1',
+        '/join/ABC234/extra',
+      ]) {
+        expect(
+          handle(NotificationTap(type: 'x', route: route)),
+          '/',
+          reason: route,
+        );
+      }
+    });
+  });
+
   test('defaults empty route to home', () {
     expect(handle(const NotificationTap(type: 'x', route: '')), '/');
     expect(handle(const NotificationTap(type: 'x', route: '  ')), '/');

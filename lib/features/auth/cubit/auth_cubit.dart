@@ -7,6 +7,7 @@ import '../../../domain/failures.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/usecases/clear_notification_token.dart';
+import '../../../domain/usecases/forget_account_progress.dart';
 import '../../../domain/usecases/sign_in_with_google.dart';
 import '../../../domain/usecases/sign_out.dart';
 import '../../../domain/usecases/sync_fcm_token.dart';
@@ -23,6 +24,7 @@ class AuthCubit extends Cubit<AuthState> {
     this._clearNotificationToken,
     this._syncProgress,
     this._analytics,
+    this._forgetAccountProgress,
   }) : super(
          _authRepository.currentUser != null
              ? AuthState(
@@ -65,6 +67,10 @@ class AuthCubit extends Cubit<AuthState> {
   /// Flushes unpushed local progress before sign-out (see [signOut]).
   final SyncProgress? _syncProgress;
   final AnalyticsRepository? _analytics;
+
+  /// Drops the account's progress on this device after
+  /// [signOutForAccountDeletion].
+  final ForgetAccountProgress? _forgetAccountProgress;
   StreamSubscription? _subscription;
 
   /// Upper bound for each pre-sign-out remote step.
@@ -122,13 +128,21 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  Future<void> signOut() async {
+  Future<void> signOut() => _signOutAndMaybeForget(forget: false);
+
+  /// Signs out before the account is deleted on the web, then drops its
+  /// progress on this device (nothing would ever read a stash of it). Its
+  /// progress isn't pushed first: the deletion removes the synced copy.
+  Future<void> signOutForAccountDeletion() =>
+      _signOutAndMaybeForget(forget: true);
+
+  Future<void> _signOutAndMaybeForget({required bool forget}) async {
     final uid = state.user?.uid;
     // Push pending local progress while still authenticated: the sync
     // lifecycle drops its debounced push on sign-out, and a later sign-in by
     // another account would otherwise purge it from this device.
     final sync = _syncProgress;
-    if (sync != null) {
+    if (sync != null && !forget) {
       try {
         await sync(pull: false).timeout(signOutStepTimeout);
       } catch (e) {
@@ -146,6 +160,15 @@ class AuthCubit extends Cubit<AuthState> {
       }
     }
     await _signOut();
+    // Signed out first, so no sync puts the account's progress back.
+    final forgetProgress = _forgetAccountProgress;
+    if (forget && uid != null && forgetProgress != null) {
+      try {
+        await forgetProgress(uid);
+      } catch (e) {
+        debugPrint('Forgetting the deleted account\'s progress: $e');
+      }
+    }
     if (isClosed) return;
     emit(const AuthState(status: AuthStatus.signedOut));
   }

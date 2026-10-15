@@ -77,5 +77,20 @@ void main() {
       await repo.dismissRecapWeek('20261012');
       expect(repo.dismissedRecapWeek, '20261012');
     });
+
+    test('is per-user progress: another account starts undismissed', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final repo = HabitRepositoryImpl(prefs);
+      final progress = ProgressLocalRepositoryImpl(prefs);
+      await repo.dismissRecapWeek('20261012');
+
+      await progress.stashUserProgress('a');
+      await progress.purgeUserProgress();
+      expect(repo.dismissedRecapWeek, isNull);
+
+      await progress.restoreStashedProgress('a');
+      expect(repo.dismissedRecapWeek, '20261012');
+    });
   });
 }
