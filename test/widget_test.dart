@@ -19,9 +19,11 @@ import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/path_words_puzzle.dart';
 import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/repositories/language_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+import 'package:winklo/features/settings/cubit/locale_cubit.dart';
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -54,6 +56,15 @@ class _FixedPathWords extends GenerateDailyPathWords {
   }
 }
 
+/// The app's language, as main.dart provides it (English here).
+Widget _withLocale(Widget app) => BlocProvider(
+  create: (context) => LocaleCubit(
+    languages: context.read<LanguageRepository>(),
+    deviceLanguageCodes: () => const ['en'],
+  ),
+  child: app,
+);
+
 Widget _buildTestApp(SharedPreferences prefs, {AppUser? authUser}) {
   final baseProviders = [
     ...buildRepositoryProviders(prefs: prefs),
@@ -76,7 +87,7 @@ Widget _buildTestApp(SharedPreferences prefs, {AppUser? authUser}) {
           signInWithGoogle: _MockSignInWithGoogle(),
           signOut: _MockSignOut(),
         ),
-        child: const WinkloApp(),
+        child: _withLocale(const WinkloApp()),
       ),
     );
   }
@@ -89,7 +100,7 @@ Widget _buildTestApp(SharedPreferences prefs, {AppUser? authUser}) {
         signInWithGoogle: context.read<SignInWithGoogle>(),
         signOut: context.read<SignOut>(),
       ),
-      child: const WinkloApp(),
+      child: _withLocale(const WinkloApp()),
     ),
   );
 }

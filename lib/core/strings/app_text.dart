@@ -344,6 +344,16 @@ abstract interface class AppText {
   String get settingsSoundSection;
   String get settingsRemindersSection;
   String get settingsLanguageSection;
+
+  /// The Language row that follows the phone.
+  String get settingsLanguageSystem;
+
+  /// Under System: the language it gives now, named in its own script.
+  String settingsLanguageSystemHint(String language);
+
+  /// Each language is named in its own script, whatever the app shows.
+  String get languageEnglish;
+  String get languageMalayalam;
   String get settingsDailyReady;
   String get settingsDailyReadyHint;
   String get settingsStreakAtRisk;

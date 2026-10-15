@@ -1045,6 +1045,19 @@ final class AppTextMl implements AppText {
   String get settingsLanguageSection => 'ഭാഷ';
 
   @override
+  String get settingsLanguageSystem => 'സിസ്റ്റം';
+
+  @override
+  String settingsLanguageSystemHint(String language) =>
+      'ഫോണിന്റെ ഭാഷ: $language';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageMalayalam => 'മലയാളം';
+
+  @override
   String get settingsDailyReady => 'ഇന്നത്തെ പസിലുകൾ റെഡി';
 
   @override

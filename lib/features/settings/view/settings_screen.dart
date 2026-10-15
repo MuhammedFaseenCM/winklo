@@ -14,8 +14,7 @@ import '../cubit/settings_state.dart';
 import 'widgets/settings_language_slot.dart';
 import 'widgets/settings_section.dart';
 
-/// `/profile/settings`: sound and vibration, reminders, and (later) the
-/// language.
+/// `/profile/settings`: sound and vibration, reminders, and the language.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -130,13 +129,8 @@ class _SettingsView extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (SettingsLanguageSlot.visible) ...[
-                  gap,
-                  SettingsSection(
-                    title: AppStrings.settingsLanguageSection,
-                    children: [SettingsLanguageSlot()],
-                  ),
-                ],
+                gap,
+                const SettingsLanguageSlot(),
               ],
             );
           },

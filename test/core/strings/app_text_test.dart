@@ -250,6 +250,9 @@ final Map<String, String Function(AppText)> _members = {
   'settingsSoundSection': (t) => t.settingsSoundSection,
   'settingsRemindersSection': (t) => t.settingsRemindersSection,
   'settingsLanguageSection': (t) => t.settingsLanguageSection,
+  'settingsLanguageSystem': (t) => t.settingsLanguageSystem,
+  'languageEnglish': (t) => t.languageEnglish,
+  'languageMalayalam': (t) => t.languageMalayalam,
   'settingsDailyReady': (t) => t.settingsDailyReady,
   'settingsDailyReadyHint': (t) => t.settingsDailyReadyHint,
   'settingsStreakAtRisk': (t) => t.settingsStreakAtRisk,
@@ -360,6 +363,8 @@ final Map<String, String Function(AppText)> _members = {
   'leagueNameLength': (t) => t.leagueNameLength,
   'leagueCodeNotFound': (t) => t.leagueCodeNotFound,
   'zipHintWithCount': (t) => t.zipHintWithCount(3),
+  'settingsLanguageSystemHint': (t) =>
+      t.settingsLanguageSystemHint(t.languageMalayalam),
   'bestTimeLabel': (t) => t.bestTimeLabel('0:48'),
   'homeTileStats': (t) => t.homeTileStats(bestSeconds: 48, longestStreak: 9),
   'homeTodaySummary': (t) =>
@@ -462,6 +467,8 @@ const _sameInEveryLanguage = {
   'updateVersionRow',
   'bonusRunLabel',
   'bonusSecondsLeft',
+  'languageEnglish',
+  'languageMalayalam',
 };
 
 final _malayalamScript = RegExp('[\u0D00-\u0D7F]');

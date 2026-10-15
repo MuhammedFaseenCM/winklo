@@ -990,6 +990,19 @@ final class AppTextEn implements AppText {
   String get settingsLanguageSection => 'Language';
 
   @override
+  String get settingsLanguageSystem => 'System';
+
+  @override
+  String settingsLanguageSystemHint(String language) =>
+      'Follows your phone: $language';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get languageMalayalam => 'മലയാളം';
+
+  @override
   String get settingsDailyReady => 'Daily puzzles ready';
 
   @override

@@ -404,6 +404,11 @@ abstract final class AppStrings {
   static String get settingsSoundSection => _t.settingsSoundSection;
   static String get settingsRemindersSection => _t.settingsRemindersSection;
   static String get settingsLanguageSection => _t.settingsLanguageSection;
+  static String get settingsLanguageSystem => _t.settingsLanguageSystem;
+  static String settingsLanguageSystemHint(String language) =>
+      _t.settingsLanguageSystemHint(language);
+  static String get languageEnglish => _t.languageEnglish;
+  static String get languageMalayalam => _t.languageMalayalam;
   static String get settingsDailyReady => _t.settingsDailyReady;
   static String get settingsDailyReadyHint => _t.settingsDailyReadyHint;
   static String get settingsStreakAtRisk => _t.settingsStreakAtRisk;

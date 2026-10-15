@@ -5,11 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
+import 'package:winklo/domain/entities/app_language.dart';
 import 'package:winklo/domain/entities/reminder_settings.dart';
+import 'package:winklo/domain/repositories/language_repository.dart';
 import 'package:winklo/domain/repositories/settings_repository.dart';
 import 'package:winklo/domain/usecases/save_reminder_settings.dart';
+import 'package:winklo/features/settings/cubit/locale_cubit.dart';
 import 'package:winklo/features/settings/view/settings_screen.dart';
-import 'package:winklo/features/settings/view/widgets/settings_language_slot.dart';
 
 import '../../../helpers/screenshot.dart';
 
@@ -17,14 +19,20 @@ class _MockSettings extends Mock implements SettingsRepository {}
 
 class _MockSave extends Mock implements SaveReminderSettings {}
 
+class _MockLanguages extends Mock implements LanguageRepository {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
 
   late _MockSettings settings;
   late _MockSave save;
+  late _MockLanguages languages;
 
-  setUpAll(() => registerFallbackValue(const ReminderSettings()));
+  setUpAll(() {
+    registerFallbackValue(const ReminderSettings());
+    registerFallbackValue(AppLanguage.system);
+  });
 
   setUp(() {
     settings = _MockSettings();
@@ -35,7 +43,12 @@ void main() {
     when(() => settings.setSoundEnabled(any())).thenAnswer((_) async {});
     when(() => settings.setVibrationEnabled(any())).thenAnswer((_) async {});
     when(() => save(any())).thenAnswer((_) async {});
+    languages = _MockLanguages();
+    when(() => languages.language).thenReturn(AppLanguage.system);
+    when(() => languages.setLanguage(any())).thenAnswer((_) async {});
   });
+
+  tearDown(() => AppStrings.use('en'));
 
   Future<void> pump(
     WidgetTester tester, {
@@ -51,12 +64,18 @@ void main() {
           RepositoryProvider<SettingsRepository>.value(value: settings),
           RepositoryProvider<SaveReminderSettings>.value(value: save),
         ],
-        child: RepaintBoundary(
-          key: boundary,
-          child: MaterialApp(
-            theme: buildAppTheme(),
-            debugShowCheckedModeBanner: false,
-            home: const SettingsScreen(),
+        child: BlocProvider(
+          create: (_) => LocaleCubit(
+            languages: languages,
+            deviceLanguageCodes: () => const ['en'],
+          ),
+          child: RepaintBoundary(
+            key: boundary,
+            child: MaterialApp(
+              theme: buildAppTheme(),
+              debugShowCheckedModeBanner: false,
+              home: const SettingsScreen(),
+            ),
           ),
         ),
       ),
@@ -64,9 +83,7 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('shows sound and reminders; Language waits for its area', (
-    tester,
-  ) async {
+  testWidgets('shows sound, reminders and the language', (tester) async {
     await pump(tester, size: const Size(360, 1200));
     expect(find.text(AppStrings.settingsTitle), findsOneWidget);
     expect(
@@ -89,11 +106,14 @@ void main() {
       find.text(AppStrings.settingsWeeklyRecapHint('7:00 PM')),
       findsOneWidget,
     );
-    expect(SettingsLanguageSlot.visible, isFalse);
     expect(
       find.text(AppStrings.settingsLanguageSection.toUpperCase()),
-      findsNothing,
+      findsOneWidget,
     );
+    expect(find.text(AppStrings.settingsLanguageSystem), findsOneWidget);
+    expect(find.text('Follows your phone: English'), findsOneWidget);
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('മലയാളം'), findsOneWidget);
   });
 
   testWidgets('the sound switch is stored', (tester) async {
@@ -156,6 +176,25 @@ void main() {
       tester,
       find.byKey(boundary),
       'settings_360x640_scrolled',
+    );
+  });
+
+  testWidgets('choosing മലയാളം stores it and switches the copy', (
+    tester,
+  ) async {
+    await pump(tester, size: const Size(360, 1400));
+    await tester.tap(find.text('മലയാളം'));
+    await tester.pump();
+    verify(() => languages.setLanguage(AppLanguage.malayalam)).called(1);
+    expect(AppStrings.languageCode, 'ml');
+    final malayalam = tester.widget<RadioListTile<AppLanguage>>(
+      find.widgetWithText(RadioListTile<AppLanguage>, 'മലയാളം'),
+    );
+    expect(
+      RadioGroup.maybeOf<AppLanguage>(
+        tester.element(find.text('മലയാളം')),
+      )?.groupValue,
+      malayalam.value,
     );
   });
 }

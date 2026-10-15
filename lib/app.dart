@@ -21,6 +21,7 @@ import 'domain/usecases/record_app_open.dart';
 import 'domain/usecases/refresh_habit_surfaces.dart';
 import 'domain/usecases/sync_progress.dart';
 import 'features/auth/cubit/auth_cubit.dart';
+import 'features/settings/view/app_language_scope.dart';
 
 class WinkloApp extends StatefulWidget {
   const WinkloApp({super.key});
@@ -113,22 +114,28 @@ class _WinkloAppState extends State<WinkloApp> {
     // go_router 18 hard-codes RootBackButtonDispatcher on RouterConfig; pass
     // the safe dispatcher explicitly so empty-match Android backs don't crash
     // (flutter/flutter#187616).
-    final app = MaterialApp.router(
-      title: AppStrings.appTitle,
-      theme: buildAppTheme(),
-      themeMode: ThemeMode.dark,
-      routeInformationProvider: router.routeInformationProvider,
-      routeInformationParser: router.routeInformationParser,
-      routerDelegate: router.routerDelegate,
-      backButtonDispatcher: SafeGoRouterBackButtonDispatcher(() => router),
-      debugShowCheckedModeBanner: false,
-      // Global tap-outside-to-dismiss: wraps every routed screen so a tap on
-      // empty space drops keyboard focus app-wide. `translucent` lets taps on
-      // real controls (buttons, list rows) still pass through underneath.
-      builder: (context, child) => GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: AppTextScale(child: child ?? const SizedBox.shrink()),
+    // In the LocaleCubit's language; a change rebuilds the whole app.
+    final app = AppLanguageScope(
+      builder: (context, locale) => MaterialApp.router(
+        title: AppStrings.appTitle,
+        locale: locale,
+        supportedLocales: AppLanguageScope.supportedLocales,
+        localizationsDelegates: AppLanguageScope.localizationsDelegates,
+        theme: buildAppTheme(),
+        themeMode: ThemeMode.dark,
+        routeInformationProvider: router.routeInformationProvider,
+        routeInformationParser: router.routeInformationParser,
+        routerDelegate: router.routerDelegate,
+        backButtonDispatcher: SafeGoRouterBackButtonDispatcher(() => router),
+        debugShowCheckedModeBanner: false,
+        // Global tap-outside-to-dismiss: wraps every routed screen so a tap on
+        // empty space drops keyboard focus app-wide. `translucent` lets taps on
+        // real controls (buttons, list rows) still pass through underneath.
+        builder: (context, child) => GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: AppTextScale(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     );
     final progressSync = _progressSyncLifecycle;
