@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:winklo/domain/entities/word_match_deck.dart';
 import 'package:winklo/domain/entities/word_pair.dart';
@@ -19,6 +21,7 @@ void main() {
   setUp(() {
     fetchDecks = _MockFetchWordMatchDecks();
     records = _MockRecords();
+    when(() => records.changes).thenAnswer((_) => const Stream.empty());
   });
 
   blocTest<WordMatchSelectCubit, WordMatchSelectState>(
@@ -95,4 +98,35 @@ void main() {
           .having((s) => s.error, 'error', isNotNull),
     ],
   );
+
+  test('refreshes the bests when a run stores one', () async {
+    final changes = StreamController<void>.broadcast();
+    addTearDown(changes.close);
+    when(() => records.changes).thenAnswer((_) => changes.stream);
+    when(() => fetchDecks()).thenAnswer(
+      (_) async => [
+        WordMatchDeck(
+          id: 'animals',
+          title: 'Animals',
+          pairs: const [WordPair(a: 'cat', b: 'meow')],
+        ),
+      ],
+    );
+    when(() => records.bestTimeSeconds(any())).thenReturn(null);
+    final cubit = WordMatchSelectCubit(
+      fetchWordMatchDecks: fetchDecks,
+      records: records,
+    );
+    addTearDown(cubit.close);
+    await cubit.load();
+    expect(cubit.state.items.single.bestSeconds, isNull);
+
+    when(
+      () => records.bestTimeSeconds('bonus_word_match_animals'),
+    ).thenReturn(31);
+    changes.add(null);
+    await pumpEventQueue();
+    expect(cubit.state.items.single.bestSeconds, 31);
+    verify(() => fetchDecks()).called(1);
+  });
 }

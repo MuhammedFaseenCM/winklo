@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/repositories/play_mode_record_repository.dart';
@@ -12,6 +14,16 @@ class PlayModeRecordRepositoryImpl implements PlayModeRecordRepository {
   PlayModeRecordRepositoryImpl(this._prefs);
 
   final SharedPreferences _prefs;
+  final _changes = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get changes => _changes.stream;
+
+  void _changed() {
+    if (!_changes.isClosed) _changes.add(null);
+  }
+
+  Future<void> dispose() => _changes.close();
 
   static const _recordPrefixes = ['archive_', 'practice_', 'bonus_'];
 
@@ -46,6 +58,7 @@ class PlayModeRecordRepositoryImpl implements PlayModeRecordRepository {
       return LocalBest(best: previous, previous: previous);
     }
     await _prefs.setInt(key, timeSeconds);
+    _changed();
     return LocalBest(
       best: timeSeconds,
       previous: previous,
@@ -64,6 +77,7 @@ class PlayModeRecordRepositoryImpl implements PlayModeRecordRepository {
       return LocalBest(best: previous, previous: previous);
     }
     await _prefs.setInt(key, score);
+    _changed();
     return LocalBest(
       best: score,
       previous: previous,

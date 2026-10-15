@@ -44,12 +44,13 @@ class ArchiveScreen extends StatelessWidget {
 class _ArchiveView extends StatelessWidget {
   const _ArchiveView();
 
+  /// The calendar reloads itself when the run stores a best
+  /// ([ArchiveCubit] listens to the records), since Results replaces the
+  /// game page and this push never returns.
   Future<void> _play(BuildContext context, String gameId, DateTime day) async {
-    final cubit = context.read<ArchiveCubit>();
     final ok = await ensureSignedInForPlay(context);
     if (!ok || !context.mounted) return;
     await context.push(PlayMode.archive(day).location(gameRoute(gameId)));
-    if (!cubit.isClosed) cubit.load();
   }
 
   @override

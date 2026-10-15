@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
@@ -117,7 +118,11 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     records = PlayModeRecordRepositoryImpl(prefs);
-    hintsForMode = HintQuotaForMode(daily: dailyHints, records: records);
+    hintsForMode = HintQuotaForMode(
+      daily: dailyHints,
+      archive: ArchiveHintQuotaRepositoryImpl(records),
+      practice: UnlimitedHintQuotaRepositoryImpl(),
+    );
     drafts = _MemoryInProgressRuns()..runs['sudoku_20261015'] = todayDraft;
     now = DateTime(2026, 10, 15, 9);
     fetched = [];

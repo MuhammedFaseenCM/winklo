@@ -33,6 +33,7 @@ import 'package:winklo/data/repositories/issue_report_repository_impl.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/league_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
+import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
 import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
@@ -270,11 +271,17 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<PlayModeRecordRepository>(
       create: (context) =>
           PlayModeRecordRepositoryImpl(context.read<SharedPreferences>()),
+      dispose: (records) {
+        if (records is PlayModeRecordRepositoryImpl) records.dispose();
+      },
     ),
     RepositoryProvider<HintQuotaForMode>(
       create: (context) => HintQuotaForMode(
         daily: context.read<HintQuotaRepository>(),
-        records: context.read<PlayModeRecordRepository>(),
+        archive: ArchiveHintQuotaRepositoryImpl(
+          context.read<PlayModeRecordRepository>(),
+        ),
+        practice: UnlimitedHintQuotaRepositoryImpl(),
       ),
     ),
     RepositoryProvider<StreakRepository>(

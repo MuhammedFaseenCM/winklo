@@ -86,11 +86,7 @@ class _DeckList extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(18),
-            onTap: () async {
-              final cubit = context.read<WordMatchSelectCubit>();
-              await context.push('/word-match/${deck.id}');
-              if (!cubit.isClosed) await cubit.load();
-            },
+            onTap: () => context.push('/word-match/${deck.id}'),
             child: Ink(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

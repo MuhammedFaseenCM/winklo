@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/repositories/analytics_repository.dart';
@@ -141,22 +142,32 @@ GoRouter buildRouter({
         name: 'zip',
         redirect: (context, state) =>
             playModeRedirect(state.uri, gameId: GameIds.zip),
-        builder: (context, state) => ZipScreen(mode: playModeOf(state.uri)),
+        builder: (context, state) {
+          final mode = playModeOf(state.uri);
+          // A new mode on the same path (an App Link over an open game)
+          // must build a new run, not relabel the old one.
+          return ZipScreen(key: ValueKey(mode), mode: mode);
+        },
       ),
       GoRoute(
         path: '/path-words',
         name: 'path_words',
         redirect: (context, state) =>
             playModeRedirect(state.uri, gameId: GameIds.pathWords),
-        builder: (context, state) =>
-            PathWordsScreen(mode: playModeOf(state.uri)),
+        builder: (context, state) {
+          final mode = playModeOf(state.uri);
+          return PathWordsScreen(key: ValueKey(mode), mode: mode);
+        },
       ),
       GoRoute(
         path: '/sudoku',
         name: 'sudoku',
         redirect: (context, state) =>
             playModeRedirect(state.uri, gameId: GameIds.sudoku),
-        builder: (context, state) => SudokuScreen(mode: playModeOf(state.uri)),
+        builder: (context, state) {
+          final mode = playModeOf(state.uri);
+          return SudokuScreen(key: ValueKey(mode), mode: mode);
+        },
       ),
       GoRoute(
         path: moreWaysLocation,

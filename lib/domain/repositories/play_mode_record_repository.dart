@@ -21,6 +21,11 @@ class LocalBest {
 /// (`archive_zip_20261009`, `practice_sudoku`, `bonus_word_match_<deck>`);
 /// any other key is refused, so a daily best can't be written here.
 abstract class PlayModeRecordRepository {
+  /// Fires after a best is stored, so lists showing bests (the archive
+  /// calendar, the Word Match decks) can refresh while a run's Results
+  /// replaced the game page.
+  Stream<void> get changes;
+
   int? bestTimeSeconds(String recordKey);
 
   /// Keeps the lower of [timeSeconds] and the stored best.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 
 import '../../../domain/archive_calendar.dart';
@@ -57,12 +59,19 @@ class ArchiveCubit extends Cubit<ArchiveState> {
     String initialGameId = GameIds.zip,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now,
-       super(ArchiveState(gameId: _known(initialGameId)));
+       super(ArchiveState(gameId: _known(initialGameId))) {
+    // A run's Results replaces the game page, so the push that opened it
+    // never returns; reload when a best is stored instead.
+    _recordsSub = records.changes.listen((_) {
+      if (!isClosed) load();
+    });
+  }
 
   final GetBestPoints getBestPoints;
   final GetBestTimeSeconds getBestTimeSeconds;
   final PlayModeRecordRepository records;
   final DateTime Function() _now;
+  StreamSubscription<void>? _recordsSub;
 
   static const games = [GameIds.zip, GameIds.pathWords, GameIds.sudoku];
 
@@ -109,5 +118,11 @@ class ArchiveCubit extends Cubit<ArchiveState> {
         ? state.monthIndex.clamp(0, months.length - 1)
         : months.length - 1;
     emit(ArchiveState(gameId: gameId, months: months, monthIndex: index));
+  }
+
+  @override
+  Future<void> close() async {
+    await _recordsSub?.cancel();
+    return super.close();
   }
 }

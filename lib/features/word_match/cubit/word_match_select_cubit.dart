@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
@@ -10,12 +12,39 @@ class WordMatchSelectCubit extends Cubit<WordMatchSelectState> {
   WordMatchSelectCubit({
     required this.fetchWordMatchDecks,
     required this.records,
-  }) : super(const WordMatchSelectState());
+  }) : super(const WordMatchSelectState()) {
+    // A round's Results replaces the game page, so the push that opened it
+    // never returns; refresh the bests when one is stored instead.
+    _recordsSub = records.changes.listen((_) => _refreshBests());
+  }
 
   final FetchWordMatchDecks fetchWordMatchDecks;
 
   /// Local best times per deck.
   final PlayModeRecordRepository records;
+  StreamSubscription<void>? _recordsSub;
+
+  void _refreshBests() {
+    if (isClosed || state.status != WordMatchSelectStatus.ready) return;
+    emit(
+      state.copyWith(
+        items: [
+          for (final item in state.items)
+            item.copyWith(
+              bestSeconds: records.bestTimeSeconds(
+                WordMatchPlayBloc.recordKey(item.deck.id),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<void> close() async {
+    await _recordsSub?.cancel();
+    return super.close();
+  }
 
   Future<void> load() async {
     if (state.status == WordMatchSelectStatus.loading) return;

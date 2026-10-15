@@ -1,3 +1,4 @@
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,59 +38,91 @@ void main() {
     now: () => now,
   );
 
-  test('months run from 11 Oct to yesterday, newest on screen', () {
-    now = DateTime(2026, 11, 3);
-    final cubit = build()..load();
-    expect(cubit.state.months.length, 2);
-    expect(cubit.state.monthIndex, 1);
-    expect(cubit.state.month!.month, 11);
-    expect(cubit.state.month!.lastDay, 2);
-    cubit.close();
-  });
+  blocTest<ArchiveCubit, ArchiveState>(
+    'months run from 11 Oct to yesterday, newest on screen',
+    setUp: () => now = DateTime(2026, 11, 3),
+    build: build,
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      isA<ArchiveState>()
+          .having((s) => s.months.length, 'months', 2)
+          .having((s) => s.monthIndex, 'monthIndex', 1)
+          .having((s) => s.month!.month, 'month', 11)
+          .having((s) => s.month!.lastDay, 'lastDay', 2),
+    ],
+  );
 
-  test('✓ for a daily clear or an archive clear, per game', () async {
-    when(() => getBestTimeSeconds('zip_daily_20261012')).thenReturn(80);
-    when(() => getBestPoints('path_words_20261011')).thenReturn(700);
-    await records.recordTime('archive_zip_20261013', 99);
-    await records.recordTime('archive_sudoku_20261014', 99);
+  blocTest<ArchiveCubit, ArchiveState>(
+    'a check for a daily clear or an archive clear, per game',
+    setUp: () async {
+      when(() => getBestTimeSeconds('zip_daily_20261012')).thenReturn(80);
+      when(() => getBestPoints('path_words_20261011')).thenReturn(700);
+      await records.recordTime('archive_zip_20261013', 99);
+      await records.recordTime('archive_sudoku_20261014', 99);
+    },
+    build: build,
+    act: (cubit) => cubit
+      ..load()
+      ..selectGame(GameIds.pathWords)
+      ..selectGame(GameIds.sudoku),
+    expect: () => [
+      isA<ArchiveState>().having((s) => s.gameId, 'game', GameIds.zip).having(
+        (s) => s.month!.clearedDays,
+        'cleared',
+        {12, 13},
+      ),
+      isA<ArchiveState>()
+          .having((s) => s.gameId, 'game', GameIds.pathWords)
+          .having((s) => s.month!.clearedDays, 'cleared', {11}),
+      isA<ArchiveState>()
+          .having((s) => s.gameId, 'game', GameIds.sudoku)
+          .having((s) => s.month!.clearedDays, 'cleared', {14}),
+    ],
+  );
 
-    final cubit = build()..load();
-    expect(cubit.state.month!.clearedDays, {12, 13});
-    cubit.selectGame(GameIds.pathWords);
-    expect(cubit.state.gameId, GameIds.pathWords);
-    expect(cubit.state.month!.clearedDays, {11});
-    cubit.selectGame(GameIds.sudoku);
-    expect(cubit.state.month!.clearedDays, {14});
-    await cubit.close();
-  });
+  blocTest<ArchiveCubit, ArchiveState>(
+    'reloads by itself when a run stores a best',
+    build: () => build(game: GameIds.sudoku),
+    act: (cubit) async {
+      cubit.load();
+      await records.recordTime('archive_sudoku_20261011', 50);
+      await pumpEventQueue();
+    },
+    expect: () => [
+      isA<ArchiveState>().having(
+        (s) => s.month!.clearedDays,
+        'cleared',
+        isEmpty,
+      ),
+      isA<ArchiveState>().having((s) => s.month!.clearedDays, 'cleared', {11}),
+    ],
+  );
 
-  test('reloading after a run picks up the new clear', () async {
-    final cubit = build(game: GameIds.sudoku)..load();
-    expect(cubit.state.month!.clearedDays, isEmpty);
-    await records.recordTime('archive_sudoku_20261011', 50);
-    cubit.load();
-    expect(cubit.state.month!.clearedDays, {11});
-    await cubit.close();
-  });
+  blocTest<ArchiveCubit, ArchiveState>(
+    'an unknown game opens Zip',
+    build: () => build(game: 'word_match'),
+    act: (cubit) => cubit.load(),
+    expect: () => [
+      isA<ArchiveState>().having((s) => s.gameId, 'game', GameIds.zip),
+    ],
+  );
 
-  test('an unknown game opens Zip', () {
-    final cubit = build(game: 'word_match')..load();
-    expect(cubit.state.gameId, GameIds.zip);
-    cubit.close();
-  });
-
-  test('showMonth pages and ignores out-of-range months', () {
-    now = DateTime(2026, 12, 20);
-    final cubit = build()..load();
-    expect(cubit.state.monthIndex, 2);
-    cubit.showMonth(0);
-    expect(cubit.state.month!.month, 10);
-    cubit.showMonth(5);
-    expect(cubit.state.monthIndex, 0);
-    cubit.load();
-    expect(cubit.state.monthIndex, 0);
-    cubit.close();
-  });
+  blocTest<ArchiveCubit, ArchiveState>(
+    'showMonth pages and ignores out-of-range months; load keeps the page',
+    setUp: () => now = DateTime(2026, 12, 20),
+    build: build,
+    act: (cubit) => cubit
+      ..load()
+      ..showMonth(0)
+      ..showMonth(5)
+      ..load(),
+    expect: () => [
+      isA<ArchiveState>().having((s) => s.monthIndex, 'index', 2),
+      isA<ArchiveState>()
+          .having((s) => s.monthIndex, 'index', 0)
+          .having((s) => s.month!.month, 'month', 10),
+    ],
+  );
 
   test('never writes anything', () async {
     final cubit = build()..load();

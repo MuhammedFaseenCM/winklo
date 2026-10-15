@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/play_mode.dart';
@@ -19,7 +20,11 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     records = PlayModeRecordRepositoryImpl(prefs);
     daily = _MockHintQuota();
-    forMode = HintQuotaForMode(daily: daily, records: records);
+    forMode = HintQuotaForMode(
+      daily: daily,
+      archive: ArchiveHintQuotaRepositoryImpl(records),
+      practice: UnlimitedHintQuotaRepositoryImpl(),
+    );
   });
 
   test('daily mode uses the daily quota', () {
@@ -51,8 +56,7 @@ void main() {
       expect(after, greaterThan(0));
       before = after;
     }
-    expect(UnlimitedHintQuota.isUnlimited(quota), isTrue);
-    expect(UnlimitedHintQuota.isUnlimited(daily), isFalse);
+    expect(quota, isA<UnlimitedHintQuotaRepositoryImpl>());
     verifyZeroInteractions(daily);
   });
 }
