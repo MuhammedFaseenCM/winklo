@@ -81,6 +81,15 @@ abstract final class AppStrings {
   static const pathWordsClearedTitle = 'Puzzle cleared!';
   static const pathWordsLoading = 'Building today’s puzzle…';
   static const pathWordsFailed = 'Could not load today’s puzzle.';
+  static String pathWordsThemeReveal(String theme) => 'Today: $theme';
+  static String pathWordsBonusWord(String word) =>
+      'Bonus word: ${word.toUpperCase()}';
+  static String pathWordsBonusCount(int count) =>
+      count == 1 ? '1 bonus word' : '$count bonus words';
+  static const pathWordsTapForMeaning = 'Tap a word to see what it means';
+  static String pathWordsWordWithMeaningLabel(String word) =>
+      '${word.toUpperCase()}, tap for its meaning';
+  static const weekendSpecial = 'Weekend special';
   static const retry = 'Retry';
 
   // Sudoku

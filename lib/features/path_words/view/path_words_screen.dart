@@ -13,12 +13,14 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
+import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/word_list_repository.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
@@ -33,9 +35,11 @@ import '../bloc/path_words_event.dart';
 import '../bloc/path_words_state.dart';
 import '../game/path_words_board_view.dart';
 import '../game/path_words_game.dart';
+import 'widgets/path_words_bonus_toast.dart';
 import 'widgets/path_words_how_to_play.dart';
 import 'widgets/path_words_paused_cover.dart';
 import 'widgets/path_words_shimmer.dart';
+import 'widgets/path_words_theme_line.dart';
 import 'widgets/path_words_tutorial.dart';
 import 'widgets/path_words_word_list.dart';
 
@@ -178,6 +182,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
           playPeriod: DevFlags.playPeriod,
           sfx: context.read<SfxService>(),
           haptics: context.read<HapticsService?>(),
+          wordList: context.read<WordListRepository?>(),
         );
 
     if (widget.autoStart) {
@@ -247,6 +252,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                 prev.puzzle?.id != curr.puzzle?.id,
             listener: (context, state) => _maybeShowTutorial(state),
           ),
+          pathWordsBonusToastListener(),
         ],
         child: BlocBuilder<PathWordsBloc, PathWordsState>(
           builder: (context, state) {
@@ -262,9 +268,11 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                 (state.status == PathWordsStatus.ready ||
                     state.status == PathWordsStatus.playing) &&
                 puzzle != null;
+            // Found words are locked, so only a live or wrong stroke undoes.
             final canUndo =
                 isReadyToPlay &&
-                (state.activePath.isNotEmpty || state.placedPaths.isNotEmpty);
+                (state.activePath.isNotEmpty ||
+                    PathWordsRules.hasIncorrectStroke(state.placedPaths));
             final canHint = isReadyToPlay && state.hintsRemaining > 0;
 
             return Scaffold(
@@ -281,9 +289,9 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                               icon: const Icon(Icons.arrow_back_rounded),
                             ),
                             Expanded(
-                              child: Text(
-                                AppStrings.pathWordsTitle,
-                                style: Theme.of(context).textTheme.titleLarge,
+                              child: GameScreenTitle(
+                                title: AppStrings.pathWordsTitle,
+                                special: puzzle?.special,
                               ),
                             ),
                             if (isReadyToPlay)
@@ -397,9 +405,14 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                 placedPaths: state.placedPaths,
                                 completedTargetIds: state.completedTargetIds,
                                 palette: PathWordsGame.pathColors,
+                                definitionsEnabled: isReview,
                               ),
                             ],
                             if (isReview) ...[
+                              if (puzzle?.theme != null) ...[
+                                const SizedBox(height: 10),
+                                PathWordsThemeLine(theme: puzzle?.theme),
+                              ],
                               const SizedBox(height: 12),
                               ClearedSummaryCard(
                                 gameId: GameIds.pathWords,

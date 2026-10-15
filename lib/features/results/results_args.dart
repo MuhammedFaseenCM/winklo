@@ -1,5 +1,6 @@
 import '../../domain/entities/leaderboard_period.dart';
 import '../../domain/entities/leaderboard_proof.dart';
+import '../../domain/entities/path_words_clear_summary.dart';
 
 class ResultsArgs {
   const ResultsArgs({
@@ -19,6 +20,7 @@ class ResultsArgs {
     this.hadMistakes,
     this.day,
     this.leaderboardProof,
+    this.pathWords,
   });
 
   final String title;
@@ -50,4 +52,7 @@ class ResultsArgs {
     final cleared = day;
     return cleared == null ? null : leaderboardDayId(cleared);
   }
+
+  /// Path Words only: the theme, found words and bonus words to show.
+  final PathWordsClearSummary? pathWords;
 }

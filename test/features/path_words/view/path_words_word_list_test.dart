@@ -1,5 +1,6 @@
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/path_words_puzzle.dart';
+import 'package:winklo/features/path_words/view/widgets/path_words_definition_sheet.dart';
 import 'package:winklo/features/path_words/view/widgets/path_words_word_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -310,5 +311,68 @@ void main() {
     expect(mid.dy, lessThan(long.dy));
     expect(short.dx, mid.dx);
     expect(mid.dx, long.dx);
+  });
+
+  group('definitions after a clear', () {
+    PathWordsPuzzle defined() {
+      final base = _puzzle();
+      return PathWordsPuzzle(
+        id: base.id,
+        day: base.day,
+        size: base.size,
+        letters: base.letters,
+        targets: base.targets,
+        definitions: const {'ab': 'The first two letters, in order'},
+      );
+    }
+
+    Future<void> pumpList(
+      WidgetTester tester, {
+      required bool enabled,
+      Set<String> completed = const {'t0', 't1'},
+    }) {
+      return tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PathWordsWordList(
+              puzzle: defined(),
+              activePath: const [],
+              placedPaths: const [],
+              completedTargetIds: completed,
+              palette: const [Colors.red, Colors.blue],
+              definitionsEnabled: enabled,
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('a found word with a definition opens it', (tester) async {
+      await pumpList(tester, enabled: true);
+      expect(find.byKey(const Key('pathWordsMeaning_t0')), findsOneWidget);
+      // "cd" has no definition, so it isn't tappable.
+      expect(find.byKey(const Key('pathWordsMeaning_t1')), findsNothing);
+      await tester.tap(find.byKey(const Key('pathWordsWord_t1')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PathWordsDefinitionSheet), findsNothing);
+
+      await tester.tap(find.byKey(const Key('pathWordsWord_t0')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PathWordsDefinitionSheet), findsOneWidget);
+      expect(find.text('The first two letters, in order'), findsOneWidget);
+    });
+
+    testWidgets('while playing, words are never tappable', (tester) async {
+      await pumpList(tester, enabled: false);
+      expect(find.byKey(const Key('pathWordsMeaning_t0')), findsNothing);
+      await tester.tap(find.byKey(const Key('pathWordsWord_t0')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PathWordsDefinitionSheet), findsNothing);
+    });
+
+    testWidgets('an unfound word is not tappable', (tester) async {
+      await pumpList(tester, enabled: true, completed: const {});
+      expect(find.byKey(const Key('pathWordsMeaning_t0')), findsNothing);
+    });
   });
 }

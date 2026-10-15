@@ -28,6 +28,9 @@ sealed class PathWordsState with _$PathWordsState {
     @Default(<Cell>[]) List<Cell> activePath,
     @Default(<PathWordsStroke>[]) List<PathWordsStroke> placedPaths,
     @Default(<String>{}) Set<String> completedTargetIds,
+
+    /// Real words found that aren't targets, lower case, in the order found.
+    @Default(<String>[]) List<String> bonusWords,
     @Default(3) int hintsRemaining,
     @Default(0) int hintRevealLength,
     @Default(false) bool usedHintsThisRun,

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,19 +9,42 @@ import '../clients/path_words/path_words_nouns_client.dart';
 
 class WordListRepositoryImpl implements WordListRepository {
   WordListRepositoryImpl({
-    this.assetPath = 'assets/words/en_words.txt',
+    this.assetPath = 'assets/words/en_bonus_words.txt',
     this.nounAssetPath = 'assets/words/en_nouns.txt',
     this._prefs,
     this._nounsClient,
+    this._bundle,
   });
 
+  /// The English word list: ENABLE, 4–8 letters (see [loadBonusWords]).
   final String assetPath;
   final String nounAssetPath;
   final SharedPreferences? _prefs;
   final PathWordsNounsClient? _nounsClient;
+  final AssetBundle? _bundle;
 
   List<String>? _englishCache;
+  Future<Set<String>>? _bonusWords;
   final Map<String, List<String>> _dailyMemory = {};
+
+  AssetBundle get _assets => _bundle ?? rootBundle;
+
+  @override
+  Future<Set<String>> loadBonusWords() {
+    return _bonusWords ??= _readBonusWords().catchError((
+      Object error,
+      StackTrace stack,
+    ) {
+      _bonusWords = null;
+      Error.throwWithStackTrace(error, stack);
+    });
+  }
+
+  Future<Set<String>> _readBonusWords() async {
+    final raw = await _assets.loadString(assetPath, cache: false);
+    // About 79,000 lines: split them off the UI isolate.
+    return Set<String>.unmodifiable(await compute(_parseBonusWords, raw));
+  }
 
   static String prefsKey(String dateId) => 'path_words_nouns_$dateId';
 
@@ -104,7 +128,7 @@ class WordListRepositoryImpl implements WordListRepository {
       final cached = _englishCache;
       if (cached != null) return cached;
     }
-    final raw = await rootBundle.loadString(path);
+    final raw = await _assets.loadString(path);
     final parsed =
         raw
             .split(RegExp(r'\r?\n'))
@@ -116,4 +140,13 @@ class WordListRepositoryImpl implements WordListRepository {
     if (cacheEnglish) _englishCache = parsed;
     return parsed;
   }
+}
+
+/// The bonus list's words: one per line, 4–8 lowercase letters.
+Set<String> _parseBonusWords(String raw) {
+  final pattern = RegExp(r'^[a-z]{4,8}$');
+  return {
+    for (final line in raw.split('\n'))
+      if (pattern.hasMatch(line.trim())) line.trim(),
+  };
 }

@@ -3,6 +3,7 @@ export 'wall.dart';
 
 import '../stable_seed.dart';
 import 'cell.dart';
+import 'daily_special.dart';
 import 'wall.dart';
 
 class ZipLevel {
@@ -13,6 +14,7 @@ class ZipLevel {
     required this.walls,
     this.order = 0,
     this.solution = const [],
+    this.special,
   });
 
   final String id;
@@ -21,6 +23,12 @@ class ZipLevel {
   final List<Wall> walls;
   final int order;
   final List<Cell> solution;
+
+  /// `weekend` on a weekend special (see [DailySpecial]); null otherwise.
+  /// Not part of the fingerprint.
+  final String? special;
+
+  bool get isWeekendSpecial => special == DailySpecial.weekend;
 
   int get maxNumber {
     if (numbers.isEmpty) return 0;
@@ -61,6 +69,7 @@ class ZipLevel {
       walls: walls,
       order: (json['order'] as num?)?.toInt() ?? 0,
       solution: solution,
+      special: readDailySpecial(json['special']),
     );
   }
 
@@ -72,5 +81,6 @@ class ZipLevel {
     'walls': walls.map((w) => w.toJson()).toList(),
     if (solution.isNotEmpty)
       'solution': solution.map((c) => c.toList()).toList(),
+    if (special != null) 'special': special,
   };
 }

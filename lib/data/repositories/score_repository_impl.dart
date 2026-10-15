@@ -82,6 +82,7 @@ class ScoreRepositoryImpl implements ScoreRepository {
     bool? usedHints,
     bool? hadMistakes,
     String? board,
+    List<String>? bonusWords,
   }) async {
     final pointsImproved = await _improvePoints(modeKey, points);
     final timeImproved = await _improveTime(modeKey, timeSeconds);
@@ -90,7 +91,11 @@ class ScoreRepositoryImpl implements ScoreRepository {
       timeSeconds: timeSeconds,
       timeImproved: timeImproved,
       meta: usedHints != null && hadMistakes != null
-          ? ClearMeta(usedHints: usedHints, hadMistakes: hadMistakes)
+          ? ClearMeta(
+              usedHints: usedHints,
+              hadMistakes: hadMistakes,
+              bonusWords: bonusWords ?? const [],
+            )
           : null,
     );
     final boardChanged = await _syncBoard(

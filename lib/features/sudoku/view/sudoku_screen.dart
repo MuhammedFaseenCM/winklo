@@ -11,6 +11,7 @@ import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
+import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/sudoku/sudoku_hint_coach.dart';
@@ -287,9 +288,9 @@ class _SudokuScreenState extends State<SudokuScreen>
                               icon: const Icon(Icons.arrow_back_rounded),
                             ),
                             Expanded(
-                              child: Text(
-                                AppStrings.sudokuTitle,
-                                style: Theme.of(context).textTheme.titleLarge,
+                              child: GameScreenTitle(
+                                title: AppStrings.sudokuTitle,
+                                special: puzzle?.special,
                               ),
                             ),
                             if (isReadyToPlay)

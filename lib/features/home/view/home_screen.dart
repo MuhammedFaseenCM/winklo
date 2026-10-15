@@ -219,6 +219,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                 lifetimeBestSeconds: state.lifetimeBestSeconds,
                 loadedAt: state.loadedAt,
                 cleared: zipCleared,
+                // Home reads only the Zip daily; the cron marks all three
+                // of a day by the same date rule.
+                weekendSpecial: state.dailyLevel.isWeekendSpecial,
               )
               .animate()
               .fadeIn(delay: 80.ms, duration: 450.ms)
@@ -253,6 +256,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   lifetimeBestSeconds: state.pathWordsLifetimeBestSeconds,
                   loadedAt: state.loadedAt,
                   cleared: pathWordsCleared,
+                  weekendSpecial: state.dailyLevel.isWeekendSpecial,
                 )
                 .animate()
                 .fadeIn(delay: 160.ms, duration: 450.ms)
@@ -286,6 +290,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   lifetimeBestSeconds: state.sudokuLifetimeBestSeconds,
                   loadedAt: state.loadedAt,
                   cleared: sudokuCleared,
+                  weekendSpecial: state.dailyLevel.isWeekendSpecial,
                 )
                 .animate()
                 .fadeIn(delay: 240.ms, duration: 450.ms)
@@ -473,6 +478,7 @@ class _DailyGameTile extends StatelessWidget {
     this.lifetimeBestSeconds,
     this.loadedAt,
     this.cleared = false,
+    this.weekendSpecial = false,
   });
 
   final Color accent;
@@ -496,6 +502,10 @@ class _DailyGameTile extends StatelessWidget {
   /// period, so a stale tile says a new puzzle is ready.
   final DateTime? loadedAt;
   final bool cleared;
+
+  /// The day's dailies are weekend specials: the pill says so instead of
+  /// "Today".
+  final bool weekendSpecial;
 
   @override
   Widget build(BuildContext context) {
@@ -612,7 +622,9 @@ class _DailyGameTile extends StatelessWidget {
                               ),
                               SizedBox(width: layout.space(5)),
                               Text(
-                                AppStrings.today,
+                                weekendSpecial
+                                    ? AppStrings.weekendSpecial
+                                    : AppStrings.today,
                                 style: textTheme.labelMedium?.copyWith(
                                   color: accent,
                                   fontWeight: FontWeight.w700,
