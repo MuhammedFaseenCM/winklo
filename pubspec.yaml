@@ -124,6 +124,9 @@ flutter:
     - assets/words/en_practice_words.txt
     - assets/branding/
     - assets/sfx/
+    # Noto Sans Malayalam (Regular and Bold) for google_fonts to load offline,
+    # and its licence.
+    - assets/google_fonts/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

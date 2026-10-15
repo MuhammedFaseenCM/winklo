@@ -8,6 +8,7 @@ import 'core/bloc/app_bloc_observer.dart';
 import 'core/di/app_repositories.dart';
 import 'core/errors/client_error_reporter.dart';
 import 'core/firebase/firebase_bootstrap.dart';
+import 'core/theme/font_licenses.dart';
 import 'data/repositories/client_error_repository_impl.dart';
 import 'domain/repositories/analytics_repository.dart';
 import 'domain/repositories/auth_repository.dart';
@@ -25,6 +26,7 @@ import 'features/settings/cubit/locale_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicenses();
   await FirebaseBootstrap.init();
 
   final clientErrorRepository = ClientErrorRepositoryImpl();

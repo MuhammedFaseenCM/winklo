@@ -921,17 +921,19 @@ class _LeaderboardSegmentBar<T> extends StatelessWidget {
                             maxLines: 1,
                             softWrap: false,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.lexend(
-                              fontWeight: segment.value == selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              fontSize: 13,
-                              letterSpacing: 0.2,
-                              color: segment.value == selected
-                                  ? (isSecondary
-                                        ? ZipColors.ember
-                                        : Colors.white)
-                                  : ZipColors.inkSoft,
+                            style: withMalayalamFallback(
+                              GoogleFonts.lexend(
+                                fontWeight: segment.value == selected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                fontSize: 13,
+                                letterSpacing: 0.2,
+                                color: segment.value == selected
+                                    ? (isSecondary
+                                          ? ZipColors.ember
+                                          : Colors.white)
+                                    : ZipColors.inkSoft,
+                              ),
                             ),
                           ),
                         ),
@@ -1181,11 +1183,13 @@ class _PinnedUserRow extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         AppStrings.leaderboardYourRank,
-                        style: GoogleFonts.lexend(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
+                        style: withMalayalamFallback(
+                          GoogleFonts.lexend(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 0.3,
+                          ),
                         ),
                       ),
                     ],
