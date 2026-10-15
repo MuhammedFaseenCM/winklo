@@ -39,6 +39,23 @@ void main() {
     expect(_rulesWhitelist(rules, 'validGameStreak'), streakFirestoreKeys);
   });
 
+  test('validGameStreak type-checks freezeCount as an optional 0-2 int', () {
+    final header = rules.indexOf('function validGameStreak(');
+    final end = rules.indexOf('function gameStreakDoesNotRegress(');
+    expect(header, isNot(-1));
+    expect(end, greaterThan(header));
+    final body = rules.substring(header, end).replaceAll(RegExp(r'\s+'), ' ');
+    expect(
+      body,
+      contains(
+        "(!('freezeCount' in data) || (data.freezeCount is int "
+        '&& data.freezeCount >= 0 && data.freezeCount <= 2))',
+      ),
+    );
+    // Older builds keep writing the flag, so it stays required.
+    expect(body, contains('data.freezeAvailable is bool'));
+  });
+
   test('leaderboard whitelist equals the client payload keys', () {
     expect(
       _rulesWhitelist(rules, 'validLeaderboardKeys'),

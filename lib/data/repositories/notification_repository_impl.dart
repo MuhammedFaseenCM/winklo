@@ -6,7 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
-import '../../domain/engagement_notification_schedule.dart';
+import '../../core/strings/app_strings.dart';
+import '../../domain/habit/engagement_reminder.dart';
 import '../../domain/notification_types.dart';
 import '../../domain/repositories/notification_repository.dart';
 import '../clients/notification/notification_client.dart';
@@ -17,14 +18,27 @@ class NotificationRepositoryImpl implements NotificationRepository {
     this._firestore,
     this._messaging,
     FlutterLocalNotificationsPlugin? localNotifications,
+    bool Function()? announcementsEnabled,
+    DateTime Function()? now,
   }) : _client = notificationClient,
+       _now = now ?? DateTime.now,
        _localNotifications =
-           localNotifications ?? FlutterLocalNotificationsPlugin();
+           localNotifications ?? FlutterLocalNotificationsPlugin(),
+       _announcementsEnabled = announcementsEnabled ?? _always;
 
   final NotificationClient _client;
   final FirebaseFirestore? _firestore;
   final FirebaseMessaging? _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications;
+
+  /// The player's announcements choice (Settings); read at each sync.
+  final bool Function() _announcementsEnabled;
+
+  static bool _always() => true;
+
+  final DateTime Function() _now;
+
+  static const _topicTimeout = Duration(seconds: 5);
 
   String? _lastSyncedUid;
   String? _lastSyncedToken;
@@ -105,10 +119,37 @@ class NotificationRepositoryImpl implements NotificationRepository {
           _lastSyncedToken = token;
         }
       }
-      await _client.subscribeToTopic(NotificationTypes.topicAnnouncements);
-      await _client.subscribeToTopic(NotificationTypes.topicAppUpdates);
+      final topics = topicsForSync();
+      for (final topic in topics) {
+        await _client.subscribeToTopic(topic);
+      }
+      if (!topics.contains(NotificationTypes.topicAnnouncements)) {
+        await _client.unsubscribeFromTopic(
+          NotificationTypes.topicAnnouncements,
+        );
+      }
     } catch (e) {
       debugPrint('syncTokenForUser failed: $e');
+    }
+  }
+
+  /// Topics a signed-in device joins: app updates always, announcements
+  /// while they are on in Settings.
+  @visibleForTesting
+  List<String> topicsForSync() => [
+    if (_announcementsEnabled()) NotificationTypes.topicAnnouncements,
+    NotificationTypes.topicAppUpdates,
+  ];
+
+  @override
+  Future<void> setAnnouncementsSubscribed(bool subscribed) async {
+    try {
+      final change = subscribed
+          ? _client.subscribeToTopic(NotificationTypes.topicAnnouncements)
+          : _client.unsubscribeFromTopic(NotificationTypes.topicAnnouncements);
+      await change.timeout(_topicTimeout);
+    } catch (e) {
+      debugPrint('setAnnouncementsSubscribed($subscribed) failed: $e');
     }
   }
 
@@ -148,63 +189,57 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }
 
   @override
-  Future<void> refreshEngagementSchedules({
-    required bool zipClearedToday,
-    required bool pathWordsClearedToday,
-    required bool sudokuClearedToday,
-    required String dailyReadyTitle,
-    required String dailyReadyBody,
-    required String streakAtRiskTitle,
-    required String streakAtRiskBody,
-  }) async {
+  Future<void> replaceEngagementSchedules(
+    List<EngagementReminder> reminders,
+  ) async {
     try {
-      final dailyWhen = EngagementNotificationSchedule.nextDailyAtHour(
-        NotificationTypes.dailyReadyHour,
-      );
-      await _client.cancelNotification(NotificationTypes.scheduleIdDailyReady);
-      await _client.scheduleNotification(
-        id: NotificationTypes.scheduleIdDailyReady,
-        title: dailyReadyTitle,
-        body: dailyReadyBody,
-        when: dailyWhen,
-        type: NotificationTypes.dailyReady,
-        data: {'route': '/'},
-        repeatsDaily: true,
-      );
-
-      await _client.cancelNotification(
-        NotificationTypes.scheduleIdStreakAtRisk,
-      );
-      final atRiskTonight =
-          EngagementNotificationSchedule.shouldScheduleStreakAtRisk(
-            zipClearedToday: zipClearedToday,
-            pathWordsClearedToday: pathWordsClearedToday,
-            sudokuClearedToday: sudokuClearedToday,
-          );
-      // With every game cleared nothing is at risk tonight, but the streak
-      // is tomorrow, and only opening the app reschedules this; so remind
-      // tomorrow evening rather than not at all. That one is a one-off: a
-      // daily repeat can't start tomorrow (the plugin fires a repeat at the
-      // next matching time, which would be tonight).
-      await _client.scheduleNotification(
-        id: NotificationTypes.scheduleIdStreakAtRisk,
-        title: streakAtRiskTitle,
-        body: streakAtRiskBody,
-        when: atRiskTonight
-            ? EngagementNotificationSchedule.nextDailyAtHour(
-                NotificationTypes.streakAtRiskHour,
-              )
-            : EngagementNotificationSchedule.tomorrowAtHour(
-                NotificationTypes.streakAtRiskHour,
-              ),
-        type: NotificationTypes.streakAtRisk,
-        data: {'route': '/'},
-        repeatsDaily: atRiskTonight,
-      );
+      for (final id in NotificationTypes.engagementScheduleIds) {
+        await _client.cancelNotification(id);
+      }
     } catch (e) {
-      debugPrint('refreshEngagementSchedules failed: $e');
+      debugPrint('replaceEngagementSchedules cancel failed: $e');
+      return;
+    }
+    for (final reminder in reminders) {
+      // The plan was made a moment ago; a one-off whose time has passed
+      // since would be refused by the plugin. A daily repeat moves on to
+      // its next time by itself.
+      if (!reminder.repeatsDaily && !reminder.when.isAfter(_now())) continue;
+      final copy = engagementCopy(reminder);
+      try {
+        await _client.scheduleNotification(
+          id: reminder.id,
+          title: copy.title,
+          body: copy.body,
+          when: reminder.when,
+          type: reminder.type,
+          data: {'route': '/'},
+          repeatsDaily: reminder.repeatsDaily,
+        );
+      } catch (e) {
+        // One refused reminder must not drop the rest.
+        debugPrint('schedule ${reminder.type} (${reminder.id}) failed: $e');
+      }
     }
   }
+
+  /// The words of [reminder].
+  static ({String title, String body}) engagementCopy(
+    EngagementReminder reminder,
+  ) => switch (reminder) {
+    DailyReadyReminder() => (
+      title: AppStrings.notifDailyReadyTitle,
+      body: AppStrings.notifDailyReadyBody,
+    ),
+    StreakAtRiskReminder(:final gameId, :final days, :final others) => (
+      title: AppStrings.notifStreakAtRiskTitle,
+      body: AppStrings.notifStreakEndsTonight(gameId, days, others: others),
+    ),
+    WeeklyRecapReminder(:final recap) => (
+      title: AppStrings.notifWeeklyRecapTitle,
+      body: AppStrings.weeklyRecapLine(recap),
+    ),
+  };
 
   @override
   Stream<NotificationTap> watchTaps() {

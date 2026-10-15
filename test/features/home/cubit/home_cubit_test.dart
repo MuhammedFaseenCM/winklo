@@ -165,6 +165,36 @@ void main() {
   );
 
   blocTest<HomeCubit, HomeState>(
+    'load emits each game freeze count',
+    build: () {
+      when(() => pts(any())).thenReturn(0);
+      when(() => time(any())).thenReturn(null);
+      for (final (gameId, count) in [
+        (GameIds.zip, 2),
+        (GameIds.pathWords, 0),
+        (GameIds.sudoku, 1),
+      ]) {
+        when(
+          () => getStreak(
+            gameId: gameId,
+            now: any(named: 'now'),
+          ),
+        ).thenAnswer(
+          (_) async => GameStreak(gameId: gameId, freezeCount: count),
+        );
+      }
+      return buildCubit();
+    },
+    act: (c) => c.load(),
+    expect: () => [
+      isA<HomeState>()
+          .having((s) => s.freezeCount, 'freezeCount', 2)
+          .having((s) => s.pathWordsFreezeCount, 'pathWordsFreezeCount', 0)
+          .having((s) => s.sudokuFreezeCount, 'sudokuFreezeCount', 1),
+    ],
+  );
+
+  blocTest<HomeCubit, HomeState>(
     'loads bests and streak for daily path words',
     build: () {
       when(() => pts(any())).thenReturn(0);

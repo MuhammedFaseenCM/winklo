@@ -24,6 +24,7 @@ class HandleNotificationTap {
     '/profile',
     '/profile/privacy',
     '/profile/report',
+    '/profile/settings',
   };
 
   /// Common admin / typo aliases → canonical app paths.

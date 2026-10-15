@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RemoteViews layout of WinkloWidgetProvider. Ids and texts are filled in
+     from the data HomeWidgetRepositoryImpl writes. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/winklo_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/winklo_widget_background"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:id="@+id/winklo_widget_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/winklo_widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:text="@string/winklo_widget_title"
+            android:textColor="@color/winklo_widget_zip_accent"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/winklo_widget_zip"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="4dp"
+        android:layout_weight="1"
+        android:background="@drawable/winklo_widget_row"
+        android:gravity="center_vertical"
+        android:minHeight="28dp"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+
+        <ImageView
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="8dp"
+            android:background="@color/winklo_widget_zip_accent"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/winklo_widget_zip_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/winklo_widget_zip"
+            android:textColor="@color/winklo_widget_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/winklo_widget_zip_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:text="@string/winklo_widget_play"
+            android:textColor="@color/winklo_widget_zip_accent"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/winklo_widget_path_words"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="4dp"
+        android:layout_weight="1"
+        android:background="@drawable/winklo_widget_row"
+        android:gravity="center_vertical"
+        android:minHeight="28dp"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+
+        <ImageView
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="8dp"
+            android:background="@color/winklo_widget_path_words_accent"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/winklo_widget_path_words_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/winklo_widget_path_words"
+            android:textColor="@color/winklo_widget_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/winklo_widget_path_words_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:text="@string/winklo_widget_play"
+            android:textColor="@color/winklo_widget_path_words_accent"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/winklo_widget_sudoku"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="4dp"
+        android:layout_weight="1"
+        android:background="@drawable/winklo_widget_row"
+        android:gravity="center_vertical"
+        android:minHeight="28dp"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+
+        <ImageView
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="8dp"
+            android:background="@color/winklo_widget_sudoku_accent"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/winklo_widget_sudoku_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/winklo_widget_sudoku"
+            android:textColor="@color/winklo_widget_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/winklo_widget_sudoku_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:text="@string/winklo_widget_play"
+            android:textColor="@color/winklo_widget_sudoku_accent"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/winklo_widget_footer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="@string/winklo_widget_footer"
+        android:textColor="@color/winklo_widget_muted"
+        android:textSize="11sp" />
+</LinearLayout>

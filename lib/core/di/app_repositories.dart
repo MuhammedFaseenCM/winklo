@@ -34,6 +34,8 @@ import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_remote_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
+import 'package:winklo/data/repositories/settings_repository_impl.dart';
+import 'package:winklo/data/repositories/habit_repository_impl.dart';
 import 'package:winklo/data/repositories/haptics_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/sfx_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
@@ -59,6 +61,7 @@ import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/progress_local_repository.dart';
 import 'package:winklo/domain/repositories/progress_remote_repository.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
+import 'package:winklo/domain/repositories/habit_repository.dart';
 import 'package:winklo/domain/repositories/haptics_settings_repository.dart';
 import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
@@ -102,6 +105,8 @@ import 'package:winklo/domain/usecases/update_avatar.dart';
 import 'package:winklo/domain/usecases/update_display_name.dart';
 import 'package:winklo/domain/usecases/upload_progress_history.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
+
+import 'habit_providers.dart';
 
 /// [clientErrorRepository] is registered first when given so providers in this
 /// list (e.g. [SyncProgress]) can report handled errors; tests may omit it.
@@ -149,6 +154,10 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<NotificationRepository>(
       create: (context) => NotificationRepositoryImpl(
         notificationClient: context.read<NotificationClient>(),
+        announcementsEnabled: () =>
+            SettingsRepositoryImpl.announcementsEnabledIn(
+              context.read<SharedPreferences>(),
+            ),
       ),
     ),
     RepositoryProvider<InitializeNotifications>(
@@ -247,6 +256,10 @@ List<SingleChildWidget> buildRepositoryProviders({
         context.read<SharedPreferences>(),
         onChanged: context.read<ProgressChangeSignal>().notify,
       ),
+    ),
+    RepositoryProvider<HabitRepository>(
+      create: (context) =>
+          HabitRepositoryImpl(context.read<SharedPreferences>()),
     ),
     RepositoryProvider<ProgressLocalRepository>(
       create: (context) =>
@@ -371,6 +384,7 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) => RecordDailyClear(
         context.read<StreakRepository>(),
         analytics: context.read<AnalyticsRepository>(),
+        habit: context.read<HabitRepository>(),
       ),
     ),
     RepositoryProvider<FetchZipLevels>(
@@ -393,5 +407,6 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<GenerateDailySudoku>(
       create: (_) => GenerateDailySudoku(period: DevFlags.playPeriod),
     ),
+    ...buildHabitProviders(),
   ];
 }

@@ -341,6 +341,93 @@ void main() {
     });
   });
 
+  group('freezeCount on streak docs', () {
+    test(
+      'streakToFirestore writes the count and freezeAvailable = count > 0',
+      () {
+        final two = streakToFirestore(
+          const GameStreak(gameId: GameIds.zip, current: 14, freezeCount: 2),
+        );
+        expect(two['freezeCount'], 2);
+        expect(two['freezeAvailable'], isTrue);
+
+        final none = streakToFirestore(
+          const GameStreak(gameId: GameIds.zip, freezeCount: 0),
+        );
+        expect(none['freezeCount'], 0);
+        expect(none['freezeAvailable'], isFalse);
+      },
+    );
+
+    test('the count is clamped to 0..2 on the way out', () {
+      final payload = streakToFirestore(
+        const GameStreak(gameId: GameIds.zip, freezeCount: 9),
+      );
+      expect(payload['freezeCount'], 2);
+    });
+
+    test('a doc from an older build without freezeCount reads the flag', () {
+      expect(
+        streakFromFirestore({
+          'current': 3,
+          'freezeAvailable': true,
+        }, gameId: GameIds.zip)!.freezeCount,
+        1,
+      );
+      expect(
+        streakFromFirestore({
+          'current': 3,
+          'freezeAvailable': false,
+        }, gameId: GameIds.zip)!.freezeCount,
+        0,
+      );
+    });
+
+    test('round-trips two freezes', () {
+      final streak = streakFromFirestore(
+        streakToFirestore(
+          const GameStreak(
+            gameId: GameIds.zip,
+            current: 14,
+            longest: 14,
+            lastClearedDateId: '20261014',
+            freezeCount: 2,
+          ),
+        ),
+        gameId: GameIds.zip,
+      )!;
+      expect(streak.freezeCount, 2);
+    });
+
+    test('a malformed count falls back to the flag', () {
+      expect(
+        streakFromFirestore({
+          'freezeCount': 'two',
+          'freezeAvailable': false,
+        }, gameId: GameIds.zip)!.freezeCount,
+        0,
+      );
+      expect(
+        streakFromFirestore({
+          'freezeCount': 1.5,
+          'freezeAvailable': true,
+        }, gameId: GameIds.zip)!.freezeCount,
+        1,
+      );
+    });
+
+    test('an older build spending the freeze after a newer one wrote two', () {
+      // Old builds merge-write freezeAvailable only; freezeCount stays 2.
+      expect(
+        streakFromFirestore({
+          'freezeCount': 2,
+          'freezeAvailable': false,
+        }, gameId: GameIds.zip)!.freezeCount,
+        1,
+      );
+    });
+  });
+
   group('confirmedSnapshotData', () {
     test('passes server-confirmed data (or a missing doc) through', () {
       final data = {'hintsUsed': 1};

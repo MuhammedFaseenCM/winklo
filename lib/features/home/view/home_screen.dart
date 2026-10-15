@@ -25,7 +25,6 @@ import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
 import '../../../domain/usecases/prefetch_tomorrow_puzzles.dart';
-import '../../../domain/usecases/schedule_engagement_notifications.dart';
 import '../../../domain/repositories/notification_repository.dart';
 import '../../../domain/repositories/update_banner_snooze_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
@@ -33,6 +32,8 @@ import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
 import '../logic/today_summary.dart';
+import 'widgets/home_freeze_badge.dart';
+import 'widgets/home_habit_cards.dart';
 import 'widgets/home_soft_update_section.dart';
 import 'widgets/home_today_summary.dart';
 
@@ -52,8 +53,6 @@ class HomeScreen extends StatelessWidget {
         analytics: context.read<AnalyticsRepository>(),
         checkAppUpdate: context.read<CheckAppUpdate>(),
         appUpdateRepository: context.read<AppUpdateRepository>(),
-        scheduleEngagementNotifications: context
-            .read<ScheduleEngagementNotifications>(),
         zipLevelRepository: context.read<ZipLevelRepository>(),
         updateBannerSnooze: context.read<UpdateBannerSnoozeRepository>(),
         prefetchTomorrowPuzzles: context.read<PrefetchTomorrowPuzzles>(),
@@ -216,6 +215,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                 longestStreak: state.longestStreak,
                 isOnFreeze: state.isOnFreeze,
                 freezeAvailable: state.freezeAvailable,
+                freezeCount: state.freezeCount,
                 lifetimeBestSeconds: state.lifetimeBestSeconds,
                 loadedAt: state.loadedAt,
                 cleared: zipCleared,
@@ -249,6 +249,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   longestStreak: state.pathWordsLongestStreak,
                   isOnFreeze: state.pathWordsIsOnFreeze,
                   freezeAvailable: state.pathWordsFreezeAvailable,
+                  freezeCount: state.pathWordsFreezeCount,
                   lifetimeBestSeconds: state.pathWordsLifetimeBestSeconds,
                   loadedAt: state.loadedAt,
                   cleared: pathWordsCleared,
@@ -281,6 +282,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   longestStreak: state.sudokuLongestStreak,
                   isOnFreeze: state.sudokuIsOnFreeze,
                   freezeAvailable: state.sudokuFreezeAvailable,
+                  freezeCount: state.sudokuFreezeCount,
                   lifetimeBestSeconds: state.sudokuLifetimeBestSeconds,
                   loadedAt: state.loadedAt,
                   cleared: sudokuCleared,
@@ -319,6 +321,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                                 requiredLabel: state.updateRequiredLabel,
                                 storeUrl: state.updateStoreUrl,
                               ),
+                            const HomeHabitCards(),
                             SizedBox(height: layout.sectionGap),
                             HomeTodaySummary(summary: TodaySummary.of(state)),
                             Expanded(child: _HomeGamesPane(tiles: gameTiles)),
@@ -466,6 +469,7 @@ class _DailyGameTile extends StatelessWidget {
     this.longestStreak = 0,
     this.isOnFreeze = false,
     this.freezeAvailable = false,
+    this.freezeCount = 0,
     this.lifetimeBestSeconds,
     this.loadedAt,
     this.cleared = false,
@@ -485,6 +489,7 @@ class _DailyGameTile extends StatelessWidget {
   final int longestStreak;
   final bool isOnFreeze;
   final bool freezeAvailable;
+  final int freezeCount;
   final int? lifetimeBestSeconds;
 
   /// When the tile's data was read; the countdown runs to the end of that
@@ -635,7 +640,7 @@ class _DailyGameTile extends StatelessWidget {
                         ],
                         const Spacer(),
                         if (showFreeze) ...[
-                          const _FreezeReadyBadge(),
+                          HomeFreezeBadge(count: freezeCount),
                           SizedBox(width: layout.space(6)),
                         ],
                         if (streak > 0)
@@ -744,32 +749,6 @@ class _DailyGameTile extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FreezeReadyBadge extends StatelessWidget {
-  const _FreezeReadyBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final layout = AppLayout.of(context);
-    return Tooltip(
-      message: AppStrings.streakFreezeReady,
-      triggerMode: TooltipTriggerMode.tap,
-      child: Container(
-        padding: EdgeInsets.all(layout.space(5)),
-        decoration: BoxDecoration(
-          color: ZipColors.skySoft,
-          shape: BoxShape.circle,
-          border: Border.all(color: ZipColors.sky.withValues(alpha: 0.45)),
-        ),
-        child: Icon(
-          Icons.ac_unit_rounded,
-          size: layout.space(13),
-          color: ZipColors.sky,
         ),
       ),
     );

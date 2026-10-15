@@ -42,7 +42,6 @@ class ProfileSignedOutMock extends StatelessWidget {
           const SizedBox(height: 28),
           ProfileSettingsList(
             enabled: false,
-            onSfxChanged: null,
             onPrivacy: _noop,
             onAbout: _noop,
             onReport: _noop,

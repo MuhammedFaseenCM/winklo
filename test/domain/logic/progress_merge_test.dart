@@ -346,12 +346,16 @@ void main() {
       expect(merged.longest, 4);
     });
 
-    test('full tie prefers local', () {
-      final merged = mergeStreak(
-        _streak(current: 3, longest: 3, last: '20261007', freeze: true),
-        _streak(current: 3, longest: 3, last: '20261007', freeze: false),
+    test('a tie on day and streak takes the spent freeze, either way', () {
+      final kept = _streak(current: 3, longest: 3, last: '20261007');
+      final spent = _streak(
+        current: 3,
+        longest: 3,
+        last: '20261007',
+        freeze: false,
       );
-      expect(merged.freezeAvailable, isTrue);
+      expect(mergeStreak(kept, spent).freezeAvailable, isFalse);
+      expect(mergeStreak(spent, kept).freezeAvailable, isFalse);
     });
 
     test('both empty prefers local freeze', () {
@@ -610,6 +614,47 @@ void main() {
         isNot(daySignature(_day(time: 1, usedHints: false))),
       );
     });
+  });
+
+  group('mergeStreak freeze count', () {
+    test("the winner's count is kept", () {
+      const local = GameStreak(
+        gameId: 'zip',
+        current: 14,
+        longest: 14,
+        lastClearedDateId: '20261014',
+        freezeCount: 2,
+      );
+      const remote = GameStreak(
+        gameId: 'zip',
+        current: 13,
+        longest: 13,
+        lastClearedDateId: '20261013',
+        freezeCount: 1,
+      );
+      expect(mergeStreak(local, remote).freezeCount, 2);
+      expect(mergeStreak(remote, local).freezeCount, 2);
+    });
+  });
+
+  test('a tie on day and streak takes the lower freeze count, both ways', () {
+    const two = GameStreak(
+      gameId: 'zip',
+      current: 9,
+      longest: 9,
+      lastClearedDateId: '20261014',
+      freezeCount: 2,
+    );
+    final one = two.copyWith(freezeCount: 1);
+    // Symmetric, so two devices settle instead of pushing their own counts.
+    expect(mergeStreak(two, one).freezeCount, 1);
+    expect(mergeStreak(one, two).freezeCount, 1);
+  });
+
+  test('streakSignature tells freeze counts apart', () {
+    const one = GameStreak(gameId: 'zip', current: 14, freezeCount: 1);
+    const two = GameStreak(gameId: 'zip', current: 14, freezeCount: 2);
+    expect(streakSignature(one), isNot(streakSignature(two)));
   });
 
   group('streakSignature', () {

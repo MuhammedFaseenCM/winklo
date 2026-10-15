@@ -162,11 +162,13 @@ class FirebaseNotificationClient implements NotificationClient {
       },
     );
 
-    await _localNotifications
+    final android = _localNotifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(AndroidNotificationDisplay.channel);
+        >();
+    for (final channel in AndroidNotificationDisplay.channels) {
+      await android?.createNotificationChannel(channel);
+    }
   }
 
   String _encodePayload({
@@ -185,9 +187,6 @@ class FirebaseNotificationClient implements NotificationClient {
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
   }
-
-  NotificationDetails _details() =>
-      AndroidNotificationDisplay.notificationDetails();
 
   void _showLocalNotificationFromRemote(RemoteMessage message) {
     if (!Platform.isAndroid) return;
@@ -208,7 +207,7 @@ class FirebaseNotificationClient implements NotificationClient {
         id: id,
         title: title,
         body: body,
-        notificationDetails: _details(),
+        notificationDetails: AndroidNotificationDisplay.announcementDetails(),
         payload: _encodePayload(
           title: title ?? '',
           body: body ?? '',
@@ -306,7 +305,7 @@ class FirebaseNotificationClient implements NotificationClient {
       id: id,
       title: title,
       body: body,
-      notificationDetails: _details(),
+      notificationDetails: AndroidNotificationDisplay.reminderDetails(),
       payload: _encodePayload(title: title, body: body, type: type, data: data),
     );
   }
@@ -328,7 +327,7 @@ class FirebaseNotificationClient implements NotificationClient {
       title: title,
       body: body,
       scheduledDate: scheduled,
-      notificationDetails: _details(),
+      notificationDetails: AndroidNotificationDisplay.reminderDetails(),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: repeatsDaily ? DateTimeComponents.time : null,
       payload: _encodePayload(title: title, body: body, type: type, data: data),

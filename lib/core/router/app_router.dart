@@ -14,6 +14,7 @@ import '../../features/profile/view/profile_screen.dart';
 import '../../features/profile/view/report_issue_screen.dart';
 import '../../features/results/results_args.dart';
 import '../../features/results/results_screen.dart';
+import '../../features/settings/view/settings_screen.dart';
 import '../../features/stats/view/stats_screen.dart';
 import '../../features/sudoku/view/sudoku_screen.dart';
 import '../../features/word_match/view/word_match_screen.dart';
@@ -23,6 +24,7 @@ import '../../domain/game_ids.dart';
 import '../errors/client_error_route_observer.dart';
 import '../firebase/analytics_route_observer.dart';
 import 'auth_router_refresh.dart';
+import 'widget_launch_route.dart';
 
 bool isPlayableLocation(String path) {
   if (path == '/zip' ||
@@ -54,11 +56,13 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: '/',
     refreshListenable: refresh,
-    redirect: (context, state) => playAuthRedirect(
-      status: authCubit.state.status,
-      isSignedIn: authCubit.isSignedIn,
-      matchedLocation: state.matchedLocation,
-    ),
+    redirect: (context, state) =>
+        widgetLaunchLocation(state.uri) ??
+        playAuthRedirect(
+          status: authCubit.state.status,
+          isSignedIn: authCubit.isSignedIn,
+          matchedLocation: state.matchedLocation,
+        ),
     observers: [AnalyticsRouteObserver(analytics), ClientErrorRouteObserver()],
     routes: [
       StatefulShellRoute.indexedStack(
@@ -113,6 +117,11 @@ GoRouter buildRouter({
                     path: 'stats',
                     name: 'profile_stats',
                     builder: (context, state) => const StatsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    name: 'profile_settings',
+                    builder: (context, state) => const SettingsScreen(),
                   ),
                 ],
               ),
