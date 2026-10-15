@@ -1,3 +1,4 @@
+import '../entities/leaderboard_proof.dart';
 import '../logic/progress_merge.dart';
 import '../repositories/leaderboard_repository.dart';
 import '../repositories/progress_local_repository.dart';
@@ -18,6 +19,8 @@ class SubmitLeaderboardTime {
   /// [playId] is the cleared play period; the marker is written only when
   /// [timeSeconds] equals the stored best for it (a slower replay must not
   /// replace the marker of the best time).
+  ///
+  /// [proof] lets the leaderboard Worker check the clear.
   Future<void> call({
     required String gameId,
     required int timeSeconds,
@@ -26,6 +29,7 @@ class SubmitLeaderboardTime {
     required int currentStreak,
     String? dayId,
     String? playId,
+    LeaderboardProof? proof,
   }) async {
     await _repo.submitBestTime(
       gameId: gameId,
@@ -34,6 +38,7 @@ class SubmitLeaderboardTime {
       hadMistakes: hadMistakes,
       currentStreak: currentStreak,
       dayId: dayId,
+      proof: proof,
     );
     await _markConfirmed(gameId, playId, timeSeconds);
   }

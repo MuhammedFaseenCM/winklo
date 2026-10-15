@@ -1,13 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
 import '../../domain/entities/leaderboard_entry.dart';
 import '../../domain/entities/leaderboard_period.dart';
+import '../../domain/entities/leaderboard_proof.dart';
 import '../../domain/failures.dart';
 import '../../domain/game_ids.dart';
+import '../../domain/leaderboard_limits.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
+import '../clients/leaderboard/leaderboard_submit_client.dart';
 import '../leaderboard_identity.dart';
 import '../leaderboard_root.dart';
 
@@ -163,11 +167,70 @@ leaderboardSubmitIdentity({
   );
 }
 
+/// The leaderboard Worker's submit body (see workers/leaderboard/src/submit.ts).
+///
+/// A null [identity] (the profile couldn't be read) sends no name, so the
+/// Worker keeps the stored one.
+Map<String, Object?> leaderboardSubmitBody({
+  required String gameId,
+  required String dayId,
+  required int timeSeconds,
+  required bool usedHints,
+  required bool hadMistakes,
+  required int currentStreak,
+  required ({String displayName, String? photoUrl, String? avatarId})? identity,
+  required LeaderboardProof proof,
+}) => {
+  'gameId': gameId,
+  'dayId': dayId,
+  'timeSeconds': timeSeconds,
+  'usedHints': usedHints,
+  'hadMistakes': hadMistakes,
+  'currentStreak': currentStreak,
+  'displayName': identity?.displayName,
+  'photoUrl': identity?.photoUrl,
+  'avatarId': identity?.avatarId,
+  'proof': proof.toJson(),
+};
+
+void _recordRejectedSubmit(Object error, StackTrace stack) {
+  if (!FirebaseBootstrap.isReady) return;
+  FirebaseCrashlytics.instance.recordError(
+    error,
+    stack,
+    fatal: false,
+    reason: 'leaderboard_submit_rejected',
+  );
+}
+
 class LeaderboardRepositoryImpl implements LeaderboardRepository {
-  LeaderboardRepositoryImpl({this._firestore, this._auth});
+  /// [submitClient] posts clears to the leaderboard Worker (release builds
+  /// only); without it every clear is written directly. [isDebugMode] and
+  /// [now] are for tests; [reportRejected] records a refused clear
+  /// (Crashlytics, as a non-fatal, by default).
+  LeaderboardRepositoryImpl({
+    this._firestore,
+    this._auth,
+    this._submitClient,
+    this._isDebugMode,
+    DateTime Function()? now,
+    void Function(Object error, StackTrace stack)? reportRejected,
+  }) : _now = now ?? DateTime.now,
+       _reportRejected = reportRejected ?? _recordRejectedSubmit;
 
   final FirebaseFirestore? _firestore;
   final FirebaseAuth? _auth;
+  final LeaderboardSubmitClient? _submitClient;
+  final bool? _isDebugMode;
+  final DateTime Function() _now;
+  final void Function(Object error, StackTrace stack) _reportRejected;
+
+  String get _root => leaderboardRootCollection(isDebugMode: _isDebugMode);
+
+  /// Release boards: the Worker serves them and the fair-play rules guard
+  /// them. Debug builds keep writing `leaderboards_debug` directly.
+  bool get _isReleaseRoot =>
+      _root == leaderboardRootCollection(isDebugMode: false);
 
   FirebaseFirestore? get _db {
     if (!FirebaseBootstrap.isReady) return null;
@@ -199,7 +262,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     required LeaderboardPeriod period,
     required String? dayId,
   }) {
-    final gameRef = db.collection(leaderboardRootCollection()).doc(gameId);
+    final gameRef = db.collection(_root).doc(gameId);
     switch (period) {
       case LeaderboardPeriod.allTime:
         return gameRef.collection('all_time');
@@ -250,6 +313,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     required int currentStreak,
     String? dayId,
     String? expectedUid,
+    LeaderboardProof? proof,
   }) async {
     _assertGameId(gameId);
     if (timeSeconds <= 0) {
@@ -257,6 +321,13 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     }
     if (dayId != null && !_dayIdPattern.hasMatch(dayId)) {
       throw Failure('Invalid leaderboard day: $dayId');
+    }
+    final boardDayId = dayId ?? leaderboardDayId();
+    // The rules and the Worker refuse these, so there is nothing to post.
+    if (_isReleaseRoot &&
+        (!leaderboardAcceptsTime(gameId, timeSeconds) ||
+            !leaderboardDayIsLive(boardDayId, _now()))) {
+      return;
     }
 
     final db = _db;
@@ -284,9 +355,30 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     );
     // The account may have switched during the profile read.
     _assertExpectedUser(auth, expectedUid);
-    final boardDayId = dayId ?? leaderboardDayId();
 
-    final root = leaderboardRootCollection();
+    final client = _submitClient;
+    if (_isReleaseRoot && client != null && proof != null) {
+      final posted = await _postToWorker(
+        client,
+        user,
+        body: leaderboardSubmitBody(
+          gameId: gameId,
+          dayId: boardDayId,
+          timeSeconds: timeSeconds,
+          usedHints: usedHints,
+          hadMistakes: hadMistakes,
+          currentStreak: currentStreak,
+          identity: identity,
+          proof: proof,
+        ),
+      );
+      if (posted) return;
+      // Unreachable or failing: write directly so the time isn't lost while
+      // direct writes are still allowed (fair-play phase 1).
+      _assertExpectedUser(auth, expectedUid);
+    }
+
+    final root = _root;
     final allTimeRef = db
         .collection(root)
         .doc(gameId)
@@ -321,6 +413,35 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       debugPrint('Leaderboard submit failed: $e');
       debugPrint('$st');
       throw Failure('Could not sync leaderboard.', cause: e);
+    }
+  }
+
+  /// True once the Worker took the clear; false when it couldn't be reached
+  /// (the caller writes directly). Throws [LeaderboardSubmitRefused] when it
+  /// refused the clear.
+  Future<bool> _postToWorker(
+    LeaderboardSubmitClient client,
+    User user, {
+    required Map<String, Object?> body,
+  }) async {
+    final String idToken;
+    try {
+      final token = await user.getIdToken();
+      if (token == null || token.isEmpty) return false;
+      idToken = token;
+    } catch (e) {
+      debugPrint('Leaderboard ID token failed: $e');
+      return false;
+    }
+    try {
+      await client.submit(idToken: idToken, body: body);
+      return true;
+    } on LeaderboardSubmitRejected catch (e, st) {
+      _reportRejected(e, st);
+      throw LeaderboardSubmitRefused(e.code);
+    } on LeaderboardSubmitUnavailable catch (e) {
+      debugPrint('Leaderboard Worker unavailable, writing directly: $e');
+      return false;
     }
   }
 

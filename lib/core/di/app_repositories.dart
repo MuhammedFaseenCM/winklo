@@ -3,6 +3,7 @@ import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:winklo/core/config/avatar_upload_config.dart';
+import 'package:winklo/core/config/leaderboard_submit_config.dart';
 import 'package:winklo/core/config/path_words_nouns_config.dart';
 import 'package:winklo/core/dev_flags.dart';
 import 'package:winklo/core/firebase/firebase_bootstrap.dart';
@@ -12,6 +13,7 @@ import 'package:winklo/core/sfx/audioplayers_sfx_playback.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/data/clients/avatar/avatar_upload_client.dart';
 import 'package:winklo/data/clients/avatar/r2_avatar_upload_client.dart';
+import 'package:winklo/data/clients/leaderboard/http_leaderboard_submit_client.dart';
 import 'package:winklo/data/clients/notification/firebase_notification_client.dart';
 import 'package:winklo/data/clients/notification/notification_client.dart';
 import 'package:winklo/data/clients/path_words/http_path_words_nouns_client.dart';
@@ -199,7 +201,13 @@ List<SingleChildWidget> buildRepositoryProviders({
           SubmitIssueReport(context.read<IssueReportRepository>()),
     ),
     RepositoryProvider<LeaderboardRepository>(
-      create: (_) => LeaderboardRepositoryImpl(),
+      create: (_) => LeaderboardRepositoryImpl(
+        submitClient: LeaderboardSubmitConfig.isConfigured
+            ? HttpLeaderboardSubmitClient(
+                baseUrl: LeaderboardSubmitConfig.baseUrl,
+              )
+            : null,
+      ),
     ),
     RepositoryProvider<SignInWithGoogle>(
       create: (context) => SignInWithGoogle(context.read<AuthRepository>()),
