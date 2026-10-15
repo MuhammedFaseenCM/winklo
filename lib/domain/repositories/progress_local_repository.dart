@@ -1,5 +1,7 @@
-/// Device-side bookkeeping for progress sync: who owns the local progress and
-/// what was last pushed.
+import '../entities/leaderboard_proof.dart';
+
+/// Device-side bookkeeping for progress sync: who owns the local progress,
+/// what was last pushed and the leaderboard proof of each daily clear.
 abstract class ProgressLocalRepository {
   /// Marker key for the pushed `game_days` doc of [gameId] / [playId].
   static String dayMarkerKey(String gameId, String playId) =>
@@ -35,6 +37,17 @@ abstract class ProgressLocalRepository {
   String? pushedSignature(String key);
 
   Future<void> setPushedSignature(String key, String signature);
+
+  /// The leaderboard proof saved with [gameId]'s daily clear of [playId], so
+  /// a later sync can send that clear through the leaderboard Worker; null
+  /// when none was saved (clears before 1.1.0) or it can't be read.
+  LeaderboardProof? clearProof(String gameId, String playId);
+
+  Future<void> setClearProof(
+    String gameId,
+    String playId,
+    LeaderboardProof proof,
+  );
 
   /// Whether this device's daily history was uploaded once for [uid]
   /// (`UploadProgressHistory`). Kept per uid across purges.

@@ -448,7 +448,8 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     _assertExpectedUser(auth, expectedUid);
 
     final client = _submitClient;
-    if (_isReleaseRoot && client != null && proof != null) {
+    final viaWorker = _isReleaseRoot && client != null && proof != null;
+    if (viaWorker) {
       final posted = await _postToWorker(
         client,
         user,
@@ -501,10 +502,30 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         identity: identity,
       );
     } catch (e, st) {
+      if (e is FirebaseException && e.code == 'permission-denied') {
+        _directWriteDenied(e, retryViaWorker: viaWorker);
+      }
       debugPrint('Leaderboard submit failed: $e');
       debugPrint('$st');
       throw Failure('Could not sync leaderboard.', cause: e);
     }
+  }
+
+  /// Fair-play phase 2: the rules take no direct writes. A proven clear goes
+  /// to the Worker again on the next sync, quietly; one without a proof never
+  /// will be accepted, so it's final, and not an error to report.
+  Never _directWriteDenied(Object error, {required bool retryViaWorker}) {
+    debugPrint('Leaderboard direct write denied: $error');
+    if (retryViaWorker) {
+      throw Failure(
+        'Could not sync leaderboard.',
+        cause: error,
+        reportable: false,
+      );
+    }
+    throw const LeaderboardSubmitRefused(
+      LeaderboardSubmitRefused.permissionDenied,
+    );
   }
 
   /// True once the Worker took the clear; false when it couldn't be reached

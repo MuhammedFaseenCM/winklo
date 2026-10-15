@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
+import 'package:winklo/domain/entities/cell.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
 import 'package:winklo/domain/repositories/progress_local_repository.dart';
 
 void main() {
@@ -131,6 +135,55 @@ void main() {
       final (repo, prefs) = await build();
       await repo.purgeUserProgress();
       expect(prefs.getKeys(), isEmpty);
+    });
+  });
+
+  group('clear proofs', () {
+    const zip = ZipLeaderboardProof([Cell(0, 0), Cell(0, 1)]);
+
+    test('are kept per daily mode key as the Worker reads them', () async {
+      final (repo, prefs) = await build();
+      expect(repo.clearProof('zip', '20261007'), isNull);
+
+      await repo.setClearProof('zip', '20261007', zip);
+      await repo.setClearProof(
+        'sudoku',
+        '20261007',
+        const SudokuLeaderboardProof([1, 2]),
+      );
+
+      expect(
+        jsonDecode(prefs.getString('clear_proof_zip_daily_20261007')!),
+        zip.toJson(),
+      );
+      expect(prefs.getString('clear_proof_sudoku_20261007'), isNotNull);
+      expect(repo.clearProof('zip', '20261007')?.toJson(), zip.toJson());
+      expect(repo.clearProof('zip', '20261008'), isNull);
+      expect(repo.clearProof('sudoku', '20261007')?.toJson(), {
+        'grid': [1, 2],
+      });
+    });
+
+    test('an unreadable proof reads as none', () async {
+      final (repo, _) = await build({
+        'clear_proof_zip_daily_20261007': '{not json',
+        'clear_proof_sudoku_20261007': '{"path":[[0,0]]}',
+      });
+      expect(repo.clearProof('zip', '20261007'), isNull);
+      expect(repo.clearProof('sudoku', '20261007'), isNull);
+    });
+
+    test('are per-user progress: purged, stashed and restored', () async {
+      final (repo, prefs) = await build();
+      await repo.setClearProof('zip', '20261007', zip);
+
+      await repo.stashUserProgress('a');
+      await repo.purgeUserProgress();
+      expect(repo.clearProof('zip', '20261007'), isNull);
+      expect(prefs.getKeys(), {'progress_stash_a'});
+
+      expect(await repo.restoreStashedProgress('a'), isTrue);
+      expect(repo.clearProof('zip', '20261007')?.toJson(), zip.toJson());
     });
   });
 
