@@ -15,11 +15,20 @@ class WordMatchGame extends FlameGame with DragCallbacks {
     required this.deck,
     required this.onWin,
     required this.onProgress,
+    this.onMatch,
+    this.onMiss,
   });
 
   final WordMatchDeck deck;
   final WordMatchWinCallback onWin;
   final void Function(int matched, int total) onProgress;
+
+  /// One-shot: a pair was matched (not called for the winning pair, which
+  /// calls [onWin]).
+  final VoidCallback? onMatch;
+
+  /// One-shot: a word was dropped on the wrong partner.
+  final VoidCallback? onMiss;
 
   final List<_WordNode> _nodes = [];
   final Set<String> _matchedIds = {};
@@ -135,6 +144,7 @@ class WordMatchGame extends FlameGame with DragCallbacks {
       source.isMatched = true;
       target.isMatched = true;
       onProgress(_matchedIds.length ~/ 2, deck.pairs.length);
+      if (_matchedIds.length < deck.pairs.length * 2) onMatch?.call();
       if (_matchedIds.length == deck.pairs.length * 2) {
         _won = true;
         final elapsed = DateTime.now().difference(_startedAt!).inSeconds;
@@ -145,6 +155,7 @@ class WordMatchGame extends FlameGame with DragCallbacks {
     } else {
       source.shake();
       target.shake();
+      onMiss?.call();
     }
   }
 

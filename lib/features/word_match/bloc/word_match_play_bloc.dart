@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/strings/app_strings.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/usecases/fetch_word_match_deck_by_id.dart';
-import '../../../domain/usecases/submit_score.dart';
+import '../../../domain/entities/word_match_deck.dart';
 import '../../results/results_args.dart';
 import 'word_match_play_event.dart';
 import 'word_match_play_state.dart';
@@ -13,7 +15,7 @@ import 'word_match_play_state.dart';
 class WordMatchPlayBloc extends Bloc<WordMatchPlayEvent, WordMatchPlayState> {
   WordMatchPlayBloc({
     required this.fetchDeckById,
-    required this.submitScore,
+    required this.records,
     required this.analytics,
     Stream<int> Function()? ticker,
   }) : _ticker =
@@ -27,8 +29,24 @@ class WordMatchPlayBloc extends Bloc<WordMatchPlayEvent, WordMatchPlayState> {
   }
 
   final FetchWordMatchDeckById fetchDeckById;
-  final SubmitScore submitScore;
+
+  /// The local best time per deck. A bonus game never touches the dailies'
+  /// scores, streaks, boards or sync.
+  final PlayModeRecordRepository records;
   final AnalyticsRepository analytics;
+
+  /// Where a deck's best time is kept.
+  static String recordKey(String deckId) => 'bonus_word_match_$deckId';
+
+  LocalResultInfo _local(WordMatchDeck deck, {int? best, int? matched}) =>
+      LocalResultInfo(
+        kind: LocalResultKind.bonus,
+        label: AppStrings.bonusRunLabel(AppStrings.wordMatch, deck.title),
+        bestSeconds: best,
+        score: matched,
+        scoreLabel: matched == null ? null : AppStrings.resultsPairsLabel,
+        againLocation: '/word-match/${deck.id}',
+      );
   final Stream<int> Function() _ticker;
 
   StreamSubscription<int>? _tickerSub;
@@ -62,7 +80,7 @@ class WordMatchPlayBloc extends Bloc<WordMatchPlayEvent, WordMatchPlayState> {
         emit(
           state.copyWith(
             status: WordMatchPlayStatus.failure,
-            error: 'Deck not found',
+            error: AppStrings.wordMatchDeckMissing,
           ),
         );
         return;
@@ -81,9 +99,14 @@ class WordMatchPlayBloc extends Bloc<WordMatchPlayEvent, WordMatchPlayState> {
       _tickerSub = _ticker().listen((_) {
         add(const WordMatchPlayEvent.tick());
       });
-    } catch (e) {
+    } catch (_) {
       if (emit.isDone) return;
-      emit(state.copyWith(status: WordMatchPlayStatus.failure, error: '$e'));
+      emit(
+        state.copyWith(
+          status: WordMatchPlayStatus.failure,
+          error: AppStrings.bonusLoadFailed,
+        ),
+      );
     }
   }
 
@@ -101,7 +124,8 @@ class WordMatchPlayBloc extends Bloc<WordMatchPlayEvent, WordMatchPlayState> {
       await _tickerSub?.cancel();
       _tickerSub = null;
       final points = state.matched * 25;
-      final timeSeconds = state.deck?.seconds ?? 60;
+      final deck = state.deck!;
+      final timeSeconds = deck.seconds;
       await analytics.logGameCompleted(
         gameId: GameIds.wordMatch,
         points: points,
@@ -112,12 +136,17 @@ class WordMatchPlayBloc extends Bloc<WordMatchPlayEvent, WordMatchPlayState> {
           status: WordMatchPlayStatus.navigating,
           finished: true,
           resultsExtra: ResultsArgs(
-            title: 'Time up',
-            subtitle: 'Matched ${state.matched} / ${state.total}',
+            title: AppStrings.wordMatchTimeUp,
+            subtitle: AppStrings.wordMatchMatched(state.matched, state.total),
             timeSeconds: timeSeconds,
             improved: false,
             points: points,
             gameId: GameIds.wordMatch,
+            local: _local(
+              deck,
+              best: records.bestTimeSeconds(recordKey(deck.id)),
+              matched: state.matched,
+            ),
           ),
         ),
       );
@@ -148,10 +177,9 @@ class WordMatchPlayBloc extends Bloc<WordMatchPlayEvent, WordMatchPlayState> {
     await _tickerSub?.cancel();
     _tickerSub = null;
 
-    final improved = await submitScore(
-      modeKey: 'match_$deckId',
-      points: event.points,
-      timeSeconds: event.elapsedSeconds,
+    final best = await records.recordTime(
+      recordKey(deckId),
+      event.elapsedSeconds,
     );
 
     await analytics.logGameCompleted(
@@ -166,12 +194,13 @@ class WordMatchPlayBloc extends Bloc<WordMatchPlayEvent, WordMatchPlayState> {
       state.copyWith(
         status: WordMatchPlayStatus.navigating,
         resultsExtra: ResultsArgs(
-          title: 'All matched!',
+          title: AppStrings.wordMatchCleared,
           subtitle: deck.title,
           timeSeconds: event.elapsedSeconds,
-          improved: improved,
+          improved: best.improved,
           points: event.points,
           gameId: GameIds.wordMatch,
+          local: _local(deck, best: best.best),
         ),
       ),
     );

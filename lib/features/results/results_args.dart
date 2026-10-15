@@ -74,6 +74,7 @@ class LocalResultInfo {
     this.bestSeconds,
     this.score,
     this.bestScore,
+    this.scoreLabel,
     this.againLocation,
   });
 
@@ -90,6 +91,9 @@ class LocalResultInfo {
 
   /// The local best [score] after this run.
   final int? bestScore;
+
+  /// What [score] counts ("words" when null).
+  final String? scoreLabel;
 
   /// Where "New board" or "Play again" goes; null for none (the archive
   /// goes back to its calendar).

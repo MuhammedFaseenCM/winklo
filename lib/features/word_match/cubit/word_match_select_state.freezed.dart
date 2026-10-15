@@ -14,7 +14,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$WordMatchSelectItem {
 
- WordMatchDeck get deck; int get bestPoints;
+ WordMatchDeck get deck;/// The deck's local best time; null before a clear.
+ int? get bestSeconds;
 /// Create a copy of WordMatchSelectItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +26,16 @@ $WordMatchSelectItemCopyWith<WordMatchSelectItem> get copyWith => _$WordMatchSel
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is WordMatchSelectItem&&(identical(other.deck, deck) || other.deck == deck)&&(identical(other.bestPoints, bestPoints) || other.bestPoints == bestPoints));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is WordMatchSelectItem&&(identical(other.deck, deck) || other.deck == deck)&&(identical(other.bestSeconds, bestSeconds) || other.bestSeconds == bestSeconds));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,deck,bestPoints);
+int get hashCode => Object.hash(runtimeType,deck,bestSeconds);
 
 @override
 String toString() {
-  return 'WordMatchSelectItem(deck: $deck, bestPoints: $bestPoints)';
+  return 'WordMatchSelectItem(deck: $deck, bestSeconds: $bestSeconds)';
 }
 
 
@@ -45,7 +46,7 @@ abstract mixin class $WordMatchSelectItemCopyWith<$Res>  {
   factory $WordMatchSelectItemCopyWith(WordMatchSelectItem value, $Res Function(WordMatchSelectItem) _then) = _$WordMatchSelectItemCopyWithImpl;
 @useResult
 $Res call({
- WordMatchDeck deck, int bestPoints
+ WordMatchDeck deck, int? bestSeconds
 });
 
 
@@ -62,11 +63,11 @@ class _$WordMatchSelectItemCopyWithImpl<$Res>
 
 /// Create a copy of WordMatchSelectItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? deck = null,Object? bestPoints = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? deck = null,Object? bestSeconds = freezed,}) {
   return _then(_self.copyWith(
 deck: null == deck ? _self.deck : deck // ignore: cast_nullable_to_non_nullable
-as WordMatchDeck,bestPoints: null == bestPoints ? _self.bestPoints : bestPoints // ignore: cast_nullable_to_non_nullable
-as int,
+as WordMatchDeck,bestSeconds: freezed == bestSeconds ? _self.bestSeconds : bestSeconds // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -148,10 +149,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( WordMatchDeck deck,  int bestPoints)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( WordMatchDeck deck,  int? bestSeconds)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _WordMatchSelectItem() when $default != null:
-return $default(_that.deck,_that.bestPoints);case _:
+return $default(_that.deck,_that.bestSeconds);case _:
   return orElse();
 
 }
@@ -169,10 +170,10 @@ return $default(_that.deck,_that.bestPoints);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( WordMatchDeck deck,  int bestPoints)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( WordMatchDeck deck,  int? bestSeconds)  $default,) {final _that = this;
 switch (_that) {
 case _WordMatchSelectItem():
-return $default(_that.deck,_that.bestPoints);}
+return $default(_that.deck,_that.bestSeconds);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -186,10 +187,10 @@ return $default(_that.deck,_that.bestPoints);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( WordMatchDeck deck,  int bestPoints)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( WordMatchDeck deck,  int? bestSeconds)?  $default,) {final _that = this;
 switch (_that) {
 case _WordMatchSelectItem() when $default != null:
-return $default(_that.deck,_that.bestPoints);case _:
+return $default(_that.deck,_that.bestSeconds);case _:
   return null;
 
 }
@@ -201,11 +202,12 @@ return $default(_that.deck,_that.bestPoints);case _:
 
 
 class _WordMatchSelectItem implements WordMatchSelectItem {
-  const _WordMatchSelectItem({required this.deck, this.bestPoints = 0});
+  const _WordMatchSelectItem({required this.deck, this.bestSeconds});
   
 
 @override final  WordMatchDeck deck;
-@override@JsonKey() final  int bestPoints;
+/// The deck's local best time; null before a clear.
+@override final  int? bestSeconds;
 
 /// Create a copy of WordMatchSelectItem
 /// with the given fields replaced by the non-null parameter values.
@@ -217,16 +219,16 @@ _$WordMatchSelectItemCopyWith<_WordMatchSelectItem> get copyWith => __$WordMatch
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _WordMatchSelectItem&&(identical(other.deck, deck) || other.deck == deck)&&(identical(other.bestPoints, bestPoints) || other.bestPoints == bestPoints));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _WordMatchSelectItem&&(identical(other.deck, deck) || other.deck == deck)&&(identical(other.bestSeconds, bestSeconds) || other.bestSeconds == bestSeconds));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,deck,bestPoints);
+int get hashCode => Object.hash(runtimeType,deck,bestSeconds);
 
 @override
 String toString() {
-  return 'WordMatchSelectItem(deck: $deck, bestPoints: $bestPoints)';
+  return 'WordMatchSelectItem(deck: $deck, bestSeconds: $bestSeconds)';
 }
 
 
@@ -237,7 +239,7 @@ abstract mixin class _$WordMatchSelectItemCopyWith<$Res> implements $WordMatchSe
   factory _$WordMatchSelectItemCopyWith(_WordMatchSelectItem value, $Res Function(_WordMatchSelectItem) _then) = __$WordMatchSelectItemCopyWithImpl;
 @override @useResult
 $Res call({
- WordMatchDeck deck, int bestPoints
+ WordMatchDeck deck, int? bestSeconds
 });
 
 
@@ -254,11 +256,11 @@ class __$WordMatchSelectItemCopyWithImpl<$Res>
 
 /// Create a copy of WordMatchSelectItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? deck = null,Object? bestPoints = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? deck = null,Object? bestSeconds = freezed,}) {
   return _then(_WordMatchSelectItem(
 deck: null == deck ? _self.deck : deck // ignore: cast_nullable_to_non_nullable
-as WordMatchDeck,bestPoints: null == bestPoints ? _self.bestPoints : bestPoints // ignore: cast_nullable_to_non_nullable
-as int,
+as WordMatchDeck,bestSeconds: freezed == bestSeconds ? _self.bestSeconds : bestSeconds // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

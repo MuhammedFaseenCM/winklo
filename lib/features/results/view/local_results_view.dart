@@ -195,18 +195,18 @@ class _LocalResultCardState extends State<_LocalResultCard> {
         ),
       ],
     );
+    final bestScore = info.bestScore;
+    final bestSeconds = info.bestSeconds;
     final String? bestLine;
-    if (score != null) {
-      final best = info.bestScore;
-      bestLine = best == null ? null : AppStrings.localBestScore(best);
-    } else {
-      final best = info.bestSeconds;
-      final time = best == null ? null : AppStrings.formatPlayTime(best);
-      bestLine = time == null
-          ? null
-          : info.kind == LocalResultKind.archive
+    if (score != null && bestScore != null) {
+      bestLine = AppStrings.localBestScore(bestScore);
+    } else if (bestSeconds != null) {
+      final time = AppStrings.formatPlayTime(bestSeconds);
+      bestLine = info.kind == LocalResultKind.archive
           ? AppStrings.archiveBest(time)
           : AppStrings.localBest(time);
+    } else {
+      bestLine = null;
     }
 
     return Container(
@@ -248,7 +248,8 @@ class _LocalResultCardState extends State<_LocalResultCard> {
           const SizedBox(height: 4),
           Text(
             score != null
-                ? AppStrings.resultsWordsLabel.toUpperCase()
+                ? (info.scoreLabel ?? AppStrings.resultsWordsLabel)
+                      .toUpperCase()
                 : AppStrings.resultsTimeLabel.toUpperCase(),
             style: theme.textTheme.titleSmall?.copyWith(
               color: ZipColors.inkSoft,

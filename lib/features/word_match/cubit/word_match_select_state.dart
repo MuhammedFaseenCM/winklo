@@ -10,7 +10,9 @@ enum WordMatchSelectStatus { initial, loading, ready, failure }
 sealed class WordMatchSelectItem with _$WordMatchSelectItem {
   const factory WordMatchSelectItem({
     required WordMatchDeck deck,
-    @Default(0) int bestPoints,
+
+    /// The deck's local best time; null before a clear.
+    int? bestSeconds,
   }) = _WordMatchSelectItem;
 }
 
