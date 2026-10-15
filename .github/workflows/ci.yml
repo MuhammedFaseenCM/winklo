@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [account-deletion, avatar-upload, leaderboard, path-words-nouns]
+        worker: [account-deletion, avatar-upload, leaderboard, path-words-nouns, site]
     defaults:
       run:
         working-directory: workers/${{ matrix.worker }}
