@@ -24,6 +24,7 @@ import '../../../domain/usecases/get_best_daily_time_seconds.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
+import '../../../domain/usecases/prefetch_tomorrow_puzzles.dart';
 import '../../../domain/usecases/schedule_engagement_notifications.dart';
 import '../../../domain/repositories/notification_repository.dart';
 import '../../../domain/repositories/update_banner_snooze_repository.dart';
@@ -55,6 +56,7 @@ class HomeScreen extends StatelessWidget {
             .read<ScheduleEngagementNotifications>(),
         zipLevelRepository: context.read<ZipLevelRepository>(),
         updateBannerSnooze: context.read<UpdateBannerSnoozeRepository>(),
+        prefetchTomorrowPuzzles: context.read<PrefetchTomorrowPuzzles>(),
         playPeriod: DevFlags.playPeriod,
       )..load(),
       child: const _HomeView(),

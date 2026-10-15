@@ -7,6 +7,7 @@ import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
+import 'package:winklo/domain/repositories/daily_puzzle_prefetch_repository.dart';
 import 'package:winklo/domain/repositories/update_banner_snooze_repository.dart';
 import 'package:winklo/domain/repositories/zip_level_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
@@ -14,6 +15,7 @@ import 'package:winklo/domain/usecases/get_best_daily_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
+import 'package:winklo/domain/usecases/prefetch_tomorrow_puzzles.dart';
 import 'package:winklo/features/home/cubit/home_cubit.dart';
 import 'package:winklo/features/zip/logic/daily_puzzle_generator.dart';
 
@@ -45,8 +47,15 @@ class _FixedSnooze implements UpdateBannerSnoozeRepository {
   Future<void> snoozeUntil(DateTime until) async {}
 }
 
+class _RecordingPrefetch implements DailyPuzzlePrefetchRepository {
+  final List<String> days = [];
+
+  @override
+  Future<void> prefetch(String dateId) async => days.add(dateId);
+}
+
 void main() {
-  final now = DateTime.utc(2026, 10, 15, 12);
+  final noonUtc = DateTime.utc(2026, 10, 15, 12);
   const soft = AppUpdateDecision(
     status: AppUpdateStatus.soft,
     storeUrl: 'https://play.google.com/store/apps/details?id=x',
@@ -94,7 +103,11 @@ void main() {
     );
   });
 
-  HomeCubit build({UpdateBannerSnoozeRepository? snooze}) => HomeCubit(
+  HomeCubit build({
+    UpdateBannerSnoozeRepository? snooze,
+    PrefetchTomorrowPuzzles? prefetch,
+    DateTime? now,
+  }) => HomeCubit(
     getBestPoints: points,
     getBestTimeSeconds: times,
     getBestDailyTimeSeconds: lifetimeBest,
@@ -104,14 +117,15 @@ void main() {
     appUpdateRepository: _MockAppUpdateRepository(),
     zipLevelRepository: zipLevels,
     updateBannerSnooze: snooze,
-    now: now,
+    prefetchTomorrowPuzzles: prefetch,
+    now: now ?? noonUtc,
     createTimer: (_, _) => Timer(Duration.zero, () {}),
   );
 
   group('update_prompt_shown and the snooze', () {
     test('a snoozed banner is not logged as shown', () async {
       final cubit = build(
-        snooze: _FixedSnooze(now.add(const Duration(hours: 5))),
+        snooze: _FixedSnooze(noonUtc.add(const Duration(hours: 5))),
       );
 
       await cubit.load();
@@ -124,7 +138,7 @@ void main() {
 
     test('a snooze that ended is logged as shown again', () async {
       final cubit = build(
-        snooze: _FixedSnooze(now.subtract(const Duration(minutes: 1))),
+        snooze: _FixedSnooze(noonUtc.subtract(const Duration(minutes: 1))),
       );
 
       await cubit.load();
@@ -132,5 +146,21 @@ void main() {
       verify(() => analytics.logUpdatePromptShown(forced: false)).called(1);
       await cubit.close();
     });
+  });
+
+  test('loading Home prefetches tomorrow once it is live', () async {
+    final repo = _RecordingPrefetch();
+    // 23:00 local: tomorrow went live at 10:00 UTC today, in any time zone
+    // short of UTC+13.
+    final cubit = build(
+      prefetch: PrefetchTomorrowPuzzles(repo),
+      now: DateTime(2026, 10, 15, 23),
+    );
+
+    await cubit.load();
+    await pumpEventQueue();
+
+    expect(repo.days, ['20261016']);
+    await cubit.close();
   });
 }

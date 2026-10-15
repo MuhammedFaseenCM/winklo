@@ -15,6 +15,7 @@ import '../../../domain/usecases/get_best_daily_time_seconds.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
+import '../../../domain/usecases/prefetch_tomorrow_puzzles.dart';
 import '../../../domain/usecases/schedule_engagement_notifications.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../zip/logic/daily_puzzle_generator.dart';
@@ -32,6 +33,7 @@ class HomeCubit extends Cubit<HomeState> {
     this.scheduleEngagementNotifications,
     required this.zipLevelRepository,
     this.updateBannerSnooze,
+    this.prefetchTomorrowPuzzles,
     DateTime? now,
     DateTime Function()? clock,
     this.playPeriod = PlayPeriod.daily,
@@ -62,6 +64,9 @@ class HomeCubit extends Cubit<HomeState> {
 
   /// A closed soft banner isn't shown, so it isn't logged as shown.
   final UpdateBannerSnoozeRepository? updateBannerSnooze;
+
+  /// Warms the cache with tomorrow's dailies once they are live.
+  final PrefetchTomorrowPuzzles? prefetchTomorrowPuzzles;
   final DateTime? _now;
   final DateTime Function()? _clockFn;
   final Duration playPeriod;
@@ -158,6 +163,7 @@ class HomeCubit extends Cubit<HomeState> {
       ),
     );
     _scheduleRollover(now);
+    unawaited(prefetchTomorrowPuzzles?.call(now));
 
     unawaited(
       scheduleEngagementNotifications?.call(
