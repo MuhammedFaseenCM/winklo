@@ -49,11 +49,10 @@ class LeagueDetailState {
 /// One league: its members, and what its owner or a member can do.
 class LeagueDetailCubit extends Cubit<LeagueDetailState> {
   LeagueDetailCubit({
-    required String leagueId,
+    required this._leagueId,
     required LeagueRepository leagueRepository,
     required AuthRepository authRepository,
-  }) : _leagueId = leagueId,
-       _leagues = leagueRepository,
+  }) : _leagues = leagueRepository,
        super(LeagueDetailState(uid: authRepository.currentUser?.uid)) {
     _watch();
   }
