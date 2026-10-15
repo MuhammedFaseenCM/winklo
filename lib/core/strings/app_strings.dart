@@ -1,3 +1,5 @@
+import '../../domain/game_ids.dart';
+
 abstract final class AppStrings {
   static const appTitle = 'Winklo';
 
@@ -217,6 +219,22 @@ abstract final class AppStrings {
   static const notifStreakAtRiskTitle = 'Streak at risk';
   static const notifStreakAtRiskBody =
       'You haven’t finished today’s puzzles yet. Play before midnight.';
+
+  // Habit: freezes, reminders, weekly recap, home-screen widget, Settings
+  static String gameTitle(String gameId) => switch (gameId) {
+    GameIds.zip => zipTitle,
+    GameIds.pathWords => pathWordsTitle,
+    GameIds.sudoku => sudokuTitle,
+    GameIds.wordMatch => wordMatch,
+    GameIds.categoryRace => categoryRace,
+    _ => gameId,
+  };
+  static String streakFreezesReady(int count) =>
+      '$count streak freezes ready: miss a day and your streak carries on.';
+  static String freezeCountLabel(int count) => '×$count';
+  static String freezeSavedStreak(String gameId, int days) =>
+      'Your freeze saved your $days-day ${gameTitle(gameId)} streak';
+  static const dismiss = 'Dismiss';
 
   // Dashboard nav
   static const navHome = 'Home';

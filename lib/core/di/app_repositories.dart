@@ -32,6 +32,7 @@ import 'package:winklo/data/repositories/profile_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_remote_repository_impl.dart';
 import 'package:winklo/data/repositories/score_repository_impl.dart';
+import 'package:winklo/data/repositories/habit_repository_impl.dart';
 import 'package:winklo/data/repositories/haptics_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/sfx_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
@@ -56,6 +57,7 @@ import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/progress_local_repository.dart';
 import 'package:winklo/domain/repositories/progress_remote_repository.dart';
 import 'package:winklo/domain/repositories/score_repository.dart';
+import 'package:winklo/domain/repositories/habit_repository.dart';
 import 'package:winklo/domain/repositories/haptics_settings_repository.dart';
 import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
@@ -241,6 +243,10 @@ List<SingleChildWidget> buildRepositoryProviders({
         onChanged: context.read<ProgressChangeSignal>().notify,
       ),
     ),
+    RepositoryProvider<HabitRepository>(
+      create: (context) =>
+          HabitRepositoryImpl(context.read<SharedPreferences>()),
+    ),
     RepositoryProvider<ProgressLocalRepository>(
       create: (context) =>
           ProgressLocalRepositoryImpl(context.read<SharedPreferences>()),
@@ -335,6 +341,7 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) => RecordDailyClear(
         context.read<StreakRepository>(),
         analytics: context.read<AnalyticsRepository>(),
+        habit: context.read<HabitRepository>(),
       ),
     ),
     RepositoryProvider<FetchZipLevels>(
