@@ -61,8 +61,9 @@ GameDayRecord _flagsWinner(GameDayRecord local, GameDayRecord remote) {
 /// Merges two copies of one game's streak.
 ///
 /// The copy with the later `lastClearedDateId` wins (null is oldest); a tie
-/// goes to the higher `current`, then [local]. `longest` is the max of both
-/// copies and the winning `current`. Freezes go with the winner.
+/// goes to the higher `current`, then the lower `freezeCount`, then [local].
+/// `longest` is the max of both copies and the winning `current`. Freezes go
+/// with the winner.
 GameStreak mergeStreak(GameStreak local, GameStreak? remote) {
   if (remote == null) return local;
 
@@ -84,7 +85,13 @@ GameStreak _streakWinner(GameStreak local, GameStreak remote) {
     remote.lastClearedDateId,
   );
   if (byDay != 0) return byDay > 0 ? local : remote;
-  if (remote.current > local.current) return remote;
+  if (remote.current != local.current) {
+    return remote.current > local.current ? remote : local;
+  }
+  // Same clear, different banks (an older build rewrote one): the lower
+  // count, the same on every device, so they settle instead of each pushing
+  // its own.
+  if (remote.freezeCount < local.freezeCount) return remote;
   return local;
 }
 

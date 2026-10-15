@@ -31,13 +31,12 @@ class HomeHabitCubit extends Cubit<HomeHabitState> {
         if (!taken.any((n) => n.gameId == shown.gameId)) shown,
       ...taken,
     ];
-    emit(
-      HomeHabitState(
-        freezeNotices: notices,
-        recap: recap?.recap,
-        recapIsLastWeek: recap?.lastWeek ?? false,
-      ),
+    final next = HomeHabitState(
+      freezeNotices: notices,
+      recap: recap?.recap,
+      recapIsLastWeek: recap?.lastWeek ?? false,
     );
+    if (next != state) emit(next);
   }
 
   ({WeeklyRecap recap, bool lastWeek})? _recap(Map<String, int> streaks) {

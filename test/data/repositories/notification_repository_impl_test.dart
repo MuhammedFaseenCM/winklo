@@ -42,6 +42,7 @@ void main() {
       notificationClient: client,
       localNotifications: _MockLocalNotifications(),
       announcementsEnabled: () => announcements,
+      now: () => DateTime(2026, 10, 15, 9),
     );
   });
 
@@ -126,6 +127,90 @@ void main() {
           when: at,
           data: {'route': '/'},
           type: NotificationTypes.weeklyRecap,
+          repeatsDaily: false,
+        ),
+      ).called(1);
+    });
+
+    test('a one-off whose time has passed is skipped', () async {
+      // Planning ran before 20:00; scheduling happens after it.
+      repo = NotificationRepositoryImpl(
+        notificationClient: client,
+        localNotifications: _MockLocalNotifications(),
+        now: () => DateTime(2026, 10, 15, 20, 0, 1),
+      );
+      final daily = DailyReadyReminder(when: DateTime(2026, 10, 15, 20));
+      await repo.replaceEngagementSchedules([
+        StreakAtRiskReminder(
+          when: DateTime(2026, 10, 15, 20),
+          id: NotificationTypes.scheduleIdStreakAtRisk,
+          gameId: GameIds.zip,
+          days: 3,
+        ),
+        daily,
+      ]);
+      verifyNever(
+        () => client.scheduleNotification(
+          id: NotificationTypes.scheduleIdStreakAtRisk,
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          when: any(named: 'when'),
+          data: any(named: 'data'),
+          type: any(named: 'type'),
+          repeatsDaily: any(named: 'repeatsDaily'),
+        ),
+      );
+      // A daily repeat moves to its next time on its own.
+      verify(
+        () => client.scheduleNotification(
+          id: NotificationTypes.scheduleIdDailyReady,
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          when: daily.when,
+          data: any(named: 'data'),
+          type: any(named: 'type'),
+          repeatsDaily: true,
+        ),
+      ).called(1);
+    });
+
+    test('one failing schedule does not drop the others', () async {
+      when(
+        () => client.scheduleNotification(
+          id: NotificationTypes.scheduleIdStreakAtRisk,
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          when: any(named: 'when'),
+          data: any(named: 'data'),
+          type: any(named: 'type'),
+          repeatsDaily: any(named: 'repeatsDaily'),
+        ),
+      ).thenThrow(ArgumentError('Must be a date in the future'));
+      final recapAt = DateTime(2026, 10, 18, 19);
+      await repo.replaceEngagementSchedules([
+        StreakAtRiskReminder(
+          when: DateTime(2026, 10, 15, 20),
+          id: NotificationTypes.scheduleIdStreakAtRisk,
+          gameId: GameIds.zip,
+          days: 3,
+        ),
+        WeeklyRecapReminder(
+          when: recapAt,
+          recap: const WeeklyRecap(
+            weekStartId: '20261012',
+            cleared: 2,
+            possible: 21,
+          ),
+        ),
+      ]);
+      verify(
+        () => client.scheduleNotification(
+          id: NotificationTypes.scheduleIdWeeklyRecap,
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          when: recapAt,
+          data: any(named: 'data'),
+          type: any(named: 'type'),
           repeatsDaily: false,
         ),
       ).called(1);

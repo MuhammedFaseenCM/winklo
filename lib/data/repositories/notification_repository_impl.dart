@@ -19,7 +19,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
     this._messaging,
     FlutterLocalNotificationsPlugin? localNotifications,
     bool Function()? announcementsEnabled,
+    DateTime Function()? now,
   }) : _client = notificationClient,
+       _now = now ?? DateTime.now,
        _localNotifications =
            localNotifications ?? FlutterLocalNotificationsPlugin(),
        _announcementsEnabled = announcementsEnabled ?? _always;
@@ -33,6 +35,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   final bool Function() _announcementsEnabled;
 
   static bool _always() => true;
+
+  final DateTime Function() _now;
 
   static const _topicTimeout = Duration(seconds: 5);
 
@@ -192,8 +196,17 @@ class NotificationRepositoryImpl implements NotificationRepository {
       for (final id in NotificationTypes.engagementScheduleIds) {
         await _client.cancelNotification(id);
       }
-      for (final reminder in reminders) {
-        final copy = engagementCopy(reminder);
+    } catch (e) {
+      debugPrint('replaceEngagementSchedules cancel failed: $e');
+      return;
+    }
+    for (final reminder in reminders) {
+      // The plan was made a moment ago; a one-off whose time has passed
+      // since would be refused by the plugin. A daily repeat moves on to
+      // its next time by itself.
+      if (!reminder.repeatsDaily && !reminder.when.isAfter(_now())) continue;
+      final copy = engagementCopy(reminder);
+      try {
         await _client.scheduleNotification(
           id: reminder.id,
           title: copy.title,
@@ -203,9 +216,10 @@ class NotificationRepositoryImpl implements NotificationRepository {
           data: {'route': '/'},
           repeatsDaily: reminder.repeatsDaily,
         );
+      } catch (e) {
+        // One refused reminder must not drop the rest.
+        debugPrint('schedule ${reminder.type} (${reminder.id}) failed: $e');
       }
-    } catch (e) {
-      debugPrint('replaceEngagementSchedules failed: $e');
     }
   }
 

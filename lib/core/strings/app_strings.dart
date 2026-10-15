@@ -286,8 +286,7 @@ abstract final class AppStrings {
   static const settingsDailyReady = 'Daily puzzles ready';
   static const settingsDailyReadyHint = 'When today’s puzzles are out';
   static const settingsStreakAtRisk = 'Streak at risk';
-  static const settingsStreakAtRiskHint =
-      'Only when a streak is at stake';
+  static const settingsStreakAtRiskHint = 'Only when a streak is at stake';
   static const settingsWeeklyRecap = 'Weekly recap';
   static String settingsWeeklyRecapHint(String time) => 'Sundays at $time';
   static const settingsAnnouncements = 'Announcements';

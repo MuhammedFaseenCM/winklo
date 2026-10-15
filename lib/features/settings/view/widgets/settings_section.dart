@@ -162,6 +162,7 @@ class SettingsTimeRow extends StatelessWidget {
         label: AppStrings.settingsReminderTimeLabel(reminder, time),
         excludeSemantics: true,
         button: true,
+        enabled: enabled,
         child: ListTile(
           enabled: enabled,
           onTap: enabled ? () => _pick(context) : null,
