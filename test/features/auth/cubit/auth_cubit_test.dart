@@ -8,6 +8,7 @@ import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/usecases/clear_notification_token.dart';
+import 'package:winklo/domain/usecases/forget_account_progress.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/sync_fcm_token.dart';
@@ -30,6 +31,9 @@ class _MockSyncProgress extends Mock implements SyncProgress {}
 
 class _MockAnalytics extends Mock implements AnalyticsRepository {}
 
+class _MockForgetAccountProgress extends Mock
+    implements ForgetAccountProgress {}
+
 void main() {
   const user = AppUser(uid: 'u1', displayName: 'Ada');
 
@@ -39,6 +43,7 @@ void main() {
   late _MockSyncFcmToken syncFcmToken;
   late _MockClearNotificationToken clearNotificationToken;
   late _MockSyncProgress syncProgress;
+  late _MockForgetAccountProgress forgetProgress;
   late StreamController<AppUser?> controller;
 
   setUp(() {
@@ -48,6 +53,8 @@ void main() {
     syncFcmToken = _MockSyncFcmToken();
     clearNotificationToken = _MockClearNotificationToken();
     syncProgress = _MockSyncProgress();
+    forgetProgress = _MockForgetAccountProgress();
+    when(() => forgetProgress(any())).thenAnswer((_) async {});
     controller = StreamController<AppUser?>.broadcast();
     when(() => auth.authStateChanges()).thenAnswer((_) => controller.stream);
     when(() => syncFcmToken(any())).thenAnswer((_) async {});
@@ -64,6 +71,7 @@ void main() {
     bool withSync = false,
     bool withClearToken = false,
     bool withProgress = false,
+    bool withForget = false,
   }) => AuthCubit(
     authRepository: auth,
     signInWithGoogle: signIn,
@@ -71,6 +79,7 @@ void main() {
     syncFcmToken: withSync ? syncFcmToken : null,
     clearNotificationToken: withClearToken ? clearNotificationToken : null,
     syncProgress: withProgress ? syncProgress : null,
+    forgetAccountProgress: withForget ? forgetProgress : null,
   );
 
   blocTest<AuthCubit, AuthState>(
@@ -217,6 +226,50 @@ void main() {
     },
     seed: () => const AuthState(status: AuthStatus.signedIn, user: user),
     act: (cubit) => cubit.signOut(),
+    expect: () => [const AuthState(status: AuthStatus.signedOut)],
+  );
+
+  blocTest<AuthCubit, AuthState>(
+    'signOut keeps the account\'s progress on this device',
+    build: () => buildCubit(withForget: true),
+    setUp: () {
+      when(() => signOut()).thenAnswer((_) async {});
+    },
+    seed: () => const AuthState(status: AuthStatus.signedIn, user: user),
+    act: (cubit) => cubit.signOut(),
+    verify: (_) => verifyNever(() => forgetProgress(any())),
+  );
+
+  blocTest<AuthCubit, AuthState>(
+    'signing out to delete the account then forgets its progress here, '
+    'without pushing it first',
+    build: () =>
+        buildCubit(withProgress: true, withClearToken: true, withForget: true),
+    setUp: () {
+      when(() => signOut()).thenAnswer((_) async {});
+    },
+    seed: () => const AuthState(status: AuthStatus.signedIn, user: user),
+    act: (cubit) => cubit.signOutForAccountDeletion(),
+    expect: () => [const AuthState(status: AuthStatus.signedOut)],
+    verify: (_) {
+      verifyInOrder([
+        () => clearNotificationToken(uid: 'u1'),
+        () => signOut(),
+        () => forgetProgress('u1'),
+      ]);
+      verifyNever(() => syncProgress(pull: any(named: 'pull')));
+    },
+  );
+
+  blocTest<AuthCubit, AuthState>(
+    'a failing forget still signs out',
+    build: () => buildCubit(withForget: true),
+    setUp: () {
+      when(() => signOut()).thenAnswer((_) async {});
+      when(() => forgetProgress(any())).thenThrow(StateError('prefs'));
+    },
+    seed: () => const AuthState(status: AuthStatus.signedIn, user: user),
+    act: (cubit) => cubit.signOutForAccountDeletion(),
     expect: () => [const AuthState(status: AuthStatus.signedOut)],
   );
 

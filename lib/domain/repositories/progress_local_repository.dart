@@ -32,6 +32,12 @@ abstract class ProgressLocalRepository {
   /// whether anything was restored.
   Future<bool> restoreStashedProgress(String uid);
 
+  /// Drops what this device keeps of [uid] once that account is being
+  /// deleted: the live progress when [uid] owns it (or nobody has claimed
+  /// it yet), with the owner, plus [uid]'s stash and history-upload flag.
+  /// Another account's live progress stays.
+  Future<void> forgetUserProgress(String uid);
+
   /// Signature last pushed under [key] (one of the `*MarkerKey` values);
   /// null when never pushed.
   String? pushedSignature(String key);

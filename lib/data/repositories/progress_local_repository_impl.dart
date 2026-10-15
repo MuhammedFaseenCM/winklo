@@ -8,8 +8,9 @@ import '../../domain/logic/progress_merge.dart';
 import '../../domain/repositories/progress_local_repository.dart';
 
 /// Prefixes of every per-user progress key on the device: scores, clear meta,
-/// boards and leaderboard proofs, streaks, hint quota, run drafts, sync
-/// markers and the achievements already announced.
+/// boards and leaderboard proofs, streaks (and the freeze-saved notices),
+/// hint quota, run drafts, sync markers, the achievements already announced
+/// and the habit surfaces' state (the dismissed weekly recap).
 const userProgressKeyPrefixes = [
   'best_',
   'clear_meta_',
@@ -20,6 +21,7 @@ const userProgressKeyPrefixes = [
   'in_progress_',
   'sync_',
   'achievements_',
+  'habit_',
 ];
 
 class ProgressLocalRepositoryImpl implements ProgressLocalRepository {
@@ -120,6 +122,17 @@ class ProgressLocalRepositoryImpl implements ProgressLocalRepository {
         return _prefs.setStringList(key, value.whereType<String>().toList());
     }
     return false;
+  }
+
+  @override
+  Future<void> forgetUserProgress(String uid) async {
+    final owner = ownerUid;
+    if (owner == null || owner == uid) {
+      await purgeUserProgress();
+      await _prefs.remove(_ownerKey);
+    }
+    await _prefs.remove(_stashKey(uid));
+    await _prefs.remove(_historyUploadedKey(uid));
   }
 
   @override

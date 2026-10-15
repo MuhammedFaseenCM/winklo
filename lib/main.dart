@@ -12,6 +12,7 @@ import 'data/repositories/client_error_repository_impl.dart';
 import 'domain/repositories/analytics_repository.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/usecases/clear_notification_token.dart';
+import 'domain/usecases/forget_account_progress.dart';
 import 'domain/usecases/initialize_notifications.dart';
 import 'domain/usecases/sign_in_with_google.dart';
 import 'domain/usecases/sign_out.dart';
@@ -59,6 +60,7 @@ Future<void> main() async {
           clearNotificationToken: context.read<ClearNotificationToken>(),
           syncProgress: context.read<SyncProgress>(),
           analytics: context.read<AnalyticsRepository>(),
+          forgetAccountProgress: context.read<ForgetAccountProgress>(),
         ),
         child: const _BootstrapNotifications(child: WinkloApp()),
       ),

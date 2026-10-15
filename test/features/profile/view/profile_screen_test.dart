@@ -17,6 +17,7 @@ import 'package:winklo/domain/repositories/external_link_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
+import 'package:winklo/domain/usecases/forget_account_progress.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_issue_report.dart';
@@ -35,6 +36,9 @@ class _MockAuthRepository extends Mock implements AuthRepository {}
 class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
 
 class _MockSignOut extends Mock implements SignOut {}
+
+class _MockForgetAccountProgress extends Mock
+    implements ForgetAccountProgress {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -55,6 +59,7 @@ void main() {
 
   late _MockAuthRepository auth;
   late _MockSignOut signOut;
+  late _MockForgetAccountProgress forgetProgress;
   late _MockProfileRepository profile;
   late MockAnalyticsRepository analytics;
   late _MockSfxSettingsRepository sfxSettings;
@@ -69,6 +74,8 @@ void main() {
     when(() => links.open(deletionPage)).thenAnswer((_) async => true);
     auth = _MockAuthRepository();
     signOut = _MockSignOut();
+    forgetProgress = _MockForgetAccountProgress();
+    when(() => forgetProgress(any())).thenAnswer((_) async {});
     profile = _MockProfileRepository();
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
@@ -111,6 +118,7 @@ void main() {
             authRepository: auth,
             signInWithGoogle: _MockSignInWithGoogle(),
             signOut: signOut,
+            forgetAccountProgress: forgetProgress,
           ),
           child: MaterialApp(
             theme: buildAppTheme(),
@@ -211,6 +219,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verifyInOrder([() => analytics.logProfileSignOut(), () => signOut()]);
+      verifyNever(() => forgetProgress(any()));
     },
   );
 
@@ -251,6 +260,8 @@ void main() {
     verifyInOrder([
       () => analytics.logProfileDeleteAccountOpened(),
       () => signOut(),
+      // Not stashed for a uid that will never sign in again.
+      () => forgetProgress('u1'),
       () => links.open(deletionPage),
     ]);
     expect(find.text(AppStrings.deleteAccountOpenFailed), findsNothing);
@@ -265,6 +276,7 @@ void main() {
 
     verifyNever(() => analytics.logProfileDeleteAccountOpened());
     verifyNever(() => signOut());
+    verifyNever(() => forgetProgress(any()));
     verifyNever(() => links.open(any()));
   });
 

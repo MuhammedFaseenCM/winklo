@@ -187,6 +187,60 @@ void main() {
     });
   });
 
+  group('forgetUserProgress (a deleted account)', () {
+    test('drops its live progress, its stash and its upload flag', () async {
+      final (repo, prefs) = await build({
+        'progress_owner_uid': 'u1',
+        'best_time_zip_daily_20261007': 12,
+        'clear_proof_zip_daily_20261007': '{"path":[[0,0]]}',
+        'sync_lb_zip_20261007': '12',
+        'progress_stash_u1': '{"best_time_zip_daily_20261001":["i",9]}',
+        'history_uploaded_u1': true,
+        'progress_stash_u2': '{"best_time_zip_daily_20261001":["i",8]}',
+        'history_uploaded_u2': true,
+        'tutorial_seen_zip': true,
+        'sfx_enabled': false,
+      });
+
+      await repo.forgetUserProgress('u1');
+
+      expect(prefs.getKeys(), {
+        'progress_stash_u2',
+        'history_uploaded_u2',
+        'tutorial_seen_zip',
+        'sfx_enabled',
+      });
+      expect(repo.ownerUid, isNull);
+      // Nothing is left for a later sign-in to stash under the old uid.
+      await repo.stashUserProgress('u1');
+      expect(prefs.containsKey('progress_stash_u1'), isFalse);
+    });
+
+    test('unclaimed progress goes with the signed-in account', () async {
+      final (repo, prefs) = await build({'best_time_sudoku_20261007': 80});
+
+      await repo.forgetUserProgress('u1');
+
+      expect(prefs.getKeys(), isEmpty);
+    });
+
+    test('keeps the live progress of another account', () async {
+      final (repo, prefs) = await build({
+        'progress_owner_uid': 'u2',
+        'best_time_sudoku_20261007': 80,
+        'progress_stash_u1': '{"best_time_zip_daily_20261001":["i",9]}',
+      });
+
+      await repo.forgetUserProgress('u1');
+
+      expect(prefs.getKeys(), {
+        'progress_owner_uid',
+        'best_time_sudoku_20261007',
+      });
+      expect(repo.ownerUid, 'u2');
+    });
+  });
+
   group('history upload flag', () {
     test('is unset until set, per uid', () async {
       final (repo, prefs) = await build();
