@@ -115,7 +115,7 @@ flutter:
     - assets/zip/levels/
     - assets/word_match/decks/
     - assets/words/categories/
-    - assets/words/en_words.txt
+    - assets/words/en_bonus_words.txt
     - assets/words/en_nouns.txt
     - assets/branding/
     - assets/sfx/
