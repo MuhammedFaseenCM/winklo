@@ -6,6 +6,7 @@ import '../entities/game_day_record.dart';
 import '../entities/game_streak.dart';
 import '../failures.dart';
 import '../game_ids.dart';
+import '../logic/local_game_day.dart';
 import '../logic/progress_merge.dart';
 import '../repositories/auth_repository.dart';
 import '../repositories/hint_quota_repository.dart';
@@ -439,43 +440,17 @@ class _Run {
     return merged;
   }
 
-  GameDayRecord _localDay(String gameId, String playId) {
-    final modeKey = modeKeyFor(gameId, playId);
-    final time = _s._scores.getBestTimeSeconds(modeKey);
-    final points = _s._scores.getBestPoints(modeKey);
-    final hintsUsed = _s._hintQuota.usedFor(gameId, playId);
-    final record = GameDayRecord(
-      gameId: gameId,
-      playId: playId,
-      timeSeconds: time,
-      points: points > 0 ? points : null,
-      hintsUsed: hintsUsed,
-    );
-    if (time == null) return record;
-
-    final cleared = record.copyWith(board: _s._scores.getClearBoard(modeKey));
-    final meta = _s._scores.getClearMeta(modeKey);
-    if (meta != null) {
-      return cleared.copyWith(
-        usedHints: meta.usedHints,
-        hadMistakes: meta.hadMistakes,
-        flagsKnown: true,
-      );
-    }
-    return _withLegacyFlags(cleared);
-  }
+  GameDayRecord _localDay(String gameId, String playId) => readLocalGameDay(
+    scores: _s._scores,
+    hintQuota: _s._hintQuota,
+    gameId: gameId,
+    playId: playId,
+  );
 
   /// Cleared records without real flags get the conservative legacy guess
   /// (recomputed from the merged hint count).
-  GameDayRecord _withLegacyFlags(GameDayRecord record) {
-    if (!record.cleared || record.flagsKnown == true) return record;
-    final flags = legacyClearFlags(record.gameId, record.hintsUsed);
-    return record.copyWith(
-      usedHints: flags.usedHints,
-      hadMistakes: flags.hadMistakes,
-      flagsKnown: false,
-    );
-  }
+  GameDayRecord _withLegacyFlags(GameDayRecord record) =>
+      withLegacyClearFlags(record);
 
   Future<void> _restoreDay(GameDayRecord merged) async {
     _ensureSameAccount();

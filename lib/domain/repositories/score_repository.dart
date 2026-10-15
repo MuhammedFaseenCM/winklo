@@ -16,6 +16,10 @@ abstract class ScoreRepository {
   /// skipping period [excludingPlayId]; null when there is none.
   int? getBestDailyTimeSeconds(String gameId, {String? excludingPlayId});
 
+  /// Periods of [gameId]'s daily puzzle with a best time on this device
+  /// (only the daily mode key, never other modes), oldest first.
+  List<String> dailyPlayIds(String gameId);
+
   /// Improve-only. When both [usedHints] and [hadMistakes] are given with a
   /// [timeSeconds], they are stored as [ClearMeta] if this submit sets a new
   /// best time or the best time has no meta yet. [board] follows the same

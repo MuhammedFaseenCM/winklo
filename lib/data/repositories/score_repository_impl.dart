@@ -64,6 +64,17 @@ class ScoreRepositoryImpl implements ScoreRepository {
   }
 
   @override
+  List<String> dailyPlayIds(String gameId) {
+    final prefix = '${_prefix}time_${modeKeyFor(gameId, '')}';
+    return [
+      for (final key in _prefs.getKeys())
+        if (key.startsWith(prefix) &&
+            _playIdPattern.hasMatch(key.substring(prefix.length)))
+          key.substring(prefix.length),
+    ]..sort();
+  }
+
+  @override
   Future<bool> submitScore({
     required String modeKey,
     required int points,
