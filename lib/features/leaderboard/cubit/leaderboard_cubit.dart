@@ -92,15 +92,20 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
     if (reload) _resubscribe();
   }
 
-  /// Shows only [leagueId]'s members; everyone for null.
+  /// Shows only [leagueId]'s members; everyone for null. A league that hasn't
+  /// loaded yet (a link right after joining) is picked once it does.
   void selectLeague(String? leagueId) {
+    _pendingLeagueId = null;
     if (leagueId == state.leagueId) return;
     if (leagueId != null && !state.leagues.any((l) => l.id == leagueId)) {
+      _pendingLeagueId = leagueId;
       return;
     }
     emit(state.copyWith(leagueId: leagueId, status: LeaderboardStatus.loading));
     _resubscribe();
   }
+
+  String? _pendingLeagueId;
 
   void retry() {
     emit(state.copyWith(status: LeaderboardStatus.loading, error: null));
@@ -127,6 +132,19 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
 
   void _applyLeagues(List<League> leagues) {
     if (isClosed) return;
+    final pending = _pendingLeagueId;
+    if (pending != null && leagues.any((l) => l.id == pending)) {
+      _pendingLeagueId = null;
+      emit(
+        state.copyWith(
+          leagues: leagues,
+          leagueId: pending,
+          status: LeaderboardStatus.loading,
+        ),
+      );
+      _resubscribe();
+      return;
+    }
     final previous = state.league;
     final selected = state.leagueId;
     final stillMine = selected == null || leagues.any((l) => l.id == selected);

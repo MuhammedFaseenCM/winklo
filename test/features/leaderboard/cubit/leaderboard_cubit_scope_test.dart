@@ -164,6 +164,22 @@ void main() {
     expect(calls.last.members, isNull);
   });
 
+  test(
+    'a league picked before my leagues load is shown once they do',
+    () async {
+      final cubit = build();
+      addTearDown(cubit.close);
+      cubit.selectLeague('L1');
+      expect(cubit.state.leagueId, isNull);
+
+      leaguesController.add([_family]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.leagueId, 'L1');
+      expect(calls.last.members, ['u1', 'u2']);
+    },
+  );
+
   test('ignores a league that is not mine', () {
     final cubit = build();
     addTearDown(cubit.close);

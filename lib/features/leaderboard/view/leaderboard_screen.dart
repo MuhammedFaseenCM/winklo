@@ -116,9 +116,13 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
     if (sameLeaderboard) return;
     final game = uri.queryParameters['game'];
     final gameId = _resolveLeaderboardGameId(game);
+    final leagueId = uri.queryParameters['league'];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<LeaderboardCubit>().selectGame(gameId);
+      final cubit = context.read<LeaderboardCubit>();
+      cubit.selectGame(gameId);
+      // `/leaderboard?league={id}`: that league's board.
+      if (leagueId != null) cubit.selectLeague(leagueId);
     });
   }
 
