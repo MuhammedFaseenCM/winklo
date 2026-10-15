@@ -1,0 +1,14 @@
+{
+  "name": "winklo-firestore-rules-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-winklo --config ../../firebase.json \"vitest run\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0",
+    "vitest": "^3.0.0"
+  }
+}

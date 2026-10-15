@@ -32,6 +32,20 @@ const leaderboardFirestoreKeys = {
   'currentStreak',
 };
 
+/// Every field on a weekly entry
+/// (`leaderboards/{gameId}/weekly/{weekId}/entries/{uid}`). Only the
+/// leaderboard Worker writes them (`WEEKLY_FIELDS` in
+/// workers/leaderboard/src/limits.ts); `test/firestore` pins both.
+const weeklyLeaderboardFields = {
+  'displayName',
+  'photoUrl',
+  'avatarId',
+  'days',
+  'daysCleared',
+  'totalSeconds',
+  'updatedAt',
+};
+
 /// Merge payload for one improve-only leaderboard write: `currentStreak`
 /// always; time + clean-run flags only when [timeImproved]; identity when
 /// known.
