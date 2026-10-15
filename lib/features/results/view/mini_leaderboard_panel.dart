@@ -166,7 +166,7 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 case LeaderboardStatus.failure:
                   return CenteredMessageBody(
-                    message: state.error ?? AppStrings.leaderboardFailed,
+                    message: AppStrings.leaderboardFailed,
                     actionLabel: AppStrings.retry,
                     onAction: () => context.read<LeaderboardCubit>().retry(),
                   );

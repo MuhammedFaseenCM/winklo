@@ -561,8 +561,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                               return const LeaderboardShimmer();
                             case LeaderboardStatus.failure:
                               return CenteredMessageBody(
-                                message:
-                                    state.error ?? AppStrings.leaderboardFailed,
+                                message: AppStrings.leaderboardFailed,
                                 actionLabel: AppStrings.retry,
                                 onAction: () =>
                                     context.read<LeaderboardCubit>().retry(),
@@ -653,7 +652,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                   action: SizedBox(
                                     width: 220,
                                     child: ZipPrimaryButton(
-                                      label: 'Play $gameTitle',
+                                      label: AppStrings.leaderboardPlayGame(
+                                        gameTitle,
+                                      ),
                                       icon: Icons.play_arrow_rounded,
                                       onPressed: () async {
                                         final ok = await ensureSignedInForPlay(
@@ -1179,7 +1180,7 @@ class _PinnedUserRow extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Your Rank',
+                        AppStrings.leaderboardYourRank,
                         style: GoogleFonts.lexend(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w800,

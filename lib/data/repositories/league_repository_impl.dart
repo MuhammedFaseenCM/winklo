@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
+import '../../core/strings/app_strings.dart';
 import '../../domain/entities/league.dart';
 import '../../domain/failures.dart';
 import '../../domain/game_ids.dart';
@@ -72,7 +73,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
 
   FirebaseFirestore _db() {
     if (!FirebaseBootstrap.isReady) {
-      throw const Failure('Firebase is unavailable.');
+      throw const Failure(AppStrings.serviceUnavailable);
     }
     return _firestore ?? FirebaseFirestore.instance;
   }
@@ -84,7 +85,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
     if (uid == null) {
       throw const LeagueFailure(
         LeagueProblem.signedOut,
-        'Sign in to use leagues.',
+        AppStrings.leaguesSignedOut,
       );
     }
     return uid;
@@ -145,7 +146,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
 
   @override
   Future<League?> findByCode(String code) =>
-      _guard('Could not look up that code.', () async {
+      _guard(AppStrings.leagueLookupFailed, () async {
         final normalized = normalizeLeagueCode(code);
         if (normalized == null) return null;
         _uid();
@@ -159,10 +160,10 @@ class LeagueRepositoryImpl implements LeagueRepository {
 
   @override
   Future<League> create(String name) =>
-      _guard('Could not create the league.', () async {
+      _guard(AppStrings.leagueCreateFailed, () async {
         final cleaned = cleanLeagueName(name);
         if (cleaned == null) {
-          throw const Failure('League names are 1 to 30 characters.');
+          throw const Failure(AppStrings.leagueNameLength);
         }
         final uid = _uid();
         final db = _db();
@@ -193,18 +194,18 @@ class LeagueRepositoryImpl implements LeagueRepository {
             memberUids: [uid],
           );
         }
-        throw const Failure('Could not create the league. Try again.');
+        throw const Failure(AppStrings.leagueCreateRetry);
       });
 
   @override
   Future<League> join(String code) =>
-      _guard('Could not join the league.', () async {
+      _guard(AppStrings.leagueJoinFailed, () async {
         final uid = _uid();
         final league = await findByCode(code);
         if (league == null) {
           throw const LeagueFailure(
             LeagueProblem.notFound,
-            'No league has that code.',
+            AppStrings.leagueCodeNotFound,
           );
         }
         if (league.hasMember(uid)) return league;
@@ -219,14 +220,14 @@ class LeagueRepositoryImpl implements LeagueRepository {
           if (current == null) {
             throw const LeagueFailure(
               LeagueProblem.notFound,
-              'No league has that code.',
+              AppStrings.leagueCodeNotFound,
             );
           }
           if (current.hasMember(uid)) return current;
           if (current.isFull) {
             throw const LeagueFailure(
               LeagueProblem.full,
-              'That league is full (30 players).',
+              AppStrings.joinLeagueFull,
             );
           }
           tx.update(ref, {
@@ -246,7 +247,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
 
   @override
   Future<void> leave(String leagueId) =>
-      _guard('Could not leave the league.', () async {
+      _guard(AppStrings.leagueLeaveFailed, () async {
         final uid = _uid();
         await _leagues(_db()).doc(leagueId).update({
           'memberUids': FieldValue.arrayRemove([uid]),
@@ -255,7 +256,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
 
   @override
   Future<void> removeMember(String leagueId, String memberUid) =>
-      _guard('Could not remove that player.', () async {
+      _guard(AppStrings.leagueRemoveFailed, () async {
         _uid();
         await _leagues(_db()).doc(leagueId).update({
           'memberUids': FieldValue.arrayRemove([memberUid]),
@@ -264,10 +265,10 @@ class LeagueRepositoryImpl implements LeagueRepository {
 
   @override
   Future<void> rename(String leagueId, String name) =>
-      _guard('Could not rename the league.', () async {
+      _guard(AppStrings.leagueRenameFailed, () async {
         final cleaned = cleanLeagueName(name);
         if (cleaned == null) {
-          throw const Failure('League names are 1 to 30 characters.');
+          throw const Failure(AppStrings.leagueNameLength);
         }
         _uid();
         await _leagues(_db()).doc(leagueId).update({'name': cleaned});
@@ -275,7 +276,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
 
   @override
   Future<void> delete(League league) =>
-      _guard('Could not delete the league.', () async {
+      _guard(AppStrings.leagueDeleteFailed, () async {
         _uid();
         final db = _db();
         final batch = db.batch()
@@ -319,7 +320,7 @@ class LeagueRepositoryImpl implements LeagueRepository {
             uid: doc.id,
             displayName: name is String && name.trim().isNotEmpty
                 ? name.trim()
-                : 'Player',
+                : AppStrings.playerFallbackName,
             photoUrl: photo is String && photo.isNotEmpty ? photo : null,
             avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
           );

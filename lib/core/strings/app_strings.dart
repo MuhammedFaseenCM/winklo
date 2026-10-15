@@ -624,4 +624,34 @@ abstract final class AppStrings {
   static const resultsWordsLabel = 'words';
   static String localBestScore(int words) =>
       words == 1 ? 'Best 1 word' : 'Best $words words';
+
+  // Copy moved out of widgets and repositories (roadmap area G)
+  static const resultsTitle = 'Results';
+  static const resultsNextPuzzle = 'Next puzzle';
+  static const leaderboardYourRank = 'Your Rank';
+  static String leaderboardPlayGame(String game) => 'Play $game';
+
+  /// Shown for a player with no name on a board or in a league.
+  static const playerFallbackName = 'Player';
+
+  /// The first line of a shared result: "Winklo Zip · 9 Oct".
+  static String shareHeadline(String game, DateTime day) =>
+      'Winklo $game · ${leaderboardShortDate(day.day, day.month)}';
+  static const signInFailed = 'Couldn’t sign in. Try again.';
+  static const serviceUnavailable = 'Firebase is unavailable. Try again later.';
+  static const signInRequiredShort = 'Sign in required.';
+  static const profileUpdateFailed = 'Could not update profile.';
+  static const avatarUploadUnavailable = 'Avatar upload is not configured.';
+  static const avatarInvalid = 'Invalid avatar.';
+  static const leaguesSignedOut = 'Sign in to use leagues.';
+  static const leagueLookupFailed = 'Could not look up that code.';
+  static const leagueCreateFailed = 'Could not create the league.';
+  static const leagueCreateRetry = 'Could not create the league. Try again.';
+  static const leagueJoinFailed = 'Could not join the league.';
+  static const leagueLeaveFailed = 'Could not leave the league.';
+  static const leagueRemoveFailed = 'Could not remove that player.';
+  static const leagueRenameFailed = 'Could not rename the league.';
+  static const leagueDeleteFailed = 'Could not delete the league.';
+  static const leagueNameLength = 'League names are 1 to 30 characters.';
+  static const leagueCodeNotFound = 'No league has that code.';
 }

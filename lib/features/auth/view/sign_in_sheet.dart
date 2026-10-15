@@ -95,8 +95,9 @@ class _SignInSheetBody extends StatelessWidget {
                 if (state.status == AuthStatus.failure &&
                     state.error != null) ...[
                   const SizedBox(height: 12),
+                  // The raw error is Firebase's or Google's English.
                   Text(
-                    state.error!,
+                    AppStrings.signInFailed,
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: ZipColors.ember),

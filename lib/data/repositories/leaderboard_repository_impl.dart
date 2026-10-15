@@ -4,6 +4,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
+import '../../core/strings/app_strings.dart';
 import '../../domain/entities/leaderboard_entry.dart';
 import '../../domain/entities/leaderboard_period.dart';
 import '../../domain/entities/leaderboard_proof.dart';
@@ -112,7 +113,7 @@ List<LeaderboardEntry> mapLeaderboardRows(
         uid: row.id,
         displayName: name is String && name.trim().isNotEmpty
             ? name.trim()
-            : 'Player',
+            : AppStrings.playerFallbackName,
         photoUrl: photo is String && photo.isNotEmpty ? photo : null,
         avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
         timeSeconds: timeSeconds,
@@ -152,7 +153,7 @@ List<LeaderboardEntry> mapWeeklyLeaderboardRows(
         uid: row.id,
         displayName: name is String && name.trim().isNotEmpty
             ? name.trim()
-            : 'Player',
+            : AppStrings.playerFallbackName,
         photoUrl: photo is String && photo.isNotEmpty ? photo : null,
         avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
         timeSeconds: total,
@@ -178,7 +179,9 @@ resolveLeaderboardIdentity({
   final authName = authDisplayName?.trim();
   final displayName = profileName is String && profileName.trim().isNotEmpty
       ? profileName.trim()
-      : (authName != null && authName.isNotEmpty ? authName : 'Player');
+      : (authName != null && authName.isNotEmpty
+            ? authName
+            : storedFallbackName);
   final photoUrl = profile != null && profile.containsKey('photoUrl')
       ? (profile['photoUrl'] is String &&
                 (profile['photoUrl'] as String).isNotEmpty

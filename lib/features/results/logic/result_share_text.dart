@@ -3,11 +3,6 @@ import '../../../core/strings/app_strings.dart';
 import '../../../domain/game_ids.dart';
 import '../../../core/strings/clean_run_chips.dart';
 
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
 /// A spoiler-free result to share: the game, the day, the time and the same
 /// clean-run chips the leaderboard shows, then the game's link (an App Link
 /// into the app, or the site for people without it).
@@ -41,7 +36,7 @@ String resultShareText({
     ),
   ];
   return [
-    'Winklo $title · ${day.day} ${_months[day.month - 1]}',
+    AppStrings.shareHeadline(title, day),
     stats.join(' · '),
     AppUrls.game(gameId),
   ].join('\n');

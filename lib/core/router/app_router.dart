@@ -25,6 +25,7 @@ import '../../features/word_match/view/word_match_select_screen.dart';
 import '../../features/zip/view/zip_screen.dart';
 import '../../domain/game_ids.dart';
 import '../errors/client_error_route_observer.dart';
+import '../strings/app_strings.dart';
 import '../firebase/analytics_route_observer.dart';
 import 'auth_router_refresh.dart';
 import 'play_mode_route.dart';
@@ -207,7 +208,7 @@ GoRouter buildRouter({
           final args = extra is ResultsArgs
               ? extra
               : const ResultsArgs(
-                  title: 'Results',
+                  title: AppStrings.resultsTitle,
                   subtitle: '',
                   timeSeconds: 0,
                   improved: false,

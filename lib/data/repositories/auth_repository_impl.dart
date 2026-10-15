@@ -8,6 +8,7 @@ import '../../core/errors/client_error_reporter.dart';
 import '../../domain/entities/app_user.dart';
 import '../../domain/failures.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../leaderboard_identity.dart';
 
 /// Firestore fields to merge on sign-in. Omits `avatarId` so an existing
 /// preset is left intact, and skips name/photo when the profile already has them.
@@ -37,7 +38,7 @@ AppUser mergeAuthWithProfile({
 }) {
   final fallbackName = () {
     final name = authDisplayName?.trim();
-    if (name == null || name.isEmpty) return 'Player';
+    if (name == null || name.isEmpty) return storedFallbackName;
     return name;
   }();
   if (profile == null) {
@@ -94,7 +95,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final name = user.displayName?.trim();
     return AppUser(
       uid: user.uid,
-      displayName: (name == null || name.isEmpty) ? 'Player' : name,
+      displayName: (name == null || name.isEmpty) ? storedFallbackName : name,
       photoUrl: user.photoURL,
     );
   }

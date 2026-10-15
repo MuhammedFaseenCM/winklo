@@ -8,9 +8,7 @@ import '../../domain/entities/app_user.dart';
 import '../../domain/failures.dart';
 import '../../domain/repositories/issue_report_repository.dart';
 
-const _issueReportsUnavailable = Failure(
-  'Firebase is unavailable. Try again later.',
-);
+const _issueReportsUnavailable = Failure(AppStrings.serviceUnavailable);
 
 class IssueReportRepositoryImpl implements IssueReportRepository {
   IssueReportRepositoryImpl({this._firestore});
