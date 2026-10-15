@@ -58,6 +58,29 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="winklo_announcements" />
+        <!-- Home-screen widget (today's games and streaks). -->
+        <receiver
+            android:name=".WinkloWidgetProvider"
+            android:exported="false"
+            android:label="@string/winklo_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/winklo_widget_info" />
+        </receiver>
+        <!-- Delivers the widget's midnight redraws (HomeWidget.scheduleWidgetUpdates)
+             and re-arms them after a reboot or an app update. -->
+        <receiver
+            android:name="es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

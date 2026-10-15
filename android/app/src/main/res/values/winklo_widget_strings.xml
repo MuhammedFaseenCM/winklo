@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shown before the app has written the widget's copy (AppStrings), and in
+     the widget picker. -->
+<resources>
+    <string name="winklo_widget_label">Winklo today</string>
+    <string name="winklo_widget_description">Today’s puzzles and your streaks</string>
+    <string name="winklo_widget_title">Winklo</string>
+    <string name="winklo_widget_zip">Zip</string>
+    <string name="winklo_widget_path_words">Path Words</string>
+    <string name="winklo_widget_sudoku">Sudoku</string>
+    <string name="winklo_widget_play">Play</string>
+    <string name="winklo_widget_footer">New puzzle at midnight</string>
+</resources>

@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/data/repositories/home_widget_repository_impl.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/habit/home_widget_snapshot.dart';
+import 'package:winklo/domain/usecases/refresh_habit_surfaces.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -120,5 +123,33 @@ void main() {
   test('does nothing off Android', () async {
     await HomeWidgetRepositoryImpl(isSupported: () => false).update(snapshot);
     expect(calls, isEmpty);
+  });
+
+  test('the Kotlin provider reads the keys values writes', () {
+    final kotlin = File(
+      'android/app/src/main/kotlin/com/winklo/faseencm/'
+      'WinkloWidgetProvider.kt',
+    ).readAsStringSync();
+    final read = RegExp(
+      r'getString\("([a-z_]+)"',
+    ).allMatches(kotlin).map((m) => m.group(1)!).toSet();
+    final ids = RegExp(
+      r'id = "([a-z_]+)"',
+    ).allMatches(kotlin).map((m) => m.group(1)!).toList();
+    expect(ids, RefreshHabitSurfaces.gameIds);
+    expect(kotlin, contains(r'getString("winklo_${game.id}_title"'));
+    expect(kotlin, contains(r'getString("winklo_${game.id}_$it"'));
+    expect(kotlin, contains('-> "today"'));
+    expect(kotlin, contains('-> "next"'));
+
+    final written = HomeWidgetRepositoryImpl.values(snapshot).keys.toSet();
+    final perGame = {
+      for (final id in ids) ...{
+        'winklo_${id}_title',
+        'winklo_${id}_today',
+        'winklo_${id}_next',
+      },
+    };
+    expect(written, {...read, ...perGame});
   });
 }

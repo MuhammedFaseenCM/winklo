@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget, dark: the app's own palette (ZipColors.ink, wall,
+     onInk, inkSoft, ember, sky, success). -->
+<resources>
+    <color name="winklo_widget_background">#0F172A</color>
+    <color name="winklo_widget_border">#3394A3B8</color>
+    <color name="winklo_widget_row">#1B263B</color>
+    <color name="winklo_widget_text">#F8FAFC</color>
+    <color name="winklo_widget_muted">#94A3B8</color>
+    <color name="winklo_widget_zip_accent">#FF6B2C</color>
+    <color name="winklo_widget_path_words_accent">#38BDF8</color>
+    <color name="winklo_widget_sudoku_accent">#2DD4BF</color>
+</resources>
