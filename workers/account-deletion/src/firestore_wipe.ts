@@ -11,6 +11,9 @@ const USER_SUBCOLLECTIONS = [
 
 const LEADERBOARD_ROOTS = ['leaderboards', 'leaderboards_debug'] as const;
 
+/** Only the leaderboard Worker writes weekly entries, and only on the release root. */
+const WEEKLY_ROOTS = ['leaderboards'] as const;
+
 /** Top-level collections whose docs name their owner in a `uid` field. */
 export const UID_FIELD_COLLECTIONS = ['issue_reports', 'client_errors'] as const;
 
@@ -53,6 +56,20 @@ export function dailyEntryPath(
   uid: string,
 ): string {
   return `${documentsBase(projectId)}/${root}/${game}/daily/${dayId}/entries/${uid}`;
+}
+
+export function weeklyEntryPath(
+  projectId: string,
+  root: LeaderboardRoot,
+  game: string,
+  weekId: string,
+  uid: string,
+): string {
+  return `${documentsBase(projectId)}/${root}/${game}/weekly/${weekId}/entries/${uid}`;
+}
+
+export function leagueCodePath(projectId: string, code: string): string {
+  return `${documentsBase(projectId)}/league_codes/${code}`;
 }
 
 export function dailyActivityUserPath(
@@ -111,12 +128,23 @@ export function uidStructuredQuery(
   uid: string,
   startAfterDocName?: string,
 ): Record<string, unknown> {
+  return fieldStructuredQuery(collectionId, 'uid', 'EQUAL', uid, startAfterDocName);
+}
+
+/** Docs of top-level [collectionId] whose [fieldPath] matches [uid] by [op], by name. */
+export function fieldStructuredQuery(
+  collectionId: string,
+  fieldPath: string,
+  op: 'EQUAL' | 'ARRAY_CONTAINS',
+  uid: string,
+  startAfterDocName?: string,
+): Record<string, unknown> {
   const structuredQuery: Record<string, unknown> = {
     from: [{ collectionId }],
     where: {
       fieldFilter: {
-        field: { fieldPath: 'uid' },
-        op: 'EQUAL',
+        field: { fieldPath },
+        op,
         value: { stringValue: uid },
       },
     },
@@ -132,15 +160,16 @@ export function uidStructuredQuery(
   return structuredQuery;
 }
 
-/** Names of the docs in top-level [collectionId] whose `uid` is [uid]. */
-async function queryNamesByUid(
+type QueriedDoc = { name: string; fields: Record<string, unknown> };
+
+/** Every doc a paged [query] returns. */
+async function queryDocs(
   accessToken: string,
   projectId: string,
-  collectionId: string,
-  uid: string,
-): Promise<string[]> {
+  query: (startAfterDocName?: string) => Record<string, unknown>,
+): Promise<QueriedDoc[]> {
   const url = `${FIRESTORE_API}/${documentsBase(projectId)}:runQuery`;
-  const names: string[] = [];
+  const docs: QueriedDoc[] = [];
   let startAfterDocName: string | undefined;
   for (;;) {
     const res = await fetch(url, {
@@ -149,25 +178,102 @@ async function queryNamesByUid(
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        structuredQuery: uidStructuredQuery(collectionId, uid, startAfterDocName),
-      }),
+      body: JSON.stringify({ structuredQuery: query(startAfterDocName) }),
     });
     const text = await res.text();
     if (!res.ok) {
       throw new Error(`firestore_query_failed:${res.status}:${text.slice(0, 300)}`);
     }
-    const rows = JSON.parse(text) as Array<{ document?: { name: string } }>;
+    const rows = JSON.parse(text) as Array<{
+      document?: { name: string; fields?: Record<string, unknown> };
+    }>;
     let matched = 0;
     for (const row of rows) {
       const name = row.document?.name;
       if (!name) continue;
-      names.push(name);
+      docs.push({ name, fields: row.document?.fields ?? {} });
       startAfterDocName = name;
       matched += 1;
     }
-    if (matched < QUERY_PAGE_SIZE) return names;
+    if (matched < QUERY_PAGE_SIZE) return docs;
   }
+}
+
+/** Names of the docs in top-level [collectionId] whose `uid` is [uid]. */
+async function queryNamesByUid(
+  accessToken: string,
+  projectId: string,
+  collectionId: string,
+  uid: string,
+): Promise<string[]> {
+  const docs = await queryDocs(accessToken, projectId, (after) =>
+    uidStructuredQuery(collectionId, uid, after),
+  );
+  return docs.map((doc) => doc.name);
+}
+
+function stringField(fields: Record<string, unknown>, key: string): string | null {
+  const value = fields[key] as { stringValue?: unknown } | undefined;
+  return typeof value?.stringValue === 'string' ? value.stringValue : null;
+}
+
+/** A batchWrite write: a delete, or taking [uid] out of a league's members. */
+export type WipeWrite =
+  | { delete: string }
+  | {
+      update: { name: string };
+      updateMask: { fieldPaths: string[] };
+      updateTransforms: Array<{
+        fieldPath: string;
+        removeAllFromArray: { values: Array<{ stringValue: string }> };
+      }>;
+      currentDocument: { exists: true };
+    };
+
+export function removeMemberWrite(leagueName: string, uid: string): WipeWrite {
+  return {
+    update: { name: leagueName },
+    updateMask: { fieldPaths: [] },
+    updateTransforms: [
+      {
+        fieldPath: 'memberUids',
+        removeAllFromArray: { values: [{ stringValue: uid }] },
+      },
+    ],
+    currentDocument: { exists: true },
+  };
+}
+
+/**
+ * Leagues: the ones [uid] owns are deleted with their invite codes; in the
+ * others [uid] is taken out of `memberUids`.
+ */
+export async function collectLeagueWrites(opts: {
+  projectId: string;
+  accessToken: string;
+  uid: string;
+}): Promise<{ deletes: string[]; updates: WipeWrite[] }> {
+  const { projectId, accessToken, uid } = opts;
+  const owned = await queryDocs(accessToken, projectId, (after) =>
+    fieldStructuredQuery('leagues', 'ownerUid', 'EQUAL', uid, after),
+  );
+  const joined = await queryDocs(accessToken, projectId, (after) =>
+    fieldStructuredQuery('leagues', 'memberUids', 'ARRAY_CONTAINS', uid, after),
+  );
+  const deletes: string[] = [];
+  const ownedNames = new Set<string>();
+  for (const league of owned) {
+    ownedNames.add(league.name);
+    deletes.push(league.name);
+    const code = stringField(league.fields, 'code');
+    if (code && /^[A-Z0-9]{1,16}$/.test(code)) {
+      deletes.push(leagueCodePath(projectId, code));
+    }
+  }
+  const updates = joined
+    .filter((league) => !ownedNames.has(league.name))
+    .map((league) => removeMemberWrite(league.name, uid));
+  return { deletes, updates };
 }
 
 /** Every doc that holds [uid]'s data. Deleting a doc that doesn't exist is a no-op. */
@@ -187,6 +293,21 @@ export async function collectUserDocNames(opts: {
     }
   }
   names.add(userPath);
+
+  for (const root of WEEKLY_ROOTS) {
+    for (const game of LEADERBOARD_GAMES) {
+      const weeks = await listDocumentNames(
+        accessToken,
+        `${base}/${root}/${game}/weekly`,
+        { showMissing: true },
+      );
+      for (const week of weeks) {
+        names.add(
+          weeklyEntryPath(projectId, root, game, docIdFromResourceName(week), uid),
+        );
+      }
+    }
+  }
 
   for (const root of LEADERBOARD_ROOTS) {
     for (const game of LEADERBOARD_GAMES) {
@@ -227,22 +348,22 @@ export async function collectUserDocNames(opts: {
   return [...names];
 }
 
-/** Deletes [names] in `batchWrite` calls of [DELETE_BATCH_SIZE]; throws if any delete fails. */
-export async function batchDelete(
+/** Applies [writes] in `batchWrite` calls of [DELETE_BATCH_SIZE]; throws if any write fails. */
+export async function batchWriteAll(
   accessToken: string,
   projectId: string,
-  names: string[],
+  writes: WipeWrite[],
 ): Promise<void> {
   const url = `${FIRESTORE_API}/${documentsBase(projectId)}:batchWrite`;
-  for (let i = 0; i < names.length; i += DELETE_BATCH_SIZE) {
-    const chunk = names.slice(i, i + DELETE_BATCH_SIZE);
+  for (let i = 0; i < writes.length; i += DELETE_BATCH_SIZE) {
+    const chunk = writes.slice(i, i + DELETE_BATCH_SIZE);
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ writes: chunk.map((name) => ({ delete: name })) }),
+      body: JSON.stringify({ writes: chunk }),
     });
     const text = await res.text();
     if (!res.ok) {
@@ -257,6 +378,19 @@ export async function batchDelete(
   }
 }
 
+/** Deletes [names] in `batchWrite` calls of [DELETE_BATCH_SIZE]; throws if any delete fails. */
+export async function batchDelete(
+  accessToken: string,
+  projectId: string,
+  names: string[],
+): Promise<void> {
+  await batchWriteAll(
+    accessToken,
+    projectId,
+    names.map((name) => ({ delete: name })),
+  );
+}
+
 export async function wipeUserFirestore(opts: {
   projectId: string;
   accessToken: string;
@@ -266,9 +400,15 @@ export async function wipeUserFirestore(opts: {
     return { ok: false, errorMessage: 'invalid_uid' };
   }
   try {
-    const names = await collectUserDocNames(opts);
-    await batchDelete(opts.accessToken, opts.projectId, names);
-    return { ok: true, deleted: names.length };
+    const names = new Set(await collectUserDocNames(opts));
+    const leagues = await collectLeagueWrites(opts);
+    for (const name of leagues.deletes) names.add(name);
+    const writes: WipeWrite[] = [
+      ...leagues.updates,
+      ...[...names].map((name) => ({ delete: name })),
+    ];
+    await batchWriteAll(opts.accessToken, opts.projectId, writes);
+    return { ok: true, deleted: names.size };
   } catch (e) {
     return {
       ok: false,

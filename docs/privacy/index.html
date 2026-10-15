@@ -162,6 +162,23 @@
         made mistakes on that run, your current streak, and when it was
         updated. Other players can see these on those boards.
       </p>
+      <p>
+        To keep the boards fair, the app sends each cleared run (your sign-in
+        token, the game, the day, your time, the clean-run flags, your streak,
+        your display name and avatar/photo, and how you solved the puzzle) to
+        our Cloudflare Worker, which checks it against that day’s puzzle and
+        then writes your entries. If the Worker can’t be reached, the app
+        writes them directly as before. The weekly board keeps, for each
+        player, the best time of each day this week, the number of days
+        cleared and their total, with the same display name and avatar/photo.
+      </p>
+      <p>
+        <strong>Leagues.</strong> If you create or join a private league, we
+        store its name, its invite code, who created it and the uids of its
+        members (at most 30). Anyone signed in who has the invite code can see
+        the league’s name and member list; a league’s board shows its members’
+        leaderboard entries.
+      </p>
 
       <h2>Synced game progress</h2>
       <p>
