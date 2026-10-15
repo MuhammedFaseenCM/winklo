@@ -17,7 +17,7 @@ void main() {
       ),
       'Winklo Zip · 9 Oct\n'
       '⏱ 1:12 · 🔥 5 · Hint-free\n'
-      'https://winklo.pages.dev',
+      'https://winklo.pages.dev/zip',
     );
   });
 
@@ -32,7 +32,7 @@ void main() {
       ),
       'Winklo Path Words · 9 Oct\n'
       '⏱ 3:25\n'
-      'https://winklo.pages.dev',
+      'https://winklo.pages.dev/path-words',
     );
   });
 
@@ -47,7 +47,7 @@ void main() {
       ),
       'Winklo Sudoku · 31 Dec\n'
       '⏱ 0:59 · Hint-free · Flawless\n'
-      'https://winklo.pages.dev',
+      'https://winklo.pages.dev/sudoku',
     );
   });
 

@@ -27,6 +27,7 @@ import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
+import '../../../core/router/pop_or_go_home.dart';
 import '../bloc/sudoku_bloc.dart';
 import '../bloc/sudoku_event.dart';
 import '../bloc/sudoku_state.dart';
@@ -281,7 +282,7 @@ class _SudokuScreenState extends State<SudokuScreen>
                         child: Row(
                           children: [
                             IconButton(
-                              onPressed: () => context.pop(),
+                              onPressed: () => popOrGoHome(context),
                               icon: const Icon(Icons.arrow_back_rounded),
                             ),
                             Expanded(

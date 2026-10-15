@@ -184,6 +184,12 @@ abstract final class AppStrings {
     return '$current → $requiredLabel';
   }
 
+  // League invite links (/join/CODE) until leagues ship
+  static const joinLinkTitle = 'League invite';
+  static String joinLinkCode(String code) => 'Invite code $code';
+  static const joinLinkBody =
+      'Leagues are on their way. Keep this invite and open it again after your next update.';
+
   // Auth / leaderboard
   static const playSignInTitle = 'Sign in to play';
   static const playSignInBody =
