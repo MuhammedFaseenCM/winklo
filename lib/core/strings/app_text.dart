@@ -486,6 +486,7 @@ abstract interface class AppText {
   String get serviceUnavailable;
   String get signInRequiredShort;
   String get profileUpdateFailed;
+  String get profileLoadFailed;
   String get avatarUploadUnavailable;
   String get avatarInvalid;
   String get leaguesSignedOut;

@@ -351,6 +351,7 @@ final Map<String, String Function(AppText)> _members = {
   'serviceUnavailable': (t) => t.serviceUnavailable,
   'signInRequiredShort': (t) => t.signInRequiredShort,
   'profileUpdateFailed': (t) => t.profileUpdateFailed,
+  'profileLoadFailed': (t) => t.profileLoadFailed,
   'avatarUploadUnavailable': (t) => t.avatarUploadUnavailable,
   'avatarInvalid': (t) => t.avatarInvalid,
   'leaguesSignedOut': (t) => t.leaguesSignedOut,

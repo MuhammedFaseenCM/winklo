@@ -549,6 +549,7 @@ abstract final class AppStrings {
   static String get serviceUnavailable => _t.serviceUnavailable;
   static String get signInRequiredShort => _t.signInRequiredShort;
   static String get profileUpdateFailed => _t.profileUpdateFailed;
+  static String get profileLoadFailed => _t.profileLoadFailed;
   static String get avatarUploadUnavailable => _t.avatarUploadUnavailable;
   static String get avatarInvalid => _t.avatarInvalid;
   static String get leaguesSignedOut => _t.leaguesSignedOut;

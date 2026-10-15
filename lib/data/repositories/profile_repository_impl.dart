@@ -113,7 +113,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     } on Failure {
       rethrow;
     } catch (e) {
-      throw Failure('Could not load profile.', cause: e);
+      throw Failure(AppStrings.profileLoadFailed, cause: e);
     }
   }
 

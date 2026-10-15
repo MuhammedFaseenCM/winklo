@@ -54,6 +54,7 @@ void main() {
     WidgetTester tester, {
     Size size = const Size(360, 640),
     Key? boundary,
+    List<String> phone = const ['en'],
   }) async {
     tester.view.physicalSize = size * 2;
     tester.view.devicePixelRatio = 2;
@@ -67,7 +68,7 @@ void main() {
         child: BlocProvider(
           create: (_) => LocaleCubit(
             languages: languages,
-            deviceLanguageCodes: () => const ['en'],
+            deviceLanguageCodes: () => phone,
           ),
           child: RepaintBoundary(
             key: boundary,
@@ -197,4 +198,14 @@ void main() {
       malayalam.value,
     );
   });
+
+  testWidgets(
+    'the System row names the phone\'s language, whatever is chosen',
+    (tester) async {
+      when(() => languages.language).thenReturn(AppLanguage.english);
+      await pump(tester, size: const Size(360, 1400), phone: const ['ml']);
+      expect(find.text('Follows your phone: മലയാളം'), findsOneWidget);
+      expect(find.text(AppStrings.settingsTitle), findsOneWidget);
+    },
+  );
 }

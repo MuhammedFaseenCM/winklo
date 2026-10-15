@@ -19,15 +19,7 @@ class LocaleCubit extends Cubit<LocaleState> {
     required this._languages,
     required this._deviceLanguageCodes,
     this._onLanguageChanged,
-  }) : super(
-         LocaleState(
-           choice: _languages.language,
-           languageCode: resolveLanguageCode(
-             _languages.language,
-             _deviceLanguageCodes(),
-           ),
-         ),
-       ) {
+  }) : super(_resolve(_languages.language, _deviceLanguageCodes())) {
     AppStrings.use(state.languageCode);
   }
 
@@ -44,19 +36,24 @@ class LocaleCubit extends Cubit<LocaleState> {
     _apply(choice);
   }
 
-  /// The phone's languages changed; only System follows them.
-  void deviceLanguagesChanged() {
-    if (state.choice != AppLanguage.system) return;
-    _apply(state.choice);
-  }
+  /// The phone's languages changed. Only System follows them; with another
+  /// choice the System row's hint still learns what it would give.
+  void deviceLanguagesChanged() => _apply(state.choice);
+
+  static LocaleState _resolve(AppLanguage choice, List<String> device) =>
+      LocaleState(
+        choice: choice,
+        languageCode: resolveLanguageCode(choice, device),
+        systemLanguageCode: resolveLanguageCode(AppLanguage.system, device),
+      );
 
   void _apply(AppLanguage choice) {
     if (isClosed) return;
-    final code = resolveLanguageCode(choice, _deviceLanguageCodes());
-    final changed = code != state.languageCode;
-    if (!changed && choice == state.choice) return;
-    AppStrings.use(code);
-    emit(LocaleState(choice: choice, languageCode: code));
+    final next = _resolve(choice, _deviceLanguageCodes());
+    if (next == state) return;
+    final changed = next.languageCode != state.languageCode;
+    AppStrings.use(next.languageCode);
+    emit(next);
     if (changed) unawaited(_replan());
   }
 

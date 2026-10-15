@@ -1448,6 +1448,9 @@ final class AppTextMl implements AppText {
   String get profileUpdateFailed => 'പ്രൊഫൈൽ അപ്ഡേറ്റ് ചെയ്യാനായില്ല.';
 
   @override
+  String get profileLoadFailed => 'പ്രൊഫൈൽ ലോഡ് ചെയ്യാനായില്ല.';
+
+  @override
   String get avatarUploadUnavailable => 'ഫോട്ടോ അപ്‌ലോഡ് ഇപ്പോൾ ലഭ്യമല്ല.';
 
   @override

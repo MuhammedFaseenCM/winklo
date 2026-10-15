@@ -1383,6 +1383,9 @@ final class AppTextEn implements AppText {
   String get profileUpdateFailed => 'Could not update profile.';
 
   @override
+  String get profileLoadFailed => 'Could not load profile.';
+
+  @override
   String get avatarUploadUnavailable => 'Avatar upload is not configured.';
 
   @override

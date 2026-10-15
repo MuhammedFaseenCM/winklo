@@ -31,7 +31,7 @@ class SettingsLanguageSlot extends StatelessWidget {
             value: AppLanguage.system,
             title: AppStrings.settingsLanguageSystem,
             subtitle: AppStrings.settingsLanguageSystemHint(
-              _nameOf(state.languageCode),
+              _nameOf(state.systemLanguageCode),
             ),
           ),
           _LanguageRow(

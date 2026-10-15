@@ -43,7 +43,11 @@ void main() {
       final cubit = build();
       expect(
         cubit.state,
-        const LocaleState(choice: AppLanguage.malayalam, languageCode: 'ml'),
+        const LocaleState(
+          choice: AppLanguage.malayalam,
+          languageCode: 'ml',
+          systemLanguageCode: 'en',
+        ),
       );
       expect(AppStrings.languageCode, 'ml');
       expect(replans, 0);
@@ -55,6 +59,14 @@ void main() {
       expect(cubit.state.choice, AppLanguage.system);
       expect(cubit.state.languageCode, 'ml');
       expect(AppStrings.languageCode, 'ml');
+    });
+
+    test('knows what System would give while another language is chosen', () {
+      phone = ['ml'];
+      when(() => languages.language).thenReturn(AppLanguage.english);
+      final cubit = build();
+      expect(cubit.state.languageCode, 'en');
+      expect(cubit.state.systemLanguageCode, 'ml');
     });
 
     test('System on a phone in another language reads English', () {
@@ -70,7 +82,11 @@ void main() {
       build: build,
       act: (cubit) => cubit.choose(AppLanguage.malayalam),
       expect: () => const [
-        LocaleState(choice: AppLanguage.malayalam, languageCode: 'ml'),
+        LocaleState(
+          choice: AppLanguage.malayalam,
+          languageCode: 'ml',
+          systemLanguageCode: 'en',
+        ),
       ],
       verify: (_) {
         verify(() => languages.setLanguage(AppLanguage.malayalam)).called(1);
@@ -100,7 +116,11 @@ void main() {
       build: build,
       act: (cubit) => cubit.choose(AppLanguage.system),
       expect: () => const [
-        LocaleState(choice: AppLanguage.system, languageCode: 'en'),
+        LocaleState(
+          choice: AppLanguage.system,
+          languageCode: 'en',
+          systemLanguageCode: 'en',
+        ),
       ],
       verify: (_) {
         verify(() => languages.setLanguage(AppLanguage.system)).called(1);
@@ -113,7 +133,11 @@ void main() {
       build: () => build(onLanguageChanged: () async => throw Exception('x')),
       act: (cubit) => cubit.choose(AppLanguage.malayalam),
       expect: () => const [
-        LocaleState(choice: AppLanguage.malayalam, languageCode: 'ml'),
+        LocaleState(
+          choice: AppLanguage.malayalam,
+          languageCode: 'ml',
+          systemLanguageCode: 'en',
+        ),
       ],
       verify: (_) => expect(AppStrings.languageCode, 'ml'),
     );
@@ -128,7 +152,11 @@ void main() {
         cubit.deviceLanguagesChanged();
       },
       expect: () => const [
-        LocaleState(choice: AppLanguage.system, languageCode: 'ml'),
+        LocaleState(
+          choice: AppLanguage.system,
+          languageCode: 'ml',
+          systemLanguageCode: 'ml',
+        ),
       ],
       verify: (_) {
         expect(AppStrings.languageCode, 'ml');
@@ -149,7 +177,7 @@ void main() {
     );
 
     blocTest<LocaleCubit, LocaleState>(
-      'with English chosen, the phone is ignored',
+      'with English chosen, only the System row learns the phone changed',
       setUp: () =>
           when(() => languages.language).thenReturn(AppLanguage.english),
       build: build,
@@ -157,7 +185,13 @@ void main() {
         phone = ['ml'];
         cubit.deviceLanguagesChanged();
       },
-      expect: () => const <LocaleState>[],
+      expect: () => const [
+        LocaleState(
+          choice: AppLanguage.english,
+          languageCode: 'en',
+          systemLanguageCode: 'ml',
+        ),
+      ],
       verify: (_) {
         expect(AppStrings.languageCode, 'en');
         expect(replans, 0);
