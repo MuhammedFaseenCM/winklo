@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:winklo/core/config/activity_config.dart';
 import 'package:winklo/core/config/avatar_upload_config.dart';
 import 'package:winklo/core/config/leaderboard_submit_config.dart';
 import 'package:winklo/core/config/path_words_nouns_config.dart';
@@ -12,6 +13,7 @@ import 'package:winklo/core/lifecycle/progress_change_signal.dart';
 import 'package:winklo/core/haptics/haptics_service.dart';
 import 'package:winklo/core/sfx/audioplayers_sfx_playback.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
+import 'package:winklo/data/clients/activity/http_guest_activity_client.dart';
 import 'package:winklo/data/clients/avatar/avatar_upload_client.dart';
 import 'package:winklo/data/clients/avatar/r2_avatar_upload_client.dart';
 import 'package:winklo/data/clients/leaderboard/http_leaderboard_submit_client.dart';
@@ -192,8 +194,12 @@ List<SingleChildWidget> buildRepositoryProviders({
     ),
     RepositoryProvider<AuthRepository>(create: (_) => AuthRepositoryImpl()),
     RepositoryProvider<ActivityRepository>(
-      create: (context) =>
-          ActivityRepositoryImpl(context.read<SharedPreferences>()),
+      create: (context) => ActivityRepositoryImpl(
+        context.read<SharedPreferences>(),
+        guestClient: ActivityConfig.isConfigured
+            ? HttpGuestActivityClient(baseUrl: ActivityConfig.baseUrl)
+            : null,
+      ),
     ),
     RepositoryProvider<RecordAppOpen>(
       create: (context) => RecordAppOpen(
