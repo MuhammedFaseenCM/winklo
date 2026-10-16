@@ -171,7 +171,8 @@ class LeaderboardTableRow extends StatelessWidget {
         onTap: onTap,
         child: Container(
           height: leaderboardTableRowHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          // The You bar takes 3px of the left padding, so columns line up.
+          padding: EdgeInsets.only(left: isYou ? 9 : 12, right: 12),
           decoration: BoxDecoration(
             border: Border(
               left: isYou

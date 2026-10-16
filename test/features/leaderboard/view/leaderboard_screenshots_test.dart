@@ -18,6 +18,7 @@ import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+import 'package:winklo/features/dashboard/view/widgets/floating_nav_dock.dart';
 import 'package:winklo/features/leaderboard/view/leaderboard_screen.dart';
 
 import '../../../helpers/screenshot.dart';
@@ -170,10 +171,17 @@ void main() {
     final router = GoRouter(
       initialLocation: '/leaderboard',
       routes: [
+        // The dashboard shell's frame: the tab over the floating dock.
         GoRoute(
           path: '/leaderboard',
-          builder: (_, _) =>
-              const LeaderboardScreen(showAllTimeLeaderboard: true),
+          builder: (_, _) => Scaffold(
+            extendBody: true,
+            body: const LeaderboardScreen(showAllTimeLeaderboard: true),
+            bottomNavigationBar: FloatingNavDock(
+              selectedIndex: 1,
+              onDestinationSelected: (_) {},
+            ),
+          ),
         ),
       ],
     );
@@ -226,6 +234,11 @@ void main() {
       final overflows = await pump(tester, size);
       board.add(_daily());
       await settle(tester);
+      if (size.height >= 800) {
+        // Nine full rows clear the nav dock (rank 9 is Ann V).
+        final dock = tester.getRect(find.byKey(const Key('floating_nav_dock')));
+        expect(tester.getRect(find.text('Ann V')).bottom, lessThan(dock.top));
+      }
       await shot(tester, overflows, 'leaderboard_daily_$tag');
     });
 

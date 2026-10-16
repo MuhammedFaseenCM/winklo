@@ -268,10 +268,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
   bool _isUserReached(AppLayout layout, int userIndex) {
     if (userIndex == -1) return true;
 
-    final hasNavDock = !GoRouter.of(context).canPop();
-    final dockOffset = hasNavDock ? (layout.isCompact ? 76.0 : 84.0) : 0.0;
-    final pinnedHeight = leaderboardTableRowHeight + layout.space(10);
-    final overlayThreshold = dockOffset + pinnedHeight;
+    // The dashboard's SafeArea already keeps the board above the nav dock;
+    // only the pinned row covers the bottom of the list.
+    final overlayThreshold = leaderboardTableRowHeight + layout.space(10);
 
     final userContext = _userRowKey.currentContext;
     final listContext = _listKey.currentContext;
@@ -624,6 +623,11 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                               final inInitialList =
                                   userIndex != -1 && userIndex < 6;
                               final hasNavDock = !GoRouter.of(context).canPop();
+                              // Under the card; the shell's SafeArea already
+                              // ends above the nav dock.
+                              final bottomGap = hasNavDock
+                                  ? layout.space(8)
+                                  : layout.pagePadding.bottom;
                               final showSignInFab = auth.user == null;
                               final showPinned =
                                   userEntry != null &&
@@ -643,9 +647,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                       12,
                                       0,
                                       12,
-                                      hasNavDock
-                                          ? 0
-                                          : layout.pagePadding.bottom,
+                                      bottomGap,
                                     ),
                                     child: LeaderboardTableCard(
                                       period: state.period,
@@ -665,7 +667,6 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                               controller: _scrollController,
                                               padding: EdgeInsets.only(
                                                 bottom:
-                                                    (hasNavDock ? 88.0 : 0.0) +
                                                     (showPinned ? 64.0 : 0.0) +
                                                     (showSignInFab
                                                         ? 80.0
@@ -753,18 +754,14 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                                         ],
                                                       ),
                                                     ),
-                                                    padding: EdgeInsets.fromLTRB(
-                                                      12,
-                                                      layout.space(10),
-                                                      12,
-                                                      hasNavDock
-                                                          ? (layout.isCompact
-                                                                ? 76.0
-                                                                : 84.0)
-                                                          : layout
-                                                                .pagePadding
-                                                                .bottom,
-                                                    ),
+                                                    padding:
+                                                        EdgeInsets.fromLTRB(
+                                                          12,
+                                                          layout.space(10),
+                                                          12,
+                                                          bottomGap +
+                                                              layout.space(6),
+                                                        ),
                                                     child: _PinnedUserRow(
                                                       entry: userEntry,
                                                       period: state.period,
