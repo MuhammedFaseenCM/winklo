@@ -72,6 +72,7 @@ describe('daily_activity users', () => {
     ['a non-v4 install id', { installId: '3f2b8c1e-9a4d-1e7f-b123-0c9d8e7f6a5b' }],
     ['a 33-character version', { appVersion: '1'.repeat(33) }],
     ['an empty version', { appVersion: '' }],
+    ['a version with a space', { appVersion: '1.1 beta' }],
     ['a string build', { build: '19' }],
     ['a negative build', { build: -1 }],
     ['an unknown key', { extra: true }],
@@ -83,11 +84,14 @@ describe('daily_activity users', () => {
     await assertFails(setDoc(doc(db('u2'), userPath('u1')), newCreate('u1')));
   });
 
-  it('counts later opens up, never down', async () => {
+  it('counts later opens up by one, never down or by more', async () => {
     const store = db('u1');
     await setDoc(doc(store, userPath('u1')), newCreate('u1'));
-    await assertSucceeds(updateDoc(doc(store, userPath('u1')), newUpdate()));
-    await assertFails(updateDoc(doc(store, userPath('u1')), { lastOpenAt: serverTimestamp(), opens: 1 }));
+    const ref = doc(store, userPath('u1'));
+    await assertSucceeds(updateDoc(ref, newUpdate())); // 1 -> 2
+    await assertSucceeds(updateDoc(ref, { ...newUpdate(), opens: 2 })); // +0, as an old build leaves it
+    await assertFails(updateDoc(ref, { ...newUpdate(), opens: 7 })); // +5
+    await assertFails(updateDoc(ref, { ...newUpdate(), opens: 1 })); // lower
   });
 
   it('still takes an old build’s update on a doc that has a count', async () => {
@@ -96,10 +100,16 @@ describe('daily_activity users', () => {
     await assertSucceeds(updateDoc(doc(store, userPath('u1')), { lastOpenAt: serverTimestamp(), platform: 'ios' }));
   });
 
-  it('starts the count on a doc an old build created', async () => {
+  it('starts the count at 1 on a doc an old build created', async () => {
     const store = db('u1');
     await setDoc(doc(store, userPath('u1')), oldCreate('u1'));
     await assertSucceeds(updateDoc(doc(store, userPath('u1')), newUpdate()));
+  });
+
+  it('refuses to start the count above 1 on a doc without one', async () => {
+    const store = db('u1');
+    await setDoc(doc(store, userPath('u1')), oldCreate('u1'));
+    await assertFails(updateDoc(doc(store, userPath('u1')), { ...newUpdate(), opens: 3 }));
   });
 
   it('lets an admin list the day', async () => {

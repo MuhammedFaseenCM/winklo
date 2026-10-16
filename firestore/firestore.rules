@@ -668,7 +668,7 @@ service cloud.firestore {
     function validActivityExtras(data) {
       return (!('opens' in data) || (data.opens is int && data.opens >= 1 && data.opens <= 100000))
         && (!('appVersion' in data) || (data.appVersion is string
-          && data.appVersion.size() >= 1 && data.appVersion.size() <= 32))
+          && data.appVersion.matches('^[0-9A-Za-z.+-]{1,32}$')))
         && (!('build' in data) || (data.build is int && data.build >= 0 && data.build <= 10000000))
         && (!('installId' in data) || (data.installId is string
           && data.installId.matches('^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')));
@@ -684,7 +684,8 @@ service cloud.firestore {
         && (!('opens' in request.resource.data) || request.resource.data.opens == 1);
     }
 
-    // An older build's update leaves opens alone; a newer one counts it up.
+    // An older build's update leaves opens alone; a newer one counts it up by
+    // one. A doc without a count (made by an older build) starts at 1.
     function validActivityUpdate() {
       return request.resource.data.keys().hasOnly(activityKeys())
         && request.resource.data.uid == resource.data.uid
@@ -692,9 +693,12 @@ service cloud.firestore {
         && request.resource.data.lastOpenAt == request.time
         && validActivityPlatform()
         && validActivityExtras(request.resource.data)
-        && (!('opens' in resource.data)
-          || ('opens' in request.resource.data
-            && request.resource.data.opens >= resource.data.opens));
+        && ('opens' in resource.data
+          ? ('opens' in request.resource.data
+            && (request.resource.data.opens == resource.data.opens
+              || request.resource.data.opens == resource.data.opens + 1))
+          : (!('opens' in request.resource.data)
+            || request.resource.data.opens == 1));
     }
 
     match /daily_activity/{dayId}/users/{uid} {
