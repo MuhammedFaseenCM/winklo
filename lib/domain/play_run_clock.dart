@@ -38,4 +38,12 @@ class PlayRunClock {
     if (isRunning) return this;
     return PlayRunClock._(elapsedMs: elapsedMs, resumedAt: at);
   }
+
+  /// Adds [penalty] (a hint's cost) to the time counted so far. A running
+  /// clock keeps running from the same instant.
+  PlayRunClock addPenalty(Duration penalty) {
+    final ms = penalty.inMilliseconds;
+    if (ms <= 0) return this;
+    return PlayRunClock._(elapsedMs: elapsedMs + ms, resumedAt: resumedAt);
+  }
 }

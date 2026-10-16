@@ -9,10 +9,7 @@ void main() {
 
       expect(clock.elapsedMs, 0);
       expect(clock.isRunning, isTrue);
-      expect(
-        clock.displayedMs(at: t0.add(const Duration(seconds: 5))),
-        5000,
-      );
+      expect(clock.displayedMs(at: t0.add(const Duration(seconds: 5))), 5000);
     });
 
     test('pause folds live delta and stops accumulation', () {
@@ -57,6 +54,36 @@ void main() {
       expect(clock.elapsedMs, 42000);
       expect(clock.isRunning, isFalse);
       expect(clock.displayedMs(at: DateTime.utc(2026, 10, 3)), 42000);
+    });
+
+    test('addPenalty adds time and keeps a running clock running', () {
+      final t0 = DateTime.utc(2026, 10, 3, 12);
+      final clock = PlayRunClock.start(
+        at: t0,
+      ).addPenalty(const Duration(seconds: 20));
+
+      expect(clock.elapsedMs, 20000);
+      expect(clock.isRunning, isTrue);
+      expect(clock.resumedAt, t0);
+      expect(
+        clock.displayedSeconds(at: t0.add(const Duration(seconds: 5))),
+        25,
+      );
+    });
+
+    test('addPenalty adds time to a paused clock', () {
+      final clock = PlayRunClock.restore(
+        elapsedMs: 8000,
+      ).addPenalty(const Duration(seconds: 10));
+
+      expect(clock.elapsedMs, 18000);
+      expect(clock.isRunning, isFalse);
+    });
+
+    test('addPenalty ignores a negative or zero penalty', () {
+      final clock = PlayRunClock.restore(elapsedMs: 8000);
+      expect(clock.addPenalty(Duration.zero).elapsedMs, 8000);
+      expect(clock.addPenalty(const Duration(seconds: -5)).elapsedMs, 8000);
     });
   });
 }
