@@ -328,7 +328,7 @@ After deploy:
 
 ### Admin custom claims (panel foundation)
 
-Operators of the admin SPA use the same Firebase Auth project with a custom claim `{ admin: true }`. Firestore rules define `isAdmin()` (`request.auth.token.admin == true`). Admin reads are enabled for `client_errors` and `daily_activity/{yyyy-MM-dd}/users/{uid}` (the owner may also read their own daily activity doc). User-submitted `issue_reports` still have no client reads (inbox is phase 2).
+Operators of the admin SPA use the same Firebase Auth project with a custom claim `{ admin: true }`. Firestore rules define `isAdmin()` (`request.auth.token.admin == true`). Admin reads are enabled for `client_errors`, `daily_activity/{yyyy-MM-dd}/users/{uid}` and `daily_activity/{yyyy-MM-dd}/guests/{installId}` (the owner may also read their own daily activity doc; guest docs have no owner, so only admins read them). User-submitted `issue_reports` still have no client reads (inbox is phase 2).
 
 Admin console code lives in a **separate repo**: [MuhammedFaseenCM/winklo-admin](https://github.com/MuhammedFaseenCM/winklo-admin) (SPA + `workers/admin-api` + claim script).
 

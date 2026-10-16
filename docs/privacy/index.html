@@ -96,7 +96,7 @@
     <main>
       <p class="brand">Winklo</p>
       <h1>Privacy Policy</h1>
-      <p class="muted updated">Last updated: 10 October 2026</p>
+      <p class="muted updated">Last updated: 17 October 2026</p>
 
       <p>
         Winklo is a set of quick daily solo puzzles — Zip, Path Words, and
@@ -111,15 +111,19 @@
         leaderboard, and profile. Your game progress syncs privately to your
         account. We use Google Firebase (Auth, Firestore, Analytics,
         Crashlytics, Remote Config, Cloud Messaging) and Cloudflare (avatar
-        upload Worker + R2) to run those features.
+        upload Worker + R2, and a Worker that records app opens, including
+        opens when you are not signed in) to run those features.
       </div>
 
       <h2>Information stored on your device</h2>
       <p>
         Local preferences may include tutorial flags, sound settings,
         notification schedules, unfinished puzzle runs, game progress, and
-        cached puzzle data. Uninstalling Winklo or clearing app storage removes
-        local data. Your cloud profile and leaderboard scores are separate (see
+        cached puzzle data, and an install ID: a random identifier the app
+        creates the first time it opens, used to count app opens (see below).
+        Uninstalling Winklo or clearing app storage removes local data,
+        including the install ID; the app then creates a new one the next time
+        it opens. Your cloud profile and leaderboard scores are separate (see
         below).
       </p>
       <p>
@@ -207,6 +211,14 @@
           version); and app error reports.
         </li>
         <li>
+          <strong>Cloudflare Workers</strong> — the Worker that records app
+          opens receives, for an open when you are not signed in, your install
+          ID, the day, your platform and the app version and build, and writes
+          them to Firestore. It uses your IP address only to limit how fast one
+          network can send requests; the IP address is not written to the
+          record.
+        </li>
+        <li>
           <strong>Firebase Analytics</strong> — product events (screens, games
           started/completed, hints, tutorials, and similar). Events may include
           gameplay metadata and device/installation identifiers from Google’s
@@ -256,10 +268,13 @@
 
       <h2>Your choices and account deletion</h2>
       <p>
-        You can sign out in Profile. You can stop using network features by
-        staying signed out (Zip, Path Words, and Sudoku require sign-in).
-        Analytics and Crashlytics collection is required for the app’s current
-        design (no in-app opt-out toggle).
+        You can sign out in Profile. Zip, Path Words, and Sudoku require
+        sign-in, but staying signed out does not stop all network use: when you
+        open the app without signing in, it still records that open under your
+        install ID, as described above. Clearing the app’s data or reinstalling
+        gives you a new install ID. There is no in-app way to turn this off, and
+        Analytics and Crashlytics collection is also required for the app’s
+        current design (no in-app opt-out toggle).
       </p>
       <p>
         To delete your account and associated cloud data (profile, leaderboard
@@ -272,6 +287,11 @@
         account you use in the app and confirm; deletion is immediate. We keep a
         short record of each deletion request (your user id, email address, the
         time and whether it succeeded) as proof that it was carried out.
+      </p>
+      <p>
+        App-open records made while you were not signed in are keyed by an
+        install ID, not an account, so they are not linked to your account and
+        account deletion does not remove them.
       </p>
       <p>
         If the deletion page fails or you cannot access it,
