@@ -19,6 +19,57 @@ Future<AppBuild> _platformBuild() async {
   return (version: info.version, build: int.tryParse(info.buildNumber) ?? 0);
 }
 
+/// Every key of a signed-in `daily_activity/{day}/users/{uid}` doc. Pinned
+/// against `activityKeys()` in firestore/firestore.rules by
+/// test/firestore/activity_pins_test.dart: a key the rules lack rejects the
+/// whole write.
+const activityFirestoreKeys = {
+  'uid',
+  'firstOpenAt',
+  'lastOpenAt',
+  'platform',
+  'opens',
+  'appVersion',
+  'build',
+  'installId',
+};
+
+/// The first open of the day. [serverTime] stands for
+/// `FieldValue.serverTimestamp()`, passed in so this stays plain data.
+Map<String, Object?> activityCreateFields({
+  required String uid,
+  required String platform,
+  required String installId,
+  required AppBuild app,
+  required Object serverTime,
+}) => {
+  'uid': uid,
+  'firstOpenAt': serverTime,
+  'lastOpenAt': serverTime,
+  'platform': platform,
+  'opens': 1,
+  'appVersion': app.version,
+  'build': app.build,
+  'installId': installId,
+};
+
+/// A later open that day. [opensIncrement] stands for
+/// `FieldValue.increment(1)`.
+Map<String, Object?> activityUpdateFields({
+  required String platform,
+  required String installId,
+  required AppBuild app,
+  required Object serverTime,
+  required Object opensIncrement,
+}) => {
+  'lastOpenAt': serverTime,
+  'platform': platform,
+  'opens': opensIncrement,
+  'appVersion': app.version,
+  'build': app.build,
+  'installId': installId,
+};
+
 class ActivityRepositoryImpl implements ActivityRepository {
   ActivityRepositoryImpl(
     this._prefs, {
@@ -66,7 +117,20 @@ class ActivityRepositoryImpl implements ActivityRepository {
   }
 
   @override
-  Future<String> installId() => _installId ??= _loadInstallId();
+  Future<String> installId() {
+    final cached = _installId;
+    if (cached != null) return cached;
+    final load = _loadInstallId();
+    _installId = load;
+    // A failed load must not be cached for the rest of the session.
+    load.then<void>(
+      (_) {},
+      onError: (Object _) {
+        if (identical(_installId, load)) _installId = null;
+      },
+    );
+    return load;
+  }
 
   Future<String> _loadInstallId() async {
     final stored = _prefs.getString(_installIdKey);
@@ -119,25 +183,25 @@ class ActivityRepositoryImpl implements ActivityRepository {
     try {
       final snap = await ref.get();
       if (!snap.exists) {
-        await ref.set({
-          'uid': uid,
-          'firstOpenAt': FieldValue.serverTimestamp(),
-          'lastOpenAt': FieldValue.serverTimestamp(),
-          'platform': platform,
-          'opens': 1,
-          'appVersion': app.version,
-          'build': app.build,
-          'installId': installId,
-        });
+        await ref.set(
+          activityCreateFields(
+            uid: uid,
+            platform: platform,
+            installId: installId,
+            app: app,
+            serverTime: FieldValue.serverTimestamp(),
+          ),
+        );
       } else {
-        await ref.update({
-          'lastOpenAt': FieldValue.serverTimestamp(),
-          'platform': platform,
-          'opens': FieldValue.increment(1),
-          'appVersion': app.version,
-          'build': app.build,
-          'installId': installId,
-        });
+        await ref.update(
+          activityUpdateFields(
+            platform: platform,
+            installId: installId,
+            app: app,
+            serverTime: FieldValue.serverTimestamp(),
+            opensIncrement: FieldValue.increment(1),
+          ),
+        );
       }
       return true;
     } catch (e, st) {

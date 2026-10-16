@@ -19,7 +19,20 @@ class RecordAppOpen {
   final AnalyticsRepository _analytics;
   final Duration throttle;
 
-  Future<void> call({DateTime? now, String? platform}) async {
+  Future<void>? _running;
+
+  /// While an open is being recorded, another call joins it instead of
+  /// recording a second one (a resume right after the first ping, or pings
+  /// piling up while a signed-in write waits to get back online).
+  Future<void> call({DateTime? now, String? platform}) {
+    final running = _running;
+    if (running != null) return running;
+    return _running = _record(now: now, platform: platform).whenComplete(() {
+      _running = null;
+    });
+  }
+
+  Future<void> _record({DateTime? now, String? platform}) async {
     final at = now ?? DateTime.now();
     final dayId = leaderboardDayId(at);
     final resolvedPlatform = platform ?? 'other';

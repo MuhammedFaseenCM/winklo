@@ -23,6 +23,24 @@ Future<SharedPreferences> _prefs([Map<String, Object> values = const {}]) {
   return SharedPreferences.getInstance();
 }
 
+class _FlakyPrefs extends Fake implements SharedPreferences {
+  int setFailures = 1;
+  final values = <String, Object>{};
+
+  @override
+  String? getString(String key) => values[key] as String?;
+
+  @override
+  Future<bool> setString(String key, String value) async {
+    if (setFailures > 0) {
+      setFailures--;
+      throw Exception('disk full');
+    }
+    values[key] = value;
+    return true;
+  }
+}
+
 Future<AppBuild> _build() async => (version: '1.1.0', build: 19);
 
 void main() {
@@ -63,12 +81,64 @@ void main() {
       expect(ids[0], ids[1]);
     });
 
+    test('a failed first load does not poison the next call', () async {
+      final prefs = _FlakyPrefs();
+      final repo = ActivityRepositoryImpl(prefs);
+      await expectLater(repo.installId(), throwsException);
+      final id = await repo.installId();
+      expect(isInstallId(id), isTrue);
+      expect(await repo.installId(), id);
+    });
+
     test('a stored value that is not an install ID is replaced', () async {
       final repo = ActivityRepositoryImpl(
         await _prefs({'activity_install_id': 'garbage'}),
       );
       expect(isInstallId(await repo.installId()), isTrue);
     });
+  });
+
+  group('signed-in open fields', () {
+    const app = (version: '1.1.0', build: 19);
+
+    test('create uses exactly the pinned keys, with plain values', () {
+      final fields = activityCreateFields(
+        uid: 'u1',
+        platform: 'android',
+        installId: 'i',
+        app: app,
+        serverTime: 'T',
+      );
+      expect(fields.keys.toSet(), activityFirestoreKeys);
+      expect(fields, {
+        'uid': 'u1',
+        'firstOpenAt': 'T',
+        'lastOpenAt': 'T',
+        'platform': 'android',
+        'opens': 1,
+        'appVersion': '1.1.0',
+        'build': 19,
+        'installId': 'i',
+      });
+    });
+
+    test(
+      'update only touches pinned keys and never rewrites uid or firstOpenAt',
+      () {
+        final fields = activityUpdateFields(
+          platform: 'ios',
+          installId: 'i',
+          app: app,
+          serverTime: 'T',
+          opensIncrement: 'INC',
+        );
+        expect(activityFirestoreKeys.containsAll(fields.keys), isTrue);
+        expect(fields.keys, isNot(contains('uid')));
+        expect(fields.keys, isNot(contains('firstOpenAt')));
+        expect(fields['opens'], 'INC');
+        expect(fields['lastOpenAt'], 'T');
+      },
+    );
   });
 
   group('guest opens', () {

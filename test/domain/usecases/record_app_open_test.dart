@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/domain/entities/app_user.dart';
@@ -200,5 +202,79 @@ void main() {
     await usecase(now: DateTime(2026, 10, 5, 12), platform: 'ios');
 
     verifyNever(() => activity.markRecorded(any()));
+  });
+
+  group('overlapping calls', () {
+    test('two at once write once; a later one runs normally', () async {
+      when(() => auth.currentUser).thenReturn(_user);
+      final gate = Completer<bool>();
+      when(
+        () => activity.recordOpen(
+          uid: any(named: 'uid'),
+          installId: any(named: 'installId'),
+          dayId: any(named: 'dayId'),
+          platform: any(named: 'platform'),
+          at: any(named: 'at'),
+        ),
+      ).thenAnswer((_) => gate.future);
+      final now = DateTime(2026, 10, 5, 12);
+
+      final first = usecase(now: now, platform: 'android');
+      final second = usecase(now: now, platform: 'android');
+      gate.complete(true);
+      await Future.wait([first, second]);
+
+      verify(
+        () => activity.recordOpen(
+          uid: 'u1',
+          installId: _install,
+          dayId: '2026-10-05',
+          platform: 'android',
+          at: now,
+        ),
+      ).called(1);
+
+      // Past the throttle, the next call is not swallowed by the old one.
+      when(() => activity.lastRecorded()).thenReturn(null);
+      when(
+        () => activity.recordOpen(
+          uid: any(named: 'uid'),
+          installId: any(named: 'installId'),
+          dayId: any(named: 'dayId'),
+          platform: any(named: 'platform'),
+          at: any(named: 'at'),
+        ),
+      ).thenAnswer((_) async => true);
+      await usecase(now: now.add(const Duration(minutes: 10)));
+      verify(
+        () => activity.recordOpen(
+          uid: any(named: 'uid'),
+          installId: any(named: 'installId'),
+          dayId: any(named: 'dayId'),
+          platform: any(named: 'platform'),
+          at: any(named: 'at'),
+        ),
+      ).called(1);
+    });
+
+    test('a failed call does not block the next one', () async {
+      when(() => auth.currentUser).thenReturn(null);
+      var calls = 0;
+      when(
+        () => activity.recordGuestOpen(
+          installId: any(named: 'installId'),
+          dayId: any(named: 'dayId'),
+          platform: any(named: 'platform'),
+        ),
+      ).thenAnswer((_) async {
+        calls++;
+        if (calls == 1) throw Exception('offline');
+        return true;
+      });
+
+      await usecase(now: DateTime(2026, 10, 5, 12), platform: 'ios');
+      await usecase(now: DateTime(2026, 10, 5, 12, 1), platform: 'ios');
+      expect(calls, 2);
+    });
   });
 }
