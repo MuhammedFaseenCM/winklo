@@ -1,6 +1,7 @@
 /**
- * The Firestore REST calls this Worker needs: one `commit` per write, at most
- * two per open (create, then increment when the doc already exists).
+ * The Firestore REST calls this Worker needs: one `commit` per write: a repeat
+ * open is one (the increment); a new guest is two (the increment finds no doc,
+ * then the create).
  */
 
 const FIRESTORE_API = 'https://firestore.googleapis.com/v1';

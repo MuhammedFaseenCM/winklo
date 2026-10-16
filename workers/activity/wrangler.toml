@@ -12,6 +12,10 @@ FIREBASE_PROJECT_ID = "brain-zip-app"
 # Workers Rate Limiting (wrangler 4.36+). Counters are per Cloudflare
 # location and eventually consistent: a brake on scripts, not an exact quota.
 # namespace_id must be unique in the Cloudflare account.
+# IP_LIMIT and NEW_GUEST_LIMIT count per client: an IPv4 address, or an IPv6
+# /64 (one subscriber holds a whole /64 and could rotate through it).
+# NEW_GUEST_LIMIT only counts opens that would create a new guest doc; a
+# repeat open is one Firestore commit and never touches it.
 [[ratelimits]]
 name = "IP_LIMIT"
 namespace_id = "4101"
@@ -21,3 +25,8 @@ simple = { limit = 30, period = 60 }
 name = "INSTALL_LIMIT"
 namespace_id = "4102"
 simple = { limit = 6, period = 60 }
+
+[[ratelimits]]
+name = "NEW_GUEST_LIMIT"
+namespace_id = "4103"
+simple = { limit = 10, period = 60 }

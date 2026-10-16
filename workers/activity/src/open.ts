@@ -90,17 +90,73 @@ function incrementWrite(name: string, open: GuestOpen): CommitWrite {
   };
 }
 
-/** Creates the day's guest doc, or counts one more open on it when it exists. */
+/**
+ * The key the per-client limiters count on. An IPv4 address is its own key. An
+ * IPv6 address maps to its /64 (the first four groups of the expanded
+ * address), because one subscriber holds a whole /64 and can rotate through
+ * it freely.
+ */
+export function clientKey(ip: string): string {
+  const addr = ip.split('%')[0].toLowerCase();
+  if (!addr.includes(':')) return ip;
+  const groups = expandIpv6(addr);
+  if (!groups) return addr;
+  return `${groups.slice(0, 4).join(':')}::/64`;
+}
+
+/** The eight 16-bit groups of an IPv6 address as unpadded hex, or null if malformed. */
+function expandIpv6(addr: string): string[] | null {
+  let text = addr;
+  const v4 = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(text);
+  if (v4) {
+    const [a, b, c, d] = v4.slice(1).map(Number);
+    if ([a, b, c, d].some((n) => n > 255)) return null;
+    text = text.slice(0, v4.index) + ((a << 8) | b).toString(16) + ':' + ((c << 8) | d).toString(16);
+  }
+  const halves = text.split('::');
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(':') : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const missing = 8 - head.length - tail.length;
+  if (halves.length === 1 ? missing !== 0 : missing < 1) return null;
+  const all = [...head, ...Array<string>(halves.length === 2 ? missing : 0).fill('0'), ...tail];
+  const out: string[] = [];
+  for (const g of all) {
+    if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
+    out.push(parseInt(g, 16).toString(16));
+  }
+  return out;
+}
+
+export type RecordResult = 'recorded' | 'rate_limited';
+
+/**
+ * Counts one more open on the day's guest doc. A repeat open is one commit.
+ * Only a doc that doesn't exist yet asks [allowCreate] (the new-guest limit);
+ * when it says no, nothing is created.
+ */
 export async function recordGuestOpen(opts: {
   projectId: string;
   accessToken: string;
   open: GuestOpen;
-}): Promise<void> {
+  allowCreate: () => Promise<boolean>;
+}): Promise<RecordResult> {
   const name = guestDocName(opts.projectId, opts.open);
+  const send = (write: CommitWrite) =>
+    commit({ projectId: opts.projectId, accessToken: opts.accessToken, writes: [write] });
   try {
-    await commit({ projectId: opts.projectId, accessToken: opts.accessToken, writes: [createWrite(name, opts.open)] });
+    await send(incrementWrite(name, opts.open));
+    return 'recorded';
   } catch (e) {
     if (!(e instanceof ContentionError)) throw e;
-    await commit({ projectId: opts.projectId, accessToken: opts.accessToken, writes: [incrementWrite(name, opts.open)] });
   }
+  if (!(await opts.allowCreate())) return 'rate_limited';
+  try {
+    await send(createWrite(name, opts.open));
+  } catch (e) {
+    if (!(e instanceof ContentionError)) throw e;
+    // Created in between (another request of the same install): count on it.
+    await send(incrementWrite(name, opts.open));
+  }
+  return 'recorded';
 }

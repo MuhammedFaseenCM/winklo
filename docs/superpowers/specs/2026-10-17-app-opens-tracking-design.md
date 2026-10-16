@@ -76,8 +76,9 @@ Errors stay best-effort: nothing blocks the UI; a failed write does not advance 
 - `GET /v1/health` → `{ok: true}`. `POST /v1/open`, no auth, body ≤ 2 KB:
   `{installId, dayId, platform, appVersion, build}`.
 - Checks (else 400 `bad_request`): `installId` is a lowercase UUID v4; `dayId` is a real `yyyy-MM-dd` whose midnight UTC is in the device-local window (`now >= midnight − 14 h && now < midnight + 36 h`, the leaderboard Worker's window); `platform` ∈ `ios|android|other`; `appVersion` matches `^[0-9A-Za-z.+-]{1,32}$`; `build` is an integer 0…10 000 000.
-- Rate limits (Workers Rate Limiting bindings; 429 `rate_limited`): 30 / 60 s per `CF-Connecting-IP`, 6 / 60 s per install ID.
-- Write: one `commit` creating the doc (`currentDocument.exists = false`, `opens: 1`, `firstOpenAt`/`lastOpenAt` = request time). If it already exists, a second `commit` updates `platform`, `appVersion`, `build`, sets `lastOpenAt` to request time and increments `opens` by 1. Firestore failure → 503 `unavailable`.
+- Body: read as a stream and refused (400) once over 2 KiB, with or without a `Content-Length`.
+- Rate limits (Workers Rate Limiting bindings; 429 `rate_limited`): 30 / 60 s per client, 6 / 60 s per install ID, and 10 / 60 s per client for opens that create a new guest doc. A client is the `CF-Connecting-IP` for IPv4, and its /64 (the first four groups of the expanded address) for IPv6, since one subscriber holds a whole /64 and could otherwise rotate addresses. A missing or failing limiter lets the open through.
+- Write: increment first. One `commit` (`currentDocument.exists = true`) updates `platform`, `appVersion`, `build`, sets `lastOpenAt` to request time and increments `opens` by 1; a repeat open costs only this. If the doc doesn't exist, the new-guest limit is checked (over it: 429, nothing created); otherwise a second `commit` creates the doc (`currentDocument.exists = false`, `opens: 1`, `firstOpenAt`/`lastOpenAt` = request time). If that create finds the doc made in between, the increment is sent once more. Firestore failure → 503 `unavailable`.
 - Reply `{ok: true}`. The app treats anything else as "not recorded" and retries on the next open.
 - Secret `FIREBASE_SERVICE_ACCOUNT_JSON`; var `FIREBASE_PROJECT_ID = "brain-zip-app"`. Helpers copied from `workers/leaderboard` (same convention as the other Workers).
 
@@ -126,5 +127,5 @@ The console works after step 3 with existing data; versions, opens and guests fi
 
 - App: `RecordAppOpen` (guest path, identity/day-aware throttle, skip when not written), `ActivityRepositoryImpl` (install ID stable, guest client call, prefs), `HttpGuestActivityClient`, `AppOpenLifecycle` first-auth ping.
 - Rules: emulator tests for old and new shapes, `opens` monotonic, guests read/write.
-- Worker: vitest for validation, window, rate limits, create-then-update, failures.
+- Worker: vitest for validation, window, rate limits, increment-then-create, failures.
 - Admin: model tests (parsing, summary, guest matching), data tests, query tests, page and dashboard tests, plus the gates (`build`, `lint`, `check:ui`, `typecheck:tests`, `test`, `check:bundle`).
