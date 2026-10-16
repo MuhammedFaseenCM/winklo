@@ -114,8 +114,11 @@ void main() {
 
   tearDown(() => board.close());
 
-  Future<GoRouter> pump(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(360, 640);
+  Future<GoRouter> pump(
+    WidgetTester tester, {
+    Size size = const Size(360, 640),
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final authCubit = AuthCubit(
@@ -160,17 +163,51 @@ void main() {
     return router;
   }
 
-  testWidgets('fits a 360×640 phone with every bar showing', (tester) async {
+  /// Lets a sheet open or close. Not pumpAndSettle: a loading board's
+  /// shimmer never settles.
+  Future<void> settle(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  Future<void> openBoardSheet(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('leaderboard_board_pill')));
+    await settle(tester);
+  }
+
+  Future<void> openScopeSheet(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('leaderboard_scope_pill')));
+    await settle(tester);
+  }
+
+  testWidgets('fits a 360×640 phone with both pills showing', (tester) async {
     await pump(tester);
     board.add([_ada, _bo]);
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text(AppStrings.leaderboardThisWeek), findsOneWidget);
     expect(find.text(AppStrings.leaderboardToday), findsOneWidget);
-    expect(find.text(AppStrings.leaderboardYesterday), findsOneWidget);
     expect(find.text(AppStrings.leaderboardScopeEveryone), findsOneWidget);
-    expect(find.text('Family'), findsOneWidget);
+    expect(find.text(AppStrings.leaderboardColumnTime), findsOneWidget);
+    expect(find.byKey(const Key('leaderboard_manage_leagues')), findsNothing);
+  });
+
+  testWidgets('a 390×800 phone shows at least nine rows', (tester) async {
+    await pump(tester, size: const Size(390, 800));
+    board.add([
+      for (var i = 1; i <= 20; i++)
+        LeaderboardEntry(
+          uid: 'p$i',
+          displayName: 'Player $i',
+          timeSeconds: 40 + i,
+          updatedAt: DateTime.utc(2026, 10, 15),
+          rank: i,
+        ),
+    ]);
+    await tester.pumpAndSettle();
+
+    // Above the 88px nav dock.
+    expect(tester.getRect(find.text('Player 9')).bottom, lessThan(800 - 88));
   });
 
   testWidgets('a past day loads that day’s board', (tester) async {
@@ -178,38 +215,55 @@ void main() {
     board.add([_ada]);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text(AppStrings.leaderboardYesterday));
-    await tester.pump();
-
     final yesterday = leaderboardDayId(
       DateTime.now().subtract(const Duration(days: 1)),
     );
+    await openBoardSheet(tester);
+    await tester.tap(find.byKey(Key('leaderboard_day_$yesterday')));
+    await settle(tester);
+
     expect(calls.last.dayId, yesterday);
+    expect(find.text(AppStrings.leaderboardYesterday), findsOneWidget);
 
     board.add(const []);
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.leaderboardPastDayEmpty), findsOneWidget);
   });
 
-  testWidgets('the weekly tab hides the day strip and shows days and total', (
-    tester,
-  ) async {
+  testWidgets('This week shows days and total columns', (tester) async {
     await pump(tester);
+    await openBoardSheet(tester);
     await tester.tap(find.text(AppStrings.leaderboardThisWeek));
-    await tester.pump();
+    await settle(tester);
     expect(calls.last.period, LeaderboardPeriod.weekly);
 
     board.add([_bo]);
     await tester.pumpAndSettle();
 
-    expect(find.text(AppStrings.leaderboardToday), findsNothing);
-    expect(find.text('5 days · 6:12'), findsOneWidget);
+    expect(find.text(AppStrings.leaderboardThisWeek), findsOneWidget);
+    expect(find.text(AppStrings.leaderboardColumnDays), findsOneWidget);
+    expect(find.text(AppStrings.leaderboardColumnTotal), findsOneWidget);
+    expect(find.text('5'), findsOneWidget);
+    expect(find.text('6:12'), findsOneWidget);
   });
 
-  testWidgets('an empty weekly tab explains debug builds', (tester) async {
+  testWidgets('All-time loads from the sheet', (tester) async {
     await pump(tester);
+    await openBoardSheet(tester);
+    await tester.tap(find.text(AppStrings.leaderboardAllTime));
+    await settle(tester);
+    expect(calls.last.period, LeaderboardPeriod.allTime);
+
+    board.add([_ada]);
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.leaderboardColumnBest), findsOneWidget);
+  });
+
+  testWidgets('an empty weekly board explains debug builds', (tester) async {
+    await pump(tester);
+    await openBoardSheet(tester);
     await tester.tap(find.text(AppStrings.leaderboardThisWeek));
-    await tester.pump();
+    await settle(tester);
     board.add(const []);
     await tester.pumpAndSettle();
 
@@ -248,18 +302,21 @@ void main() {
     board.add([_ada]);
     await tester.pumpAndSettle();
 
+    await openScopeSheet(tester);
     await tester.tap(find.text('Family'));
-    await tester.pump();
+    await settle(tester);
 
     expect(memberCalls.last, ['u1', 'u2']);
+    expect(find.text('Family'), findsOneWidget);
   });
 
-  testWidgets('the Leagues chip opens the leagues screen', (tester) async {
+  testWidgets('Manage leagues opens the leagues screen', (tester) async {
     await pump(tester);
     board.add(const []);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('leaderboard_manage_leagues')));
+    await openScopeSheet(tester);
+    await tester.tap(find.text(AppStrings.leaderboardManageLeagues));
     await tester.pumpAndSettle();
 
     expect(find.text('leagues screen'), findsOneWidget);

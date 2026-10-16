@@ -584,9 +584,12 @@ void main() {
     );
     await tester.pump();
 
+    await tester.tap(find.byKey(const Key('leaderboard_board_pill')));
+    // Not pumpAndSettle: the loading board's shimmer never settles.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text(AppStrings.leaderboardAllTime), findsNothing);
-    // Daily and This week stay: the weekly board isn't behind the flag.
-    expect(find.text(AppStrings.leaderboardDaily), findsOneWidget);
+    // This week stays: the weekly board isn't behind the flag.
     expect(find.text(AppStrings.leaderboardThisWeek), findsOneWidget);
     expect(periods, isNotEmpty);
     expect(periods, everyElement(LeaderboardPeriod.daily));

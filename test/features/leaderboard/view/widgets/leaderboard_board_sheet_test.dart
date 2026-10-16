@@ -100,11 +100,11 @@ void main() {
     await open(tester, dayId: '2026-10-13');
     expect(
       tester.getSemantics(find.byKey(const Key('leaderboard_day_2026-10-13'))),
-      containsSemantics(isSelected: true, isButton: true),
+      isSemantics(isSelected: true, isButton: true),
     );
     expect(
       tester.getSemantics(find.byKey(const Key('leaderboard_day_2026-10-17'))),
-      containsSemantics(isSelected: false),
+      isSemantics(isSelected: false),
     );
   });
 }
