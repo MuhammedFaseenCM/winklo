@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/repositories/analytics_repository.dart';
+import '../../features/achievements/view/badges_screen.dart';
 import '../../features/auth/cubit/auth_cubit.dart';
 import '../../features/auth/cubit/auth_state.dart';
 import '../../features/category_race/view/category_race_screen.dart';
@@ -124,6 +125,11 @@ GoRouter buildRouter({
                     path: 'stats',
                     name: 'profile_stats',
                     builder: (context, state) => const StatsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'badges',
+                    name: 'profile_badges',
+                    builder: (context, state) => const BadgesScreen(),
                   ),
                   GoRoute(
                     path: 'settings',
