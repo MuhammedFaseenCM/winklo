@@ -97,7 +97,7 @@ Errors stay best-effort: nothing blocks the UI; a failed write does not advance 
 ### App opens page (`/activity`, nav: Overview → App opens)
 
 - Header: title, description, refresh indicator, date stepper (`?day=`, default browser-local today, max today).
-- **14-day strip**: stacked bars (signed in / guests) ending at the selected day. Clicking a bar selects its day.
+- **14-day strip**: stacked bars (signed in / guests) for the 14 days ending today (or ending at the selected day when it is older). Clicking a bar selects its day.
 - **Stats**: Signed in, Guests, Opens (sum of `opens`; notes how many rows came from builds that don't count), Platforms (android / iOS / other).
 - **Tabs** `?who=users|guests`:
   - Signed in: player (avatar, name, email, Admin badge), platform, version, opens, first open, last open. Search `?q=` on name, email, uid. Row → `/platform?q=<email or uid>`.
