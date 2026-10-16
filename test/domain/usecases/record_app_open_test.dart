@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/domain/entities/app_user.dart';
+import 'package:winklo/domain/entities/recorded_open.dart';
 import 'package:winklo/domain/repositories/activity_repository.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
@@ -12,24 +13,41 @@ class _MockActivity extends Mock implements ActivityRepository {}
 
 class _MockAnalytics extends Mock implements AnalyticsRepository {}
 
+const _install = '3f2b8c1e-9a4d-4e7f-b123-0c9d8e7f6a5b';
+const _user = AppUser(uid: 'u1', displayName: 'A');
+
 void main() {
   late _MockAuth auth;
   late _MockActivity activity;
   late _MockAnalytics analytics;
   late RecordAppOpen usecase;
 
+  setUpAll(() {
+    registerFallbackValue(RecordedOpen(at: DateTime(2026), key: ''));
+  });
+
   setUp(() {
     auth = _MockAuth();
     activity = _MockActivity();
     analytics = _MockAnalytics();
     usecase = RecordAppOpen(auth, activity, analytics);
+    when(() => activity.installId()).thenAnswer((_) async => _install);
+    when(() => activity.lastRecorded()).thenReturn(null);
     when(() => activity.markRecorded(any())).thenAnswer((_) async {});
     when(
       () => activity.recordOpen(
         uid: any(named: 'uid'),
+        installId: any(named: 'installId'),
         dayId: any(named: 'dayId'),
         platform: any(named: 'platform'),
         at: any(named: 'at'),
+      ),
+    ).thenAnswer((_) async => true);
+    when(
+      () => activity.recordGuestOpen(
+        installId: any(named: 'installId'),
+        dayId: any(named: 'dayId'),
+        platform: any(named: 'platform'),
       ),
     ).thenAnswer((_) async => true);
     when(
@@ -37,74 +55,129 @@ void main() {
     ).thenAnswer((_) async {});
   });
 
-  test('no-ops when signed out', () async {
-    when(() => auth.currentUser).thenReturn(null);
-    await usecase(now: DateTime(2026, 10, 5, 12));
+  void verifyNothingWritten() {
     verifyNever(
       () => activity.recordOpen(
         uid: any(named: 'uid'),
+        installId: any(named: 'installId'),
         dayId: any(named: 'dayId'),
         platform: any(named: 'platform'),
         at: any(named: 'at'),
       ),
     );
-  });
+    verifyNever(
+      () => activity.recordGuestOpen(
+        installId: any(named: 'installId'),
+        dayId: any(named: 'dayId'),
+        platform: any(named: 'platform'),
+      ),
+    );
+    verifyNever(() => activity.markRecorded(any()));
+  }
 
-  test('records open and analytics when signed in', () async {
-    when(
-      () => auth.currentUser,
-    ).thenReturn(const AppUser(uid: 'u1', displayName: 'A'));
-    when(() => activity.lastRecordedAt()).thenReturn(null);
+  test('records a signed-in open with the install ID', () async {
+    when(() => auth.currentUser).thenReturn(_user);
+    final now = DateTime(2026, 10, 5, 12);
 
-    final now = DateTime(2026, 10, 5, 12, 0);
     await usecase(now: now, platform: 'android');
 
     verify(
       () => activity.recordOpen(
         uid: 'u1',
+        installId: _install,
         dayId: '2026-10-05',
         platform: 'android',
         at: now,
       ),
     ).called(1);
-    verify(() => activity.markRecorded(now)).called(1);
+    verify(
+      () => activity.markRecorded(RecordedOpen(at: now, key: 'u:u1')),
+    ).called(1);
     verify(() => analytics.logAppOpen(platform: 'android')).called(1);
   });
 
-  test('skips when within 5 minute throttle', () async {
-    when(
-      () => auth.currentUser,
-    ).thenReturn(const AppUser(uid: 'u1', displayName: 'A'));
-    final now = DateTime(2026, 10, 5, 12, 0);
-    when(
-      () => activity.lastRecordedAt(),
-    ).thenReturn(now.subtract(const Duration(minutes: 2)));
+  test('records a guest open through the guest path', () async {
+    when(() => auth.currentUser).thenReturn(null);
+    final now = DateTime(2026, 10, 5, 12);
+
+    await usecase(now: now, platform: 'ios');
+
+    verify(
+      () => activity.recordGuestOpen(
+        installId: _install,
+        dayId: '2026-10-05',
+        platform: 'ios',
+      ),
+    ).called(1);
+    verify(
+      () => activity.markRecorded(RecordedOpen(at: now, key: 'g:$_install')),
+    ).called(1);
+    verify(() => analytics.logAppOpen(platform: 'ios')).called(1);
+  });
+
+  test('skips the same identity within 5 minutes on the same day', () async {
+    when(() => auth.currentUser).thenReturn(_user);
+    final now = DateTime(2026, 10, 5, 12);
+    when(() => activity.lastRecorded()).thenReturn(
+      RecordedOpen(at: now.subtract(const Duration(minutes: 2)), key: 'u:u1'),
+    );
 
     await usecase(now: now, platform: 'android');
 
-    verifyNever(
-      () => activity.recordOpen(
-        uid: any(named: 'uid'),
-        dayId: any(named: 'dayId'),
-        platform: any(named: 'platform'),
-        at: any(named: 'at'),
-      ),
-    );
-    verifyNever(() => activity.markRecorded(any()));
+    verifyNothingWritten();
     verifyNever(() => analytics.logAppOpen(platform: any(named: 'platform')));
   });
 
-  test('does not throttle or log FA when Firestore write is skipped', () async {
-    when(
-      () => auth.currentUser,
-    ).thenReturn(const AppUser(uid: 'u1', displayName: 'A'));
-    when(() => activity.lastRecordedAt()).thenReturn(null);
-    when(
+  test('a sign-in right after a guest open is recorded', () async {
+    when(() => auth.currentUser).thenReturn(_user);
+    final now = DateTime(2026, 10, 5, 12);
+    when(() => activity.lastRecorded()).thenReturn(
+      RecordedOpen(
+        at: now.subtract(const Duration(minutes: 1)),
+        key: 'g:$_install',
+      ),
+    );
+
+    await usecase(now: now, platform: 'android');
+
+    verify(
       () => activity.recordOpen(
-        uid: any(named: 'uid'),
+        uid: 'u1',
+        installId: _install,
+        dayId: '2026-10-05',
+        platform: 'android',
+        at: now,
+      ),
+    ).called(1);
+  });
+
+  test('an open just past midnight counts for the new day', () async {
+    when(() => auth.currentUser).thenReturn(_user);
+    final now = DateTime(2026, 10, 6, 0, 1);
+    when(
+      () => activity.lastRecorded(),
+    ).thenReturn(RecordedOpen(at: DateTime(2026, 10, 5, 23, 58), key: 'u:u1'));
+
+    await usecase(now: now, platform: 'android');
+
+    verify(
+      () => activity.recordOpen(
+        uid: 'u1',
+        installId: _install,
+        dayId: '2026-10-06',
+        platform: 'android',
+        at: now,
+      ),
+    ).called(1);
+  });
+
+  test('does not throttle or log when the write was skipped', () async {
+    when(() => auth.currentUser).thenReturn(null);
+    when(
+      () => activity.recordGuestOpen(
+        installId: any(named: 'installId'),
         dayId: any(named: 'dayId'),
         platform: any(named: 'platform'),
-        at: any(named: 'at'),
       ),
     ).thenAnswer((_) async => false);
 
@@ -112,5 +185,20 @@ void main() {
 
     verifyNever(() => activity.markRecorded(any()));
     verifyNever(() => analytics.logAppOpen(platform: any(named: 'platform')));
+  });
+
+  test('a failed write is swallowed and not throttled', () async {
+    when(() => auth.currentUser).thenReturn(null);
+    when(
+      () => activity.recordGuestOpen(
+        installId: any(named: 'installId'),
+        dayId: any(named: 'dayId'),
+        platform: any(named: 'platform'),
+      ),
+    ).thenThrow(Exception('offline'));
+
+    await usecase(now: DateTime(2026, 10, 5, 12), platform: 'ios');
+
+    verifyNever(() => activity.markRecorded(any()));
   });
 }
