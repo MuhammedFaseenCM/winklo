@@ -20,7 +20,6 @@ abstract interface class AppText {
   String get zipClear;
   String get zipReplay;
   String get zipHint;
-  String zipHintWithCount(int n);
   String get zipHowToPlayTitle;
   String get zipTutorialStart;
   String get zipTutorialFinish;
@@ -69,7 +68,6 @@ abstract interface class AppText {
   String get playTodaysPathWords;
   String get pathWordsUndo;
   String get pathWordsHint;
-  String pathWordsHintWithCount(int n);
   String get pathWordsHowToPlayTitle;
   String get pathWordsTutorialMatchList;
   String get pathWordsTutorialFindEveryWord;
@@ -94,7 +92,6 @@ abstract interface class AppText {
   String get sudokuTagline;
   String get playTodaysSudoku;
   String get sudokuHint;
-  String sudokuHintWithCount(int n);
   String get sudokuHintUnitRegion;
   String get sudokuHintUnitRow;
   String get sudokuHintUnitColumn;
@@ -133,6 +130,7 @@ abstract interface class AppText {
   String clearedIn(String time);
   String rankToday(int rank);
   String get resultsTimeLabel;
+  String resultsHintPenalty(int seconds);
   String get resultsPointsLabel;
   String saveTimeToBoard(String timeLabel);
   String get saveTimeSignInTitle;
@@ -457,6 +455,7 @@ abstract interface class AppText {
   String get practiceRunLabel;
   String get practiceNewBoard;
   String get hintUnlimited;
+  String hintWithCost(int seconds);
   String localBest(String time);
   String archiveBest(String time);
   String get newLocalBest;

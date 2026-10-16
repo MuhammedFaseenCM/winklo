@@ -14,12 +14,18 @@ import 'package:winklo/features/results/results_screen.dart';
 import '../../helpers/mock_analytics_repository.dart';
 import '../../helpers/screenshot.dart';
 
-ResultsArgs _archiveArgs({bool improved = false, int best = 75}) => ResultsArgs(
+ResultsArgs _archiveArgs({
+  bool improved = false,
+  int best = 75,
+  int hintPenaltySeconds = 0,
+}) => ResultsArgs(
   title: AppStrings.zipClearedTitle,
   subtitle: '',
   timeSeconds: 75,
   improved: improved,
   gameId: GameIds.zip,
+  usedHints: hintPenaltySeconds > 0,
+  hintPenaltySeconds: hintPenaltySeconds,
   day: DateTime(2026, 10, 12),
   local: LocalResultInfo(
     kind: LocalResultKind.archive,
@@ -94,6 +100,13 @@ void main() {
     expect(find.text('Archive · 12 Oct'), findsOneWidget);
     expect(find.text(AppStrings.archiveBest('1:15')), findsOneWidget);
     expect(find.text(AppStrings.newLocalBest), findsOneWidget);
+    expect(find.textContaining('from hints'), findsNothing);
+  });
+
+  testWidgets('says how much time hints added to the time', (tester) async {
+    await pump(tester, _archiveArgs(hintPenaltySeconds: 30));
+    expect(find.text('1:15'), findsOneWidget);
+    expect(find.text(AppStrings.resultsHintPenalty(30)), findsOneWidget);
   });
 
   testWidgets('has no board, streak, share or achievements', (tester) async {

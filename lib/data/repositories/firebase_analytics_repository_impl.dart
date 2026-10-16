@@ -89,12 +89,17 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
   @override
   Future<void> logHintUsed({
     required String gameId,
-    required int hintsRemaining,
+    required int hintsUsed,
+    required int penaltySeconds,
   }) {
     return _safe(
       (a) => a.logEvent(
         name: 'hint_used',
-        parameters: {'game_id': gameId, 'hints_remaining': hintsRemaining},
+        parameters: {
+          'game_id': gameId,
+          'hints_used': hintsUsed,
+          'penalty_seconds': penaltySeconds,
+        },
       ),
     );
   }

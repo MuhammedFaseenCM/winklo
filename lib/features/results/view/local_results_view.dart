@@ -13,6 +13,7 @@ import '../../path_words/view/widgets/path_words_results_panel.dart';
 import '../results_args.dart';
 import 'counting_play_time.dart';
 import 'ember_burst.dart';
+import 'hint_penalty_line.dart';
 
 /// Results of a run off the dailies (archive, practice, bonus games): the
 /// time (or score), what kind of run it was, and the local best. There is
@@ -257,6 +258,10 @@ class _LocalResultCardState extends State<_LocalResultCard> {
               letterSpacing: latinTracking(2.5),
             ),
           ),
+          if (score == null && args.hintPenaltySeconds > 0) ...[
+            const SizedBox(height: 6),
+            HintPenaltyLine(seconds: args.hintPenaltySeconds),
+          ],
           if (args.improved) ...[
             const SizedBox(height: 12),
             ZipHudPill(

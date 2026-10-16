@@ -1,4 +1,5 @@
 import '../../domain/game_ids.dart';
+import '../../domain/hint_penalty.dart';
 import '../../domain/habit/weekly_recap.dart';
 import 'app_text.dart';
 import 'play_time_format.dart';
@@ -55,9 +56,6 @@ final class AppTextMl implements AppText {
 
   @override
   String get zipHint => 'സൂചന';
-
-  @override
-  String zipHintWithCount(int n) => 'സൂചന ($n)';
 
   @override
   String get zipHowToPlayTitle => 'എങ്ങനെ കളിക്കാം';
@@ -174,9 +172,6 @@ final class AppTextMl implements AppText {
   String get pathWordsHint => 'സൂചന';
 
   @override
-  String pathWordsHintWithCount(int n) => 'സൂചന ($n)';
-
-  @override
   String get pathWordsHowToPlayTitle => 'എങ്ങനെ കളിക്കാം';
 
   @override
@@ -249,9 +244,6 @@ final class AppTextMl implements AppText {
   @override
   String get sudokuHint => 'സൂചന';
 
-  @override
-  String sudokuHintWithCount(int n) => 'സൂചന ($n)';
-
   // Rows are വരി and columns നിര, as in Kerala school maths.
   @override
   String get sudokuHintUnitRegion => 'ബോക്സ്';
@@ -305,9 +297,11 @@ final class AppTextMl implements AppText {
       'ഓരോ വരിയിലും നിരയിലും 2×3 ബോക്സിലും 1–6 വരെയുള്ള ഓരോ അക്കവും '
       'ഒരിക്കൽ മാത്രം വരുന്ന വിധം ഒഴിഞ്ഞ കളങ്ങൾ നിറയ്ക്കൂ. ഏത് അക്കവും '
       'ഇടാം; നിറഞ്ഞ ഒരു വരിയോ നിരയോ ബോക്സോ തെറ്റാണെങ്കിൽ അത് തിളങ്ങും. '
-      'കുറിപ്പുകൾക്ക് പരിധിയില്ല. ഓരോ പസിലിനും 3 സൂചനകൾ കിട്ടും: ഓരോന്നും '
-      'ഒരു തെറ്റായ അക്കം കാണിക്കും, അല്ലെങ്കിൽ അടുത്ത പടി വിശദീകരിക്കും; '
-      'കളം നിങ്ങൾക്കായി നിറയ്ക്കില്ല.';
+      'കുറിപ്പുകൾക്കും സൂചനകൾക്കും പരിധിയില്ല, പക്ഷേ ഓരോ സൂചനയും സമയം '
+      'കൂട്ടും: +${HintPenalty.stepSeconds}s, പിന്നെ '
+      '+${HintPenalty.stepSeconds * 2}s, അങ്ങനെ +${HintPenalty.maxSeconds}s '
+      'വരെ. ഓരോ സൂചനയും ഒരു തെറ്റായ അക്കം കാണിക്കും, അല്ലെങ്കിൽ അടുത്ത പടി '
+      'വിശദീകരിക്കും; കളം നിങ്ങൾക്കായി നിറയ്ക്കില്ല.';
 
   @override
   String get sudokuHowToPlayGotIt => 'മനസ്സിലായി';
@@ -386,6 +380,9 @@ final class AppTextMl implements AppText {
 
   @override
   String get resultsTimeLabel => 'സമയം';
+
+  @override
+  String resultsHintPenalty(int seconds) => 'സൂചനകളുടെ +${seconds}s ഉൾപ്പെടെ';
 
   @override
   String get resultsPointsLabel => 'പോയിന്റ്';
@@ -1346,6 +1343,9 @@ final class AppTextMl implements AppText {
 
   @override
   String get hintUnlimited => 'സൂചന';
+
+  @override
+  String hintWithCost(int seconds) => 'സൂചന +${seconds}s';
 
   @override
   String localBest(String time) => 'മികച്ചത് $time';

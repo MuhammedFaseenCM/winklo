@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../domain/hint_penalty.dart';
 import '../../domain/play_mode.dart';
 import '../../domain/play_mode_hints.dart';
 import '../../domain/repositories/hint_quota_repository.dart';
@@ -21,13 +22,12 @@ extension PlayModeReads on BuildContext {
       mode.isDaily ? null : read<PlayModeRecordRepository>();
 }
 
-/// The hint button's label: "Hint (2)", or plain "Hint" in practice, where
-/// hints never run out.
-String hintLabelFor(
-  PlayMode mode,
-  int remaining,
-  String Function(int remaining) withCount,
-) => mode.isPractice ? AppStrings.hintUnlimited : withCount(remaining);
+/// The hint button's label: what the next hint costs ("Hint +20s"), or
+/// plain "Hint" in practice, where hints are free.
+String hintLabelFor(PlayMode mode, {required int hintsUsed}) {
+  final cost = HintPenalty.nextSeconds(mode, hintsUsed: hintsUsed);
+  return cost > 0 ? AppStrings.hintWithCost(cost) : AppStrings.hintUnlimited;
+}
 
 /// "Archive · 9 Oct" or "Practice" under a game's header, so a run off the
 /// dailies never looks like today's puzzle. Practice adds New board.

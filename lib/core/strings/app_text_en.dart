@@ -1,4 +1,5 @@
 import '../../domain/game_ids.dart';
+import '../../domain/hint_penalty.dart';
 import '../../domain/habit/weekly_recap.dart';
 import 'app_text.dart';
 import 'play_time_format.dart';
@@ -49,9 +50,6 @@ final class AppTextEn implements AppText {
 
   @override
   String get zipHint => 'Hint';
-
-  @override
-  String zipHintWithCount(int n) => 'Hint ($n)';
 
   @override
   String get zipHowToPlayTitle => 'How to play';
@@ -168,9 +166,6 @@ final class AppTextEn implements AppText {
   String get pathWordsHint => 'Hint';
 
   @override
-  String pathWordsHintWithCount(int n) => 'Hint ($n)';
-
-  @override
   String get pathWordsHowToPlayTitle => 'How to play';
 
   @override
@@ -243,9 +238,6 @@ final class AppTextEn implements AppText {
   String get sudokuHint => 'Hint';
 
   @override
-  String sudokuHintWithCount(int n) => 'Hint ($n)';
-
-  @override
   String get sudokuHintUnitRegion => 'region';
 
   @override
@@ -283,7 +275,7 @@ final class AppTextEn implements AppText {
 
   @override
   String get sudokuHowToPlayBody =>
-      'Fill every empty cell with 1–6 so each row, column and 2×3 box has every digit once. You can enter any digit; a full row, column or box that’s wrong lights up. Notes are unlimited. You get 3 hints per puzzle: each points out a wrong digit or explains the next step, and never fills a cell for you.';
+      'Fill every empty cell with 1–6 so each row, column and 2×3 box has every digit once. You can enter any digit; a full row, column or box that’s wrong lights up. Notes are unlimited, and so are hints, but each hint adds time: +${HintPenalty.stepSeconds}s, then +${HintPenalty.stepSeconds * 2}s, and so on up to +${HintPenalty.maxSeconds}s. A hint points out a wrong digit or explains the next step, and never fills a cell for you.';
 
   @override
   String get sudokuHowToPlayGotIt => 'Got it';
@@ -357,6 +349,9 @@ final class AppTextEn implements AppText {
 
   @override
   String get resultsTimeLabel => 'time';
+
+  @override
+  String resultsHintPenalty(int seconds) => 'Includes +${seconds}s from hints';
 
   @override
   String get resultsPointsLabel => 'points';
@@ -1289,6 +1284,9 @@ final class AppTextEn implements AppText {
 
   @override
   String get hintUnlimited => 'Hint';
+
+  @override
+  String hintWithCost(int seconds) => 'Hint +${seconds}s';
 
   @override
   String localBest(String time) => 'Best $time';

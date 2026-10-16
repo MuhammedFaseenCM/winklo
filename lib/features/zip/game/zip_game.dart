@@ -9,7 +9,6 @@ import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_id.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/zip_level.dart';
-import '../../../domain/repositories/hint_quota_repository.dart';
 import '../logic/path_validator.dart';
 import '../logic/zip_hints.dart';
 import '../logic/zip_rule_tip.dart';
@@ -32,10 +31,8 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     this.onSfx,
     this.onHaptic,
     this.readOnly = false,
-    int initialHintsRemaining = HintQuotaRepository.cap,
     this._initialPath = const [],
-  }) : _validator = PathValidator(level),
-       hintsRemaining = initialHintsRemaining;
+  }) : _validator = PathValidator(level);
 
   final ZipLevel level;
   final ZipWinCallback onWin;
@@ -57,7 +54,6 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
 
   /// True after [onTapDown] armed a stroke; drag may cancel the tap later.
   bool _armedFromTapDown = false;
-  int hintsRemaining;
   int hintRevealLength = 0;
   int hintFromIndex = 0;
   DateTime? _hintFlashStartedAt;
@@ -217,7 +213,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   );
 
   bool get canHint {
-    if (_won || readOnly || hintsRemaining <= 0) return false;
+    if (_won || readOnly) return false;
     return ZipHints.canReveal(
       solution: level.solution,
       path: path,

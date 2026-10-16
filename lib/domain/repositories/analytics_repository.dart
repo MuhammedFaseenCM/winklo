@@ -20,9 +20,12 @@ abstract class AnalyticsRepository {
     bool? usedHints,
   });
 
+  /// [hintsUsed] counts this hint; [penaltySeconds] is the time it added
+  /// (0 in practice).
   Future<void> logHintUsed({
     required String gameId,
-    required int hintsRemaining,
+    required int hintsUsed,
+    required int penaltySeconds,
   });
 
   Future<void> logGameReset({required String gameId});

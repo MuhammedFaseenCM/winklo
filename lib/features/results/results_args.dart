@@ -18,6 +18,7 @@ class ResultsArgs {
     this.gameId,
     this.usedHints,
     this.hadMistakes,
+    this.hintPenaltySeconds = 0,
     this.day,
     this.leaderboardProof,
     this.pathWords,
@@ -40,6 +41,9 @@ class ResultsArgs {
   /// Session flags for soft-claim leaderboard sync. Null = unknown.
   final bool? usedHints;
   final bool? hadMistakes;
+
+  /// Seconds the run's hints added to [timeSeconds] (already included).
+  final int hintPenaltySeconds;
 
   /// The daily this run cleared, for the share text.
   final DateTime? day;

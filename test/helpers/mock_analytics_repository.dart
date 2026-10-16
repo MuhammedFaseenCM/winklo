@@ -30,7 +30,8 @@ void stubAnalytics(MockAnalyticsRepository analytics) {
   when(
     () => analytics.logHintUsed(
       gameId: any(named: 'gameId'),
-      hintsRemaining: any(named: 'hintsRemaining'),
+      hintsUsed: any(named: 'hintsUsed'),
+      penaltySeconds: any(named: 'penaltySeconds'),
     ),
   ).thenAnswer((_) async {});
   when(

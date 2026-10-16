@@ -231,8 +231,10 @@ void main() {
       now = now.add(const Duration(seconds: 81));
       final done = await solve(bloc);
       expectNoDailyState();
-      expect(records.bestTimeSeconds('archive_sudoku_20261012'), 81);
+      // 81s played plus the hint's 10s.
+      expect(records.bestTimeSeconds('archive_sudoku_20261012'), 91);
       final args = done.resultsExtra!;
+      expect(args.hintPenaltySeconds, 10);
       expect(args.local!.kind, LocalResultKind.archive);
       expect(args.local!.label, 'Archive · 12 Oct');
       expect(args.currentStreak, isNull);
@@ -240,17 +242,19 @@ void main() {
       await bloc.close();
     });
 
-    test('spends 3 archive hints per run, never the daily quota', () async {
+    test('counts archive hints per run and charges them, never the daily '
+        'count', () async {
       await records.setHintsUsed(GameIds.sudoku, 'archive_20261012', 3);
       final bloc = buildBloc(PlayMode.archive(archiveDay));
       bloc.add(const SudokuEvent.started());
       final state = await ready(bloc);
-      // A fresh run starts with a full set.
-      expect(state.hintsRemaining, 3);
+      // A fresh run starts with no hints spent and no hint time.
+      expect(state.hintsUsed, 0);
+      expect(state.elapsedMs, 0);
       bloc.add(const SudokuEvent.cellSelected(Cell(0, 0)));
       bloc.add(const SudokuEvent.hint());
-      final after = await until(bloc, (s) => s.hintsRemaining == 2);
-      expect(after.hintsRemaining, 2);
+      final after = await until(bloc, (s) => s.hintsUsed == 1);
+      expect(after.elapsedMs, 10000);
       expect(records.hintsUsed(GameIds.sudoku, 'archive_20261012'), 1);
       verifyZeroInteractions(dailyHints);
       await bloc.close();
@@ -307,9 +311,14 @@ void main() {
         final state = await ready(bloc);
         expect(state.puzzle!.id, 'practice_4');
         expect(fetched, isEmpty);
-        expect(state.hintsRemaining, greaterThan(100));
+        bloc.add(const SudokuEvent.cellSelected(Cell(0, 0)));
+        bloc.add(const SudokuEvent.hint());
+        // Practice hints are free.
+        final hinted = await until(bloc, (s) => s.hintsUsed == 1);
+        expect(hinted.elapsedMs, 0);
         now = now.add(const Duration(seconds: 52));
         final done = await solve(bloc);
+        expect(done.resultsExtra!.hintPenaltySeconds, 0);
         expectNoDailyState();
         expect(records.bestTimeSeconds('practice_sudoku'), 52);
         expect(

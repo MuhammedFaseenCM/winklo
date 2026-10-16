@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
 import 'package:winklo/domain/game_ids.dart';
@@ -86,8 +87,10 @@ void main() {
   late _MemoryInProgressRuns drafts;
   late DateTime now;
   late List<DateTime> fetchedDays;
+  late UnlimitedHintQuotaRepositoryImpl practiceHints;
 
   setUp(() async {
+    practiceHints = UnlimitedHintQuotaRepositoryImpl();
     submitScore = _MockSubmitScore();
     submitLeaderboardTime = _MockSubmitLeaderboardTime();
     recordDailyClear = _MockRecordDailyClear();
@@ -167,6 +170,9 @@ void main() {
       isNewPersonalBest: isNewPersonalBest,
       getClearBoard: getClearBoard,
       analytics: analytics,
+      hintQuota: mode.isArchive
+          ? ArchiveHintQuotaRepositoryImpl(records)
+          : practiceHints,
       clockNow: () => now,
       wait: (_) async {},
       newPracticeSeed: newSeed,
@@ -280,12 +286,30 @@ void main() {
       await again.close();
     });
 
-    test('a fresh run gets 3 hints again', () async {
+    test('a fresh run starts with no hints spent and no hint time', () async {
       await records.setHintsUsed(GameIds.zip, 'archive_20261012', 3);
       final bloc = buildBloc(PlayMode.archive(archiveDay));
       bloc.add(const ZipEvent.started());
-      await ready(bloc);
+      final state = await ready(bloc);
       expect(records.hintsUsed(GameIds.zip, 'archive_20261012'), 0);
+      expect(state.hintsUsed, 0);
+      expect(state.elapsedMs, 0);
+      await bloc.close();
+    });
+
+    test('archive hints cost time and count per run', () async {
+      final bloc = buildBloc(PlayMode.archive(archiveDay));
+      bloc.add(const ZipEvent.started());
+      await ready(bloc);
+      bloc.add(const ZipEvent.hint());
+      await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+      expect(records.hintsUsed(GameIds.zip, 'archive_20261012'), 1);
+      now = now.add(const Duration(seconds: 30));
+      final done = await finish(bloc);
+      expect(done.timeSeconds, 40);
+      expect(done.resultsExtra!.hintPenaltySeconds, 10);
+      expect(records.bestTimeSeconds('archive_zip_20261012'), 40);
+      expectNoDailyState();
       await bloc.close();
     });
 
@@ -325,6 +349,20 @@ void main() {
         await bloc.close();
       },
     );
+
+    test('hints are free', () async {
+      final bloc = buildBloc(PlayMode.practice, newSeed: () => 7);
+      bloc.add(const ZipEvent.started());
+      await ready(bloc);
+      bloc.add(const ZipEvent.hint());
+      final hinted = await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+      expect(hinted.elapsedMs, 0);
+      now = now.add(const Duration(seconds: 20));
+      final done = await finish(bloc);
+      expect(done.timeSeconds, 20);
+      expect(done.resultsExtra!.hintPenaltySeconds, 0);
+      await bloc.close();
+    });
 
     test('resumes its draft board from the stored seed', () async {
       var seed = 11;

@@ -49,29 +49,24 @@ class _MockSfx extends Mock implements SfxService {}
 class _MockHaptics extends Mock implements HapticsService {}
 
 class _FakeHintQuota implements HintQuotaRepository {
-  _FakeHintQuota(this._remaining);
+  _FakeHintQuota([this._used = 0]);
 
-  int _remaining;
+  int _used;
 
   /// Play periods the bloc read or spent hints for, in order.
   final playIds = <String>[];
 
   @override
-  int remaining(String gameId, String playId) {
+  Future<int> consume(String gameId, String playId) async {
     playIds.add(playId);
-    return _remaining;
+    return ++_used;
   }
 
   @override
-  Future<int> tryConsume(String gameId, String playId) async {
+  int usedFor(String gameId, String playId) {
     playIds.add(playId);
-    if (_remaining <= 0) return 0;
-    _remaining--;
-    return _remaining;
+    return _used;
   }
-
-  @override
-  int usedFor(String gameId, String playId) => 0;
 
   @override
   Future<bool> restoreUsed(String gameId, String playId, int used) async =>
@@ -262,7 +257,7 @@ void main() {
     getBestTimeSeconds = _MockGetBestTimeSeconds();
     isNewPersonalBest = _MockIsNewPersonalBest();
     analytics = _MockAnalyticsRepository();
-    hintQuota = _FakeHintQuota(3);
+    hintQuota = _FakeHintQuota();
     waited = <Duration>[];
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
@@ -305,7 +300,8 @@ void main() {
     when(
       () => analytics.logHintUsed(
         gameId: any(named: 'gameId'),
-        hintsRemaining: any(named: 'hintsRemaining'),
+        hintsUsed: any(named: 'hintsUsed'),
+        penaltySeconds: any(named: 'penaltySeconds'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -345,7 +341,8 @@ void main() {
           .having((s) => s.status, 'status', PathWordsStatus.ready)
           .having((s) => s.puzzle?.id, 'puzzle.id', 't')
           .having((s) => s.resumedAt, 'resumedAt', isNotNull)
-          .having((s) => s.hintsRemaining, 'hintsRemaining', 3)
+          .having((s) => s.hintsUsed, 'hintsUsed', 0)
+          .having((s) => s.elapsedMs, 'elapsedMs', 0)
           .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty)
           .having((s) => s.activePath, 'activePath', isEmpty),
     ],
@@ -1374,20 +1371,22 @@ void main() {
       ]),
       isA<PathWordsState>()
           .having((s) => s.placedPaths, 'placedPaths', hasLength(1))
-          .having((s) => s.hintsRemaining, 'hintsRemaining', 3),
+          .having((s) => s.hintsUsed, 'hintsUsed', 0),
       isA<PathWordsState>()
           .having((s) => s.placedPaths, 'placedPaths', isEmpty)
-          .having((s) => s.hintsRemaining, 'hintsRemaining', 2)
+          .having((s) => s.hintsUsed, 'hintsUsed', 1)
+          .having((s) => s.elapsedMs, 'elapsedMs', 10000)
           .having((s) => s.hintRevealLength, 'hintRevealLength', 0),
       isA<PathWordsState>()
-          .having((s) => s.hintsRemaining, 'hintsRemaining', 1)
+          .having((s) => s.hintsUsed, 'hintsUsed', 2)
+          .having((s) => s.elapsedMs, 'elapsedMs', 30000)
           .having((s) => s.hintRevealLength, 'hintRevealLength', 1)
           .having((s) => s.hintFlashCell, 'hintFlashCell', const Cell(0, 0)),
     ],
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
-    'hint decrements and sets hintFlashCell',
+    'hint counts, charges +10s and sets hintFlashCell',
     build: () {
       when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
@@ -1423,10 +1422,18 @@ void main() {
         PathWordsStatus.ready,
       ),
       isA<PathWordsState>()
-          .having((s) => s.hintsRemaining, 'hintsRemaining', 2)
+          .having((s) => s.hintsUsed, 'hintsUsed', 1)
+          .having((s) => s.elapsedMs, 'elapsedMs', 10000)
           .having((s) => s.hintFlashCell, 'hintFlashCell', const Cell(0, 0))
           .having((s) => s.hintRevealLength, 'hintRevealLength', 1),
     ],
+    verify: (_) => verify(
+      () => analytics.logHintUsed(
+        gameId: GameIds.pathWords,
+        hintsUsed: 1,
+        penaltySeconds: 10,
+      ),
+    ).called(1),
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
@@ -1596,7 +1603,7 @@ void main() {
       isA<PathWordsState>()
           .having((s) => s.completedTargetIds, 'completedTargetIds', isEmpty)
           .having((s) => s.activePath, 'activePath', isEmpty)
-          .having((s) => s.hintsRemaining, 'hintsRemaining', 3)
+          .having((s) => s.hintsUsed, 'hintsUsed', 0)
           .having(
             (s) => s.resumedAt,
             'resumedAt',
@@ -1606,12 +1613,12 @@ void main() {
   );
 
   blocTest<PathWordsBloc, PathWordsState>(
-    'reset after two hint consumes leaves remaining at 1',
+    'reset after two hints keeps their count and time',
     build: () {
       when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
         (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
       );
-      return buildBloc(quota: _FakeHintQuota(3));
+      return buildBloc(quota: _FakeHintQuota());
     },
     act: (b) async {
       b.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
@@ -1623,7 +1630,8 @@ void main() {
       b.add(const PathWordsEvent.reset());
     },
     verify: (bloc) {
-      expect(bloc.state.hintsRemaining, 1);
+      expect(bloc.state.hintsUsed, 2);
+      expect(bloc.state.elapsedMs, 30000);
       expect(bloc.state.hintRevealLength, 0);
       expect(bloc.state.completedTargetIds, isEmpty);
     },
@@ -1893,6 +1901,82 @@ void main() {
     );
     expect(saved?.elapsedMs, 0);
     expect(saved?.usedHintsThisRun, isTrue);
+    await bloc.close();
+  });
+
+  test('a fresh run carries the time of hints already counted', () async {
+    // Ops replaced the board, or the run began on another device.
+    when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+      (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+    );
+    final bloc = buildBloc(quota: _FakeHintQuota(1));
+
+    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == PathWordsStatus.ready,
+    );
+
+    expect(ready.hintsUsed, 1);
+    expect(ready.elapsedMs, 10000);
+    await bloc.close();
+  });
+
+  test('a hinted clear posts its time with the hint time added', () async {
+    when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+      (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+    );
+    when(
+      () => submitScore(
+        modeKey: any(named: 'modeKey'),
+        points: any(named: 'points'),
+        timeSeconds: any(named: 'timeSeconds'),
+        usedHints: any(named: 'usedHints'),
+        hadMistakes: any(named: 'hadMistakes'),
+        bonusWords: any(named: 'bonusWords'),
+      ),
+    ).thenAnswer((_) async => true);
+    when(
+      () => recordDailyClear(gameId: GameIds.pathWords, dateId: '20260917'),
+    ).thenAnswer(
+      (_) async => const GameStreak(
+        gameId: GameIds.pathWords,
+        current: 1,
+        longest: 1,
+        lastClearedDateId: '20260917',
+      ),
+    );
+    final bloc = buildBloc(celebrationDuration: Duration.zero);
+    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+    await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+
+    bloc.add(const PathWordsEvent.hint());
+    await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+    for (final (from, to) in [
+      (const Cell(0, 0), const Cell(0, 1)),
+      (const Cell(1, 0), const Cell(1, 1)),
+    ]) {
+      bloc.add(PathWordsEvent.pointerDown(from));
+      bloc.add(PathWordsEvent.pointerEnter(to));
+      bloc.add(const PathWordsEvent.pointerUp());
+    }
+    final done = await bloc.stream.firstWhere(
+      (s) => s.status == PathWordsStatus.navigating,
+    );
+
+    expect(done.timeSeconds, 10);
+    expect(done.resultsExtra?.hintPenaltySeconds, 10);
+    verify(
+      () => submitLeaderboardTime(
+        gameId: GameIds.pathWords,
+        timeSeconds: 10,
+        usedHints: true,
+        hadMistakes: false,
+        currentStreak: 1,
+        dayId: any(named: 'dayId'),
+        playId: '20260917',
+        proof: any(named: 'proof'),
+      ),
+    ).called(1);
     await bloc.close();
   });
 

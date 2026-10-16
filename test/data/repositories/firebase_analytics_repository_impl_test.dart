@@ -22,7 +22,7 @@ void main() {
         timeSeconds: 5,
         streak: 1,
       );
-      await repo.logHintUsed(gameId: 'zip', hintsRemaining: 2);
+      await repo.logHintUsed(gameId: 'zip', hintsUsed: 2, penaltySeconds: 20);
       await repo.logGameReset(gameId: 'zip');
       await repo.logHowToPlayOpened(gameId: 'zip');
       await repo.logTutorialShown(gameId: 'zip');

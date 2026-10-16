@@ -31,7 +31,7 @@ sealed class PathWordsState with _$PathWordsState {
 
     /// Real words found that aren't targets, lower case, in the order found.
     @Default(<String>[]) List<String> bonusWords,
-    @Default(3) int hintsRemaining,
+    @Default(0) int hintsUsed,
     @Default(0) int hintRevealLength,
     @Default(false) bool usedHintsThisRun,
     @Default(0) int elapsedMs,

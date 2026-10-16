@@ -137,13 +137,13 @@ return newBoard(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( List<Cell> path)?  pathChanged,TResult Function()?  completed,TResult Function( int hintsRemaining)?  hint,TResult Function()?  reset,TResult Function()?  pauseRun,TResult Function()?  resumeRun,TResult Function()?  newBoard,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( List<Cell> path)?  pathChanged,TResult Function()?  completed,TResult Function()?  hint,TResult Function()?  reset,TResult Function()?  pauseRun,TResult Function()?  resumeRun,TResult Function()?  newBoard,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
 return started(_that.date);case ZipPathChanged() when pathChanged != null:
 return pathChanged(_that.path);case ZipCompleted() when completed != null:
 return completed();case ZipHint() when hint != null:
-return hint(_that.hintsRemaining);case ZipReset() when reset != null:
+return hint();case ZipReset() when reset != null:
 return reset();case ZipPauseRun() when pauseRun != null:
 return pauseRun();case ZipResumeRun() when resumeRun != null:
 return resumeRun();case ZipNewBoard() when newBoard != null:
@@ -165,13 +165,13 @@ return newBoard();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( List<Cell> path)  pathChanged,required TResult Function()  completed,required TResult Function( int hintsRemaining)  hint,required TResult Function()  reset,required TResult Function()  pauseRun,required TResult Function()  resumeRun,required TResult Function()  newBoard,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( List<Cell> path)  pathChanged,required TResult Function()  completed,required TResult Function()  hint,required TResult Function()  reset,required TResult Function()  pauseRun,required TResult Function()  resumeRun,required TResult Function()  newBoard,}) {final _that = this;
 switch (_that) {
 case ZipStarted():
 return started(_that.date);case ZipPathChanged():
 return pathChanged(_that.path);case ZipCompleted():
 return completed();case ZipHint():
-return hint(_that.hintsRemaining);case ZipReset():
+return hint();case ZipReset():
 return reset();case ZipPauseRun():
 return pauseRun();case ZipResumeRun():
 return resumeRun();case ZipNewBoard():
@@ -189,13 +189,13 @@ return newBoard();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( List<Cell> path)?  pathChanged,TResult? Function()?  completed,TResult? Function( int hintsRemaining)?  hint,TResult? Function()?  reset,TResult? Function()?  pauseRun,TResult? Function()?  resumeRun,TResult? Function()?  newBoard,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( List<Cell> path)?  pathChanged,TResult? Function()?  completed,TResult? Function()?  hint,TResult? Function()?  reset,TResult? Function()?  pauseRun,TResult? Function()?  resumeRun,TResult? Function()?  newBoard,}) {final _that = this;
 switch (_that) {
 case ZipStarted() when started != null:
 return started(_that.date);case ZipPathChanged() when pathChanged != null:
 return pathChanged(_that.path);case ZipCompleted() when completed != null:
 return completed();case ZipHint() when hint != null:
-return hint(_that.hintsRemaining);case ZipReset() when reset != null:
+return hint();case ZipReset() when reset != null:
 return reset();case ZipPauseRun() when pauseRun != null:
 return pauseRun();case ZipResumeRun() when resumeRun != null:
 return resumeRun();case ZipNewBoard() when newBoard != null:
@@ -381,67 +381,33 @@ String toString() {
 
 
 class ZipHint implements ZipEvent {
-  const ZipHint({required this.hintsRemaining});
+  const ZipHint();
   
 
- final  int hintsRemaining;
 
-/// Create a copy of ZipEvent
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$ZipHintCopyWith<ZipHint> get copyWith => _$ZipHintCopyWithImpl<ZipHint>(this, _$identity);
+
 
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ZipHint&&(identical(other.hintsRemaining, hintsRemaining) || other.hintsRemaining == hintsRemaining));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ZipHint);
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,hintsRemaining);
+int get hashCode => runtimeType.hashCode;
 
 @override
 String toString() {
-  return 'ZipEvent.hint(hintsRemaining: $hintsRemaining)';
+  return 'ZipEvent.hint()';
 }
 
 
 }
 
-/// @nodoc
-abstract mixin class $ZipHintCopyWith<$Res> implements $ZipEventCopyWith<$Res> {
-  factory $ZipHintCopyWith(ZipHint value, $Res Function(ZipHint) _then) = _$ZipHintCopyWithImpl;
-@useResult
-$Res call({
- int hintsRemaining
-});
 
 
-
-
-}
-/// @nodoc
-class _$ZipHintCopyWithImpl<$Res>
-    implements $ZipHintCopyWith<$Res> {
-  _$ZipHintCopyWithImpl(this._self, this._then);
-
-  final ZipHint _self;
-  final $Res Function(ZipHint) _then;
-
-/// Create a copy of ZipEvent
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? hintsRemaining = null,}) {
-  return _then(ZipHint(
-hintsRemaining: null == hintsRemaining ? _self.hintsRemaining : hintsRemaining // ignore: cast_nullable_to_non_nullable
-as int,
-  ));
-}
-
-
-}
 
 /// @nodoc
 

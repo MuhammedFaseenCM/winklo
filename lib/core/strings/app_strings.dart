@@ -46,7 +46,6 @@ abstract final class AppStrings {
   static String get zipClear => _t.zipClear;
   static String get zipReplay => _t.zipReplay;
   static String get zipHint => _t.zipHint;
-  static String zipHintWithCount(int n) => _t.zipHintWithCount(n);
   static String get zipHowToPlayTitle => _t.zipHowToPlayTitle;
   static String get zipTutorialStart => _t.zipTutorialStart;
   static String get zipTutorialFinish => _t.zipTutorialFinish;
@@ -92,7 +91,6 @@ abstract final class AppStrings {
   static String get playTodaysPathWords => _t.playTodaysPathWords;
   static String get pathWordsUndo => _t.pathWordsUndo;
   static String get pathWordsHint => _t.pathWordsHint;
-  static String pathWordsHintWithCount(int n) => _t.pathWordsHintWithCount(n);
   static String get pathWordsHowToPlayTitle => _t.pathWordsHowToPlayTitle;
   static String get pathWordsTutorialMatchList => _t.pathWordsTutorialMatchList;
   static String get pathWordsTutorialFindEveryWord =>
@@ -123,7 +121,6 @@ abstract final class AppStrings {
   static String get sudokuTagline => _t.sudokuTagline;
   static String get playTodaysSudoku => _t.playTodaysSudoku;
   static String get sudokuHint => _t.sudokuHint;
-  static String sudokuHintWithCount(int n) => _t.sudokuHintWithCount(n);
   static String get sudokuHintUnitRegion => _t.sudokuHintUnitRegion;
   static String get sudokuHintUnitRow => _t.sudokuHintUnitRow;
   static String get sudokuHintUnitColumn => _t.sudokuHintUnitColumn;
@@ -164,6 +161,8 @@ abstract final class AppStrings {
   static String clearedIn(String time) => _t.clearedIn(time);
   static String rankToday(int rank) => _t.rankToday(rank);
   static String get resultsTimeLabel => _t.resultsTimeLabel;
+  static String resultsHintPenalty(int seconds) =>
+      _t.resultsHintPenalty(seconds);
   static String get resultsPointsLabel => _t.resultsPointsLabel;
   static String saveTimeToBoard(String timeLabel) =>
       _t.saveTimeToBoard(timeLabel);
@@ -523,6 +522,7 @@ abstract final class AppStrings {
   static String get practiceRunLabel => _t.practiceRunLabel;
   static String get practiceNewBoard => _t.practiceNewBoard;
   static String get hintUnlimited => _t.hintUnlimited;
+  static String hintWithCost(int seconds) => _t.hintWithCost(seconds);
   static String localBest(String time) => _t.localBest(time);
   static String archiveBest(String time) => _t.archiveBest(time);
   static String get newLocalBest => _t.newLocalBest;

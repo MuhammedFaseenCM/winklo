@@ -9,14 +9,14 @@ void main() {
   test('reads English by default', () {
     expect(AppStrings.languageCode, 'en');
     expect(AppStrings.retry, 'Retry');
-    expect(AppStrings.zipHintWithCount(2), 'Hint (2)');
+    expect(AppStrings.hintWithCost(20), 'Hint +20s');
   });
 
   test('use(ml) switches getters and methods to Malayalam', () {
     AppStrings.use('ml');
     expect(AppStrings.languageCode, 'ml');
     expect(AppStrings.retry, 'വീണ്ടും ശ്രമിക്കൂ');
-    expect(AppStrings.zipHintWithCount(2), 'സൂചന (2)');
+    expect(AppStrings.hintWithCost(20), 'സൂചന +20s');
     AppStrings.use('en');
     expect(AppStrings.retry, 'Retry');
   });

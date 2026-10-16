@@ -19,7 +19,6 @@ import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_mode.dart';
 import '../../../domain/repositories/analytics_repository.dart';
-import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/get_best_points.dart';
@@ -58,7 +57,6 @@ class ZipScreen extends StatefulWidget {
 
 class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
   late final ZipBloc _bloc;
-  late final HintQuotaRepository _hintQuota;
   late final SfxService _sfx;
   late final HapticsService? _haptics;
   ZipGame? _game;
@@ -84,10 +82,8 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
     }
     final current = _game;
     if (current != null && identical(current.level, state.level)) return false;
-    final remaining = _hintQuota.remaining(GameIds.zip, _bloc.playId);
     _game = ZipGame(
       level: state.level,
-      initialHintsRemaining: remaining,
       initialPath: state.path,
       readOnly: state.status == ZipStatus.locked || state.finished,
       onWin: () {
@@ -127,7 +123,6 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _hintQuota = context.hintQuotaFor(widget.mode);
     _sfx = context.read<SfxService>();
     _haptics = context.read<HapticsService?>();
     _bloc = ZipBloc(
@@ -139,6 +134,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
       isNewPersonalBest: context.read<IsNewPersonalBest>(),
       getClearBoard: context.read<GetClearBoard>(),
       analytics: context.read<AnalyticsRepository>(),
+      hintQuota: context.hintQuotaFor(widget.mode),
       inProgressRuns: context.read<InProgressRunRepository>(),
       zipLevelRepository: context.read<ZipLevelRepository>(),
       ignoreDailyLock: DevFlags.zipOnlyTesting,
@@ -250,15 +246,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                 onPressed: !canPlay
                                     ? null
                                     : () {
-                                        final game = _game;
-                                        game?.clearPath();
-                                        if (game != null) {
-                                          game.hintsRemaining = _hintQuota
-                                              .remaining(
-                                                GameIds.zip,
-                                                _bloc.playId,
-                                              );
-                                        }
+                                        _game?.clearPath();
                                         _bloc.add(const ZipEvent.reset());
                                         setState(() => _ruleTip = null);
                                       },
@@ -403,38 +391,20 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                       ),
                                     ),
                                     onPressed: canHint
-                                        ? () async {
+                                        ? () {
                                             final game = _game;
-                                            if (game == null || !game.canHint) {
+                                            if (game == null || !game.hint()) {
                                               return;
                                             }
-                                            final before = game.hintsRemaining;
-                                            final remaining = await _hintQuota
-                                                .tryConsume(
-                                                  GameIds.zip,
-                                                  _bloc.playId,
-                                                );
-                                            if (remaining >= before) {
-                                              return;
-                                            }
-                                            if (!game.hint()) {
-                                              return;
-                                            }
-                                            game.hintsRemaining = remaining;
-                                            _bloc.add(
-                                              ZipEvent.hint(
-                                                hintsRemaining: remaining,
-                                              ),
-                                            );
-                                            if (mounted) setState(() {});
+                                            _bloc.add(const ZipEvent.hint());
+                                            setState(() {});
                                           }
                                         : null,
                                     icon: const Icon(Icons.lightbulb_rounded),
                                     label: Text(
                                       hintLabelFor(
                                         widget.mode,
-                                        game?.hintsRemaining ?? 0,
-                                        AppStrings.zipHintWithCount,
+                                        hintsUsed: state.hintsUsed,
                                       ),
                                     ),
                                   ),

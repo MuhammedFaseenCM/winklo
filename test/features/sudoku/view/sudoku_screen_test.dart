@@ -161,7 +161,7 @@ void main() {
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     final hints = _MockHintQuota();
-    when(() => hints.remaining(any(), any())).thenReturn(3);
+    when(() => hints.usedFor(any(), any())).thenReturn(0);
     final bloc = buildBloc(
       ({required DateTime day}) => SudokuPuzzle(
         id: 'daily_20261014',

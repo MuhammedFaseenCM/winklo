@@ -101,6 +101,7 @@ final Map<String, String Function(AppText)> _members = {
   'shareFailed': (t) => t.shareFailed,
   'resultsFullBoard': (t) => t.resultsFullBoard,
   'resultsTimeLabel': (t) => t.resultsTimeLabel,
+  'resultsHintPenalty': (t) => t.resultsHintPenalty(30),
   'resultsPointsLabel': (t) => t.resultsPointsLabel,
   'saveTimeSignInTitle': (t) => t.saveTimeSignInTitle,
   'saveTimeSignInBody': (t) => t.saveTimeSignInBody,
@@ -332,6 +333,7 @@ final Map<String, String Function(AppText)> _members = {
   'practiceRunLabel': (t) => t.practiceRunLabel,
   'practiceNewBoard': (t) => t.practiceNewBoard,
   'hintUnlimited': (t) => t.hintUnlimited,
+  'hintWithCost': (t) => t.hintWithCost(20),
   'newLocalBest': (t) => t.newLocalBest,
   'backToArchive': (t) => t.backToArchive,
   'archivePickGame': (t) => t.archivePickGame,
@@ -382,14 +384,12 @@ final Map<String, String Function(AppText)> _members = {
   'leagueDeleteFailed': (t) => t.leagueDeleteFailed,
   'leagueNameLength': (t) => t.leagueNameLength,
   'leagueCodeNotFound': (t) => t.leagueCodeNotFound,
-  'zipHintWithCount': (t) => t.zipHintWithCount(3),
   'settingsLanguageSystemHint': (t) =>
       t.settingsLanguageSystemHint(t.languageMalayalam),
   'bestTimeLabel': (t) => t.bestTimeLabel('0:48'),
   'homeTileStats': (t) => t.homeTileStats(bestSeconds: 48, longestStreak: 9),
   'homeTodaySummary': (t) =>
       t.homeTodaySummary(cleared: 2, total: 3, totalSeconds: 221),
-  'pathWordsHintWithCount': (t) => t.pathWordsHintWithCount(3),
   'pathWordsUnfoundWordLabel': (t) => t.pathWordsUnfoundWordLabel(5),
   'pathWordsTracingWordLabel': (t) => t.pathWordsTracingWordLabel('cat'),
   'pathWordsThemeReveal': (t) => t.pathWordsThemeReveal('Fruit'),
@@ -397,7 +397,6 @@ final Map<String, String Function(AppText)> _members = {
   'pathWordsBonusCount': (t) => t.pathWordsBonusCount(2),
   'pathWordsWordWithMeaningLabel': (t) =>
       t.pathWordsWordWithMeaningLabel('cat'),
-  'sudokuHintWithCount': (t) => t.sudokuHintWithCount(3),
   'sudokuHintLastRemaining': (t) =>
       t.sudokuHintLastRemaining(digit: 4, unit: t.sudokuHintUnitRow),
   'sudokuHintNakedSingle': (t) => t.sudokuHintNakedSingle(digit: 4),

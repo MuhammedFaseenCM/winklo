@@ -13,6 +13,7 @@ import '../../../domain/entities/leaderboard_proof.dart';
 import '../../../domain/entities/sudoku_puzzle.dart';
 import '../../../domain/failures.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/hint_penalty.dart';
 import '../../../domain/logic/run_rollover.dart';
 import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
@@ -231,7 +232,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           resumedAt: now,
           selectedIndex: null,
           finished: false,
-          hintsRemaining: hintQuota.remaining(GameIds.sudoku, playId),
+          hintsUsed: hintQuota.usedFor(GameIds.sudoku, playId),
           activeCoachHint: null,
           showNoSimpleHint: false,
           usedHintsThisRun: draft.usedHintsThisRun,
@@ -245,19 +246,25 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         ),
       );
     } else {
-      _clock = PlayRunClock.start(at: now);
+      final hintsUsed = hintQuota.usedFor(GameIds.sudoku, playId);
+      final clock = HintPenalty.startClock(
+        at: now,
+        mode: mode,
+        hintsUsed: hintsUsed,
+      );
+      _clock = clock;
       emit(
         state.copyWith(
           status: SudokuStatus.ready,
           puzzle: puzzle,
           grid: SudokuRules.initialGrid(puzzle),
           notes: SudokuRules.emptyNotes(puzzle.cellCount),
-          elapsedMs: 0,
+          elapsedMs: clock.elapsedMs,
           resumedAt: now,
           selectedIndex: null,
           notesMode: false,
           finished: false,
-          hintsRemaining: hintQuota.remaining(GameIds.sudoku, playId),
+          hintsUsed: hintsUsed,
           activeCoachHint: null,
           showNoSimpleHint: false,
           usedHintsThisRun: keptHints,
@@ -414,7 +421,6 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
 
   Future<void> _onHint(SudokuHint event, Emitter<SudokuState> emit) async {
     if (!_canPlay) return;
-    if (state.hintsRemaining <= 0) return;
     final puzzle = state.puzzle;
     if (puzzle == null) return;
 
@@ -436,10 +442,20 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       return;
     }
 
-    final remaining = await hintQuota.tryConsume(GameIds.sudoku, _runPlayId);
+    final spent = await spendHint(
+      quota: hintQuota,
+      mode: mode,
+      gameId: GameIds.sudoku,
+      playId: _runPlayId,
+    );
+    final clock = (_clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs))
+        .addPenalty(Duration(seconds: spent.penaltySeconds));
+    _clock = clock;
     emit(
       state.copyWith(
-        hintsRemaining: remaining,
+        hintsUsed: spent.hintsUsed,
+        elapsedMs: clock.elapsedMs,
+        resumedAt: clock.resumedAt,
         activeCoachHint: coach,
         showNoSimpleHint: false,
         selectedIndex: coach.targetIndex ?? state.selectedIndex,
@@ -450,7 +466,8 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     await _persistDraft();
     await analytics.logHintUsed(
       gameId: GameIds.sudoku,
-      hintsRemaining: remaining,
+      hintsUsed: spent.hintsUsed,
+      penaltySeconds: spent.penaltySeconds,
     );
   }
 
@@ -474,7 +491,6 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         notesMode: false,
         hintFlashIndex: null,
         errorIndices: const <int>{},
-        hintsRemaining: hintQuota.remaining(GameIds.sudoku, _runPlayId),
         activeCoachHint: null,
         showNoSimpleHint: false,
         unitFlashIndices: const <int>{},
@@ -649,6 +665,10 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           gameId: GameIds.sudoku,
           usedHints: state.usedHintsThisRun,
           hadMistakes: state.hadMistakesThisRun,
+          hintPenaltySeconds: HintPenalty.chargedSeconds(
+            mode,
+            hintsUsed: state.hintsUsed,
+          ),
           day: state.day,
           leaderboardProof: proof,
         ),
@@ -750,7 +770,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       draft = null;
     }
     if (draft == null && mode.isArchive) {
-      // A fresh archive run gets a full set of hints.
+      // A fresh archive run starts with no hints spent.
       await modeRecords!.clearHints(GameIds.sudoku, runId);
       if (emit.isDone) return;
     }
@@ -760,9 +780,11 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         ? null
         : _restoreFromDraft(puzzle: puzzle, draft: draft);
     final grid = restored?.grid ?? SudokuRules.initialGrid(puzzle);
-    _clock = draft == null
-        ? PlayRunClock.start(at: now)
+    final hintsUsed = hintQuota.usedFor(GameIds.sudoku, runId);
+    final clock = draft == null
+        ? HintPenalty.startClock(at: now, mode: mode, hintsUsed: hintsUsed)
         : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+    _clock = clock;
     emit(
       state.copyWith(
         status: SudokuStatus.ready,
@@ -770,11 +792,11 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         grid: grid,
         notes: restored?.notes ?? SudokuRules.emptyNotes(puzzle.cellCount),
         notesMode: restored?.notesMode ?? false,
-        elapsedMs: draft?.elapsedMs ?? 0,
+        elapsedMs: clock.elapsedMs,
         resumedAt: now,
         selectedIndex: null,
         finished: false,
-        hintsRemaining: hintQuota.remaining(GameIds.sudoku, runId),
+        hintsUsed: hintsUsed,
         activeCoachHint: null,
         showNoSimpleHint: false,
         usedHintsThisRun: draft?.usedHintsThisRun ?? false,
@@ -852,6 +874,10 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           gameId: GameIds.sudoku,
           usedHints: state.usedHintsThisRun,
           hadMistakes: state.hadMistakesThisRun,
+          hintPenaltySeconds: HintPenalty.chargedSeconds(
+            mode,
+            hintsUsed: state.hintsUsed,
+          ),
           day: mode.day,
           local: LocalResultInfo(
             kind: mode.isArchive

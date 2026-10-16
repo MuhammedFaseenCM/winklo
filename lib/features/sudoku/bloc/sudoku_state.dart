@@ -34,7 +34,7 @@ sealed class SudokuState with _$SudokuState {
     @Default(0) int elapsedMs,
     DateTime? resumedAt,
     int? hintFlashIndex,
-    @Default(3) int hintsRemaining,
+    @Default(0) int hintsUsed,
     SudokuCoachHint? activeCoachHint,
     @Default(false) bool showNoSimpleHint,
     @Default(false) bool usedHintsThisRun,

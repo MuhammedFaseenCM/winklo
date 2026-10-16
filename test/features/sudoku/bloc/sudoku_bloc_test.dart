@@ -47,29 +47,24 @@ class _MockSfx extends Mock implements SfxService {}
 class _MockHaptics extends Mock implements HapticsService {}
 
 class _FakeHintQuota implements HintQuotaRepository {
-  _FakeHintQuota(this._remaining);
+  _FakeHintQuota([this._used = 0]);
 
-  int _remaining;
+  int _used;
 
   /// Play periods the bloc read or spent hints for, in order.
   final playIds = <String>[];
 
   @override
-  int remaining(String gameId, String playId) {
+  Future<int> consume(String gameId, String playId) async {
     playIds.add(playId);
-    return _remaining;
+    return ++_used;
   }
 
   @override
-  Future<int> tryConsume(String gameId, String playId) async {
+  int usedFor(String gameId, String playId) {
     playIds.add(playId);
-    if (_remaining <= 0) return 0;
-    _remaining--;
-    return _remaining;
+    return _used;
   }
-
-  @override
-  int usedFor(String gameId, String playId) => 0;
 
   @override
   Future<bool> restoreUsed(String gameId, String playId, int used) async =>
@@ -242,7 +237,7 @@ void main() {
     getBestTimeSeconds = _MockGetBestTimeSeconds();
     isNewPersonalBest = _MockIsNewPersonalBest();
     analytics = _MockAnalyticsRepository();
-    hintQuota = _FakeHintQuota(3);
+    hintQuota = _FakeHintQuota();
     inProgressRuns = _MemoryInProgressRuns();
     when(() => getBestPoints(any())).thenReturn(0);
     when(() => getBestTimeSeconds(any())).thenReturn(null);
@@ -307,7 +302,8 @@ void main() {
     when(
       () => analytics.logHintUsed(
         gameId: any(named: 'gameId'),
-        hintsRemaining: any(named: 'hintsRemaining'),
+        hintsUsed: any(named: 'hintsUsed'),
+        penaltySeconds: any(named: 'penaltySeconds'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -331,7 +327,7 @@ void main() {
           .having((s) => s.status, 'status', SudokuStatus.ready)
           .having((s) => s.puzzle, 'puzzle', isNotNull)
           .having((s) => s.grid[1], 'empty cell', 0)
-          .having((s) => s.hintsRemaining, 'hintsRemaining', 3)
+          .having((s) => s.hintsUsed, 'hintsUsed', 0)
           .having((s) => s.resumedAt, 'resumedAt', isNotNull)
           .having((s) => s.elapsedMs, 'elapsedMs', 0),
     ],
@@ -563,19 +559,24 @@ void main() {
           .having((s) => s.grid[1], 'grid unchanged', 0)
           .having((s) => s.activeCoachHint?.targetIndex, 'target', 1)
           .having((s) => s.activeCoachHint?.digit, 'digit', 2)
-          .having((s) => s.hintsRemaining, 'remaining', 2)
+          .having((s) => s.hintsUsed, 'hintsUsed', 1)
+          .having((s) => s.elapsedMs, 'elapsedMs with +10s', 10000)
           .having((s) => s.usedHintsThisRun, 'usedHintsThisRun', isTrue)
           .having((s) => s.hintFlashIndex, 'no flash', isNull),
     ],
     verify: (_) {
       verify(
-        () => analytics.logHintUsed(gameId: GameIds.sudoku, hintsRemaining: 2),
+        () => analytics.logHintUsed(
+          gameId: GameIds.sudoku,
+          hintsUsed: 1,
+          penaltySeconds: 10,
+        ),
       ).called(1);
     },
   );
 
   blocTest<SudokuBloc, SudokuState>(
-    'hint with no teachable move shows banner without consuming quota',
+    'hint with no teachable move shows banner and costs nothing',
     build: () => buildBloc(
       generatePuzzle: ({required DateTime day}) => _noCoachPuzzle(day: day),
     ),
@@ -589,30 +590,33 @@ void main() {
       isA<SudokuState>()
           .having((s) => s.showNoSimpleHint, 'banner', isTrue)
           .having((s) => s.activeCoachHint, 'coach', isNull)
-          .having((s) => s.hintsRemaining, 'remaining', 3),
+          .having((s) => s.hintsUsed, 'hintsUsed', 0)
+          .having((s) => s.elapsedMs, 'elapsedMs', 0),
     ],
     verify: (_) {
       verifyNever(
         () => analytics.logHintUsed(
           gameId: any(named: 'gameId'),
-          hintsRemaining: any(named: 'hintsRemaining'),
+          hintsUsed: any(named: 'hintsUsed'),
+          penaltySeconds: any(named: 'penaltySeconds'),
         ),
       );
     },
   );
 
   blocTest<SudokuBloc, SudokuState>(
-    'reset after hint consume keeps depleted quota and usedHintsThisRun',
-    build: () => buildBloc(quota: _FakeHintQuota(3)),
+    'reset after a hint keeps the hint count, its time and usedHintsThisRun',
+    build: () => buildBloc(quota: _FakeHintQuota()),
     act: (bloc) async {
       bloc.add(SudokuEvent.started(date: day));
       await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
       bloc.add(const SudokuEvent.hint());
-      await bloc.stream.firstWhere((s) => s.hintsRemaining == 2);
+      await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
       bloc.add(const SudokuEvent.reset());
     },
     verify: (bloc) {
-      expect(bloc.state.hintsRemaining, 2);
+      expect(bloc.state.hintsUsed, 1);
+      expect(bloc.state.elapsedMs, 10000);
       expect(bloc.state.activeCoachHint, isNull);
       expect(bloc.state.grid[1], 0);
       // The reset is part of the same run; it can't earn "Hint-free" back.
@@ -658,7 +662,7 @@ void main() {
     expect(coach.targetIndex, isNull);
     expect(coach.evidenceIndices, {0, 1, 2, 3, 4, 5});
     expect(hinted.selectedIndex, 34, reason: 'selection stays put');
-    expect(hinted.hintsRemaining, 2);
+    expect(hinted.hintsUsed, 1);
     expect(hinted.usedHintsThisRun, isTrue);
 
     // Erasing the wrong digit resolves the hint.
@@ -693,6 +697,62 @@ void main() {
       await bloc.close();
     },
   );
+
+  test('hints have no cap and each costs more time', () async {
+    final bloc = buildBloc(
+      generatePuzzle: ({required DateTime day}) => _twoEmptyPuzzle(day: day),
+    );
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+    for (var n = 1; n <= 4; n++) {
+      bloc.add(const SudokuEvent.hint());
+      await bloc.stream.firstWhere((s) => s.hintsUsed == n);
+    }
+    // 10 + 20 + 30 + 40
+    expect(bloc.state.elapsedMs, 100000);
+    await bloc.close();
+  });
+
+  test('a hinted clear posts its time with the hint time added', () async {
+    final bloc = buildBloc();
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.hint());
+    await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+    bloc.add(const SudokuEvent.digitTapped(2));
+    final done = await bloc.stream.firstWhere(
+      (s) => s.status == SudokuStatus.navigating,
+    );
+
+    expect(done.timeSeconds, 10);
+    expect(done.resultsExtra?.timeSeconds, 10);
+    expect(done.resultsExtra?.hintPenaltySeconds, 10);
+    expect(done.resultsExtra?.usedHints, isTrue);
+    verify(
+      () => submitScore(
+        modeKey: 'sudoku_20260927',
+        points: any(named: 'points'),
+        timeSeconds: 10,
+        usedHints: true,
+        hadMistakes: any(named: 'hadMistakes'),
+      ),
+    ).called(1);
+    await bloc.close();
+  });
+
+  test('a fresh run carries the time of hints already counted', () async {
+    // Ops replaced the board, or the run began on another device.
+    final bloc = buildBloc(quota: _FakeHintQuota(2));
+    bloc.add(SudokuEvent.started(date: day));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == SudokuStatus.ready,
+    );
+
+    expect(ready.hintsUsed, 2);
+    expect(ready.elapsedMs, 30000);
+    await bloc.close();
+  });
 
   blocTest<SudokuBloc, SudokuState>(
     'dismissHint clears coach and banner',

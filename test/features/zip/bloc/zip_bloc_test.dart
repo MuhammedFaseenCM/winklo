@@ -6,6 +6,7 @@ import 'package:winklo/domain/entities/in_progress_run.dart';
 import 'package:winklo/domain/entities/zip_level.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/play_period.dart';
+import 'package:winklo/domain/repositories/hint_quota_repository.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
@@ -58,6 +59,22 @@ class _MemoryInProgressRuns implements InProgressRunRepository {
   }
 }
 
+class _FakeHintQuota implements HintQuotaRepository {
+  _FakeHintQuota([this._used = 0]);
+
+  int _used;
+
+  @override
+  Future<int> consume(String gameId, String playId) async => ++_used;
+
+  @override
+  int usedFor(String gameId, String playId) => _used;
+
+  @override
+  Future<bool> restoreUsed(String gameId, String playId, int used) async =>
+      false;
+}
+
 void main() {
   late _MockSubmitScore submitScore;
   late _MockSubmitLeaderboardTime submitLeaderboardTime;
@@ -107,10 +124,12 @@ void main() {
     DateTime Function()? clockNow,
     Future<void> Function(Duration duration)? wait,
     _MemoryInProgressRuns? drafts,
+    _FakeHintQuota? quota,
     Future<ZipLevel> Function(DateTime date, {Duration period})?
     fetchDailyLevel,
   }) {
     return ZipBloc(
+      hintQuota: quota ?? _FakeHintQuota(),
       inProgressRuns: drafts ?? _MemoryInProgressRuns(),
       submitScore: submitScore,
       submitLeaderboardTime: submitLeaderboardTime,
@@ -164,16 +183,21 @@ void main() {
       );
       bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
       await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
-      bloc.add(const ZipEvent.hint(hintsRemaining: 2));
+      bloc.add(const ZipEvent.hint());
       await bloc.stream.firstWhere((s) => s.usedHintsThisRun);
       bloc.add(const ZipEvent.completed());
-      await bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
+      final done = await bloc.stream.firstWhere(
+        (s) => s.status == ZipStatus.navigating,
+      );
 
+      // No time passed; the hint's 10s is the whole time.
+      expect(done.timeSeconds, 10);
+      expect(done.resultsExtra?.hintPenaltySeconds, 10);
       verify(
         () => submitScore(
           modeKey: 'zip_daily_20260913',
           points: any(named: 'points'),
-          timeSeconds: any(named: 'timeSeconds'),
+          timeSeconds: 10,
           usedHints: true,
           hadMistakes: false,
           board: any(named: 'board'),
@@ -182,7 +206,7 @@ void main() {
       verify(
         () => submitLeaderboardTime(
           gameId: GameIds.zip,
-          timeSeconds: any(named: 'timeSeconds'),
+          timeSeconds: 10,
           usedHints: true,
           hadMistakes: false,
           currentStreak: 1,
@@ -394,23 +418,72 @@ void main() {
     await bloc.close();
   });
 
-  blocTest<ZipBloc, ZipState>(
-    'ZipHint marks usedHintsThisRun and logs hint_used',
-    build: buildBloc,
-    act: (b) => b.add(const ZipEvent.hint(hintsRemaining: 2)),
-    expect: () => [
-      isA<ZipState>().having(
-        (s) => s.usedHintsThisRun,
-        'usedHintsThisRun',
-        isTrue,
+  test('ZipHint spends a hint, charges its time and logs hint_used', () async {
+    final quota = _FakeHintQuota();
+    final bloc = buildBloc(
+      now: DateTime(2026, 9, 13),
+      clockNow: () => DateTime(2026, 9, 13),
+      quota: quota,
+    );
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == ZipStatus.ready,
+    );
+    expect(ready.hintsUsed, 0);
+
+    bloc.add(const ZipEvent.hint());
+    final first = await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+    expect(first.usedHintsThisRun, isTrue);
+    expect(first.elapsedMs, 10000);
+    expect(first.isClockRunning, isTrue);
+
+    bloc.add(const ZipEvent.hint());
+    final second = await bloc.stream.firstWhere((s) => s.hintsUsed == 2);
+    expect(second.elapsedMs, 30000);
+    expect(quota.usedFor(GameIds.zip, '20260913'), 2);
+    await pumpEventQueue();
+
+    verify(
+      () => analytics.logHintUsed(
+        gameId: GameIds.zip,
+        hintsUsed: 1,
+        penaltySeconds: 10,
       ),
-    ],
-    verify: (_) {
-      verify(
-        () => analytics.logHintUsed(gameId: GameIds.zip, hintsRemaining: 2),
-      ).called(1);
-    },
-  );
+    ).called(1);
+    verify(
+      () => analytics.logHintUsed(
+        gameId: GameIds.zip,
+        hintsUsed: 2,
+        penaltySeconds: 20,
+      ),
+    ).called(1);
+    await bloc.close();
+  });
+
+  test('ZipHint before the board is ready costs nothing', () async {
+    final quota = _FakeHintQuota();
+    final bloc = buildBloc(quota: quota);
+    bloc.add(const ZipEvent.hint());
+    await pumpEventQueue();
+    expect(quota.usedFor(GameIds.zip, '20260913'), 0);
+    expect(bloc.state.usedHintsThisRun, isFalse);
+    await bloc.close();
+  });
+
+  test('a fresh run carries the time of hints already counted', () async {
+    // Ops replaced the board, or the run began on another device.
+    final bloc = buildBloc(
+      now: DateTime(2026, 9, 13),
+      quota: _FakeHintQuota(2),
+    );
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == ZipStatus.ready,
+    );
+    expect(ready.hintsUsed, 2);
+    expect(ready.elapsedMs, 30000);
+    await bloc.close();
+  });
 
   test('a replaced board drops the saved run but keeps its hint use', () async {
     final drafts = _MemoryInProgressRuns();
@@ -474,7 +547,7 @@ void main() {
     bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
     await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
     bloc.add(ZipEvent.pathChanged(path: [const Cell(0, 0)]));
-    bloc.add(const ZipEvent.hint(hintsRemaining: 2));
+    bloc.add(const ZipEvent.hint());
     bloc.add(const ZipEvent.reset());
     await bloc.stream.firstWhere((s) => s.usedHintsThisRun && s.path.isEmpty);
     await Future<void>.delayed(Duration.zero);
@@ -499,6 +572,7 @@ void main() {
         isNewPersonalBest: isNewPersonalBest,
         getClearBoard: getClearBoard,
         analytics: analytics,
+        hintQuota: _FakeHintQuota(),
         now: DateTime(2026, 9, 20, 14, 31, 40),
         playPeriod: PlayPeriod.minute,
         fetchDailyLevel: (date, {period = PlayPeriod.daily}) async =>

@@ -28,6 +28,7 @@ sealed class ZipState with _$ZipState {
     @Default(ZipStatus.ready) ZipStatus status,
     @Default(false) bool finished,
     @Default(false) bool usedHintsThisRun,
+    @Default(0) int hintsUsed,
     @Default(0) int elapsedMs,
     DateTime? resumedAt,
     @Default(<Cell>[]) List<Cell> path,

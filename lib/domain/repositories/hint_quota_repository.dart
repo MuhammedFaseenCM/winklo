@@ -1,15 +1,12 @@
+/// Hints spent per game and run. There is no cap: each hint costs run time
+/// instead ([HintPenalty]), so this only counts them.
 abstract class HintQuotaRepository {
-  static const int cap = 3;
-
-  /// Hints left for [gameId] in the run of period [playId].
+  /// Spends one hint for [gameId] in the run of period [playId] and returns
+  /// how many that run has spent now.
   ///
   /// Keyed by the run's period rather than the clock, so a run that crosses
-  /// midnight keeps its own quota instead of getting a fresh one.
-  int remaining(String gameId, String playId);
-
-  /// Spends one hint for [gameId] in period [playId] when any are left.
-  /// Returns remaining after the attempt (0 if already exhausted).
-  Future<int> tryConsume(String gameId, String playId);
+  /// midnight keeps counting its own hints.
+  Future<int> consume(String gameId, String playId);
 
   /// Hints consumed for [gameId] in the period [playId].
   int usedFor(String gameId, String playId);

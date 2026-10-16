@@ -263,8 +263,10 @@ void main() {
       now = now.add(const Duration(seconds: 64));
       final done = await solve(bloc);
       expectNoDailyState();
-      expect(records.bestTimeSeconds('archive_path_words_20261012'), 64);
+      // 64s played plus the hint's 10s.
+      expect(records.bestTimeSeconds('archive_path_words_20261012'), 74);
       final args = done.resultsExtra!;
+      expect(args.hintPenaltySeconds, 10);
       expect(args.local!.kind, LocalResultKind.archive);
       expect(args.local!.label, 'Archive · 12 Oct');
       expect(args.currentStreak, isNull);
@@ -273,14 +275,15 @@ void main() {
       await bloc.close();
     });
 
-    test('spends 3 archive hints per run, never the daily quota', () async {
+    test('counts archive hints per run and charges them, never the daily '
+        'count', () async {
       final bloc = buildBloc(PlayMode.archive(archiveDay));
       bloc.add(const PathWordsEvent.started());
       final state = await ready(bloc);
-      expect(state.hintsRemaining, 3);
+      expect(state.hintsUsed, 0);
       bloc.add(const PathWordsEvent.hint());
-      final after = await until(bloc, (s) => s.hintsRemaining == 2);
-      expect(after.hintsRemaining, 2);
+      final after = await until(bloc, (s) => s.hintsUsed == 1);
+      expect(after.elapsedMs, 10000);
       expect(records.hintsUsed(GameIds.pathWords, 'archive_20261012'), 1);
       verifyZeroInteractions(dailyHints);
       await bloc.close();
@@ -352,11 +355,13 @@ void main() {
       },
     );
 
-    test('hints never run out', () async {
+    test('hints are free', () async {
       final bloc = buildBloc(PlayMode.practice, newSeed: () => 5);
       bloc.add(const PathWordsEvent.started());
-      final state = await ready(bloc);
-      expect(state.hintsRemaining, greaterThan(100));
+      await ready(bloc);
+      bloc.add(const PathWordsEvent.hint());
+      final after = await until(bloc, (s) => s.hintsUsed == 1);
+      expect(after.elapsedMs, 0);
       verifyZeroInteractions(dailyHints);
       await bloc.close();
     });

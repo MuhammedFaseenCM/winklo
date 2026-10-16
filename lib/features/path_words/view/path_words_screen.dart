@@ -280,7 +280,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                 isReadyToPlay &&
                 (state.activePath.isNotEmpty ||
                     PathWordsRules.hasIncorrectStroke(state.placedPaths));
-            final canHint = isReadyToPlay && state.hintsRemaining > 0;
+            final canHint = isReadyToPlay;
 
             return Scaffold(
               body: ZipAtmosphere(
@@ -473,8 +473,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                       label: Text(
                                         hintLabelFor(
                                           widget.mode,
-                                          state.hintsRemaining,
-                                          AppStrings.pathWordsHintWithCount,
+                                          hintsUsed: state.hintsUsed,
                                         ),
                                       ),
                                     ),

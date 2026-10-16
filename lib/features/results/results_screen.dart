@@ -22,6 +22,7 @@ import '../path_words/view/widgets/path_words_results_panel.dart';
 import 'results_args.dart';
 import 'view/counting_play_time.dart';
 import 'view/ember_burst.dart';
+import 'view/hint_penalty_line.dart';
 import 'view/local_results_view.dart';
 import 'view/mini_leaderboard_panel.dart';
 import 'view/results_actions.dart';
@@ -346,6 +347,7 @@ class _CelebrateAndClaimResults extends StatelessWidget {
               improved: args.improved,
               // Leaderboard ranks by time — points clutter the win card.
               points: null,
+              hintPenaltySeconds: args.hintPenaltySeconds,
               currentStreak: args.currentStreak,
               longestStreak: args.longestStreak,
               celebrateMotion: true,
@@ -405,6 +407,7 @@ class _ResultsCelebrationCard extends StatefulWidget {
     required this.timeSeconds,
     required this.improved,
     this.points,
+    this.hintPenaltySeconds = 0,
     this.currentStreak,
     this.longestStreak,
     this.celebrateMotion = false,
@@ -414,6 +417,9 @@ class _ResultsCelebrationCard extends StatefulWidget {
   final int timeSeconds;
   final bool improved;
   final int? points;
+
+  /// Seconds hints added to [timeSeconds]; shown under the time when any.
+  final int hintPenaltySeconds;
   final int? currentStreak;
   final int? longestStreak;
   final bool celebrateMotion;
@@ -529,6 +535,10 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
               letterSpacing: latinTracking(2.5),
             ),
           ),
+          if (widget.hintPenaltySeconds > 0) ...[
+            SizedBox(height: compact ? 4 : 6),
+            HintPenaltyLine(seconds: widget.hintPenaltySeconds),
+          ],
           if (widget.points != null) ...[
             const SizedBox(height: 18),
             badgeWrap(

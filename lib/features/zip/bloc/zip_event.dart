@@ -13,7 +13,8 @@ sealed class ZipEvent with _$ZipEvent {
 
   const factory ZipEvent.completed() = ZipCompleted;
 
-  const factory ZipEvent.hint({required int hintsRemaining}) = ZipHint;
+  /// The game revealed hint cells; the bloc spends the hint and charges it.
+  const factory ZipEvent.hint() = ZipHint;
 
   const factory ZipEvent.reset() = ZipReset;
 

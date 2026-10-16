@@ -9,11 +9,13 @@ import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/entities/leaderboard_proof.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/hint_penalty.dart';
 import '../../../domain/logic/run_rollover.dart';
 import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
@@ -41,6 +43,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     required this.getClearBoard,
     required this.isNewPersonalBest,
     required this.analytics,
+    required this.hintQuota,
     required this.inProgressRuns,
     ZipLevelRepository? zipLevelRepository,
     Future<ZipLevel> Function(DateTime date, {Duration period})?
@@ -97,6 +100,9 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   final GetClearBoard getClearBoard;
   final IsNewPersonalBest isNewPersonalBest;
   final AnalyticsRepository analytics;
+
+  /// Where this mode counts its hints (the daily count for a daily).
+  final HintQuotaRepository hintQuota;
   final InProgressRunRepository inProgressRuns;
   final Future<ZipLevel> Function(DateTime date, {Duration period})
   fetchDailyLevel;
@@ -122,8 +128,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   PlayRunClock? _clock;
   String? _playId;
 
-  /// Period of the run on screen. The screen spends hints against it, so a
-  /// run left open over midnight keeps its own quota.
+  /// Period of the run on screen. Hints count against it, so a run left
+  /// open over midnight keeps its own count.
   String get playId => _playId ?? PlayPeriod.id(state.day, playPeriod);
 
   /// Where this daily's best is stored, for showing it in review.
@@ -220,9 +226,11 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
 
     final now = _now();
     final path = draft == null ? const <Cell>[] : _pathFromDraft(draft);
-    _clock = draft == null
-        ? PlayRunClock.start(at: now)
+    final hintsUsed = hintQuota.usedFor(GameIds.zip, playId);
+    final clock = draft == null
+        ? HintPenalty.startClock(at: now, mode: mode, hintsUsed: hintsUsed)
         : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+    _clock = clock;
 
     emit(
       ZipState(
@@ -231,7 +239,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         status: ZipStatus.ready,
         finished: false,
         usedHintsThisRun: draft?.usedHintsThisRun ?? keptHints,
-        elapsedMs: draft?.elapsedMs ?? 0,
+        hintsUsed: hintsUsed,
+        elapsedMs: clock.elapsedMs,
         resumedAt: now,
         path: path,
       ),
@@ -350,6 +359,10 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           gameId: GameIds.zip,
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
+          hintPenaltySeconds: HintPenalty.chargedSeconds(
+            mode,
+            hintsUsed: state.hintsUsed,
+          ),
           day: state.day,
           leaderboardProof: proof,
         ),
@@ -357,12 +370,32 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     );
   }
 
+  /// The game already revealed the cells; this spends the hint and adds
+  /// its time to the run clock.
   Future<void> _onHint(ZipHint event, Emitter<ZipState> emit) async {
-    emit(state.copyWith(usedHintsThisRun: true));
+    if (state.finished || state.status != ZipStatus.ready) return;
+    final spent = await spendHint(
+      quota: hintQuota,
+      mode: mode,
+      gameId: GameIds.zip,
+      playId: playId,
+    );
+    final clock = (_clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs))
+        .addPenalty(Duration(seconds: spent.penaltySeconds));
+    _clock = clock;
+    emit(
+      state.copyWith(
+        usedHintsThisRun: true,
+        hintsUsed: spent.hintsUsed,
+        elapsedMs: clock.elapsedMs,
+        resumedAt: clock.resumedAt,
+      ),
+    );
     await _persistDraft();
     await analytics.logHintUsed(
       gameId: GameIds.zip,
-      hintsRemaining: event.hintsRemaining,
+      hintsUsed: spent.hintsUsed,
+      penaltySeconds: spent.penaltySeconds,
     );
   }
 
@@ -478,22 +511,25 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       draft = null;
     }
     if (draft == null && mode.isArchive) {
-      // A fresh archive run gets a full set of hints.
+      // A fresh archive run starts with no hints spent.
       await modeRecords!.clearHints(GameIds.zip, runId);
       if (emit.isDone) return;
     }
 
     final now = _now();
-    _clock = draft == null
-        ? PlayRunClock.start(at: now)
+    final hintsUsed = hintQuota.usedFor(GameIds.zip, runId);
+    final clock = draft == null
+        ? HintPenalty.startClock(at: now, mode: mode, hintsUsed: hintsUsed)
         : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+    _clock = clock;
     emit(
       ZipState(
         day: day,
         level: level,
         status: ZipStatus.ready,
         usedHintsThisRun: draft?.usedHintsThisRun ?? false,
-        elapsedMs: draft?.elapsedMs ?? 0,
+        hintsUsed: hintsUsed,
+        elapsedMs: clock.elapsedMs,
         resumedAt: now,
         path: draft == null ? const <Cell>[] : _pathFromDraft(draft),
       ),
@@ -559,6 +595,10 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           gameId: GameIds.zip,
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
+          hintPenaltySeconds: HintPenalty.chargedSeconds(
+            mode,
+            hintsUsed: state.hintsUsed,
+          ),
           day: mode.day,
           local: LocalResultInfo(
             kind: mode.isArchive

@@ -436,11 +436,9 @@ class _SudokuScreenState extends State<SudokuScreen>
                                       ),
                                     ),
                                     _NumberPad(
-                                      hintsRemaining: state.hintsRemaining,
                                       hintLabel: hintLabelFor(
                                         widget.mode,
-                                        state.hintsRemaining,
-                                        AppStrings.sudokuHintWithCount,
+                                        hintsUsed: state.hintsUsed,
                                       ),
                                       onDigit: (d) =>
                                           _bloc.add(SudokuEvent.digitTapped(d)),
@@ -570,14 +568,12 @@ class _NotesToggle extends StatelessWidget {
 
 class _NumberPad extends StatelessWidget {
   const _NumberPad({
-    required this.hintsRemaining,
     required this.hintLabel,
     required this.onDigit,
     required this.onErase,
     required this.onHint,
   });
 
-  final int hintsRemaining;
   final String hintLabel;
   final void Function(int digit) onDigit;
   final VoidCallback onErase;
@@ -695,7 +691,7 @@ class _NumberPad extends StatelessWidget {
               _digitButton(5),
               _digitButton(6),
               _actionButton(
-                onPressed: hintsRemaining > 0 ? onHint : null,
+                onPressed: onHint,
                 icon: Icons.lightbulb_outline,
                 label: hintLabel,
               ),

@@ -141,6 +141,8 @@ void main() {
 
     expect(find.text(AppStrings.formatPlayTime(12)), findsOneWidget);
     expect(find.text(AppStrings.resultsTimeLabel), findsOneWidget);
+    // No hints, so no hint time line.
+    expect(find.textContaining('from hints'), findsNothing);
     expect(find.text(AppStrings.newPersonalBest), findsOneWidget);
     expect(find.byType(MiniLeaderboardPanel), findsOneWidget);
     expect(find.text(AppStrings.resultsFullBoard), findsOneWidget);
@@ -697,6 +699,8 @@ void main() {
               improved: true,
               replayDaily: true,
               gameId: GameIds.zip,
+              usedHints: true,
+              hintPenaltySeconds: 30,
               currentStreak: 6,
               longestStreak: 14,
               day: DateTime.now(),
@@ -738,6 +742,7 @@ void main() {
       lessThanOrEqualTo(tester.getRect(header).bottom),
     );
     expect(find.text(AppStrings.longestStreakLabel(14)), findsOneWidget);
+    expect(find.text(AppStrings.resultsHintPenalty(30)), findsOneWidget);
   });
 
   testWidgets('a result from a day that has ended says a new puzzle is '
