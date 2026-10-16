@@ -27,7 +27,8 @@ const _streakColor = Color(0xFFFFC27A);
 
 /// The card the board's rows sit in, used by the shimmer too.
 BoxDecoration leaderboardTableDecoration() => BoxDecoration(
-  color: ZipColors.wall.withValues(alpha: 0.55),
+  // Nearly opaque: the screen's backdrop shapes shouldn't cross the rows.
+  color: ZipColors.wall.withValues(alpha: 0.92),
   borderRadius: BorderRadius.circular(16),
   border: Border.all(color: ZipColors.outlineQuiet.withValues(alpha: 0.6)),
 );

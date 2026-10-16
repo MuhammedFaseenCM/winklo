@@ -40,8 +40,8 @@ class LeaderboardSheetFrame extends StatelessWidget {
   }
 }
 
-/// A 52px choice in a picker sheet: [leading], [label], a quiet [subtitle]
-/// on the right, ember when [selected].
+/// A choice in a picker sheet: [leading], then [label] over a quiet
+/// [subtitle]; ember with a check when [selected].
 class LeaderboardSheetOption extends StatelessWidget {
   const LeaderboardSheetOption({
     super.key,
@@ -82,39 +82,55 @@ class LeaderboardSheetOption extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(14),
-            child: SizedBox(
-              height: 52,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     leading,
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleSmall?.copyWith(
-                          color: selected ? ZipColors.ember : ZipColors.onInk,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleSmall?.copyWith(
+                              color: selected
+                                  ? ZipColors.ember
+                                  : ZipColors.onInk,
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.labelMedium?.copyWith(
+                                color: ZipColors.inkSoft,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    if (subtitle != null) ...[
+                    if (selected) ...[
                       const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                          style: textTheme.labelMedium?.copyWith(
-                            color: ZipColors.inkSoft,
-                          ),
-                        ),
+                      const Icon(
+                        Icons.check_rounded,
+                        size: 20,
+                        color: ZipColors.ember,
                       ),
                     ],
                   ],
