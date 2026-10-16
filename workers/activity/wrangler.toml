@@ -1,0 +1,23 @@
+name = "winklo-activity"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Records guests' app opens (daily_activity/{day}/guests/{installId}).
+# Secret (not in this file): FIREBASE_SERVICE_ACCOUNT_JSON, a service account
+# that can write Firestore (`npx wrangler secret put
+# FIREBASE_SERVICE_ACCOUNT_JSON`).
+[vars]
+FIREBASE_PROJECT_ID = "brain-zip-app"
+
+# Workers Rate Limiting (wrangler 4.36+). Counters are per Cloudflare
+# location and eventually consistent: a brake on scripts, not an exact quota.
+# namespace_id must be unique in the Cloudflare account.
+[[ratelimits]]
+name = "IP_LIMIT"
+namespace_id = "4101"
+simple = { limit = 30, period = 60 }
+
+[[ratelimits]]
+name = "INSTALL_LIMIT"
+namespace_id = "4102"
+simple = { limit = 6, period = 60 }
