@@ -244,6 +244,18 @@ abstract final class AppStrings {
   static String get achievementPerfectDayTitle => _t.achievementPerfectDayTitle;
   static String get achievementPerfectDayCondition =>
       _t.achievementPerfectDayCondition;
+
+  // Badges: the Profile summary and the Badges screen
+  static String achievementNext(String title) => _t.achievementNext(title);
+  static String achievementStreakProgress(int current, int target) =>
+      _t.achievementStreakProgress(current, target);
+  static String get achievementsAllEarned => _t.achievementsAllEarned;
+  static String get achievementLadderFirst => _t.achievementLadderFirst;
+  static String achievementLadderDays(int days) =>
+      _t.achievementLadderDays(days);
+  static String get achievementsSpecial => _t.achievementsSpecial;
+  static String achievementCurrentStreak(int days) =>
+      _t.achievementCurrentStreak(days);
   static String newAchievementsTitle(int count) =>
       _t.newAchievementsTitle(count);
   static String newAchievementsList(List<String> titles) =>

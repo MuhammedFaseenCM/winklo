@@ -577,6 +577,30 @@ final class AppTextMl implements AppText {
   @override
   String get achievementPerfectDayCondition => 'ഒരു ദിവസം മൂന്നും തീർക്കൂ';
 
+  // Badges: the Profile summary and the Badges screen
+  @override
+  String achievementNext(String title) => 'അടുത്തത്: $title';
+
+  @override
+  String achievementStreakProgress(int current, int target) =>
+      '$target-ൽ $current ദിവസം';
+
+  @override
+  String get achievementsAllEarned => 'എല്ലാ ബാഡ്ജുകളും നേടി';
+
+  @override
+  String get achievementLadderFirst => 'ആദ്യ ജയം';
+
+  @override
+  String achievementLadderDays(int days) => '$days ദിവസം';
+
+  @override
+  String get achievementsSpecial => 'പ്രത്യേകം';
+
+  @override
+  String achievementCurrentStreak(int days) =>
+      'ഇപ്പോഴത്തെ സ്ട്രീക്ക്: $days ദിവസം';
+
   @override
   String newAchievementsTitle(int count) =>
       count == 1 ? 'പുതിയ ബാഡ്ജ് നേടി' : '$count പുതിയ ബാഡ്ജുകൾ നേടി';

@@ -194,6 +194,15 @@ abstract interface class AppText {
   String get achievementFlawlessSudokusCondition;
   String get achievementPerfectDayTitle;
   String get achievementPerfectDayCondition;
+
+  // Badges: the Profile summary and the Badges screen
+  String achievementNext(String title);
+  String achievementStreakProgress(int current, int target);
+  String get achievementsAllEarned;
+  String get achievementLadderFirst;
+  String achievementLadderDays(int days);
+  String get achievementsSpecial;
+  String achievementCurrentStreak(int days);
   String newAchievementsTitle(int count);
 
   /// "First Zip", "First Zip and Perfect day", "First Zip, Perfect day and

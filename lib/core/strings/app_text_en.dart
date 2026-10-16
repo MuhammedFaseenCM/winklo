@@ -548,6 +548,30 @@ final class AppTextEn implements AppText {
   String get achievementPerfectDayCondition =>
       'Clear all three games on the same day';
 
+  // Badges: the Profile summary and the Badges screen
+  @override
+  String achievementNext(String title) => 'Next: $title';
+
+  @override
+  String achievementStreakProgress(int current, int target) =>
+      '$current of $target days';
+
+  @override
+  String get achievementsAllEarned => 'Every badge earned';
+
+  @override
+  String get achievementLadderFirst => 'First clear';
+
+  @override
+  String achievementLadderDays(int days) => '$days days';
+
+  @override
+  String get achievementsSpecial => 'Special';
+
+  @override
+  String achievementCurrentStreak(int days) =>
+      days == 1 ? 'Current streak: 1 day' : 'Current streak: $days days';
+
   @override
   String newAchievementsTitle(int count) =>
       count == 1 ? 'New badge unlocked' : '$count new badges unlocked';
