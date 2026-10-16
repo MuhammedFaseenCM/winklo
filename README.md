@@ -97,6 +97,7 @@ Started from `feat/home-review-haptics` at `8b3daff`, so it holds both branches 
 - [ ] Deploy the Firestore rules and indexes: `firebase deploy --only firestore:rules,firestore:indexes`. This is fair-play phase 1, safe for older builds, and it also accepts the `freezeCount` that +19 writes, so it must go first.
 - [ ] Remove stored times under the new minimums: `node tools/purge_fast_leaderboard_times.mjs` (a dry run), then again with `APPLY=1`.
 - [ ] Deploy the leaderboard Worker: `cd workers/leaderboard && npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON && npm run deploy` (the service account needs Firestore read and write). Then redeploy account deletion, which now also clears leagues and weekly entries: `cd workers/account-deletion && npm run deploy`.
+- [ ] Deploy the activity Worker: `cd workers/activity && npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON && npm run deploy` (Firestore write). Deploy the rules first: the 1.1.x app writes `opens`, `appVersion`, `build` and `installId` to `daily_activity`.
 - [ ] winklo-admin: merge `feat/themes-definitions-weekends` into `main`, which deploys it, and set `WINKLO_ANDROID_NOTIFICATION_CHANNEL_ID` to `winklo_announcements`. Check that the next Path Words day has a `theme` and `definitions`, and the next Saturday's docs have `special: 'weekend'`. A weekend Sudoku can take up to about 6 s of the cron's CPU time.
 - [ ] App Links: add `docs/.well-known/assetlinks.json` for package `com.winklo.faseencm` with the SHA-256 of the Play app signing certificate (Play Console → App integrity), so the Pages deploy publishes it with the link pages. No phone was connected to read it from the Play build.
 - [ ] Have a native speaker review the Malayalam copy in `lib/core/strings/`.
@@ -322,7 +323,7 @@ dart run build_runner build --delete-conflicting-outputs   # after changing free
 
 **Release:** signing reads `android/key.properties`, which isn't committed; without it, release builds quietly fall back to the debug key, which Play rejects. fastlane and the `play/*.py` scripts also need `play/play-service-account.json` (not committed). Build with `flutter build appbundle`, then upload with fastlane: `fastlane internal`, `fastlane closed` (the alpha track) or `fastlane testing` (both). `fastlane listing` and `play/upload_listing.py` update the store listing, and `play/upload_data_safety.py` updates the Data safety form.
 
-**Workers:** in `workers/avatar-upload`, `workers/account-deletion` or `workers/path-words-nouns`, run `npm test`, `npm run dev` or `npm run deploy`. The account-deletion Worker also needs the `FIREBASE_SERVICE_ACCOUNT_JSON` secret (`npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON`) and shares the `winklo-avatars` R2 bucket with avatar-upload.
+**Workers:** in `workers/avatar-upload`, `workers/account-deletion`, `workers/activity` (guests' app opens; needs the `FIREBASE_SERVICE_ACCOUNT_JSON` secret too) or `workers/path-words-nouns`, run `npm test`, `npm run dev` or `npm run deploy`. The account-deletion Worker also needs the `FIREBASE_SERVICE_ACCOUNT_JSON` secret (`npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON`) and shares the `winklo-avatars` R2 bucket with avatar-upload.
 
 ## Project layout
 
@@ -336,7 +337,7 @@ lib/
                    (plus the hidden word_match and category_race)
 test/              mirrors lib/, plus a Firestore rules whitelist test
 firestore/         security rules and indexes
-workers/           Cloudflare Workers: avatar-upload and account-deletion (used),
+workers/           Cloudflare Workers: avatar-upload, account-deletion and activity (used),
                    path-words-nouns (unused)
 tool/, tools/      icon and avatar generators, demo leaderboard seeding, R2 source art
 play/, fastlane/   Play listing, Data safety and release lanes

@@ -199,9 +199,12 @@
         <li>
           <strong>Cloud Firestore</strong> — puzzle catalogs; the user,
           leaderboard, and synced progress data described above; a daily
-          app-open record (uid, first/last open time, platform); issue reports
-          you submit (with your uid, display name, avatar, and app version);
-          and app error reports.
+          app-open record (uid, first/last open time, platform, how many
+          times you opened the app that day, app version, and an install ID
+          the app creates); if you use the app without signing in, the same
+          daily record keyed by that install ID instead of an account; issue
+          reports you submit (with your uid, display name, avatar, and app
+          version); and app error reports.
         </li>
         <li>
           <strong>Firebase Analytics</strong> — product events (screens, games

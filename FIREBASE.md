@@ -256,7 +256,10 @@ leaderboards_debug/{gameId}/all_time/{uid}    # debug builds (`kDebugMode`)
 leaderboards_debug/{gameId}/daily/{yyyy-MM-dd}/entries/{uid}
 
 daily_activity/{yyyy-MM-dd}/users/{uid}
-  uid, firstOpenAt, lastOpenAt, platform
+  uid, firstOpenAt, lastOpenAt, platform,
+  opens, appVersion, build, installId          # 1.1.x on; older docs lack them
+daily_activity/{yyyy-MM-dd}/guests/{installId} # written by workers/activity only
+  installId, firstOpenAt, lastOpenAt, platform, opens, appVersion, build
 
 users/{uid}/game_days/{gameId}_{playId}       # private progress (owner-only)
   gameId, playId, timeSeconds?, points?, usedHints?, hadMistakes?,
@@ -317,7 +320,7 @@ After deploy:
 3. Content collections (`zip_levels`, etc.) still refuse client writes.
 4. `users/{uid}` is owner read / owner write (admins can read too): it holds the device's `fcmToken`, so other players can't read it. `avatarId` must be a string or null when present.
 5. Custom gallery photos: Worker accepts `PUT /v1/avatar` only with a valid Firebase ID token for that uid; object key `avatars/{uid}.jpg` on R2; JPEG, max 2 MiB. Public read via R2 `r2.dev` (no Firebase Storage rules).
-6. `daily_activity/{yyyy-MM-dd}/users/{uid}`: owner create/update and read of their own doc; admin read (counts). **Deploy** `firestore/firestore.rules` before relying on production open tracking (`firebase deploy --only firestore:rules`).
+6. `daily_activity/{yyyy-MM-dd}/users/{uid}`: owner create/update and read of their own doc; admin read (counts). The owner may also write `opens` (1 on create, never lower afterwards), `appVersion`, `build` and `installId`. `daily_activity/{yyyy-MM-dd}/guests/{installId}` is admin read only, and only the activity Worker's service account writes it. **Deploy** `firestore/firestore.rules` before relying on production open tracking, and before the 1.1.x app ships (`firebase deploy --only firestore:rules`).
 7. `users/{uid}/game_days/{dayKey}` and `users/{uid}/game_streaks/{gameId}` (and the `_debug` twins): **only the owner** can read, create or update; other signed-in users and signed-out clients are rejected; delete is always rejected.
 8. Game day writes: keys only from the whitelist; `gameId` in `zip` / `path_words` / `sudoku`; `playId` matches `^[0-9]{8}([0-9]{4})?$`; doc id equals `gameId + '_' + playId`; `hintsUsed` int 0..50; `timeSeconds` / `points` int ≥ 0 when present; `usedHints` / `hadMistakes` / `flagsKnown` bool when present; `clearedAt` timestamp when present; `board` non-empty string of at most 1024 chars, only alongside `timeSeconds`; `updatedAt == request.time`. Merge writes are validated against the **merged** doc. Updates may only improve: `timeSeconds` never rises, `points` / `hintsUsed` never drop, `clearedAt` never moves later or disappears, `board` only changes with a strictly better `timeSeconds` (a stale merge write from a cached read is rejected and re-merged on the next sync).
 9. Streak writes: path `gameId` is a valid game; keys only `current`, `longest`, `lastClearedDateId`, `freezeAvailable`, `updatedAt`; `current` / `longest` int ≥ 0; `lastClearedDateId` null or an 8-digit string; `freezeAvailable` bool; `updatedAt == request.time`. Updates never lower `longest` and never move `lastClearedDateId` earlier or back to null (`current` may reset to 0).
@@ -340,7 +343,7 @@ FCM announcements can be sent from the [winklo-admin](https://github.com/Muhamme
 
 ### Data Safety / privacy (Auth)
 
-Leaderboards (Zip, Path Words, Sudoku) store **uid, displayName, photoUrl, avatarId, timeSeconds, updatedAt, usedHints, hadMistakes, currentStreak**; these are publicly readable. Private progress docs (owner-only) store per-day **best time, points, usedHints, hadMistakes, flagsKnown, hintsUsed, clearedAt, board (Zip drawn path)** and per-game **streak counters** (`current`, `longest`, `lastClearedDateId`, `freezeAvailable`). `daily_activity` stores uid, first/last open time and platform; `issue_reports` store the submitted text plus uid, displayName, photoUrl, avatarId, app version/build and platform. Custom photos live on **Cloudflare R2** (public `r2.dev` URLs). Play Data Safety declares this gameplay data under **App interactions** (`PSL_USER_INTERACTION`) for **App functionality** and **Analytics**, collected not shared (`play/data_safety.csv`). Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
+Leaderboards (Zip, Path Words, Sudoku) store **uid, displayName, photoUrl, avatarId, timeSeconds, updatedAt, usedHints, hadMistakes, currentStreak**; these are publicly readable. Private progress docs (owner-only) store per-day **best time, points, usedHints, hadMistakes, flagsKnown, hintsUsed, clearedAt, board (Zip drawn path)** and per-game **streak counters** (`current`, `longest`, `lastClearedDateId`, `freezeAvailable`). `daily_activity` stores, per player per day, uid, first/last open time, platform, open count, app version/build and install ID; guests' opens are stored per install ID with the same fields (no account); `issue_reports` store the submitted text plus uid, displayName, photoUrl, avatarId, app version/build and platform. Custom photos live on **Cloudflare R2** (public `r2.dev` URLs). Play Data Safety declares this gameplay data under **App interactions** (`PSL_USER_INTERACTION`) for **App functionality** and **Analytics**, collected not shared (`play/data_safety.csv`). Confirm Play Data Safety covers Google account sign-in and that profile/name/photo sharing on a public-within-app leaderboard is disclosed if required.
 
 ## 8. Profile photos (Cloudflare R2 + Worker)
 
