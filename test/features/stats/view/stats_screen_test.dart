@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:winklo/core/dev_flags.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/game_day_record.dart';
@@ -75,10 +76,15 @@ void main() {
   late _MockLoadHistory load;
 
   setUp(() {
+    DevFlags.disablePreviewFullProgressInTests = true;
     load = _MockLoadHistory();
     when(
       () => load(refreshRemote: any(named: 'refreshRemote')),
     ).thenAnswer((_) async => sampleHistory());
+  });
+
+  tearDown(() {
+    DevFlags.disablePreviewFullProgressInTests = false;
   });
 
   Future<void> pumpStats(WidgetTester tester) async {

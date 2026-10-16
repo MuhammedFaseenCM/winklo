@@ -42,6 +42,9 @@ void main() {
     await pumpGrid(tester, {'first_clear_zip', 'perfect_day'});
 
     expect(find.byType(AchievementBadge), findsNWidgets(16));
+    expect(find.text(AppStrings.achievementsFirstClearsSection), findsOneWidget);
+    expect(find.text(AppStrings.achievementsStreaksSection), findsOneWidget);
+    expect(find.text(AppStrings.achievementsSpecialsSection), findsOneWidget);
     expect(find.text('First Zip'), findsOneWidget);
     expect(find.text(AppStrings.achievementPerfectDayTitle), findsOneWidget);
     expect(find.text('Clear your first Sudoku'), findsOneWidget);
@@ -56,6 +59,34 @@ void main() {
     expect(opacityOf('First Zip'), 1);
     expect(opacityOf('Clear your first Sudoku'), lessThan(1));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('unlocked medals use distinct enamel colors by game', (
+    tester,
+  ) async {
+    await pumpGrid(tester, {
+      for (final a in Achievements.all) a.id,
+    });
+
+    final zip = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.widgetWithText(AchievementBadge, 'First Zip'),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final path = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.widgetWithText(AchievementBadge, 'First Path Words'),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final zipGrad = (zip.decoration! as BoxDecoration).gradient!;
+    final pathGrad = (path.decoration! as BoxDecoration).gradient!;
+    expect(zipGrad.colors.first, isNot(pathGrad.colors.first));
   });
 
   testWidgets('badges read their state to screen readers', (tester) async {

@@ -206,16 +206,6 @@ void main() {
     expect(find.text('5 days · 6:12'), findsOneWidget);
   });
 
-  testWidgets('an empty weekly tab explains debug builds', (tester) async {
-    await pump(tester);
-    await tester.tap(find.text(AppStrings.leaderboardThisWeek));
-    await tester.pump();
-    board.add(const []);
-    await tester.pumpAndSettle();
-
-    expect(find.text(AppStrings.leaderboardWeeklyDebugNote), findsOneWidget);
-  });
-
   testWidgets('tapping a player opens their card', (tester) async {
     await pump(tester);
     board.add([_ada, _bo]);

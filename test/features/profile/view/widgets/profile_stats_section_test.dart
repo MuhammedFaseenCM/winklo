@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:winklo/core/dev_flags.dart';
 import 'package:winklo/core/lifecycle/progress_change_signal.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
@@ -31,10 +32,15 @@ void main() {
   late _MockLoadHistory load;
 
   setUp(() {
+    DevFlags.disablePreviewFullProgressInTests = true;
     load = _MockLoadHistory();
     when(
       () => load(refreshRemote: any(named: 'refreshRemote')),
     ).thenAnswer((_) async => _history(const [_zip]));
+  });
+
+  tearDown(() {
+    DevFlags.disablePreviewFullProgressInTests = false;
   });
 
   Future<void> pumpSection(

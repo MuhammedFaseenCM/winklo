@@ -503,6 +503,15 @@ final class AppTextEn implements AppText {
   String achievementsProgress(int unlocked, int total) => '$unlocked of $total';
 
   @override
+  String get achievementsFirstClearsSection => 'First clears';
+
+  @override
+  String get achievementsStreaksSection => 'Streaks';
+
+  @override
+  String get achievementsSpecialsSection => 'Specials';
+
+  @override
   String get achievementLocked => 'Locked';
 
   @override

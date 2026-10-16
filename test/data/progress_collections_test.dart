@@ -3,6 +3,12 @@ import 'package:winklo/data/progress_collections.dart';
 
 void main() {
   group('progressCollections', () {
+    test('defaults to release names', () {
+      final names = progressCollections();
+      expect(names.gameDays, 'game_days');
+      expect(names.gameStreaks, 'game_streaks');
+    });
+
     test('returns the _debug twins when isDebugMode is true', () {
       final names = progressCollections(isDebugMode: true);
       expect(names.gameDays, 'game_days_debug');

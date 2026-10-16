@@ -76,7 +76,7 @@ class _ProfileStatsBody extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _Card(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
           child: BlocBuilder<StatsCubit, StatsState>(
             builder: (context, state) {
               final unlocked = state.unlocked;
@@ -95,19 +95,30 @@ class _ProfileStatsBody extends StatelessWidget {
                         ),
                       ),
                       if (state.status == StatsStatus.ready)
-                        Text(
-                          AppStrings.achievementsProgress(
-                            unlocked.length,
-                            Achievements.all.length,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
                           ),
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: ZipColors.inkSoft,
-                            fontWeight: FontWeight.w600,
+                          decoration: BoxDecoration(
+                            color: ZipColors.paper,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: ZipColors.outlineQuiet),
+                          ),
+                          child: Text(
+                            AppStrings.achievementsProgress(
+                              unlocked.length,
+                              Achievements.all.length,
+                            ),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: ZipColors.inkSoft,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   AchievementBadgeGrid(unlocked: unlocked),
                 ],
               );

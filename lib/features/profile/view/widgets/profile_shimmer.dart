@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/widgets/app_shimmer.dart';
+import '../../../dashboard/view/widgets/floating_nav_dock.dart';
 
 class ProfileShimmer extends StatelessWidget {
   const ProfileShimmer({super.key});
@@ -11,7 +12,11 @@ class ProfileShimmer extends StatelessWidget {
     final layout = AppLayout.of(context);
     return AppShimmer(
       child: SingleChildScrollView(
-        padding: layout.pagePadding,
+        padding: layout.pagePadding.copyWith(
+          bottom:
+              layout.pagePadding.bottom +
+              FloatingNavDock.contentBottomGap(context),
+        ),
         child: Column(
           children: [
             const Center(child: AppShimmerCircle(radius: 56)),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:winklo/core/dev_flags.dart';
 import 'package:winklo/domain/entities/game_day_record.dart';
 import 'package:winklo/domain/entities/game_history.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
@@ -38,10 +39,15 @@ void main() {
   late _MockLoadHistory load;
 
   setUp(() {
+    DevFlags.disablePreviewFullProgressInTests = true;
     load = _MockLoadHistory();
     when(
       () => load(refreshRemote: any(named: 'refreshRemote')),
     ).thenAnswer((_) async => _history(days: const [_zipClear]));
+  });
+
+  tearDown(() {
+    DevFlags.disablePreviewFullProgressInTests = false;
   });
 
   blocTest<StatsCubit, StatsState>(

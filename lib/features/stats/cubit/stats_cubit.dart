@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/dev_flags.dart';
 import '../../../domain/achievements/achievement_rules.dart';
 import '../../../domain/entities/game_history.dart';
 import '../../../domain/logic/local_game_day.dart';
 import '../../../domain/stats/game_stats.dart';
+import '../../../domain/stats/preview_full_progress_history.dart';
 import '../../../domain/usecases/load_game_history.dart';
 import 'stats_state.dart';
 
@@ -35,7 +37,9 @@ class StatsCubit extends Cubit<StatsState> {
   /// [refresh] fetches the account's remote days again.
   Future<void> load({bool refresh = false}) async {
     try {
-      final history = await _loadHistory(refreshRemote: refresh);
+      final history = DevFlags.showFullProgressPreview
+          ? previewFullProgressHistory()
+          : await _loadHistory(refreshRemote: refresh);
       if (isClosed) return;
       emit(
         StatsState(

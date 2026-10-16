@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/app.dart';
+import 'package:winklo/core/dev_flags.dart';
 import 'package:winklo/core/di/app_repositories.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
@@ -135,6 +136,7 @@ void main() {
   GoogleFonts.config.allowRuntimeFetching = false;
 
   setUpAll(() async {
+    DevFlags.disablePreviewFullProgressInTests = true;
     // Home's game art is a cached network image. Writing a PNG runs real
     // async, where the cache would ask for a directory no test host has; it
     // waits instead, and the art keeps its placeholder.
@@ -146,6 +148,10 @@ void main() {
     await loadScreenshotFonts();
     registerFallbackValue(LeaderboardPeriod.daily);
     registerFallbackValue(AppLanguage.system);
+  });
+
+  tearDownAll(() {
+    DevFlags.disablePreviewFullProgressInTests = false;
   });
 
   tearDown(() => AppStrings.use('en'));

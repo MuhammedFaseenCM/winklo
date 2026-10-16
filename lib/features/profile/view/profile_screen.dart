@@ -20,6 +20,7 @@ import '../../../domain/usecases/update_display_name.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/cubit/auth_state.dart';
 import '../../auth/view/sign_in_sheet.dart';
+import '../../dashboard/view/widgets/floating_nav_dock.dart';
 import '../cubit/profile_cubit.dart';
 import '../cubit/profile_state.dart';
 import 'widgets/about_game_dialog.dart';
@@ -214,7 +215,11 @@ class _SignedInBodyState extends State<_SignedInBody> {
             onRefresh: () => context.read<ProfileCubit>().refresh(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: layout.pagePadding,
+              padding: layout.pagePadding.copyWith(
+                bottom:
+                    layout.pagePadding.bottom +
+                    FloatingNavDock.contentBottomGap(context),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

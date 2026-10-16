@@ -181,6 +181,9 @@ abstract interface class AppText {
   // Achievements
   String get achievementsTitle;
   String achievementsProgress(int unlocked, int total);
+  String get achievementsFirstClearsSection;
+  String get achievementsStreaksSection;
+  String get achievementsSpecialsSection;
   String get achievementLocked;
   String achievementFirstClearTitle(String game);
   String achievementFirstClearCondition(String game);
