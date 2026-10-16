@@ -656,24 +656,45 @@ service cloud.firestore {
         && request.resource.data.platform in ['ios', 'android', 'other'];
     }
 
+    // Keys of an app-open doc. opens, appVersion, build and installId came in
+    // 1.1.x; docs from older builds have only the first four.
+    function activityKeys() {
+      return ['uid', 'firstOpenAt', 'lastOpenAt', 'platform',
+        'opens', 'appVersion', 'build', 'installId'];
+    }
+
+    // The same install ID pattern as workers/activity/src/open.ts and
+    // lib/data/repositories/activity_install_id.dart.
+    function validActivityExtras(data) {
+      return (!('opens' in data) || (data.opens is int && data.opens >= 1 && data.opens <= 100000))
+        && (!('appVersion' in data) || (data.appVersion is string
+          && data.appVersion.size() >= 1 && data.appVersion.size() <= 32))
+        && (!('build' in data) || (data.build is int && data.build >= 0 && data.build <= 10000000))
+        && (!('installId' in data) || (data.installId is string
+          && data.installId.matches('^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')));
+    }
+
     function validActivityCreate() {
-      return request.resource.data.keys().hasOnly([
-          'uid', 'firstOpenAt', 'lastOpenAt', 'platform'
-        ])
+      return request.resource.data.keys().hasOnly(activityKeys())
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.firstOpenAt == request.time
         && request.resource.data.lastOpenAt == request.time
-        && validActivityPlatform();
+        && validActivityPlatform()
+        && validActivityExtras(request.resource.data)
+        && (!('opens' in request.resource.data) || request.resource.data.opens == 1);
     }
 
+    // An older build's update leaves opens alone; a newer one counts it up.
     function validActivityUpdate() {
-      return request.resource.data.keys().hasOnly([
-          'uid', 'firstOpenAt', 'lastOpenAt', 'platform'
-        ])
+      return request.resource.data.keys().hasOnly(activityKeys())
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.firstOpenAt == resource.data.firstOpenAt
         && request.resource.data.lastOpenAt == request.time
-        && validActivityPlatform();
+        && validActivityPlatform()
+        && validActivityExtras(request.resource.data)
+        && (!('opens' in resource.data)
+          || ('opens' in request.resource.data
+            && request.resource.data.opens >= resource.data.opens));
     }
 
     match /daily_activity/{dayId}/users/{uid} {
@@ -685,6 +706,12 @@ service cloud.firestore {
         && validActivityDayId(dayId)
         && validActivityUpdate();
       allow delete: if false;
+    }
+
+    // Guests' opens: written only by workers/activity (service account).
+    match /daily_activity/{dayId}/guests/{installId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
   }
 }
