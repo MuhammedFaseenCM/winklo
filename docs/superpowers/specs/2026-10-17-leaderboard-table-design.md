@@ -26,7 +26,7 @@ row grows sideways as players join more leagues.
 
 1. **Header.** The title, plus a back button when the screen is pushed. The
    `leaderboard_manage_leagues` button is removed.
-2. **Game tabs.** The existing pill track, 36px tall (was 48px).
+2. **Game tabs.** The existing pill track, 40px tall (was 50px).
 3. **Filter row** (34px):
    - **Board pill** (`leaderboard_board_pill`). Label: "Today",
      "Yesterday", a short date ("14 Oct"), "This week", or "All-time".
@@ -90,7 +90,7 @@ A modal bottom sheet with:
 - **Name.** One line with an ellipsis.
 - **Name icons** (daily boards only), each with a semantics label and
   tooltip:
-  - no hint: `Icons.lightbulb_outline` in teal
+  - no hint: a struck-through `Icons.lightbulb_outline_rounded` in teal
   - no mistakes (Sudoku): `Icons.verified_outlined` in blue
   - streak ≥ 2: flame and number in amber
 - **Numbers.** Tabular figures, right-aligned. Time uses
@@ -129,8 +129,8 @@ New, under `lib/features/leaderboard/`:
 - `view/widgets/leaderboard_board_sheet.dart`: `showLeaderboardBoardSheet`,
   which returns `LeaderboardBoardChoice?` (period + dayId).
 - `view/widgets/leaderboard_scope_sheet.dart`: `showLeaderboardScopeSheet`,
-  which returns `LeaderboardScopeChoice?` (a league id, or null for
-  Everyone).
+  which returns `LeaderboardScopeChoice?`: a league id (null for
+  Everyone), or "open the leagues screen".
 - `view/widgets/leaderboard_table.dart`: `LeaderboardTableHeader` and
   `LeaderboardTableRow`.
 - `view/widgets/leaderboard_game_tabs.dart`: the segment bar and pill
