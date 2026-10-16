@@ -24,6 +24,10 @@ class AppOpenLifecycle with WidgetsBindingObserver {
   String? _lastUid;
   bool _started = false;
 
+  /// Whether Firebase has said who is signed in. Until then a ping would see
+  /// a restoring session as a guest, so the first one waits for it.
+  bool _authKnown = false;
+
   void start() {
     if (_started) return;
     _started = true;
@@ -32,7 +36,6 @@ class AppOpenLifecycle with WidgetsBindingObserver {
     // sign-in. A later null → uid transition still pings (auth restore / login).
     _lastUid = _authRepository.currentUser?.uid;
     _authSub = _authRepository.authStateChanges().listen(_onAuth);
-    unawaited(_ping());
   }
 
   void dispose() {
@@ -44,20 +47,23 @@ class AppOpenLifecycle with WidgetsBindingObserver {
       unawaited(subscription.cancel());
     }
     _started = false;
+    _authKnown = false;
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && _authKnown) {
       unawaited(_ping());
     }
   }
 
   void _onAuth(AppUser? user) {
     final uid = user?.uid;
+    final first = !_authKnown;
+    _authKnown = true;
     final signedIn = uid != null && _lastUid == null;
     _lastUid = uid;
-    if (signedIn) {
+    if (first || signedIn) {
       unawaited(_ping());
     }
   }
