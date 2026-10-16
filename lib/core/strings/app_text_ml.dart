@@ -598,6 +598,9 @@ final class AppTextMl implements AppText {
   String get achievementsSpecial => 'പ്രത്യേകം';
 
   @override
+  String get achievementEarned => 'നേടി';
+
+  @override
   String achievementCurrentStreak(int days) =>
       'ഇപ്പോഴത്തെ സ്ട്രീക്ക്: $days ദിവസം';
 

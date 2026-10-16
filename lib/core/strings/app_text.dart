@@ -202,6 +202,7 @@ abstract interface class AppText {
   String get achievementLadderFirst;
   String achievementLadderDays(int days);
   String get achievementsSpecial;
+  String get achievementEarned;
   String achievementCurrentStreak(int days);
   String newAchievementsTitle(int count);
 

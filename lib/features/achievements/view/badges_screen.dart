@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -199,7 +201,8 @@ class _GameLadderCard extends StatelessWidget {
                     for (var i = 0; i + 1 < steps.length; i++)
                       Positioned(
                         left: center(i) + _medal / 2,
-                        width: column - _medal,
+                        // Never negative, however narrow the card.
+                        width: math.max(0, column - _medal),
                         top: _medal / 2 - 1.5,
                         height: 3,
                         child: DecoratedBox(
@@ -352,8 +355,8 @@ class _SpecialRow extends StatelessWidget {
   }
 }
 
-/// A badge for screen readers: its name, and "Locked. How to earn it" when
-/// it isn't earned yet.
+/// A badge for screen readers: its name, then "Earned", or "Locked. How
+/// to earn it".
 class _BadgeSemantics extends StatelessWidget {
   const _BadgeSemantics({
     required this.achievement,
@@ -371,7 +374,7 @@ class _BadgeSemantics extends StatelessWidget {
       container: true,
       label: achievementTitle(achievement),
       value: unlocked
-          ? null
+          ? AppStrings.achievementEarned
           : '${AppStrings.achievementLocked}. '
                 '${achievementCondition(achievement)}',
       excludeSemantics: true,

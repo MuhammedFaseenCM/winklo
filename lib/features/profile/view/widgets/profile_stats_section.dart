@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -78,12 +80,20 @@ class _ProfileStatsBody extends StatelessWidget {
         BlocBuilder<StatsCubit, StatsState>(
           builder: (context, state) => BadgesSummaryCard(
             state: state,
-            onOpen: () => context.push('/profile/badges'),
+            onOpen: () => unawaited(_openBadges(context)),
           ),
         ),
       ],
     );
   }
+}
+
+/// Opens Badges, then reloads: Badges refreshes the account's remote days,
+/// and the plain reload reads that cache without fetching again.
+Future<void> _openBadges(BuildContext context) async {
+  final cubit = context.read<StatsCubit>();
+  await context.push('/profile/badges');
+  if (!cubit.isClosed) unawaited(cubit.load());
 }
 
 class _Card extends StatelessWidget {

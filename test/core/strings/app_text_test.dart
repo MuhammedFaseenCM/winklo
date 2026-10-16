@@ -145,6 +145,7 @@ final Map<String, String Function(AppText)> _members = {
   'achievementsAllEarned': (t) => t.achievementsAllEarned,
   'achievementLadderFirst': (t) => t.achievementLadderFirst,
   'achievementsSpecial': (t) => t.achievementsSpecial,
+  'achievementEarned': (t) => t.achievementEarned,
   'updateRequiredTitle': (t) => t.updateRequiredTitle,
   'updateAvailableTitle': (t) => t.updateAvailableTitle,
   'updateRequiredBody': (t) => t.updateRequiredBody,

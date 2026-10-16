@@ -92,7 +92,7 @@ void main() {
     await pump(tester);
 
     final earned = tester.widget<Semantics>(labelled('7-day Zip streak'));
-    expect(earned.properties.value, isNull);
+    expect(earned.properties.value, AppStrings.achievementEarned);
     final locked = tester.widget<Semantics>(labelled('30-day Zip streak'));
     expect(
       locked.properties.value,
@@ -102,6 +102,29 @@ void main() {
       labelled(AppStrings.achievementPerfectDayTitle),
     );
     expect(special.properties.value, startsWith(AppStrings.achievementLocked));
+  });
+
+  testWidgets('big text on a narrow phone: no overflow', (tester) async {
+    tester.view.physicalSize = const Size(320, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      RepositoryProvider<LoadGameHistory>.value(
+        value: load,
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: const BadgesScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('a failed load offers Retry', (tester) async {

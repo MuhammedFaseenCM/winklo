@@ -254,6 +254,7 @@ abstract final class AppStrings {
   static String achievementLadderDays(int days) =>
       _t.achievementLadderDays(days);
   static String get achievementsSpecial => _t.achievementsSpecial;
+  static String get achievementEarned => _t.achievementEarned;
   static String achievementCurrentStreak(int days) =>
       _t.achievementCurrentStreak(days);
   static String newAchievementsTitle(int count) =>

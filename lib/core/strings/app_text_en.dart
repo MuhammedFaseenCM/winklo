@@ -569,6 +569,9 @@ final class AppTextEn implements AppText {
   String get achievementsSpecial => 'Special';
 
   @override
+  String get achievementEarned => 'Earned';
+
+  @override
   String achievementCurrentStreak(int days) =>
       days == 1 ? 'Current streak: 1 day' : 'Current streak: $days days';
 

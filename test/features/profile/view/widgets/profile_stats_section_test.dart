@@ -147,4 +147,29 @@ void main() {
 
     expect(find.text('badges page'), findsOneWidget);
   });
+
+  testWidgets('coming back from Badges reloads the card', (tester) async {
+    await pumpSection(tester);
+    expect(find.text(AppStrings.achievementsProgress(1, 16)), findsOneWidget);
+
+    // Badges refreshed the account's remote days meanwhile.
+    when(() => load(refreshRemote: any(named: 'refreshRemote'))).thenAnswer(
+      (_) async => _history([
+        _zip,
+        const GameDayRecord(
+          gameId: GameIds.sudoku,
+          playId: '20261015',
+          timeSeconds: 120,
+        ),
+      ]),
+    );
+    await tester.tap(find.text(AppStrings.achievementsTitle));
+    await tester.pumpAndSettle();
+    GoRouter.of(tester.element(find.text('badges page'))).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.achievementsProgress(2, 16)), findsOneWidget);
+    // The plain reload reads the cache Badges refreshed: no second fetch.
+    verifyNever(() => load(refreshRemote: true));
+  });
 }

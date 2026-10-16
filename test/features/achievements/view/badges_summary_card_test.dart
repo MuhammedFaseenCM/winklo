@@ -117,6 +117,47 @@ void main() {
     expect(find.byType(AchievementMedal), findsNothing);
   });
 
+  testWidgets('a failed load still shows the card to open', (tester) async {
+    await pump(tester, const StatsState(status: StatsStatus.failure));
+    expect(find.text(AppStrings.achievementsTitle), findsOneWidget);
+    expect(find.byType(AchievementMedal), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('big text on a narrow phone: no overflow', (tester) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(320, 900),
+            textScaler: TextScaler.linear(2),
+          ),
+          child: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: BadgesSummaryCard(
+                state: _ready(
+                  const {
+                    'first_clear_zip',
+                    'first_clear_path_words',
+                    'first_clear_sudoku',
+                  },
+                  streaks: const {GameIds.pathWords: 4},
+                ),
+                onOpen: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tapping the card opens the Badges screen', (tester) async {
     var opened = 0;
     await pump(tester, _ready(const {}), onOpen: () => opened++);

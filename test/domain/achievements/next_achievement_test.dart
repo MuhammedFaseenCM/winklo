@@ -54,6 +54,16 @@ void main() {
     );
   });
 
+  test('a streak past its target that is not stored yet still leads', () {
+    expect(
+      nextAchievement(
+        _firstClears,
+        currentStreakByGame: const {GameIds.zip: 9, GameIds.sudoku: 5},
+      )?.id,
+      'streak_7_zip',
+    );
+  });
+
   test('everything earned: nothing next', () {
     expect(nextAchievement({for (final a in Achievements.all) a.id}), isNull);
   });
