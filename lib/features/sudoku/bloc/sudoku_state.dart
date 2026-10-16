@@ -35,6 +35,9 @@ sealed class SudokuState with _$SudokuState {
     DateTime? resumedAt,
     int? hintFlashIndex,
     @Default(0) int hintsUsed,
+
+    /// Seconds hints added to the clock this run; Results reports it.
+    @Default(0) int hintPenaltySeconds,
     SudokuCoachHint? activeCoachHint,
     @Default(false) bool showNoSimpleHint,
     @Default(false) bool usedHintsThisRun,

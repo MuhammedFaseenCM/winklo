@@ -29,6 +29,9 @@ sealed class ZipState with _$ZipState {
     @Default(false) bool finished,
     @Default(false) bool usedHintsThisRun,
     @Default(0) int hintsUsed,
+
+    /// Seconds hints added to the clock this run; Results reports it.
+    @Default(0) int hintPenaltySeconds,
     @Default(0) int elapsedMs,
     DateTime? resumedAt,
     @Default(<Cell>[]) List<Cell> path,

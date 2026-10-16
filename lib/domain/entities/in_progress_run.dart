@@ -7,6 +7,7 @@ class InProgressRun {
     required this.board,
     this.usedHintsThisRun = false,
     this.hadMistakesThisRun = false,
+    this.hintPenaltySeconds = 0,
     this.boardFingerprint,
   });
 
@@ -15,6 +16,11 @@ class InProgressRun {
   final int elapsedMs;
   final bool usedHintsThisRun;
   final bool hadMistakesThisRun;
+
+  /// Seconds hints added to [elapsedMs]: what Results reports, since it can
+  /// differ from what the hint count suggests (runs saved before hints cost
+  /// time charged none).
+  final int hintPenaltySeconds;
 
   /// Game-specific JSON-encodable board snapshot.
   final Map<String, dynamic> board;
@@ -35,6 +41,7 @@ class InProgressRun {
     'usedHintsThisRun': usedHintsThisRun,
     'hadMistakesThisRun': hadMistakesThisRun,
     'board': board,
+    if (hintPenaltySeconds > 0) 'hintPenaltySeconds': hintPenaltySeconds,
     if (boardFingerprint != null) 'boardFingerprint': boardFingerprint,
   };
 
@@ -46,6 +53,7 @@ class InProgressRun {
       elapsedMs: (json['elapsedMs'] as num?)?.toInt() ?? 0,
       usedHintsThisRun: json['usedHintsThisRun'] as bool? ?? false,
       hadMistakesThisRun: json['hadMistakesThisRun'] as bool? ?? false,
+      hintPenaltySeconds: (json['hintPenaltySeconds'] as num?)?.toInt() ?? 0,
       board: boardRaw is Map
           ? Map<String, dynamic>.from(boardRaw)
           : const <String, dynamic>{},

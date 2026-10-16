@@ -1918,6 +1918,25 @@ void main() {
 
     expect(ready.hintsUsed, 1);
     expect(ready.elapsedMs, 10000);
+    expect(ready.hintPenaltySeconds, 10);
+    await bloc.close();
+  });
+
+  test('two quick hint taps reveal two letters, charging each once', () async {
+    when(() => generateDaily(day: any(named: 'day'))).thenAnswer(
+      (inv) async => _tinyPuzzle(day: inv.namedArguments[#day] as DateTime),
+    );
+    final bloc = buildBloc();
+    bloc.add(PathWordsEvent.started(date: DateTime(2026, 9, 17)));
+    await bloc.stream.firstWhere((s) => s.status == PathWordsStatus.ready);
+
+    bloc.add(const PathWordsEvent.hint());
+    bloc.add(const PathWordsEvent.hint());
+    final second = await bloc.stream.firstWhere((s) => s.hintsUsed == 2);
+
+    expect(second.hintRevealLength, 2);
+    expect(second.elapsedMs, 30000);
+    expect(second.hintPenaltySeconds, 30);
     await bloc.close();
   });
 

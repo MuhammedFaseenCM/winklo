@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/bloc/sequential.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
@@ -85,7 +86,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     on<ZipStarted>(_onStarted);
     on<ZipPathChanged>(_onPathChanged);
     on<ZipCompleted>(_onCompleted);
-    on<ZipHint>(_onHint);
+    // One at a time: each hint costs time, so none may race another.
+    on<ZipHint>(_onHint, transformer: sequential());
     on<ZipReset>(_onReset);
     on<ZipPauseRun>(_onPauseRun);
     on<ZipResumeRun>(_onResumeRun);
@@ -240,6 +242,9 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         finished: false,
         usedHintsThisRun: draft?.usedHintsThisRun ?? keptHints,
         hintsUsed: hintsUsed,
+        hintPenaltySeconds:
+            draft?.hintPenaltySeconds ??
+            HintPenalty.chargedSeconds(mode, hintsUsed: hintsUsed),
         elapsedMs: clock.elapsedMs,
         resumedAt: now,
         path: path,
@@ -359,10 +364,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           gameId: GameIds.zip,
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
-          hintPenaltySeconds: HintPenalty.chargedSeconds(
-            mode,
-            hintsUsed: state.hintsUsed,
-          ),
+          hintPenaltySeconds: state.hintPenaltySeconds,
           day: state.day,
           leaderboardProof: proof,
         ),
@@ -380,6 +382,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       gameId: GameIds.zip,
       playId: playId,
     );
+    // The run may have finished meanwhile; its time is already posted.
+    if (state.finished || state.status != ZipStatus.ready) return;
     final clock = (_clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs))
         .addPenalty(Duration(seconds: spent.penaltySeconds));
     _clock = clock;
@@ -387,6 +391,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       state.copyWith(
         usedHintsThisRun: true,
         hintsUsed: spent.hintsUsed,
+        hintPenaltySeconds: state.hintPenaltySeconds + spent.penaltySeconds,
         elapsedMs: clock.elapsedMs,
         resumedAt: clock.resumedAt,
       ),
@@ -529,6 +534,9 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         status: ZipStatus.ready,
         usedHintsThisRun: draft?.usedHintsThisRun ?? false,
         hintsUsed: hintsUsed,
+        hintPenaltySeconds:
+            draft?.hintPenaltySeconds ??
+            HintPenalty.chargedSeconds(mode, hintsUsed: hintsUsed),
         elapsedMs: clock.elapsedMs,
         resumedAt: now,
         path: draft == null ? const <Cell>[] : _pathFromDraft(draft),
@@ -595,10 +603,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           gameId: GameIds.zip,
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
-          hintPenaltySeconds: HintPenalty.chargedSeconds(
-            mode,
-            hintsUsed: state.hintsUsed,
-          ),
+          hintPenaltySeconds: state.hintPenaltySeconds,
           day: mode.day,
           local: LocalResultInfo(
             kind: mode.isArchive
@@ -630,6 +635,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         playId: playId,
         elapsedMs: elapsedMs,
         usedHintsThisRun: state.usedHintsThisRun,
+        hintPenaltySeconds: state.hintPenaltySeconds,
         boardFingerprint: state.level.fingerprint,
         board: {
           'path': [for (final cell in state.path) cell.toList()],

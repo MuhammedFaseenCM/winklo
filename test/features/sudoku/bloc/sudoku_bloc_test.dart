@@ -698,18 +698,28 @@ void main() {
     },
   );
 
-  test('hints have no cap and each costs more time', () async {
+  test('hints have no cap and each new one costs more time', () async {
     final bloc = buildBloc(
       generatePuzzle: ({required DateTime day}) => _twoEmptyPuzzle(day: day),
     );
     bloc.add(SudokuEvent.started(date: day));
     await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
-    for (var n = 1; n <= 4; n++) {
-      bloc.add(const SudokuEvent.hint());
-      await bloc.stream.firstWhere((s) => s.hintsUsed == n);
-    }
-    // 10 + 20 + 30 + 40
-    expect(bloc.state.elapsedMs, 100000);
+    // Three different pieces of help: each gap's step, then a mistake.
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.hint());
+    await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+    bloc.add(const SudokuEvent.cellSelected(Cell(5, 4)));
+    bloc.add(const SudokuEvent.hint());
+    await bloc.stream.firstWhere((s) => s.hintsUsed == 2);
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.digitTapped(3));
+    bloc.add(const SudokuEvent.hint());
+    final third = await bloc.stream.firstWhere((s) => s.hintsUsed == 3);
+
+    expect(third.activeCoachHint?.technique, SudokuHintTechnique.mistakeInRow);
+    // 10 + 20 + 30
+    expect(third.elapsedMs, 60000);
+    expect(third.hintPenaltySeconds, 60);
     await bloc.close();
   });
 
@@ -741,6 +751,43 @@ void main() {
     await bloc.close();
   });
 
+  test('asking again for the same help on the same grid is free', () async {
+    final bloc = buildBloc();
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.hint());
+    await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+    bloc.add(const SudokuEvent.dismissHint());
+    await bloc.stream.firstWhere((s) => s.activeCoachHint == null);
+
+    bloc.add(const SudokuEvent.hint());
+    final again = await bloc.stream.firstWhere(
+      (s) => s.activeCoachHint != null,
+    );
+    expect(again.activeCoachHint?.targetIndex, 1);
+    expect(again.hintsUsed, 1);
+    expect(again.elapsedMs, 10000);
+    expect(again.hintPenaltySeconds, 10);
+    await bloc.close();
+  });
+
+  test('two quick hint taps charge once', () async {
+    final bloc = buildBloc();
+    bloc.add(SudokuEvent.started(date: day));
+    await bloc.stream.firstWhere((s) => s.status == SudokuStatus.ready);
+    bloc.add(const SudokuEvent.cellSelected(Cell(0, 1)));
+    bloc.add(const SudokuEvent.hint());
+    bloc.add(const SudokuEvent.hint());
+    await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+    await pumpEventQueue();
+
+    expect(bloc.state.hintsUsed, 1);
+    expect(bloc.state.elapsedMs, 10000);
+    expect(hintQuota.usedFor(GameIds.sudoku, '20260927'), 1);
+    await bloc.close();
+  });
+
   test('a fresh run carries the time of hints already counted', () async {
     // Ops replaced the board, or the run began on another device.
     final bloc = buildBloc(quota: _FakeHintQuota(2));
@@ -751,6 +798,7 @@ void main() {
 
     expect(ready.hintsUsed, 2);
     expect(ready.elapsedMs, 30000);
+    expect(ready.hintPenaltySeconds, 30);
     await bloc.close();
   });
 

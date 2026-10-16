@@ -33,6 +33,12 @@ counted in the solve time. We went with an instant penalty instead:
   replaced by ops, or the run was started on another device) starts its clock
   at those hints' total penalty, so switching boards or devices can't wipe it.
 - Sudoku's "No simple hint right now" costs nothing (no hint is spent).
+  Asking again for the same help on an unchanged grid (a second tap, or
+  after dismissing it) shows it again for free.
+- Hint events are handled one at a time (`core/bloc/sequential.dart`), so a
+  quick second tap sees what the first revealed and is never charged for the
+  same letter or step. A hint that lands after the run finished is dropped.
+- A hint that would reveal nothing new (Zip, Path Words) is never offered.
 - Hint-free chips and badges are unchanged: any hint still loses them.
 
 ## UI
@@ -42,7 +48,11 @@ counted in the solve time. We went with an instant penalty instead:
   running out.
 - The run timer is a debug-only label, so players don't watch it jump. The
   results card adds a line under TIME when hints added time:
-  "Includes +30s from hints" (daily and archive results).
+  "Includes +30s from hints" (daily and archive results). It reports what
+  the run's clock was actually charged (`hintPenaltySeconds`, saved in the
+  draft), not a figure from the hint count, which can disagree: a draft
+  saved before this change charged nothing, and a sync can raise the count
+  mid-run.
 - Sudoku's How to play no longer promises 3 hints and explains the cost.
 
 ## Data and server

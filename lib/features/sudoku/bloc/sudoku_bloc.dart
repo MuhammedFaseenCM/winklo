@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart' show listEquals;
+import '../../../core/bloc/sequential.dart';
 
 import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_id.dart';
@@ -77,7 +79,9 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     on<SudokuDigitTapped>(_onDigitTapped);
     on<SudokuErase>(_onErase);
     on<SudokuNotesModeToggled>(_onNotesModeToggled);
-    on<SudokuHint>(_onHint);
+    // One at a time: each hint costs time, so a quick second tap must see
+    // the first one's result.
+    on<SudokuHint>(_onHint, transformer: sequential());
     on<SudokuDismissHint>(_onDismissHint);
     on<SudokuReset>(_onReset);
     on<SudokuPauseRun>(_onPauseRun);
@@ -120,6 +124,10 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   String? _playId;
   PlayRunClock? _clock;
 
+  /// The last hint paid for and the grid it was for. Asking again on that
+  /// grid shows it again for free: the player already paid for that help.
+  ({List<int> grid, SudokuCoachHint coach})? _paidHint;
+
   /// Period of the run on screen; hints count against it, not the clock.
   String get _runPlayId => _playId ?? PlayPeriod.id(state.day, playPeriod);
 
@@ -153,6 +161,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         hintFlashIndex: null,
         errorIndices: const <int>{},
         usedHintsThisRun: false,
+        hintPenaltySeconds: 0,
         hadMistakesThisRun: false,
         activeCoachHint: null,
         showNoSimpleHint: false,
@@ -167,6 +176,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       ),
     );
     _clock = null;
+    _paidHint = null;
 
     late final SudokuPuzzle puzzle;
     try {
@@ -233,6 +243,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           selectedIndex: null,
           finished: false,
           hintsUsed: hintQuota.usedFor(GameIds.sudoku, playId),
+          hintPenaltySeconds: draft.hintPenaltySeconds,
           activeCoachHint: null,
           showNoSimpleHint: false,
           usedHintsThisRun: draft.usedHintsThisRun,
@@ -265,6 +276,10 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           notesMode: false,
           finished: false,
           hintsUsed: hintsUsed,
+          hintPenaltySeconds: HintPenalty.chargedSeconds(
+            mode,
+            hintsUsed: hintsUsed,
+          ),
           activeCoachHint: null,
           showNoSimpleHint: false,
           usedHintsThisRun: keptHints,
@@ -441,6 +456,21 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       emit(state.copyWith(showNoSimpleHint: true, activeCoachHint: null));
       return;
     }
+    final paid = _paidHint;
+    if (paid != null &&
+        listEquals(paid.grid, state.grid) &&
+        _sameHelp(paid.coach, coach)) {
+      emit(
+        state.copyWith(
+          activeCoachHint: coach,
+          showNoSimpleHint: false,
+          selectedIndex: coach.targetIndex ?? state.selectedIndex,
+          hintFlashIndex: null,
+        ),
+      );
+      return;
+    }
+    final grid = List<int>.of(state.grid);
 
     final spent = await spendHint(
       quota: hintQuota,
@@ -448,12 +478,16 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       gameId: GameIds.sudoku,
       playId: _runPlayId,
     );
+    // The run may have finished meanwhile; its time is already posted.
+    if (!_canPlay) return;
+    _paidHint = (grid: grid, coach: coach);
     final clock = (_clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs))
         .addPenalty(Duration(seconds: spent.penaltySeconds));
     _clock = clock;
     emit(
       state.copyWith(
         hintsUsed: spent.hintsUsed,
+        hintPenaltySeconds: state.hintPenaltySeconds + spent.penaltySeconds,
         elapsedMs: clock.elapsedMs,
         resumedAt: clock.resumedAt,
         activeCoachHint: coach,
@@ -470,6 +504,12 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       penaltySeconds: spent.penaltySeconds,
     );
   }
+
+  static bool _sameHelp(SudokuCoachHint a, SudokuCoachHint b) =>
+      a.technique == b.technique &&
+      a.targetIndex == b.targetIndex &&
+      a.digit == b.digit &&
+      a.row == b.row;
 
   void _onDismissHint(SudokuDismissHint event, Emitter<SudokuState> emit) {
     emit(state.copyWith(activeCoachHint: null, showNoSimpleHint: false));
@@ -665,10 +705,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           gameId: GameIds.sudoku,
           usedHints: state.usedHintsThisRun,
           hadMistakes: state.hadMistakesThisRun,
-          hintPenaltySeconds: HintPenalty.chargedSeconds(
-            mode,
-            hintsUsed: state.hintsUsed,
-          ),
+          hintPenaltySeconds: state.hintPenaltySeconds,
           day: state.day,
           leaderboardProof: proof,
         ),
@@ -698,6 +735,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     final runId = mode.runId(dailyPlayId: '');
     _playId = runId;
     _clock = null;
+    _paidHint = null;
     _unitFlashGeneration++;
     final today = _now();
     final day = mode.day ?? DateTime(today.year, today.month, today.day);
@@ -715,6 +753,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         hintFlashIndex: null,
         errorIndices: const <int>{},
         usedHintsThisRun: false,
+        hintPenaltySeconds: 0,
         hadMistakesThisRun: false,
         activeCoachHint: null,
         showNoSimpleHint: false,
@@ -797,6 +836,9 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         selectedIndex: null,
         finished: false,
         hintsUsed: hintsUsed,
+        hintPenaltySeconds:
+            draft?.hintPenaltySeconds ??
+            HintPenalty.chargedSeconds(mode, hintsUsed: hintsUsed),
         activeCoachHint: null,
         showNoSimpleHint: false,
         usedHintsThisRun: draft?.usedHintsThisRun ?? false,
@@ -874,10 +916,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           gameId: GameIds.sudoku,
           usedHints: state.usedHintsThisRun,
           hadMistakes: state.hadMistakesThisRun,
-          hintPenaltySeconds: HintPenalty.chargedSeconds(
-            mode,
-            hintsUsed: state.hintsUsed,
-          ),
+          hintPenaltySeconds: state.hintPenaltySeconds,
           day: mode.day,
           local: LocalResultInfo(
             kind: mode.isArchive
@@ -910,6 +949,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         elapsedMs: elapsedMs,
         usedHintsThisRun: state.usedHintsThisRun,
         hadMistakesThisRun: state.hadMistakesThisRun,
+        hintPenaltySeconds: state.hintPenaltySeconds,
         boardFingerprint: state.puzzle?.fingerprint,
         board: {
           'grid': state.grid,
