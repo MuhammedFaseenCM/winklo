@@ -53,12 +53,9 @@ class _SettingsView extends StatelessWidget {
             final cubit = context.read<SettingsCubit>();
             final reminders = state.reminders;
             final gap = SizedBox(height: layout.space(20));
-            // Clear of the shell's floating nav dock (extendBody).
-            final bottomInset = MediaQuery.paddingOf(context).bottom;
             return ListView(
-              padding: layout.pagePadding.copyWith(
-                bottom: layout.pagePadding.bottom + bottomInset,
-              ),
+              // Clear of the shell's floating nav dock (extendBody).
+              padding: layout.scrollPadding(context),
               children: [
                 SettingsSection(
                   title: AppStrings.settingsSoundSection,

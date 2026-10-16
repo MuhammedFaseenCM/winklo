@@ -214,7 +214,9 @@ class _SignedInBodyState extends State<_SignedInBody> {
             onRefresh: () => context.read<ProfileCubit>().refresh(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: layout.pagePadding,
+              // Clear of the shell's floating nav dock (extendBody), so the
+              // last row isn't under it.
+              padding: layout.scrollPadding(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

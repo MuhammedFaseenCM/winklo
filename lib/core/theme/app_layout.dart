@@ -43,6 +43,13 @@ class AppLayout {
     space(isCompact ? 16 : 20),
   );
 
+  /// [pagePadding] for a scrolling page, with the bottom inset added: the
+  /// floating nav dock inside the dashboard (its Scaffold has extendBody),
+  /// the system bar elsewhere. The last row then ends clear of the dock.
+  EdgeInsets scrollPadding(BuildContext context) => pagePadding.copyWith(
+    bottom: pagePadding.bottom + MediaQuery.paddingOf(context).bottom,
+  );
+
   double get sectionGap => space(isCompact ? 10 : 12);
 
   double get tileGap => space(isCompact ? 8 : 10);

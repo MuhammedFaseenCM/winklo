@@ -117,7 +117,8 @@ class _GameStatsPage extends StatelessWidget {
       onRefresh: () => context.read<StatsCubit>().load(refresh: true),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: layout.pagePadding,
+        // Clear of the shell's floating nav dock (extendBody).
+        padding: layout.scrollPadding(context),
         children: [
           if (localOnly) ...[_LocalOnlyNote(), gap],
           StatTiles(stats: stats),
