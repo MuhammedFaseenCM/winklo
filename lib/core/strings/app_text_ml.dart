@@ -769,6 +769,56 @@ final class AppTextMl implements AppText {
   @override
   String get leaderboardLeagues => 'ലീഗുകൾ';
 
+  // Leaderboard: the board and scope pickers and the table
+  @override
+  String get leaderboardBoardSheetTitle => 'ഏത് ബോർഡ്?';
+
+  @override
+  String get leaderboardScopeSheetTitle => 'ആരുടെ സ്കോറുകൾ?';
+
+  @override
+  String get leaderboardThisWeekHint =>
+      'പൂർത്തിയാക്കിയ ദിവസങ്ങൾ, പിന്നെ ആകെ സമയം';
+
+  @override
+  String get leaderboardAllTimeHint => 'എക്കാലത്തെയും മികച്ച സമയം';
+
+  @override
+  String get leaderboardSingleDayLabel => 'ഒരു ദിവസം · കഴിഞ്ഞ 14 ദിവസം';
+
+  @override
+  String get leaderboardColumnPlayer => 'കളിക്കാർ';
+
+  @override
+  String get leaderboardColumnTime => 'സമയം';
+
+  @override
+  String get leaderboardColumnDays => 'ദിവസം';
+
+  @override
+  String get leaderboardColumnTotal => 'ആകെ';
+
+  @override
+  String get leaderboardColumnBest => 'മികച്ചത്';
+
+  @override
+  String get leaderboardTop50 => 'ആദ്യ 50 പേർ';
+
+  @override
+  String get leaderboardManageLeagues => 'ലീഗുകൾ നിയന്ത്രിക്കൂ';
+
+  @override
+  String get leaderboardCreateOrJoinLeague => 'ലീഗ് ഉണ്ടാക്കൂ അല്ലെങ്കിൽ ചേരൂ';
+
+  @override
+  String leaderboardLeaguePlayers(int count) => '$count പേർ';
+
+  @override
+  String leaderboardBoardPillLabel(String board) => 'ബോർഡ്: $board';
+
+  @override
+  String leaderboardScopePillLabel(String scope) => 'സ്കോറുകൾ: $scope';
+
   @override
   String playerCardRank(int rank) => 'റാങ്ക് #$rank';
 

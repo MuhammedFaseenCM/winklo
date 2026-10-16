@@ -310,6 +310,28 @@ abstract final class AppStrings {
   static String get leaderboardLeagueEmpty => _t.leaderboardLeagueEmpty;
   static String get leaderboardScopeEveryone => _t.leaderboardScopeEveryone;
   static String get leaderboardLeagues => _t.leaderboardLeagues;
+
+  // Leaderboard: the board and scope pickers and the table
+  static String get leaderboardBoardSheetTitle => _t.leaderboardBoardSheetTitle;
+  static String get leaderboardScopeSheetTitle => _t.leaderboardScopeSheetTitle;
+  static String get leaderboardThisWeekHint => _t.leaderboardThisWeekHint;
+  static String get leaderboardAllTimeHint => _t.leaderboardAllTimeHint;
+  static String get leaderboardSingleDayLabel => _t.leaderboardSingleDayLabel;
+  static String get leaderboardColumnPlayer => _t.leaderboardColumnPlayer;
+  static String get leaderboardColumnTime => _t.leaderboardColumnTime;
+  static String get leaderboardColumnDays => _t.leaderboardColumnDays;
+  static String get leaderboardColumnTotal => _t.leaderboardColumnTotal;
+  static String get leaderboardColumnBest => _t.leaderboardColumnBest;
+  static String get leaderboardTop50 => _t.leaderboardTop50;
+  static String get leaderboardManageLeagues => _t.leaderboardManageLeagues;
+  static String get leaderboardCreateOrJoinLeague =>
+      _t.leaderboardCreateOrJoinLeague;
+  static String leaderboardLeaguePlayers(int count) =>
+      _t.leaderboardLeaguePlayers(count);
+  static String leaderboardBoardPillLabel(String board) =>
+      _t.leaderboardBoardPillLabel(board);
+  static String leaderboardScopePillLabel(String scope) =>
+      _t.leaderboardScopePillLabel(scope);
   static String playerCardRank(int rank) => _t.playerCardRank(rank);
   static String get playerCardTime => _t.playerCardTime;
   static String get playerCardWeekTotal => _t.playerCardWeekTotal;

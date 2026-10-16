@@ -256,6 +256,25 @@ abstract interface class AppText {
   String get leaderboardLeagueEmpty;
   String get leaderboardScopeEveryone;
   String get leaderboardLeagues;
+
+  // Leaderboard: the board and scope pickers and the table
+  String get leaderboardBoardSheetTitle;
+  String get leaderboardScopeSheetTitle;
+  String get leaderboardThisWeekHint;
+  String get leaderboardAllTimeHint;
+  String get leaderboardSingleDayLabel;
+  String get leaderboardColumnPlayer;
+  String get leaderboardColumnTime;
+  String get leaderboardColumnDays;
+  String get leaderboardColumnTotal;
+  String get leaderboardColumnBest;
+  String get leaderboardTop50;
+  String get leaderboardManageLeagues;
+  String get leaderboardCreateOrJoinLeague;
+  String leaderboardLeaguePlayers(int count);
+  String leaderboardBoardPillLabel(String board);
+  String leaderboardScopePillLabel(String scope);
+
   String playerCardRank(int rank);
   String get playerCardTime;
   String get playerCardWeekTotal;

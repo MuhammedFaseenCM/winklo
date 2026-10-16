@@ -730,6 +730,56 @@ final class AppTextEn implements AppText {
   @override
   String get leaderboardLeagues => 'Leagues';
 
+  // Leaderboard: the board and scope pickers and the table
+  @override
+  String get leaderboardBoardSheetTitle => 'Which board?';
+
+  @override
+  String get leaderboardScopeSheetTitle => 'Whose scores?';
+
+  @override
+  String get leaderboardThisWeekHint => 'Days cleared, then total time';
+
+  @override
+  String get leaderboardAllTimeHint => 'Best time ever';
+
+  @override
+  String get leaderboardSingleDayLabel => 'A single day · last 14 days';
+
+  @override
+  String get leaderboardColumnPlayer => 'Player';
+
+  @override
+  String get leaderboardColumnTime => 'Time';
+
+  @override
+  String get leaderboardColumnDays => 'Days';
+
+  @override
+  String get leaderboardColumnTotal => 'Total';
+
+  @override
+  String get leaderboardColumnBest => 'Best';
+
+  @override
+  String get leaderboardTop50 => 'Top 50';
+
+  @override
+  String get leaderboardManageLeagues => 'Manage leagues';
+
+  @override
+  String get leaderboardCreateOrJoinLeague => 'Create or join a league';
+
+  @override
+  String leaderboardLeaguePlayers(int count) =>
+      count == 1 ? '1 player' : '$count players';
+
+  @override
+  String leaderboardBoardPillLabel(String board) => 'Board: $board';
+
+  @override
+  String leaderboardScopePillLabel(String scope) => 'Scores: $scope';
+
   @override
   String playerCardRank(int rank) => 'Rank #$rank';
 
