@@ -10,7 +10,7 @@ import 'package:winklo/domain/entities/game_day_record.dart';
 import 'package:winklo/domain/entities/game_history.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/usecases/load_game_history.dart';
-import 'package:winklo/features/achievements/view/achievement_badge_grid.dart';
+import 'package:winklo/features/achievements/view/badges_summary_card.dart';
 import 'package:winklo/features/profile/view/widgets/profile_stats_section.dart';
 
 class _MockLoadHistory extends Mock implements LoadGameHistory {}
@@ -57,6 +57,10 @@ void main() {
           path: '/profile/stats',
           builder: (context, state) => const Text('stats page'),
         ),
+        GoRoute(
+          path: '/profile/badges',
+          builder: (context, state) => const Text('badges page'),
+        ),
       ],
     );
     addTearDown(router.dispose);
@@ -85,7 +89,14 @@ void main() {
     expect(find.text(AppStrings.statsProfileRow), findsOneWidget);
     expect(find.text(AppStrings.achievementsTitle), findsOneWidget);
     expect(find.text(AppStrings.achievementsProgress(1, 16)), findsOneWidget);
-    expect(find.text('First Zip'), findsOneWidget);
+    // The summary card, not the 16-badge grid: Zip's first clear is earned,
+    // so Path Words' is next.
+    expect(find.byType(BadgesSummaryCard), findsOneWidget);
+    expect(
+      find.text(AppStrings.achievementNext('First Path Words')),
+      findsOneWidget,
+    );
+    expect(find.text('Clear your first Sudoku'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -102,7 +113,7 @@ void main() {
     final signal = ProgressChangeSignal();
     addTearDown(signal.dispose);
     await pumpSection(tester, signal: signal);
-    expect(find.text('First Sudoku'), findsNothing);
+    expect(find.text(AppStrings.achievementsProgress(1, 16)), findsOneWidget);
 
     when(() => load(refreshRemote: any(named: 'refreshRemote'))).thenAnswer(
       (_) async => _history([
@@ -118,7 +129,6 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
 
-    expect(find.text('First Sudoku'), findsOneWidget);
     expect(find.text(AppStrings.achievementsProgress(2, 16)), findsOneWidget);
   });
 
@@ -126,6 +136,15 @@ void main() {
     await pumpSection(tester, provideHistory: false);
 
     expect(find.text(AppStrings.statsProfileRow), findsNothing);
-    expect(find.byType(AchievementBadgeGrid), findsNothing);
+    expect(find.byType(BadgesSummaryCard), findsNothing);
+  });
+
+  testWidgets('the badges card opens /profile/badges', (tester) async {
+    await pumpSection(tester);
+
+    await tester.tap(find.text(AppStrings.achievementsTitle));
+    await tester.pumpAndSettle();
+
+    expect(find.text('badges page'), findsOneWidget);
   });
 }
