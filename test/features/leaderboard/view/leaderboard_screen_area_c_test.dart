@@ -190,6 +190,14 @@ void main() {
     expect(find.text(AppStrings.leaderboardScopeEveryone), findsOneWidget);
     expect(find.text(AppStrings.leaderboardColumnTime), findsOneWidget);
     expect(find.byKey(const Key('leaderboard_manage_leagues')), findsNothing);
+    // Screen readers can open both pickers.
+    for (final key in ['leaderboard_board_pill', 'leaderboard_scope_pill']) {
+      expect(
+        tester.getSemantics(find.byKey(Key(key))),
+        isSemantics(isButton: true, hasTapAction: true),
+        reason: key,
+      );
+    }
   });
 
   testWidgets('a 390×800 phone shows at least nine rows', (tester) async {

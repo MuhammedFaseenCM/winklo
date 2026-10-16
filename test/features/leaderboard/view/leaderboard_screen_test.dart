@@ -451,6 +451,67 @@ void main() {
     expect(find.text('Your Rank'), findsNothing);
   });
 
+  testWidgets(
+    'the last-ranked player reaching their row hides the pin for good',
+    (tester) async {
+      const user = AppUser(uid: 'u25', displayName: 'Player 25');
+      final auth = _MockAuthRepository();
+      final watch = _MockWatchLeaderboard();
+      final boardController =
+          StreamController<List<LeaderboardEntry>>.broadcast();
+      addTearDown(boardController.close);
+
+      when(() => auth.currentUser).thenReturn(user);
+      when(
+        () => auth.authStateChanges(),
+      ).thenAnswer((_) => Stream<AppUser?>.value(user));
+      when(
+        () => watch(
+          gameId: any(named: 'gameId'),
+          period: any(named: 'period'),
+          dayId: any(named: 'dayId'),
+        ),
+      ).thenAnswer((_) => boardController.stream);
+
+      final authCubit = AuthCubit(
+        authRepository: auth,
+        signInWithGoogle: _MockSignInWithGoogle(),
+        signOut: _MockSignOut(),
+      );
+      await pumpLeaderboard(
+        tester,
+        authCubit: authCubit,
+        auth: auth,
+        watch: watch,
+      );
+
+      boardController.add(
+        List.generate(
+          25,
+          (i) => LeaderboardEntry(
+            uid: 'u${i + 1}',
+            displayName: 'Player ${i + 1}',
+            timeSeconds: 20 + i,
+            updatedAt: DateTime.utc(2026, 9, 25),
+            rank: i + 1,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Your Rank'), findsOneWidget);
+
+      // To the very end: the row is on screen, so the pin goes and stays gone
+      // (it must not reclaim its padding and bounce the row back under it).
+      await tester.drag(_boardList, const Offset(0, -3000));
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      expect(find.text('Your Rank'), findsNothing);
+      expect(find.text('Player 25'), findsOneWidget);
+    },
+  );
+
   testWidgets('signed-out shows live entries and floating sign-in CTA', (
     tester,
   ) async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
@@ -146,6 +147,43 @@ void main() {
       ),
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('big text scales the time down instead of clipping it', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.6)),
+          child: Scaffold(
+            body: Column(
+              children: [
+                const LeaderboardTableHeader(period: LeaderboardPeriod.weekly),
+                LeaderboardTableRow(
+                  entry: _entry(seconds: 8432, days: 7),
+                  period: LeaderboardPeriod.weekly,
+                  gameId: GameIds.zip,
+                  isYou: false,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    final time = tester.renderObject<RenderParagraph>(find.text('140:32'));
+    // Laid out at its full width (not cut), then fitted into the column.
+    expect(
+      time.size.width,
+      greaterThanOrEqualTo(time.getMaxIntrinsicWidth(double.infinity) - 0.5),
+    );
+    expect(
+      tester.getRect(find.text('140:32')).right,
+      lessThanOrEqualTo(tester.getRect(find.byType(LeaderboardTableRow)).right),
+    );
   });
 
   testWidgets('tapping a row calls onTap', (tester) async {

@@ -73,6 +73,8 @@ class _FilterPill extends StatelessWidget {
     return Semantics(
       button: true,
       label: semanticsLabel,
+      // excludeSemantics drops the InkWell's own tap action.
+      onTap: onTap,
       excludeSemantics: true,
       child: Material(
         color: ZipColors.wall.withValues(alpha: 0.8),
@@ -83,10 +85,10 @@ class _FilterPill extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          child: SizedBox(
-            height: 34,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 36),
             child: Padding(
-              padding: const EdgeInsets.only(left: 10, right: 6),
+              padding: const EdgeInsets.fromLTRB(10, 4, 6, 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

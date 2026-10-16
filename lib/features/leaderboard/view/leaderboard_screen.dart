@@ -323,6 +323,11 @@ class _LeaderboardViewState extends State<_LeaderboardView>
       showAllTime: _showAllTimeLeaderboard,
     );
     if (choice == null || !mounted || cubit.isClosed) return;
+    // Remote Config may have hidden All-time while the sheet was open.
+    if (choice.period == LeaderboardPeriod.allTime &&
+        !_showAllTimeLeaderboard) {
+      return;
+    }
     cubit.selectBoard(choice.period, dayId: choice.dayId);
   }
 
@@ -667,7 +672,13 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                               controller: _scrollController,
                                               padding: EdgeInsets.only(
                                                 bottom:
-                                                    (showPinned ? 64.0 : 0.0) +
+                                                    // Kept while the pin can
+                                                    // show, so hiding it
+                                                    // doesn't move the rows.
+                                                    (userEntry != null &&
+                                                            !inInitialList
+                                                        ? 64.0
+                                                        : 0.0) +
                                                     (showSignInFab
                                                         ? 80.0
                                                         : 0.0),

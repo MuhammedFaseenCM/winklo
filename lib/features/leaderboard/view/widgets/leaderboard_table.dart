@@ -112,20 +112,20 @@ class LeaderboardTableHeader extends StatelessWidget {
           if (period == LeaderboardPeriod.weekly)
             SizedBox(
               width: _daysWidth,
-              child: Text(
-                AppStrings.leaderboardColumnDays,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                style: style,
+              child: _FitCell(
+                alignment: Alignment.center,
+                child: Text(
+                  AppStrings.leaderboardColumnDays,
+                  maxLines: 1,
+                  style: style,
+                ),
               ),
             ),
           SizedBox(
             width: _timeWidth,
-            child: Text(
-              timeLabel,
-              textAlign: TextAlign.right,
-              maxLines: 1,
-              style: style,
+            child: _FitCell(
+              alignment: Alignment.centerRight,
+              child: Text(timeLabel, maxLines: 1, style: style),
             ),
           ),
         ],
@@ -203,20 +203,24 @@ class LeaderboardTableRow extends StatelessWidget {
               if (period == LeaderboardPeriod.weekly)
                 SizedBox(
                   width: _daysWidth,
-                  child: Text(
-                    '${entry.daysCleared ?? 0}',
-                    textAlign: TextAlign.center,
-                    style: numberStyle?.copyWith(color: ZipColors.teal),
+                  child: _FitCell(
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${entry.daysCleared ?? 0}',
+                      style: numberStyle?.copyWith(color: ZipColors.teal),
+                    ),
                   ),
                 ),
               SizedBox(
                 width: _timeWidth,
-                child: Text(
-                  AppStrings.formatPlayTime(entry.timeSeconds),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  style: numberStyle?.copyWith(
-                    color: isYou ? ZipColors.ember : ZipColors.onInk,
+                child: _FitCell(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    AppStrings.formatPlayTime(entry.timeSeconds),
+                    maxLines: 1,
+                    style: numberStyle?.copyWith(
+                      color: isYou ? ZipColors.ember : ZipColors.onInk,
+                    ),
                   ),
                 ),
               ),
@@ -319,6 +323,20 @@ class LeaderboardTableRow extends StatelessWidget {
         ],
       ],
     );
+  }
+}
+
+/// A fixed-width column's content: shrinks to fit at large text sizes
+/// instead of being cut ("140:32" at 1.6× is wider than the column).
+class _FitCell extends StatelessWidget {
+  const _FitCell({required this.alignment, required this.child});
+
+  final Alignment alignment;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(fit: BoxFit.scaleDown, alignment: alignment, child: child);
   }
 }
 

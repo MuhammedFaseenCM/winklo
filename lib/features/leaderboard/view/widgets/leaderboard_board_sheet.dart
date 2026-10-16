@@ -190,6 +190,8 @@ class _DayCell extends StatelessWidget {
       button: true,
       selected: selected,
       label: MaterialLocalizations.of(context).formatMediumDate(date),
+      // excludeSemantics drops the InkWell's own tap action.
+      onTap: onTap,
       excludeSemantics: true,
       child: Material(
         color: selected
