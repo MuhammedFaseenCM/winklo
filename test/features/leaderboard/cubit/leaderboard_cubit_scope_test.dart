@@ -232,4 +232,78 @@ void main() {
     expect(cubit.state.leagues, isEmpty);
     expect(calls, hasLength(1));
   });
+
+  group('selectBoard', () {
+    test('a past day loads once, with that day', () {
+      final cubit = build();
+      addTearDown(cubit.close);
+      final before = calls.length;
+
+      cubit.selectBoard(LeaderboardPeriod.daily, dayId: '2026-10-13');
+
+      expect(calls, hasLength(before + 1));
+      expect(calls.last.period, LeaderboardPeriod.daily);
+      expect(calls.last.dayId, '2026-10-13');
+      expect(cubit.state.dayId, '2026-10-13');
+    });
+
+    test('from a past day to This week: one load, day cleared', () {
+      final cubit = build();
+      addTearDown(cubit.close);
+      cubit.selectBoard(LeaderboardPeriod.daily, dayId: '2026-10-13');
+      final before = calls.length;
+
+      cubit.selectBoard(LeaderboardPeriod.weekly);
+
+      expect(calls, hasLength(before + 1));
+      expect(calls.last.period, LeaderboardPeriod.weekly);
+      expect(cubit.state.period, LeaderboardPeriod.weekly);
+      expect(cubit.state.dayId, isNull);
+    });
+
+    test('from This week to a past day: one load', () {
+      final cubit = build();
+      addTearDown(cubit.close);
+      cubit.selectBoard(LeaderboardPeriod.weekly);
+      final before = calls.length;
+
+      cubit.selectBoard(LeaderboardPeriod.daily, dayId: '2026-10-14');
+
+      expect(calls, hasLength(before + 1));
+      expect(calls.last, (
+        period: LeaderboardPeriod.daily,
+        dayId: '2026-10-14',
+        members: null,
+      ));
+    });
+
+    test('today is the live board (null day)', () {
+      final cubit = build();
+      addTearDown(cubit.close);
+      cubit.selectBoard(LeaderboardPeriod.daily, dayId: '2026-10-13');
+
+      cubit.selectBoard(LeaderboardPeriod.daily, dayId: '2026-10-15');
+
+      expect(cubit.state.dayId, isNull);
+      expect(calls.last.dayId, isNull);
+    });
+
+    test('the board already showing does nothing', () {
+      final cubit = build();
+      addTearDown(cubit.close);
+      final before = calls.length;
+      cubit.selectBoard(LeaderboardPeriod.daily);
+      cubit.selectBoard(LeaderboardPeriod.daily, dayId: '2026-10-15');
+      expect(calls, hasLength(before));
+    });
+
+    test('a day outside the window is ignored', () {
+      final cubit = build();
+      addTearDown(cubit.close);
+      final before = calls.length;
+      cubit.selectBoard(LeaderboardPeriod.daily, dayId: '2026-09-01');
+      expect(calls, hasLength(before));
+      expect(cubit.state.dayId, isNull);
+    });
+  });
 }

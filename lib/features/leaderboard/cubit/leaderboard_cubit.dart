@@ -92,6 +92,29 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
     if (reload) _resubscribe();
   }
 
+  /// Shows [period]'s board in one load; for the daily board, [dayId]'s
+  /// (`yyyy-MM-dd`, today's for null). Weekly and all-time clear the day.
+  void selectBoard(LeaderboardPeriod period, {String? dayId}) {
+    String? nextDay;
+    if (period == LeaderboardPeriod.daily) {
+      final today = leaderboardDayId(_now());
+      nextDay = dayId == today ? null : dayId;
+      if (nextDay != null && !recentDayIds.contains(nextDay)) return;
+    }
+    final sameBoard =
+        period == state.period &&
+        (period != LeaderboardPeriod.daily || nextDay == state.dayId);
+    if (sameBoard) return;
+    emit(
+      state.copyWith(
+        period: period,
+        dayId: nextDay,
+        status: LeaderboardStatus.loading,
+      ),
+    );
+    _resubscribe();
+  }
+
   /// Shows only [leagueId]'s members; everyone for null. A league that hasn't
   /// loaded yet (a link right after joining) is picked once it does.
   void selectLeague(String? leagueId) {
