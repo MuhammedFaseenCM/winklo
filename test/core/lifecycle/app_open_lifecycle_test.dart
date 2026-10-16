@@ -24,6 +24,8 @@ void main() {
   late int pings;
 
   Future<void> settle() => Future<void>.delayed(Duration.zero);
+  Future<void> pastWait() =>
+      Future<void>.delayed(const Duration(milliseconds: 120));
 
   setUp(() {
     auth = _MockAuth();
@@ -35,7 +37,11 @@ void main() {
     when(() => record(platform: any(named: 'platform'))).thenAnswer((_) async {
       pings++;
     });
-    lifecycle = AppOpenLifecycle(record, auth);
+    lifecycle = AppOpenLifecycle(
+      record,
+      auth,
+      authWait: const Duration(milliseconds: 50),
+    );
   });
 
   tearDown(() async {
@@ -90,5 +96,47 @@ void main() {
     authEvents.add(_user);
     await settle();
     expect(pings, 1);
+  });
+
+  group('when the auth stream stays silent', () {
+    test('one ping after authWait; a resume after that pings again', () async {
+      lifecycle.start();
+      await settle();
+      expect(pings, 0);
+
+      await pastWait();
+      expect(pings, 1);
+
+      lifecycle.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await settle();
+      expect(pings, 2);
+    });
+
+    test('an auth event before the timer cancels it', () async {
+      lifecycle.start();
+      authEvents.add(null);
+      await settle();
+      expect(pings, 1);
+
+      await pastWait();
+      expect(pings, 1);
+    });
+
+    test('a user arriving after the timer fired pings again', () async {
+      lifecycle.start();
+      await pastWait();
+      expect(pings, 1);
+
+      authEvents.add(_user);
+      await settle();
+      expect(pings, 2);
+    });
+
+    test('dispose before the timer means no ping', () async {
+      lifecycle.start();
+      lifecycle.dispose();
+      await pastWait();
+      expect(pings, 0);
+    });
   });
 }
