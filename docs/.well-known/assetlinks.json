@@ -1,0 +1,16 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.winklo.faseencm",
+      "sha256_cert_fingerprints": [
+        "3D:8A:50:0F:BE:91:2C:80:90:5F:B1:15:27:AE:9E:6F:DE:20:44:B7:F2:1D:DF:50:C9:51:4C:F6:1C:AB:A7:CB",
+        "1E:9F:CE:70:26:F1:ED:CA:7D:AC:F2:8D:45:F9:18:43:5B:92:4B:C1:ED:2C:78:E9:D8:DD:04:06:D9:CC:98:7E",
+        "E7:94:39:D1:E5:CC:E5:C5:53:52:96:92:B9:90:0C:9B:DC:D5:6B:D8:E4:F7:35:05:5C:15:74:34:44:A6:6A:3E"
+      ]
+    }
+  }
+]
