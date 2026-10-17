@@ -442,7 +442,7 @@ final Map<String, String Function(AppText)> _members = {
   'leagueMembers': (t) => t.leagueMembers(5),
   'leagueCode': (t) => t.leagueCode('ABC234'),
   'leagueInviteText': (t) =>
-      t.leagueInviteText('Office', 'https://winklo.pages.dev/join/ABC234'),
+      t.leagueInviteText('Office', 'https://brain-zip-app.web.app/join/ABC234'),
   'leagueRemoveConfirm': (t) => t.leagueRemoveConfirm('Nova'),
   'joinLeagueNotFound': (t) => t.joinLeagueNotFound('ABC234'),
   'gameTitle': (t) => t.gameTitle(GameIds.wordMatch),

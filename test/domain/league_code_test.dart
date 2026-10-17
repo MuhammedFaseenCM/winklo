@@ -24,6 +24,11 @@ void main() {
     expect(normalizeLeagueCode(' abc-def '), 'ABCDEF');
     expect(normalizeLeagueCode('ab cd ef'), 'ABCDEF');
     expect(
+      normalizeLeagueCode('https://brain-zip-app.web.app/join/XYZ234'),
+      'XYZ234',
+    );
+    // Older invites still shared as pages.dev links.
+    expect(
       normalizeLeagueCode('https://winklo.pages.dev/join/XYZ234'),
       'XYZ234',
     );
@@ -43,6 +48,9 @@ void main() {
   });
 
   test('invite links point at the join page', () {
-    expect(leagueInviteUrl('ABCDEF'), 'https://winklo.pages.dev/join/ABCDEF');
+    expect(
+      leagueInviteUrl('ABCDEF'),
+      'https://brain-zip-app.web.app/join/ABCDEF',
+    );
   });
 }

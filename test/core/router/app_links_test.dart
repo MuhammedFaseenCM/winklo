@@ -17,7 +17,7 @@ class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
 
 class _MockSignOut extends Mock implements SignOut {}
 
-/// The paths `winklo.pages.dev` hands to the app (spec, roadmap batch A6).
+/// The paths `brain-zip-app.web.app` hands to the app (spec, roadmap batch A6).
 const _gamePaths = ['/zip', '/path-words', '/sudoku'];
 const _appLinkPaths = [..._gamePaths, '/leaderboard', '/join/ABC234'];
 
@@ -93,7 +93,7 @@ void main() {
     expect(body, contains('android.intent.action.VIEW'));
     expect(body, contains('android.intent.category.BROWSABLE'));
     expect(body, contains('android:scheme="https"'));
-    expect(body, contains('android:host="winklo.pages.dev"'));
+    expect(body, contains('android:host="brain-zip-app.web.app"'));
     for (final path in [..._gamePaths, '/leaderboard']) {
       expect(body, contains('android:path="$path"'), reason: path);
     }

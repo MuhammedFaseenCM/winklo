@@ -13,7 +13,7 @@ const leaguesMaxMembers = 30;
 const leagueNameMaxLength = 30;
 
 /// Where an invite link points; the app opens it as `/join/CODE`.
-const leagueInviteBaseUrl = 'https://winklo.pages.dev/join/';
+const leagueInviteBaseUrl = 'https://brain-zip-app.web.app/join/';
 
 final _codePattern = RegExp('^[$leagueCodeAlphabet]{$leagueCodeLength}\$');
 

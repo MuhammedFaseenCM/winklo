@@ -20,7 +20,7 @@ void main() {
       expect(league.isOwner('u1'), isTrue);
       expect(league.hasMember('u2'), isTrue);
       expect(league.isFull, isFalse);
-      expect(league.inviteUrl, 'https://winklo.pages.dev/join/ABC234');
+      expect(league.inviteUrl, 'https://brain-zip-app.web.app/join/ABC234');
       expect(league.createdAt?.toUtc(), DateTime.utc(2026, 10, 15));
     });
 

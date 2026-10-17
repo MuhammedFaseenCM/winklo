@@ -10,7 +10,7 @@ import '../../../core/strings/clean_run_chips.dart';
 /// ```
 /// Winklo Zip · 9 Oct
 /// ⏱ 1:12 · 🔥 5 · Hint-free
-/// https://winklo.pages.dev/zip
+/// https://brain-zip-app.web.app/zip
 /// ```
 String resultShareText({
   required String gameId,

@@ -180,7 +180,7 @@ void main() {
       () => share.shareText(
         AppStrings.leagueInviteText(
           'Family',
-          'https://winklo.pages.dev/join/ABC234',
+          'https://brain-zip-app.web.app/join/ABC234',
         ),
       ),
     ).called(1);

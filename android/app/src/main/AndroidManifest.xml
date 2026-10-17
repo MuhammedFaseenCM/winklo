@@ -36,10 +36,8 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- App Links: winklo.pages.dev/zip etc. open the app (go_router
-                 handles the path). Android verifies them against
-                 https://winklo.pages.dev/.well-known/assetlinks.json
-                 (Play signing + upload + debug certs in docs/.well-known/). -->
+            <!-- App Links: brain-zip-app.web.app/zip etc. (Firebase Hosting).
+                 Verified via /.well-known/assetlinks.json on that host. -->
             <meta-data
                 android:name="flutter_deeplinking_enabled"
                 android:value="true" />
@@ -47,7 +45,7 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="winklo.pages.dev"/>
+                <data android:scheme="https" android:host="brain-zip-app.web.app"/>
                 <data android:path="/zip"/>
                 <data android:path="/path-words"/>
                 <data android:path="/sudoku"/>
