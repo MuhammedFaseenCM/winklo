@@ -58,8 +58,12 @@ GoRouter buildRouter({
   required AnalyticsRepository analytics,
   required AuthCubit authCubit,
 }) {
+  // Profile sub-screens push on this key so the dashboard bottom nav is
+  // not shown on top of them.
+  final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
   final refresh = AuthRouterRefresh(authCubit);
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) =>
@@ -111,29 +115,35 @@ GoRouter buildRouter({
                 name: 'profile',
                 builder: (context, state) => const ProfileScreen(),
                 routes: [
+                  // Full-screen over the shell (no bottom nav).
                   GoRoute(
                     path: 'privacy',
                     name: 'profile_privacy',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (context, state) => const PrivacyWebViewScreen(),
                   ),
                   GoRoute(
                     path: 'report',
                     name: 'profile_report',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (context, state) => const ReportIssueScreen(),
                   ),
                   GoRoute(
                     path: 'stats',
                     name: 'profile_stats',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (context, state) => const StatsScreen(),
                   ),
                   GoRoute(
                     path: 'badges',
                     name: 'profile_badges',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (context, state) => const BadgesScreen(),
                   ),
                   GoRoute(
                     path: 'settings',
                     name: 'profile_settings',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (context, state) => const SettingsScreen(),
                   ),
                 ],

@@ -118,6 +118,15 @@ Started from `feat/hint-time-penalty`, so it holds every branch above; not merge
 - [ ] winklo-admin: merge `feat/app-opens-page` into `main`, which deploys the console and the admin-api Worker's new `POST /v1/platform/users/lookup`. It works on existing data straight away; versions, open counts and guests fill in as players update.
 - [ ] Merge into `master` after `feat/hint-time-penalty` and ship it in the next build. The privacy policy (`docs/privacy/index.html`) already describes the install ID and guest records; Play Data safety already declares "Device or other IDs" for app functionality and analytics.
 
+### Ready to merge: `feat/landing-live-data`
+
+Started from `feat/roadmap-batch` at `9545081`, because its copy describes 1.1.0 (leagues, archive and practice, badges, the widget, Malayalam); merge it with or after that branch. The spec is `docs/superpowers/specs/2026-10-16-landing-live-data-design.md`.
+
+- The landing page shows today's three boards (drawn from the puzzle docs, without their solutions), the three fastest clears per game with shortened names, how many players cleared each, and the time to the next set. It reads them from `GET /api/today?day=yyyy-MM-dd`, a Pages Function in `workers/site/` that reads Firestore's public data over REST and keeps answers in Cloudflare's cache (5 minutes, puzzles 6 hours), so visits don't spend the app's Spark reads. Without the function (GitHub Pages, a plain static server) the live parts stay hidden.
+- Headings use Lexend, the app's font, instead of Syne; wide screens get a real grid instead of a stretched phone column.
+- The privacy policy says the website shows shortened names and times.
+- [ ] After the merge, the Deploy site workflow publishes `docs/` with the function (it now runs from `workers/site/`). Check `curl -sI "https://winklo.pages.dev/api/today?day=$(date +%F)"`: a second call within 5 minutes should say `x-winklo-cache: hit`.
+
 ### Pending
 
 - **winklo-admin `fix/daily-puzzle-follow-ups`** is merged into its `main` (`9fa3cd7`), which deploys the SPA and the Worker. Confirm that Deploy run succeeded in GitHub Actions, then check the next Path Words day the cron creates: `boardSource` should say `ai`, and `generatorMeta.aiWords` says why if it doesn't.
@@ -346,8 +355,9 @@ lib/
                    (plus the hidden word_match and category_race)
 test/              mirrors lib/, plus a Firestore rules whitelist test
 firestore/         security rules and indexes
-workers/           Cloudflare Workers: avatar-upload, account-deletion and activity (used),
-                   path-words-nouns (unused)
+workers/           Cloudflare Workers: avatar-upload, account-deletion, leaderboard
+                   and activity (used), path-words-nouns (unused), and site: the
+                   landing page's /api/today Pages Function
 tool/, tools/      icon and avatar generators, demo leaderboard seeding, R2 source art
 play/, fastlane/   Play listing, Data safety and release lanes
 docs/              landing page, privacy policy and account-deletion page (deployed to

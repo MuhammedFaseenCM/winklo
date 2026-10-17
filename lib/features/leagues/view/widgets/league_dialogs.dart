@@ -18,6 +18,7 @@ Future<String?> showLeagueNameDialog(
       actionLabel: actionLabel,
       label: AppStrings.leagueNameLabel,
       hint: AppStrings.leagueNameHint,
+      helper: AppStrings.leagueNameInvalid,
       initialText: initialName,
       maxLength: leagueNameMaxLength,
       capitalization: TextCapitalization.sentences,
@@ -37,6 +38,7 @@ Future<String?> showLeagueCodeDialog(BuildContext context) {
       actionLabel: AppStrings.leagueJoinAction,
       label: AppStrings.leagueCodeLabel,
       hint: AppStrings.leagueCodeHint,
+      helper: AppStrings.leagueCodeInvalid,
       capitalization: TextCapitalization.characters,
       validate: (text) => normalizeLeagueCode(text) == null
           ? AppStrings.leagueCodeInvalid
@@ -83,6 +85,7 @@ class _TextEntryDialog extends StatefulWidget {
     required this.actionLabel,
     required this.label,
     required this.hint,
+    required this.helper,
     required this.validate,
     required this.result,
     this.initialText = '',
@@ -94,6 +97,7 @@ class _TextEntryDialog extends StatefulWidget {
   final String actionLabel;
   final String label;
   final String hint;
+  final String helper;
   final String initialText;
   final int? maxLength;
   final TextCapitalization capitalization;
@@ -130,13 +134,16 @@ class _TextEntryDialogState extends State<_TextEntryDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return AlertDialog(
       backgroundColor: ZipColors.wall,
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       title: Text(
         widget.title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleLarge?.copyWith(color: ZipColors.onInk),
+        style: textTheme.titleLarge?.copyWith(color: ZipColors.onInk),
       ),
       content: TextField(
         controller: _controller,
@@ -145,11 +152,25 @@ class _TextEntryDialogState extends State<_TextEntryDialog> {
         textCapitalization: widget.capitalization,
         textInputAction: TextInputAction.done,
         onSubmitted: (_) => _submit(),
+        onChanged: (_) {
+          if (_error != null) setState(() => _error = null);
+        },
         style: const TextStyle(color: ZipColors.onInk),
         decoration: InputDecoration(
           labelText: widget.label,
           hintText: widget.hint,
+          helperText: _error == null ? widget.helper : null,
           errorText: _error,
+          filled: true,
+          fillColor: ZipColors.paper,
+          labelStyle: const TextStyle(color: ZipColors.inkSoft),
+          floatingLabelStyle: _error != null
+              ? null
+              : const TextStyle(color: ZipColors.inkSoft),
+          helperStyle: const TextStyle(
+            color: ZipColors.inkSoft,
+            fontSize: 12,
+          ),
         ),
       ),
       actions: [
@@ -157,7 +178,20 @@ class _TextEntryDialogState extends State<_TextEntryDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(AppStrings.leagueCancel),
         ),
-        TextButton(onPressed: _submit, child: Text(widget.actionLabel)),
+        FilledButton(
+          onPressed: _submit,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            minimumSize: const Size(64, 40),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          child: Text(widget.actionLabel),
+        ),
       ],
     );
   }

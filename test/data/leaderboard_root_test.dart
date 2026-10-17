@@ -3,6 +3,10 @@ import 'package:winklo/data/leaderboard_root.dart';
 
 void main() {
   group('leaderboardRootCollection', () {
+    test('defaults to production leaderboards', () {
+      expect(leaderboardRootCollection(), 'leaderboards');
+    });
+
     test('returns leaderboards_debug when isDebugMode is true', () {
       expect(
         leaderboardRootCollection(isDebugMode: true),

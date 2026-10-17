@@ -219,6 +219,11 @@ abstract final class AppStrings {
   static String get achievementsTitle => _t.achievementsTitle;
   static String achievementsProgress(int unlocked, int total) =>
       _t.achievementsProgress(unlocked, total);
+  static String get achievementsFirstClearsSection =>
+      _t.achievementsFirstClearsSection;
+  static String get achievementsStreaksSection => _t.achievementsStreaksSection;
+  static String get achievementsSpecialsSection =>
+      _t.achievementsSpecialsSection;
   static String get achievementLocked => _t.achievementLocked;
   static String achievementFirstClearTitle(String game) =>
       _t.achievementFirstClearTitle(game);

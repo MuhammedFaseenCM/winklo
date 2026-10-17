@@ -37,13 +37,31 @@ class FloatingNavDock extends StatelessWidget {
   static const _pillHeight = 32.0;
   static const _animDuration = Duration(milliseconds: 220);
 
+  /// Outer bottom pad below the dock (before the device home-indicator).
+  static const _outerBottomPad = 12.0;
+
+  /// Vertical padding inside the glass dock around the tab row.
+  static const _innerVerticalPad = 8.0;
+
+  /// Extra scroll/list bottom padding so content clears this dock when the
+  /// shell uses [Scaffold.extendBody]. Includes the device home-indicator.
+  static double contentBottomGap(BuildContext context) {
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    // Keep in sync with [build]: outer pad + inner pads + tab row min height.
+    return _outerBottomPad +
+        bottomInset +
+        (_innerVerticalPad * 2) +
+        _DockItem._minHeight +
+        8;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Scaffold.bottomNavigationBar often zeroes MediaQuery.padding.bottom.
     // viewPadding keeps the true device inset (home indicator / gesture bar).
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomInset),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, _outerBottomPad + bottomInset),
       child: Container(
         key: const Key('floating_nav_dock'),
         decoration: BoxDecoration(
@@ -79,7 +97,10 @@ class FloatingNavDock extends StatelessWidget {
                   width: 1.2,
                 ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: _innerVerticalPad,
+              ),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final tabWidth = constraints.maxWidth / _destinations.length;
@@ -166,6 +187,7 @@ class _DockItem extends StatelessWidget {
   final VoidCallback onTap;
 
   static const _animDuration = Duration(milliseconds: 220);
+  static const _minHeight = 48.0;
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +201,7 @@ class _DockItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: ExcludeSemantics(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
+            constraints: const BoxConstraints(minHeight: _minHeight),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.start,

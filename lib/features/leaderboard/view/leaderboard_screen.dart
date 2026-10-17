@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -347,12 +346,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     cubit.selectLeague(choice.leagueId);
   }
 
-  /// The empty board's message when there's nothing to play for: a past day,
-  /// or the weekly board in a debug build (only the server writes it).
+  /// The empty board's message when there's nothing to play for on a past day.
   String? _quietEmptyMessage(LeaderboardState state) {
-    if (state.period == LeaderboardPeriod.weekly && kDebugMode) {
-      return AppStrings.leaderboardWeeklyDebugNote;
-    }
     if (state.period == LeaderboardPeriod.daily && state.dayId != null) {
       return AppStrings.leaderboardPastDayEmpty;
     }

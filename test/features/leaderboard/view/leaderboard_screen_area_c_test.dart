@@ -267,17 +267,6 @@ void main() {
     expect(find.text(AppStrings.leaderboardColumnBest), findsOneWidget);
   });
 
-  testWidgets('an empty weekly board explains debug builds', (tester) async {
-    await pump(tester);
-    await openBoardSheet(tester);
-    await tester.tap(find.text(AppStrings.leaderboardThisWeek));
-    await settle(tester);
-    board.add(const []);
-    await tester.pumpAndSettle();
-
-    expect(find.text(AppStrings.leaderboardWeeklyDebugNote), findsOneWidget);
-  });
-
   testWidgets('tapping a player opens their card', (tester) async {
     await pump(tester);
     board.add([_ada, _bo]);

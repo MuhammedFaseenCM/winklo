@@ -273,8 +273,8 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
 
   String get _root => leaderboardRootCollection(isDebugMode: _isDebugMode);
 
-  /// Release boards: the Worker serves them and the fair-play rules guard
-  /// them. Debug builds keep writing `leaderboards_debug` directly.
+  /// Production boards: the Worker serves them and the fair-play rules guard
+  /// them. Tests can still point [_root] at `leaderboards_debug`.
   bool get _isReleaseRoot =>
       _root == leaderboardRootCollection(isDebugMode: false);
 

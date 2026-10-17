@@ -11,7 +11,7 @@ class ProfileShimmer extends StatelessWidget {
     final layout = AppLayout.of(context);
     return AppShimmer(
       child: SingleChildScrollView(
-        padding: layout.pagePadding,
+        padding: layout.scrollPadding(context),
         child: Column(
           children: [
             const Center(child: AppShimmerCircle(radius: 56)),

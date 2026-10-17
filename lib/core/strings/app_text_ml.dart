@@ -530,6 +530,15 @@ final class AppTextMl implements AppText {
   String achievementsProgress(int unlocked, int total) => '$total-ൽ $unlocked';
 
   @override
+  String get achievementsFirstClearsSection => 'ആദ്യ ക്ലിയറുകൾ';
+
+  @override
+  String get achievementsStreaksSection => 'സ്ട്രീക്കുകൾ';
+
+  @override
+  String get achievementsSpecialsSection => 'പ്രത്യേകം';
+
+  @override
   String get achievementLocked => 'നേടിയിട്ടില്ല';
 
   @override

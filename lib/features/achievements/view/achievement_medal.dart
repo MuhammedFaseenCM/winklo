@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/achievements/achievement.dart';
+import 'achievement_accent.dart';
 import 'achievement_copy.dart';
 
-/// A badge's round medal: ember with a glow when earned, dimmed with a lock
-/// when not. Decorative: the caller labels it for screen readers.
+/// A badge's round medal: game-colored enamel when earned, dimmed with a
+/// lock when not. Decorative: the caller labels it for screen readers.
 class AchievementMedal extends StatelessWidget {
   const AchievementMedal({
     super.key,
@@ -20,19 +21,26 @@ class AchievementMedal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = achievementAccent(achievement);
     final medal = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: unlocked ? ZipColors.emberGradient : null,
+        gradient: unlocked ? accent.gradient : null,
         color: unlocked ? null : ZipColors.paper,
-        border: unlocked ? null : Border.all(color: ZipColors.outline),
+        border: Border.all(
+          color: unlocked
+              ? accent.fill.withValues(alpha: 0.55)
+              : ZipColors.outline,
+          width: unlocked ? 1.5 : 1,
+        ),
         boxShadow: unlocked
             ? [
                 BoxShadow(
-                  color: ZipColors.emberGlow.withValues(alpha: 0.4),
+                  color: accent.glow,
                   blurRadius: size * 0.3,
+                  spreadRadius: -1,
                 ),
               ]
             : null,
@@ -40,7 +48,7 @@ class AchievementMedal extends StatelessWidget {
       child: Icon(
         achievementIcon(achievement),
         size: size / 2,
-        color: unlocked ? ZipColors.onInk : ZipColors.inkSoft,
+        color: unlocked ? accent.icon : accent.fill.withValues(alpha: 0.45),
       ),
     );
     if (unlocked) return ExcludeSemantics(child: medal);

@@ -6,7 +6,7 @@
     <title>Winklo — Daily solo puzzles</title>
     <meta
       name="description"
-      content="Winklo is a daily puzzle app with Zip, Path Words, and Sudoku. Clear today’s board at your own pace."
+      content="Winklo is a daily puzzle app with Zip, Path Words, and Sudoku. See today’s boards and fastest clears, then play them on Android."
     />
     <meta property="og:title" content="Winklo — Daily solo puzzles" />
     <meta
@@ -19,12 +19,26 @@
       content="https://winklo.pages.dev/assets/icon.png"
     />
     <link rel="canonical" href="https://winklo.pages.dev/" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "MobileApplication",
+        "name": "Winklo",
+        "description": "Daily solo puzzles: a fresh Zip, Path Words, and Sudoku every day, with live leaderboards and streaks.",
+        "url": "https://winklo.pages.dev/",
+        "image": "https://winklo.pages.dev/assets/icon.png",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Android",
+        "installUrl": "https://play.google.com/store/apps/details?id=com.winklo.faseencm",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="assets/icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Syne:wght@700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -41,9 +55,18 @@
         --ember-deep: #e85a1c;
         --ember-soft: #3a241c;
         --teal: #2dd4bf;
-        --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
+        --font-display: "Lexend", ui-sans-serif, system-ui, sans-serif;
         --font-body: "Lexend", ui-sans-serif, system-ui, sans-serif;
         --measure: min(44rem, 100%);
+        --measure-wide: min(72rem, 100%);
+        --card-top: #223049;
+        --card-bottom: #182234;
+        --outline: #475569;
+        --number: #fb7185;
+      }
+
+      [hidden] {
+        display: none !important;
       }
 
       * {
@@ -158,7 +181,8 @@
       .hero-inner {
         position: relative;
         z-index: 1;
-        width: var(--measure);
+        width: var(--measure-wide);
+        margin: 0 auto;
         padding: 4.5rem 1.4rem 3.75rem;
         animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
       }
@@ -188,10 +212,10 @@
       .brand {
         margin: 0 0 1.1rem;
         font-family: var(--font-display);
-        font-weight: 800;
-        font-size: clamp(3.4rem, 12vw, 5.6rem);
-        letter-spacing: -0.055em;
-        line-height: 0.92;
+        font-weight: 700;
+        font-size: clamp(3.2rem, 11vw, 5.2rem);
+        letter-spacing: -0.04em;
+        line-height: 1;
         color: var(--on-ink);
       }
 
@@ -212,7 +236,7 @@
         margin: 0 0 1.75rem;
         color: var(--muted);
         font-size: 1.02rem;
-        max-width: 30ch;
+        max-width: 34ch;
       }
 
       .cta {
@@ -284,11 +308,9 @@
       }
 
       .section-kicker {
-        margin: 0 0 0.55rem;
-        font-size: 0.78rem;
+        margin: 0 0 0.45rem;
+        font-size: 0.92rem;
         font-weight: 600;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
         color: var(--ember);
       }
 
@@ -296,9 +318,9 @@
         margin: 0 0 0.85rem;
         font-family: var(--font-display);
         font-size: clamp(1.55rem, 4vw, 1.9rem);
-        letter-spacing: -0.03em;
-        font-weight: 700;
-        line-height: 1.15;
+        letter-spacing: -0.02em;
+        font-weight: 600;
+        line-height: 1.2;
       }
 
       .section-lead {
@@ -324,9 +346,8 @@
 
       .step-num {
         font-family: var(--font-display);
-        font-weight: 800;
+        font-weight: 700;
         font-size: 1.35rem;
-        letter-spacing: -0.04em;
         color: var(--ember);
         line-height: 1.2;
       }
@@ -347,7 +368,8 @@
 
       .habit-band {
         margin-top: 1rem;
-        padding: 2rem 0 0.25rem;
+        padding-top: 2rem;
+        padding-bottom: 0.25rem;
       }
 
       .habit-list {
@@ -382,10 +404,10 @@
         padding: 1.35rem 0 0;
         border-top: 1px solid rgba(255, 107, 44, 0.35);
         font-family: var(--font-display);
-        font-size: clamp(1.25rem, 3.2vw, 1.55rem);
-        font-weight: 700;
-        letter-spacing: -0.03em;
-        line-height: 1.25;
+        font-size: clamp(1.25rem, 3.2vw, 1.5rem);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.3;
         max-width: 22ch;
         color: var(--on-ink);
       }
@@ -434,6 +456,7 @@
         gap: 1rem;
         overflow-x: auto;
         padding: 0.25rem 1.4rem 1.5rem;
+        scroll-padding: 0 1.4rem;
         scroll-snap-type: x mandatory;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
@@ -443,6 +466,7 @@
       .shot {
         flex: 0 0 auto;
         width: min(12.5rem, 46vw);
+        margin: 0;
         scroll-snap-align: start;
       }
 
@@ -511,7 +535,7 @@
         padding-top: 4.5rem;
       }
 
-      .close p {
+      .close p:not(.section-kicker) {
         margin: 0 0 1.35rem;
         color: var(--muted);
         max-width: 32ch;
@@ -541,13 +565,517 @@
         color: var(--ember);
       }
 
+      /* —— Live line (hero) —— */
+      .live-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.3rem 0.55rem;
+        margin: 1.15rem 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .live-text {
+        flex: 1;
+      }
+
+      .live-line .live-dot {
+        align-self: flex-start;
+        margin-top: 0.52rem;
+      }
+
+      .live-line a {
+        flex-basis: 100%;
+        color: var(--on-ink);
+        text-underline-offset: 0.2em;
+      }
+
+      .live-line a:hover {
+        color: var(--ember);
+      }
+
+      .live-dot {
+        display: inline-block;
+        flex-shrink: 0;
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background: var(--teal);
+        animation: pulse 2.2s ease-out infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.55);
+        }
+        70%,
+        100% {
+          box-shadow: 0 0 0 0.45rem rgba(45, 212, 191, 0);
+        }
+      }
+
+      /* —— Today's boards —— */
+      .today {
+        padding: 4.25rem 0 0.5rem;
+      }
+
+      .today .section-intro,
+      .today-foot {
+        width: var(--measure-wide);
+        margin: 0 auto;
+        padding: 0 1.4rem;
+      }
+
+      .today h2 {
+        margin: 0 0 0.85rem;
+        font-family: var(--font-display);
+        font-size: clamp(1.55rem, 4vw, 1.9rem);
+        letter-spacing: -0.02em;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+
+      .today .section-kicker {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+      }
+
+      .rail-hint {
+        margin: -1.25rem 0 1rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .board-rail {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: min(19.5rem, 84vw);
+        gap: 1rem;
+        overflow-x: auto;
+        padding: 0.25rem 1.4rem 1.25rem;
+        scroll-padding: 0 1.4rem;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--mist) transparent;
+      }
+
+      .board-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.95rem;
+        min-width: 0;
+        padding: 1.15rem 1.15rem 1rem;
+        scroll-snap-align: start;
+        border-radius: 1.25rem;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        background: linear-gradient(160deg, var(--card-top), var(--card-bottom));
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+      }
+
+      .board-head {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+      }
+
+      .board-head img {
+        width: 2.4rem;
+        height: 2.4rem;
+        border-radius: 0.7rem;
+      }
+
+      .board-head h3 {
+        flex: 1;
+        margin: 0;
+        font-size: 1.12rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .chip {
+        padding: 0.18rem 0.5rem;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.14);
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .chip-level {
+        background: var(--ember-soft);
+        color: #ffb08a;
+        text-transform: capitalize;
+      }
+
+      .chip-streak {
+        background: rgba(255, 107, 44, 0.14);
+        color: #ffb08a;
+      }
+
+      .board {
+        display: grid;
+        place-items: center;
+        aspect-ratio: 1;
+      }
+
+      .board svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      .board-missing {
+        margin: 0;
+        max-width: 16ch;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .board-meta {
+        margin: -0.3rem 0 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .b-bg {
+        fill: var(--wall);
+        stroke: var(--outline);
+        stroke-width: 0.3;
+      }
+
+      .b-grid {
+        stroke: var(--mist);
+        stroke-width: 0.18;
+      }
+
+      .b-box {
+        stroke: var(--outline);
+        stroke-width: 0.5;
+      }
+
+      .zip-wall {
+        stroke: rgba(248, 250, 252, 0.85);
+        stroke-width: 1.2;
+        stroke-linecap: round;
+      }
+
+      .zip-num,
+      .sdk-num,
+      .pw-letter {
+        font-family: var(--font-body);
+        text-anchor: middle;
+      }
+
+      .zip-num {
+        fill: var(--number);
+        font-size: 4.8px;
+        font-weight: 700;
+      }
+
+      .sdk-num {
+        fill: var(--on-ink);
+        font-size: 4.8px;
+        font-weight: 600;
+      }
+
+      .pw-tile {
+        fill: var(--paper);
+      }
+
+      .pw-letter {
+        fill: var(--on-ink);
+        font-size: 4.4px;
+        font-weight: 600;
+      }
+
+      .fastest h4 {
+        margin: 0 0 0.35rem;
+        color: var(--ember);
+        font-size: 0.88rem;
+        font-weight: 600;
+      }
+
+      .podium {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .podium li {
+        display: grid;
+        grid-template-columns: 1.6rem 1fr auto;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.5rem 0;
+        border-top: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .rank {
+        display: grid;
+        place-items: center;
+        width: 1.6rem;
+        height: 1.6rem;
+        border-radius: 50%;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .rank-1 {
+        background: #fbbf24;
+        color: #1a1205;
+      }
+
+      .rank-2 {
+        background: #cbd5e1;
+        color: var(--ink);
+      }
+
+      .rank-3 {
+        background: #d97706;
+        color: #1a0b05;
+      }
+
+      .who {
+        min-width: 0;
+      }
+
+      .who strong {
+        display: block;
+        overflow: hidden;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-top: 0.2rem;
+      }
+
+      .chips:empty {
+        display: none;
+      }
+
+      .time {
+        font-size: 1rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .empty {
+        margin: 0;
+        padding: 0.6rem 0 0.2rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.12);
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .clears {
+        margin: auto 0 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .today-foot p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      @media (min-width: 62rem) {
+        .rail-hint {
+          display: none;
+        }
+
+        .board-rail {
+          grid-auto-flow: row;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          width: var(--measure-wide);
+          margin: 0 auto;
+          overflow: visible;
+        }
+      }
+
+      /* —— Today's set in the hero (wide screens) —— */
+      .hero-set {
+        display: none;
+      }
+
+      .hero-tile {
+        position: absolute;
+        width: 68%;
+        aspect-ratio: 1;
+        padding: 0.85rem;
+        border-radius: 1.4rem;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: linear-gradient(160deg, var(--card-top), var(--card-bottom));
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .hero-tile svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      .hero-tile[data-hero-board="path_words"] {
+        top: 0;
+        left: 0;
+        transform: rotate(-7deg);
+      }
+
+      .hero-tile[data-hero-board="sudoku"] {
+        top: 6%;
+        right: 0;
+        transform: rotate(6deg);
+      }
+
+      .hero-tile[data-hero-board="zip"] {
+        top: 18%;
+        left: 16%;
+        box-shadow:
+          0 30px 70px rgba(0, 0, 0, 0.55),
+          0 0 48px rgba(255, 107, 44, 0.18);
+      }
+
+      .hero-set:hover [data-hero-board="path_words"],
+      .hero-set:focus-visible [data-hero-board="path_words"] {
+        transform: rotate(-10deg) translate(-4%, -2%);
+      }
+
+      .hero-set:hover [data-hero-board="sudoku"],
+      .hero-set:focus-visible [data-hero-board="sudoku"] {
+        transform: rotate(9deg) translate(4%, -2%);
+      }
+
+      .hero-set:focus-visible {
+        outline: 2px solid var(--on-ink);
+        outline-offset: 0.75rem;
+        border-radius: 1.5rem;
+      }
+
+      /* —— Wide screens: one grid instead of a stretched phone column —— */
+      @media (min-width: 62rem) {
+        .hero {
+          min-height: min(100svh, 52rem);
+          align-items: center;
+        }
+
+        .hero-inner {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 27rem);
+          align-items: center;
+          gap: 3rem;
+          padding: 5rem 1.4rem 5rem;
+        }
+
+        .hero-set:not([hidden]) {
+          display: block;
+          position: relative;
+          aspect-ratio: 1 / 0.95;
+        }
+
+        .section,
+        .section-wide .section-intro,
+        footer {
+          width: var(--measure-wide);
+        }
+
+        .section {
+          padding-top: 5.5rem;
+        }
+
+        .steps,
+        .games {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 0 2.5rem;
+          border-top: 0;
+        }
+
+        .step,
+        .game {
+          border-top: 1px solid rgba(148, 163, 184, 0.18);
+          border-bottom: 0;
+        }
+
+        .step {
+          grid-template-columns: 1fr;
+          gap: 0.6rem;
+        }
+
+        .habit-list {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 0 2.5rem;
+          border-top: 0;
+        }
+
+        .habit-list li {
+          border-top: 1px solid rgba(148, 163, 184, 0.18);
+          border-bottom: 0;
+        }
+
+        /* Text centred beside the tall video. */
+        #watch {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-rows: 1fr repeat(4, auto) 1fr;
+          column-gap: 3rem;
+        }
+
+        #watch > .section-kicker {
+          grid-area: 2 / 1;
+        }
+
+        #watch > h2 {
+          grid-area: 3 / 1;
+        }
+
+        #watch > .section-lead {
+          grid-area: 4 / 1;
+        }
+
+        #watch > .video-link {
+          grid-area: 5 / 1;
+          justify-self: start;
+        }
+
+        #watch .video-block {
+          grid-area: 1 / 2 / -1 / 3;
+          width: 20rem;
+        }
+
+        /* Centred while it fits; scrolls from the first shot when it doesn't. */
+        .shot:first-child {
+          margin-left: auto;
+        }
+
+        .shot:last-child {
+          margin-right: auto;
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         html {
           scroll-behavior: auto;
         }
         .path-glow,
-        .hero-inner {
+        .hero-inner,
+        .live-dot {
           animation: none;
+        }
+        .hero-tile {
+          transition: none;
         }
         .path-glow {
           stroke-dasharray: none;
@@ -560,7 +1088,7 @@
     </style>
   </head>
   <body>
-    <a class="skip" href="#how">Skip to content</a>
+    <a class="skip" href="#main">Skip to content</a>
 
     <header class="hero" aria-label="Winklo">
       <div class="hero-grid" aria-hidden="true">
@@ -580,6 +1108,7 @@
         </svg>
       </div>
       <div class="hero-inner">
+        <div class="hero-copy">
         <img
           class="app-icon"
           src="assets/icon.png"
@@ -590,8 +1119,8 @@
         <p class="brand">Wink<span>lo</span></p>
         <p class="lede">Daily solo puzzles. Clear today’s board.</p>
         <p class="support">
-          Zip, Path Words, and Sudoku — quick runs, live leaderboards, streaks
-          that stick.
+          A fresh Zip, Path Words, and Sudoku every day — the same boards for
+          every player, live leaderboards, streaks that stick.
         </p>
         <a
           class="cta"
@@ -606,10 +1135,95 @@
           </svg>
           Get it on Google Play
         </a>
+        <p class="live-line" data-live-line hidden>
+          <span class="live-dot" aria-hidden="true"></span>
+          <span class="live-text"
+            ><span data-live-text></span> New boards in
+            <span data-countdown></span>.</span
+          >
+          <a href="#today">See today’s boards</a>
+        </p>
+        </div>
+        <a
+          class="hero-set"
+          href="#today"
+          data-hero-set
+          hidden
+          aria-label="See today’s boards"
+        >
+          <span class="hero-tile" data-hero-board="path_words"></span>
+          <span class="hero-tile" data-hero-board="sudoku"></span>
+          <span class="hero-tile" data-hero-board="zip"></span>
+        </a>
       </div>
     </header>
 
-    <main>
+    <main id="main">
+      <section class="today" id="today" aria-labelledby="today-title" hidden>
+        <div class="section-intro">
+          <p class="section-kicker">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span>Live · <span data-date>Today</span></span>
+          </p>
+          <h2 id="today-title">Today’s boards</h2>
+          <p class="section-lead">
+            Every player gets these three puzzles today. Clear them in the app
+            and your time joins the board.
+          </p>
+          <p class="rail-hint" aria-hidden="true">Swipe for all three →</p>
+        </div>
+        <div class="board-rail" tabindex="0" aria-label="Today’s boards">
+          <article class="board-card" data-game="zip">
+            <div class="board-head">
+              <img src="assets/games/zip.png" width="38" height="38" alt="" />
+              <h3>Zip</h3>
+              <span class="chip chip-level" data-difficulty hidden></span>
+            </div>
+            <div class="board" data-board></div>
+            <p class="board-meta" data-meta></p>
+            <div class="fastest" data-fastest hidden>
+              <h4>Fastest today</h4>
+              <div data-top></div>
+            </div>
+            <p class="clears" data-clears hidden></p>
+          </article>
+          <article class="board-card" data-game="path_words">
+            <div class="board-head">
+              <img src="assets/games/path-words.png" width="38" height="38" alt="" />
+              <h3>Path Words</h3>
+              <span class="chip chip-level" data-difficulty hidden></span>
+            </div>
+            <div class="board" data-board></div>
+            <p class="board-meta" data-meta></p>
+            <div class="fastest" data-fastest hidden>
+              <h4>Fastest today</h4>
+              <div data-top></div>
+            </div>
+            <p class="clears" data-clears hidden></p>
+          </article>
+          <article class="board-card" data-game="sudoku">
+            <div class="board-head">
+              <img src="assets/games/sudoku.png" width="38" height="38" alt="" />
+              <h3>Sudoku</h3>
+              <span class="chip chip-level" data-difficulty hidden></span>
+            </div>
+            <div class="board" data-board></div>
+            <p class="board-meta" data-meta></p>
+            <div class="fastest" data-fastest hidden>
+              <h4>Fastest today</h4>
+              <div data-top></div>
+            </div>
+            <p class="clears" data-clears hidden></p>
+          </article>
+        </div>
+        <div class="today-foot">
+          <p>
+            New boards at your midnight, in <span data-countdown></span>.
+            Fastest clears updated <span data-updated></span>; names are
+            shortened here.
+          </p>
+        </div>
+      </section>
       <section class="section" id="how">
         <p class="section-kicker">How it plays</p>
         <h2>Open. Clear. Climb.</h2>
@@ -624,7 +1238,8 @@
               <h3>Open today’s set</h3>
               <p>
                 Sign in with Google and pick Zip, Path Words, or Sudoku. Each
-                day brings a fresh board for every game.
+                day brings a fresh board for every game, the same for every
+                player.
               </p>
             </div>
           </article>
@@ -644,8 +1259,9 @@
             <div>
               <h3>Climb the board</h3>
               <p>
-                Post your time to the live daily leaderboard. Keep your streak
-                going, and sync progress when you switch phones.
+                Post your time to the live daily leaderboard, race friends in
+                a private league, and keep your streak going. Progress syncs
+                when you switch phones.
               </p>
             </div>
           </article>
@@ -746,32 +1362,46 @@
         </p>
         <ul class="habit-list">
           <li>
-            <strong>Fresh puzzles every day</strong>
+            <strong>Streaks with a safety net</strong>
             <span
-              >New Zip, Path Words, and Sudoku boards reset with the calendar.
-              Miss a day and start again — or protect a streak when a freeze is
-              available.</span
+              >One streak per game. A freeze covers a missed day, and every
+              seventh day in a row earns one back, up to two.</span
             >
           </li>
           <li>
-            <strong>Live daily leaderboard</strong>
+            <strong>Leagues with friends</strong>
             <span
-              >See who’s fastest today. Your display name and avatar show with
-              your best clean run — not a wall of ads.</span
+              >Start a private league for up to 30 people, share the invite
+              link, and race on your own daily and weekly boards.</span
             >
           </li>
           <li>
-            <strong>Streaks that stick</strong>
+            <strong>Badges and stats</strong>
             <span
-              >Clear today’s puzzles to keep the fire lit. Progress syncs to your
-              account so a reinstall doesn’t wipe your run.</span
+              >Sixteen badges, a calendar of cleared days, your best and
+              average times, and a 30-day personal-best trend.</span
             >
           </li>
           <li>
-            <strong>Cloud profile, private progress</strong>
+            <strong>Archive and practice</strong>
             <span
-              >Leaderboard times are public in-app. Your deeper progress stays
-              with your signed-in account.</span
+              >Missed a day? Replay past dailies from the archive, or warm up
+              on endless practice boards that never touch your streak.</span
+            >
+          </li>
+          <li>
+            <strong>Reminders and a home-screen widget</strong>
+            <span
+              >A nudge when the puzzles are ready and another when a streak is
+              at risk, at times you pick. The widget shows what’s left
+              today.</span
+            >
+          </li>
+          <li>
+            <strong>English or മലയാളം</strong>
+            <span
+              >Switch the whole app, its reminders, and the widget to
+              Malayalam in Settings.</span
             >
           </li>
         </ul>
@@ -815,8 +1445,8 @@
             <div>
               <h3>Path Words</h3>
               <p>
-                Trace every word across the grid. Find the shared letters, draw
-                clean routes, and clear the daily word list.
+                Trace each hidden word through a sparse letter grid. Find where
+                the words run, draw clean routes, and clear the daily list.
               </p>
             </div>
           </article>
@@ -832,8 +1462,9 @@
             <div>
               <h3>Sudoku</h3>
               <p>
-                Fill every cell with 1–6. A compact daily board — logic first,
-                no endless variants.
+                Fill a 6×6 grid so every row, column, and 2×3 box holds 1–6. A
+                compact daily board — logic first, and hints that explain the
+                next step instead of filling it in.
               </p>
             </div>
           </article>
@@ -868,5 +1499,6 @@
       <a href="privacy/">Privacy policy</a>
       <a href="delete-account/">Delete account</a>
     </footer>
+    <script type="module" src="assets/today.js"></script>
   </body>
 </html>

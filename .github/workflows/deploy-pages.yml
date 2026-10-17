@@ -5,6 +5,9 @@ on:
     branches: [master]
     paths:
       - "docs/**"
+      - "workers/site/**"
+      # The site's /api/today function imports the leaderboard Worker's limits.
+      - "workers/leaderboard/src/**"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
@@ -19,13 +22,27 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    defaults:
+      run:
+        working-directory: workers/site
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - name: Deploy docs/ to Cloudflare Pages
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workers/site/package-lock.json
+
+      - run: npm ci
+
+      # Wrangler picks up the Pages Functions in workers/site/functions from
+      # the working directory and deploys them with the static docs/ folder.
+      - name: Deploy docs/ and its functions to Cloudflare Pages
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3.15.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy docs --project-name winklo
+          workingDirectory: workers/site
+          command: pages deploy ../../docs --project-name winklo
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
