@@ -39,7 +39,7 @@ class AppReviewRepositoryImpl implements AppReviewRepository {
     try {
       final uri = Uri.parse(url);
       if (!await canLaunchUrl(uri)) return false;
-      return launchUrl(uri, mode: LaunchMode.externalApplication);
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       return false;
     }
