@@ -269,4 +269,17 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
       ),
     );
   }
+
+  @override
+  Future<void> logReviewPrompt({
+    required String source,
+    required String outcome,
+  }) {
+    return _safe(
+      (a) => a.logEvent(
+        name: 'review_prompt',
+        parameters: {'source': source, 'outcome': outcome},
+      ),
+    );
+  }
 }

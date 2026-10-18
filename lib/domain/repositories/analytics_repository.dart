@@ -78,4 +78,11 @@ abstract class AnalyticsRepository {
 
   /// A clear after a missed day spent the game's streak freeze.
   Future<void> logStreakFreezeUsed({required String gameId});
+
+  /// [source] is `profile`, `personal_best`, or `streak`.
+  /// [outcome] is `in_app`, `store`, or `failed`.
+  Future<void> logReviewPrompt({
+    required String source,
+    required String outcome,
+  });
 }

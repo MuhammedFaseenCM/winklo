@@ -83,4 +83,10 @@ void stubAnalytics(MockAnalyticsRepository analytics) {
   when(
     () => analytics.logStreakFreezeUsed(gameId: any(named: 'gameId')),
   ).thenAnswer((_) async {});
+  when(
+    () => analytics.logReviewPrompt(
+      source: any(named: 'source'),
+      outcome: any(named: 'outcome'),
+    ),
+  ).thenAnswer((_) async {});
 }
