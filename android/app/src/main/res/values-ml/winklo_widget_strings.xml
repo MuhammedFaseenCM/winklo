@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Malayalam twin of values/winklo_widget_strings.xml (AppStrings' Malayalam
+     table has the same copy). -->
+<resources>
+    <string name="winklo_widget_label">ഇന്ന് Winklo-യിൽ</string>
+    <string name="winklo_widget_description">ഇന്നത്തെ പസിലുകളും നിങ്ങളുടെ സ്ട്രീക്കുകളും</string>
+    <string name="winklo_widget_play">കളിക്കൂ</string>
+    <string name="winklo_widget_footer">അർധരാത്രി പുതിയ പസിൽ</string>
+</resources>

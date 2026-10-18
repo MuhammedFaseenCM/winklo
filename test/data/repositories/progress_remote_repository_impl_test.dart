@@ -195,6 +195,100 @@ void main() {
     });
   });
 
+  group('gameDaysFromFirestoreDocs', () {
+    test('parses docs of the three daily games, ids from the data', () {
+      final days = gameDaysFromFirestoreDocs([
+        (
+          'zip_20261001',
+          {'gameId': 'zip', 'playId': '20261001', 'timeSeconds': 42},
+        ),
+        (
+          'path_words_202610011230',
+          {'gameId': 'path_words', 'playId': '202610011230', 'hintsUsed': 1},
+        ),
+        ('sudoku_20261007', gameDayToFirestore(fullDay)..remove('updatedAt')),
+      ]);
+      expect(days.map((d) => (d.gameId, d.playId)), [
+        ('zip', '20261001'),
+        ('path_words', '202610011230'),
+        ('sudoku', '20261007'),
+      ]);
+      expect(days.first.timeSeconds, 42);
+      expect(days[1].cleared, isFalse);
+      expect(days.last.points, 900);
+    });
+
+    test('skips docs whose id does not match their data', () {
+      expect(
+        gameDaysFromFirestoreDocs([
+          ('zip_20261002', {'gameId': 'zip', 'playId': '20261001'}),
+          ('sudoku_20261001', {'gameId': 'zip', 'playId': '20261001'}),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('skips unknown games, malformed play ids and missing ids', () {
+      expect(
+        gameDaysFromFirestoreDocs([
+          (
+            'word_match_20261001',
+            {'gameId': 'word_match', 'playId': '20261001'},
+          ),
+          ('zip_2026-10-01', {'gameId': 'zip', 'playId': '2026-10-01'}),
+          ('zip_archive', {'gameId': 'zip', 'playId': 'archive'}),
+          ('zip_20261001', {'playId': '20261001'}),
+          ('zip_20261001', {'gameId': 'zip', 'playId': 20261001}),
+        ]),
+        isEmpty,
+      );
+    });
+  });
+
+  group('confirmedGameDays', () {
+    final docs = [
+      (
+        'zip_20261001',
+        <String, dynamic>{'gameId': 'zip', 'playId': '20261001'},
+      ),
+    ];
+
+    test('parses a confirmed read', () {
+      expect(
+        confirmedGameDays(
+          docs,
+          requireConfirmed: true,
+          hasPendingWrites: false,
+        ).single.playId,
+        '20261001',
+      );
+    });
+
+    test('throws a non-reportable failure for unconfirmed writes', () {
+      expect(
+        () => confirmedGameDays(
+          docs,
+          requireConfirmed: true,
+          hasPendingWrites: true,
+        ),
+        throwsA(
+          isA<Failure>().having((f) => f.reportable, 'reportable', false),
+        ),
+      );
+    });
+
+    test('a display read takes pending writes as they are', () {
+      expect(
+        confirmedGameDays(
+          docs,
+          requireConfirmed: false,
+          hasPendingWrites: true,
+        ),
+        hasLength(1),
+      );
+    });
+  });
+
   group('streakToFirestore', () {
     test('writes exactly the documented keys', () {
       expect(streakToFirestore(fullStreak).keys.toSet(), streakFirestoreKeys);
@@ -244,6 +338,93 @@ void main() {
       expect(streak.longest, 0);
       expect(streak.lastClearedDateId, isNull);
       expect(streak.freezeAvailable, isTrue);
+    });
+  });
+
+  group('freezeCount on streak docs', () {
+    test(
+      'streakToFirestore writes the count and freezeAvailable = count > 0',
+      () {
+        final two = streakToFirestore(
+          const GameStreak(gameId: GameIds.zip, current: 14, freezeCount: 2),
+        );
+        expect(two['freezeCount'], 2);
+        expect(two['freezeAvailable'], isTrue);
+
+        final none = streakToFirestore(
+          const GameStreak(gameId: GameIds.zip, freezeCount: 0),
+        );
+        expect(none['freezeCount'], 0);
+        expect(none['freezeAvailable'], isFalse);
+      },
+    );
+
+    test('the count is clamped to 0..2 on the way out', () {
+      final payload = streakToFirestore(
+        const GameStreak(gameId: GameIds.zip, freezeCount: 9),
+      );
+      expect(payload['freezeCount'], 2);
+    });
+
+    test('a doc from an older build without freezeCount reads the flag', () {
+      expect(
+        streakFromFirestore({
+          'current': 3,
+          'freezeAvailable': true,
+        }, gameId: GameIds.zip)!.freezeCount,
+        1,
+      );
+      expect(
+        streakFromFirestore({
+          'current': 3,
+          'freezeAvailable': false,
+        }, gameId: GameIds.zip)!.freezeCount,
+        0,
+      );
+    });
+
+    test('round-trips two freezes', () {
+      final streak = streakFromFirestore(
+        streakToFirestore(
+          const GameStreak(
+            gameId: GameIds.zip,
+            current: 14,
+            longest: 14,
+            lastClearedDateId: '20261014',
+            freezeCount: 2,
+          ),
+        ),
+        gameId: GameIds.zip,
+      )!;
+      expect(streak.freezeCount, 2);
+    });
+
+    test('a malformed count falls back to the flag', () {
+      expect(
+        streakFromFirestore({
+          'freezeCount': 'two',
+          'freezeAvailable': false,
+        }, gameId: GameIds.zip)!.freezeCount,
+        0,
+      );
+      expect(
+        streakFromFirestore({
+          'freezeCount': 1.5,
+          'freezeAvailable': true,
+        }, gameId: GameIds.zip)!.freezeCount,
+        1,
+      );
+    });
+
+    test('an older build spending the freeze after a newer one wrote two', () {
+      // Old builds merge-write freezeAvailable only; freezeCount stays 2.
+      expect(
+        streakFromFirestore({
+          'freezeCount': 2,
+          'freezeAvailable': false,
+        }, gameId: GameIds.zip)!.freezeCount,
+        1,
+      );
     });
   });
 
@@ -305,6 +486,21 @@ void main() {
         throwsA(isA<Failure>()),
       );
     });
+
+    test('fetchAllDays throws Failure', () {
+      expect(repo.fetchAllDays(uid: 'u1'), throwsA(isA<Failure>()));
+    });
+
+    test('saveDayBatch throws Failure', () {
+      expect(
+        repo.saveDayBatch(uid: 'u1', records: [fullDay]),
+        throwsA(isA<Failure>()),
+      );
+    });
+
+    test('an empty saveDayBatch writes nothing', () async {
+      expect(await repo.saveDayBatch(uid: 'u1', records: const []), 0);
+    });
   });
 
   group('ProgressRemoteRepositoryImpl validation', () {
@@ -339,6 +535,21 @@ void main() {
 
     test('rejects an empty uid', () {
       expect(repo.fetchStreak(uid: '', gameId: 'zip'), throwsA(isA<Failure>()));
+      expect(repo.fetchAllDays(uid: ''), throwsA(isA<Failure>()));
+    });
+
+    test('saveDayBatch rejects bad records and oversized batches', () {
+      expect(
+        repo.saveDayBatch(
+          uid: 'u1',
+          records: const [GameDayRecord(gameId: 'zip', playId: 'bad')],
+        ),
+        throwsA(isA<Failure>()),
+      );
+      expect(
+        repo.saveDayBatch(uid: 'u1', records: List.filled(501, fullDay)),
+        throwsArgumentError,
+      );
     });
   });
 }

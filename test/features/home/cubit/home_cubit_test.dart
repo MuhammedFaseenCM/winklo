@@ -6,6 +6,9 @@ import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/zip_level_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
+import 'dart:async';
+
+import 'package:winklo/domain/usecases/get_best_daily_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
@@ -21,6 +24,9 @@ class _MockGetBestPoints extends Mock implements GetBestPoints {}
 
 class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 
+class _MockGetBestDailyTimeSeconds extends Mock
+    implements GetBestDailyTimeSeconds {}
+
 class _MockGetStreak extends Mock implements GetStreak {}
 
 class _MockCheckAppUpdate extends Mock implements CheckAppUpdate {}
@@ -32,6 +38,7 @@ class _MockZipLevelRepository extends Mock implements ZipLevelRepository {}
 void main() {
   late _MockGetBestPoints pts;
   late _MockGetBestTimeSeconds time;
+  late _MockGetBestDailyTimeSeconds lifetimeBest;
   late _MockGetStreak getStreak;
   late MockAnalyticsRepository analytics;
   late _MockCheckAppUpdate checkAppUpdate;
@@ -46,6 +53,8 @@ void main() {
   setUp(() {
     pts = _MockGetBestPoints();
     time = _MockGetBestTimeSeconds();
+    lifetimeBest = _MockGetBestDailyTimeSeconds();
+    when(() => lifetimeBest(any())).thenReturn(null);
     getStreak = _MockGetStreak();
     analytics = MockAnalyticsRepository();
     checkAppUpdate = _MockCheckAppUpdate();
@@ -70,18 +79,23 @@ void main() {
 
   HomeCubit buildCubit({
     DateTime? now,
+    DateTime Function()? clock,
     Duration playPeriod = PlayPeriod.daily,
+    Timer Function(Duration, void Function())? createTimer,
   }) {
     return HomeCubit(
       getBestPoints: pts,
       getBestTimeSeconds: time,
+      getBestDailyTimeSeconds: lifetimeBest,
       getStreak: getStreak,
       analytics: analytics,
       checkAppUpdate: checkAppUpdate,
       appUpdateRepository: appUpdateRepository,
       zipLevelRepository: zipLevels,
-      now: now ?? DateTime.utc(2026, 9, 13),
+      now: clock == null ? (now ?? DateTime.utc(2026, 9, 13)) : null,
+      clock: clock,
       playPeriod: playPeriod,
+      createTimer: createTimer ?? (_, _) => Timer(Duration.zero, () {}),
     );
   }
 
@@ -148,6 +162,36 @@ void main() {
         ),
       ).called(1);
     },
+  );
+
+  blocTest<HomeCubit, HomeState>(
+    'load emits each game freeze count',
+    build: () {
+      when(() => pts(any())).thenReturn(0);
+      when(() => time(any())).thenReturn(null);
+      for (final (gameId, count) in [
+        (GameIds.zip, 2),
+        (GameIds.pathWords, 0),
+        (GameIds.sudoku, 1),
+      ]) {
+        when(
+          () => getStreak(
+            gameId: gameId,
+            now: any(named: 'now'),
+          ),
+        ).thenAnswer(
+          (_) async => GameStreak(gameId: gameId, freezeCount: count),
+        );
+      }
+      return buildCubit();
+    },
+    act: (c) => c.load(),
+    expect: () => [
+      isA<HomeState>()
+          .having((s) => s.freezeCount, 'freezeCount', 2)
+          .having((s) => s.pathWordsFreezeCount, 'pathWordsFreezeCount', 0)
+          .having((s) => s.sudokuFreezeCount, 'sudokuFreezeCount', 1),
+    ],
   );
 
   blocTest<HomeCubit, HomeState>(
@@ -367,4 +411,192 @@ void main() {
           ),
     ],
   );
+
+  blocTest<HomeCubit, HomeState>(
+    "loads each game's best time over every day",
+    build: () {
+      stubIdleScores();
+      when(() => lifetimeBest(GameIds.zip)).thenReturn(48);
+      when(() => lifetimeBest(GameIds.pathWords)).thenReturn(95);
+      return buildCubit();
+    },
+    act: (c) => c.load(),
+    expect: () => [
+      isA<HomeState>()
+          .having((s) => s.lifetimeBestSeconds, 'zip', 48)
+          .having((s) => s.pathWordsLifetimeBestSeconds, 'pathWords', 95)
+          .having((s) => s.sudokuLifetimeBestSeconds, 'sudoku', isNull),
+    ],
+  );
+
+  group('rollover', () {
+    test('reloads just after the next local midnight', () async {
+      stubIdleScores();
+      final waits = <Duration>[];
+      final callbacks = <void Function()>[];
+      final cubit = buildCubit(
+        now: DateTime(2026, 10, 14, 18, 30),
+        createTimer: (wait, callback) {
+          waits.add(wait);
+          callbacks.add(callback);
+          return Timer(const Duration(days: 1), () {});
+        },
+      );
+
+      await cubit.load();
+      expect(
+        waits.single,
+        HomeCubit.rolloverSlack + const Duration(hours: 5, minutes: 30),
+      );
+      verify(
+        () => getStreak(
+          gameId: GameIds.zip,
+          now: any(named: 'now'),
+        ),
+      ).called(1);
+
+      callbacks.single();
+      await Future<void>.delayed(Duration.zero);
+
+      verify(
+        () => getStreak(
+          gameId: GameIds.zip,
+          now: any(named: 'now'),
+        ),
+      ).called(1);
+      // And it waits for the midnight after that.
+      expect(waits, hasLength(2));
+      await cubit.close();
+    });
+
+    test('a reload that ends after midnight reloads again at once', () async {
+      stubIdleScores();
+      var now = DateTime(2026, 10, 14, 23, 59, 59);
+      // The update check is slow enough to carry the load past midnight.
+      when(() => checkAppUpdate()).thenAnswer((_) async {
+        now = DateTime(2026, 10, 15, 0, 0, 1);
+        return AppUpdateDecision.none;
+      });
+      final waits = <Duration>[];
+      final cubit = buildCubit(
+        clock: () => now,
+        createTimer: (wait, _) {
+          waits.add(wait);
+          return Timer(const Duration(days: 1), () {});
+        },
+      );
+
+      await cubit.load();
+
+      expect(waits.single, Duration.zero);
+      expect(cubit.state.loadedAt, DateTime(2026, 10, 14, 23, 59, 59));
+      await cubit.close();
+    });
+
+    test('a slower, older reload never overwrites a newer one', () async {
+      stubIdleScores();
+      final slow = Completer<AppUpdateDecision>();
+      final answers = [slow.future, Future.value(AppUpdateDecision.none)];
+      when(() => checkAppUpdate()).thenAnswer((_) => answers.removeAt(0));
+      final cubit = buildCubit(
+        createTimer: (_, _) => Timer(const Duration(days: 1), () {}),
+      );
+      final emitted = <HomeState>[];
+      final sub = cubit.stream.listen(emitted.add);
+
+      final older = cubit.load();
+      await cubit.load();
+      slow.complete(
+        const AppUpdateDecision(status: AppUpdateStatus.soft, storeUrl: 'x'),
+      );
+      await older;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(emitted, hasLength(1));
+      expect(cubit.state.updateStatus, AppUpdateStatus.none);
+      await sub.cancel();
+      await cubit.close();
+    });
+
+    test('the minute mode reloads every minute', () async {
+      stubIdleScores();
+      final waits = <Duration>[];
+      final cubit = buildCubit(
+        now: DateTime(2026, 9, 20, 14, 31, 20),
+        playPeriod: PlayPeriod.minute,
+        createTimer: (wait, _) {
+          waits.add(wait);
+          return Timer(const Duration(days: 1), () {});
+        },
+      );
+
+      await cubit.load();
+
+      expect(
+        waits.single,
+        HomeCubit.rolloverSlack + const Duration(seconds: 40),
+      );
+      await cubit.close();
+    });
+
+    test('closing cancels the pending reload', () async {
+      stubIdleScores();
+      late Timer timer;
+      final cubit = buildCubit(
+        now: DateTime(2026, 10, 14, 18, 30),
+        createTimer: (_, _) => timer = Timer(const Duration(days: 1), () {}),
+      );
+      await cubit.load();
+
+      await cubit.close();
+
+      expect(timer.isActive, isFalse);
+    });
+  });
+
+  group('update prompt analytics', () {
+    const soft = AppUpdateDecision(
+      status: AppUpdateStatus.soft,
+      storeUrl: 'https://play.google.com/store/apps/details?id=x',
+    );
+
+    test(
+      'the soft banner logs update_prompt_shown once per appearance',
+      () async {
+        stubIdleScores();
+        when(() => checkAppUpdate()).thenAnswer((_) async => soft);
+        final cubit = buildCubit();
+
+        await cubit.load();
+        await cubit.load(); // Home reloads each time it's revisited.
+
+        verify(() => analytics.logUpdatePromptShown(forced: false)).called(1);
+        await cubit.close();
+      },
+    );
+
+    test('tapping update logs update_prompt_accepted', () async {
+      stubIdleScores();
+      when(() => checkAppUpdate()).thenAnswer((_) async => soft);
+      final cubit = buildCubit();
+      await cubit.load();
+
+      await cubit.openStore();
+
+      verify(() => analytics.logUpdatePromptAccepted(forced: false)).called(1);
+      await cubit.close();
+    });
+
+    test('no update logs nothing', () async {
+      stubIdleScores();
+      final cubit = buildCubit();
+
+      await cubit.load();
+
+      verifyNever(
+        () => analytics.logUpdatePromptShown(forced: any(named: 'forced')),
+      );
+      await cubit.close();
+    });
+  });
 }

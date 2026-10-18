@@ -9,19 +9,17 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
 
-  testWidgets(
-    'sound effects switch calls onSfxChanged(false) when other rows are disabled',
-    (tester) async {
-      bool? changedTo;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: buildAppTheme(),
-          home: Scaffold(
-            body: ProfileSettingsList(
-              enabled: false,
-              sfxEnabled: true,
-              onSfxChanged: (value) => changedTo = value,
+  testWidgets('the Settings row opens Settings, even with others disabled', (
+    tester,
+  ) async {
+    var opened = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProfileSettingsList(
+              onSettings: () => opened++,
               onPrivacy: () {},
               onAbout: () {},
               onReport: () {},
@@ -30,46 +28,66 @@ void main() {
             ),
           ),
         ),
-      );
+      ),
+    );
 
-      expect(find.text(AppStrings.profileSoundEffects), findsOneWidget);
+    // Sound and vibration moved to Settings.
+    expect(find.text(AppStrings.profileSoundEffects), findsNothing);
+    expect(find.byType(Switch), findsNothing);
+    await tester.tap(find.text(AppStrings.profileSettings));
+    await tester.pump();
+    expect(opened, 1);
+  });
 
-      final privacy = tester.widget<ListTile>(
-        find.widgetWithText(ListTile, AppStrings.profilePrivacyPolicy),
-      );
-      expect(privacy.onTap, isNull);
-      final delete = tester.widget<ListTile>(
-        find.widgetWithText(ListTile, AppStrings.deleteAccount),
-      );
-      expect(delete.onTap, isNull);
-
-      await tester.tap(find.byType(Switch));
-      await tester.pump();
-
-      expect(changedTo, isFalse);
-    },
-  );
-
-  testWidgets('omits the sound effects row when onSfxChanged is null', (
-    tester,
-  ) async {
+  testWidgets('a disabled list keeps the Settings row inert', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildAppTheme(),
         home: Scaffold(
-          body: ProfileSettingsList(
-            onPrivacy: () {},
-            onAbout: () {},
-            onReport: () {},
-            onSignOut: () {},
-            onDeleteAccount: () {},
+          body: SingleChildScrollView(
+            child: ProfileSettingsList(
+              enabled: false,
+              onSettings: () {},
+              onPrivacy: () {},
+              onAbout: () {},
+              onReport: () {},
+              onSignOut: () {},
+              onDeleteAccount: () {},
+            ),
           ),
         ),
       ),
     );
 
-    expect(find.text(AppStrings.profileSoundEffects), findsNothing);
-    expect(find.byType(Switch), findsNothing);
+    final settings = tester.widget<ListTile>(
+      find.widgetWithText(ListTile, AppStrings.profileSettings),
+    );
+    expect(settings.onTap, isNull);
+    final privacy = tester.widget<ListTile>(
+      find.widgetWithText(ListTile, AppStrings.profilePrivacyPolicy),
+    );
+    expect(privacy.onTap, isNull);
+  });
+
+  testWidgets('omits the Settings row when onSettings is null', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProfileSettingsList(
+              onPrivacy: () {},
+              onAbout: () {},
+              onReport: () {},
+              onSignOut: () {},
+              onDeleteAccount: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text(AppStrings.profileSettings), findsNothing);
   });
 
   testWidgets('delete account row calls onDeleteAccount', (tester) async {

@@ -32,6 +32,38 @@ PathWordsPuzzle tinyPuzzle() {
 void main() {
   final puzzle = tinyPuzzle();
 
+  group('undo and spelling helpers', () {
+    const found = PathWordsStroke(
+      cells: [Cell(0, 0), Cell(0, 1)],
+      colorIndex: 0,
+      targetId: 't0',
+    );
+    const wrong = PathWordsStroke(
+      cells: [Cell(1, 0), Cell(1, 1)],
+      colorIndex: 1,
+    );
+
+    test('lastIncorrectIndex finds the latest wrong stroke only', () {
+      expect(PathWordsRules.lastIncorrectIndex(const []), isNull);
+      expect(PathWordsRules.lastIncorrectIndex(const [found]), isNull);
+      expect(PathWordsRules.lastIncorrectIndex(const [wrong, found]), 0);
+      expect(PathWordsRules.lastIncorrectIndex(const [found, wrong]), 1);
+      expect(PathWordsRules.lastIncorrectIndex(const [wrong, found, wrong]), 2);
+    });
+
+    test('spell reads the letters along the cells', () {
+      expect(
+        PathWordsRules.spell(puzzle, const [
+          Cell(1, 1),
+          Cell(0, 1),
+          Cell(0, 0),
+        ]),
+        'dba',
+      );
+      expect(PathWordsRules.spell(puzzle, const []), '');
+    });
+  });
+
   test('tryBegin allows any letter cell that is not locked', () {
     expect(
       PathWordsRules.tryBegin(
@@ -120,7 +152,106 @@ void main() {
     );
   });
 
-  test('completedTarget matches the official path only, not reverse', () {
+  group('completedTarget on another route', () {
+    test('accepts the word traced through cells no other word needs', () {
+      expect(
+        PathWordsRules.completedTarget(
+          puzzle: decoyPuzzle(),
+          path: const [Cell(0, 1), Cell(0, 2), Cell(1, 2)],
+          completedTargetIds: {},
+        )?.id,
+        't0',
+      );
+    });
+
+    test('rejects a route through another word, which would strand it', () {
+      expect(
+        PathWordsRules.completedTarget(
+          puzzle: decoyPuzzle(decoysAreAWord: true),
+          path: const [Cell(0, 1), Cell(0, 2), Cell(1, 2)],
+          completedTargetIds: {},
+        ),
+        isNull,
+      );
+    });
+
+    test('ignores the case of the stored word', () {
+      final upper = PathWordsPuzzle(
+        id: 'upper',
+        day: DateTime(2026, 10, 14),
+        size: 3,
+        letters: decoyPuzzle().letters,
+        targets: const [
+          PathWordsTarget(
+            id: 't0',
+            word: 'CAT',
+            start: Cell(0, 1),
+            path: [Cell(0, 1), Cell(0, 0), Cell(1, 0)],
+            colorIndex: 0,
+          ),
+        ],
+      );
+      expect(
+        PathWordsRules.completedTarget(
+          puzzle: upper,
+          path: const [Cell(0, 1), Cell(0, 2), Cell(1, 2)],
+          completedTargetIds: {},
+        )?.id,
+        't0',
+      );
+    });
+
+    test('does not complete a word that is already found', () {
+      expect(
+        PathWordsRules.completedTarget(
+          puzzle: decoyPuzzle(),
+          path: const [Cell(0, 1), Cell(0, 2), Cell(1, 2)],
+          completedTargetIds: {'t0'},
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('completedPaths', () {
+    test('draws a found word where the player traced it', () {
+      const traced = [Cell(0, 1), Cell(0, 2), Cell(1, 2)];
+      final paths = PathWordsRules.completedPaths(
+        puzzle: decoyPuzzle(),
+        completedTargetIds: {'t0'},
+        placedPaths: const [
+          PathWordsStroke(cells: traced, colorIndex: 0, targetId: 't0'),
+        ],
+      );
+      expect(paths, {'t0': traced});
+    });
+
+    test('blocks the traced cells, matching what the board draws', () {
+      const traced = [Cell(0, 1), Cell(0, 2), Cell(1, 2)];
+      final blocked = PathWordsRules.blockedCells(
+        puzzle: decoyPuzzle(),
+        completedTargetIds: {'t0'},
+        placedPaths: const [
+          PathWordsStroke(cells: traced, colorIndex: 0, targetId: 't0'),
+        ],
+      );
+      // The stored route's other letters belong to no word and look free.
+      expect(blocked, traced.toSet());
+    });
+
+    test('falls back to the stored path when no stroke is kept', () {
+      final paths = PathWordsRules.completedPaths(
+        puzzle: decoyPuzzle(),
+        completedTargetIds: {'t0'},
+        placedPaths: const [],
+      );
+      expect(paths, {
+        't0': const [Cell(0, 1), Cell(0, 0), Cell(1, 0)],
+      });
+    });
+  });
+
+  test('completedTarget does not accept a word traced backwards', () {
     expect(
       PathWordsRules.completedTarget(
         puzzle: puzzle,
@@ -728,4 +859,32 @@ void main() {
       expect(fills, isEmpty);
     });
   });
+}
+
+/// 3x3, hand-made: "cat" hidden as c(0,1) a(0,0) t(1,0), with a decoy "a" and
+/// "t" on the right that belong to no word.
+PathWordsPuzzle decoyPuzzle({bool decoysAreAWord = false}) {
+  return PathWordsPuzzle(
+    id: 'decoy',
+    day: DateTime(2026, 10, 14),
+    size: 3,
+    letters: const ['a', 'c', 'a', 't', '', 't', '', '', ''],
+    targets: [
+      const PathWordsTarget(
+        id: 't0',
+        word: 'cat',
+        start: Cell(0, 1),
+        path: [Cell(0, 1), Cell(0, 0), Cell(1, 0)],
+        colorIndex: 0,
+      ),
+      if (decoysAreAWord)
+        const PathWordsTarget(
+          id: 't1',
+          word: 'at',
+          start: Cell(0, 2),
+          path: [Cell(0, 2), Cell(1, 2)],
+          colorIndex: 1,
+        ),
+    ],
+  );
 }

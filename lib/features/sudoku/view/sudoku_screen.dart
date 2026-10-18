@@ -6,16 +6,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/dev_flags.dart';
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
+import '../../../core/widgets/play_mode_strip.dart';
+import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/sudoku/sudoku_hint_coach.dart';
 import '../../../domain/entities/sudoku_difficulty.dart';
+import '../../../domain/game_ids.dart';
+import '../../../domain/play_mode.dart';
+import '../../../domain/play_period.dart';
 import '../../../domain/repositories/analytics_repository.dart';
-import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/usecases/generate_daily_sudoku.dart';
 import '../../../domain/usecases/get_best_points.dart';
@@ -24,17 +29,29 @@ import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
+import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
+import '../../../core/router/pop_or_go_home.dart';
 import '../bloc/sudoku_bloc.dart';
 import '../bloc/sudoku_event.dart';
 import '../bloc/sudoku_state.dart';
 import '../game/sudoku_board_view.dart';
 import '../game/sudoku_game.dart';
 import 'widgets/sudoku_how_to_play.dart';
+import 'widgets/sudoku_paused_cover.dart';
 
 class SudokuScreen extends StatefulWidget {
-  const SudokuScreen({super.key, this.date, this.bloc, this.autoStart = true});
+  const SudokuScreen({
+    super.key,
+    this.date,
+    this.bloc,
+    this.autoStart = true,
+    this.mode = PlayMode.daily,
+  });
 
   final DateTime? date;
+
+  /// Daily (default), archive or practice.
+  final PlayMode mode;
   final SudokuBloc? bloc;
   final bool autoStart;
 
@@ -47,6 +64,10 @@ class _SudokuScreenState extends State<SudokuScreen>
   late final SudokuBloc _bloc;
   late final bool _ownsBloc;
   SudokuGame? _game;
+  var _howToPlayPrompted = false;
+
+  /// The first-run rules are open; the clock stays stopped until they close.
+  var _howToPlayOpen = false;
 
   @override
   void initState() {
@@ -64,12 +85,19 @@ class _SudokuScreenState extends State<SudokuScreen>
           getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
           isNewPersonalBest: context.read<IsNewPersonalBest>(),
           analytics: context.read<AnalyticsRepository>(),
-          hintQuota: context.read<HintQuotaRepository>(),
+          hintQuota: context.hintQuotaFor(widget.mode),
           inProgressRuns: context.read<InProgressRunRepository>(),
           generatePuzzle: ({required day}) =>
-              context.read<GenerateDailySudoku>()(day: day),
+              context.read<GenerateDailySudoku>()(
+                day: day,
+                // The archive always reads calendar days.
+                period: widget.mode.isArchive ? PlayPeriod.daily : null,
+              ),
           playPeriod: DevFlags.playPeriod,
           sfx: context.read<SfxService>(),
+          haptics: context.read<HapticsService?>(),
+          mode: widget.mode,
+          modeRecords: context.modeRecordsFor(widget.mode),
         );
 
     if (widget.autoStart) {
@@ -81,7 +109,7 @@ class _SudokuScreenState extends State<SudokuScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
-        _bloc.add(const SudokuEvent.resumeRun());
+        if (!_howToPlayOpen) _bloc.add(const SudokuEvent.resumeRun());
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
@@ -207,6 +235,26 @@ class _SudokuScreenState extends State<SudokuScreen>
             },
           ),
           BlocListener<SudokuBloc, SudokuState>(
+            listenWhen: (prev, curr) =>
+                !_howToPlayPrompted &&
+                curr.status == SudokuStatus.ready &&
+                !curr.finished,
+            listener: (context, state) {
+              _howToPlayPrompted = true;
+              SudokuHowToPlay.maybeShow(
+                context,
+                onOpen: () {
+                  _howToPlayOpen = true;
+                  _bloc.add(const SudokuEvent.pauseRun());
+                },
+                onClose: () {
+                  _howToPlayOpen = false;
+                  if (mounted) _bloc.add(const SudokuEvent.resumeRun());
+                },
+              );
+            },
+          ),
+          BlocListener<SudokuBloc, SudokuState>(
             listenWhen: (prev, curr) => prev.puzzle?.id != curr.puzzle?.id,
             listener: (context, state) {
               if (_ensureGame(state)) setState(() {});
@@ -229,7 +277,9 @@ class _SudokuScreenState extends State<SudokuScreen>
             }
             final puzzle = state.puzzle;
             final isReview = state.status == SudokuStatus.locked;
-            final isFailed = state.status == SudokuStatus.failed;
+            final isUnsupported = state.status == SudokuStatus.unsupported;
+            final isFailed =
+                state.status == SudokuStatus.failed || isUnsupported;
             final isLoading = state.status == SudokuStatus.loading;
             final isReadyToPlay =
                 !state.finished &&
@@ -251,13 +301,13 @@ class _SudokuScreenState extends State<SudokuScreen>
                         child: Row(
                           children: [
                             IconButton(
-                              onPressed: () => context.pop(),
+                              onPressed: () => popOrGoHome(context),
                               icon: const Icon(Icons.arrow_back_rounded),
                             ),
                             Expanded(
-                              child: Text(
-                                AppStrings.sudokuTitle,
-                                style: Theme.of(context).textTheme.titleLarge,
+                              child: GameScreenTitle(
+                                title: AppStrings.sudokuTitle,
+                                special: puzzle?.special,
                               ),
                             ),
                             if (isReadyToPlay)
@@ -284,6 +334,12 @@ class _SudokuScreenState extends State<SudokuScreen>
                             const SudokuHowToPlayButton(),
                           ],
                         ),
+                      ),
+                      PlayModeStrip(
+                        mode: widget.mode,
+                        onNewBoard: isReadyToPlay || isFailed
+                            ? () => _bloc.add(const SudokuEvent.newBoard())
+                            : null,
                       ),
                       Expanded(
                         child: LayoutBuilder(
@@ -320,7 +376,8 @@ class _SudokuScreenState extends State<SudokuScreen>
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Text(
-                                                    AppStrings.sudokuFailed,
+                                                    state.errorMessage ??
+                                                        AppStrings.sudokuFailed,
                                                     textAlign: TextAlign.center,
                                                     style: Theme.of(context)
                                                         .textTheme
@@ -333,19 +390,32 @@ class _SudokuScreenState extends State<SudokuScreen>
                                                         ),
                                                   ),
                                                   const SizedBox(height: 14),
-                                                  FilledButton.icon(
-                                                    onPressed: () => _bloc.add(
-                                                      SudokuEvent.started(
-                                                        date: widget.date,
+                                                  if (isUnsupported)
+                                                    FilledButton.icon(
+                                                      onPressed: () =>
+                                                          context.go('/'),
+                                                      icon: const Icon(
+                                                        Icons.home_rounded,
+                                                      ),
+                                                      label: Text(
+                                                        AppStrings.backHome,
+                                                      ),
+                                                    )
+                                                  else
+                                                    FilledButton.icon(
+                                                      onPressed: () =>
+                                                          _bloc.add(
+                                                            SudokuEvent.started(
+                                                              date: widget.date,
+                                                            ),
+                                                          ),
+                                                      icon: const Icon(
+                                                        Icons.refresh_rounded,
+                                                      ),
+                                                      label: Text(
+                                                        AppStrings.retry,
                                                       ),
                                                     ),
-                                                    icon: const Icon(
-                                                      Icons.refresh_rounded,
-                                                    ),
-                                                    label: const Text(
-                                                      AppStrings.retry,
-                                                    ),
-                                                  ),
                                                 ],
                                               ),
                                             ),
@@ -354,7 +424,9 @@ class _SudokuScreenState extends State<SudokuScreen>
                                         ? const Center(
                                             child: CircularProgressIndicator(),
                                           )
-                                        : GameWidget(game: game),
+                                        : SudokuPausedCover(
+                                            child: GameWidget(game: game),
+                                          ),
                                   ),
                                   if (isReadyToPlay) ...[
                                     _NotesToggle(
@@ -364,7 +436,10 @@ class _SudokuScreenState extends State<SudokuScreen>
                                       ),
                                     ),
                                     _NumberPad(
-                                      hintsRemaining: state.hintsRemaining,
+                                      hintLabel: hintLabelFor(
+                                        widget.mode,
+                                        hintsUsed: state.hintsUsed,
+                                      ),
                                       onDigit: (d) =>
                                           _bloc.add(SudokuEvent.digitTapped(d)),
                                       onErase: () =>
@@ -381,14 +456,10 @@ class _SudokuScreenState extends State<SudokuScreen>
                                         16,
                                         8,
                                       ),
-                                      child: Text(
-                                        AppStrings.comeBackTomorrow,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color: ZipColors.inkSoft,
-                                            ),
+                                      child: ClearedSummaryCard(
+                                        gameId: GameIds.sudoku,
+                                        modeKey: _bloc.clearModeKey,
+                                        day: state.day,
                                       ),
                                     ),
                                 ],
@@ -483,7 +554,7 @@ class _NotesToggle extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: FilterChip(
           selected: enabled,
-          label: const Text(AppStrings.sudokuNotes),
+          label: Text(AppStrings.sudokuNotes),
           onSelected: (_) => onPressed(),
           selectedColor: ZipColors.skySoft,
           checkmarkColor: ZipColors.sky,
@@ -497,13 +568,13 @@ class _NotesToggle extends StatelessWidget {
 
 class _NumberPad extends StatelessWidget {
   const _NumberPad({
-    required this.hintsRemaining,
+    required this.hintLabel,
     required this.onDigit,
     required this.onErase,
     required this.onHint,
   });
 
-  final int hintsRemaining;
+  final String hintLabel;
   final void Function(int digit) onDigit;
   final VoidCallback onErase;
   final VoidCallback onHint;
@@ -620,9 +691,9 @@ class _NumberPad extends StatelessWidget {
               _digitButton(5),
               _digitButton(6),
               _actionButton(
-                onPressed: hintsRemaining > 0 ? onHint : null,
+                onPressed: onHint,
                 icon: Icons.lightbulb_outline,
-                label: AppStrings.sudokuHintWithCount(hintsRemaining),
+                label: hintLabel,
               ),
             ],
           ),

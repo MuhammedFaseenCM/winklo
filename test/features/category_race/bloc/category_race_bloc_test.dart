@@ -4,7 +4,8 @@ import 'dart:math';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:winklo/domain/entities/word_category.dart';
 import 'package:winklo/domain/usecases/fetch_categories.dart';
-import 'package:winklo/domain/usecases/submit_score.dart';
+import 'package:winklo/domain/repositories/play_mode_record_repository.dart';
+import 'package:winklo/features/results/results_args.dart';
 import 'package:winklo/features/category_race/bloc/category_race_bloc.dart';
 import 'package:winklo/features/category_race/bloc/category_race_event.dart';
 import 'package:winklo/features/category_race/bloc/category_race_state.dart';
@@ -15,7 +16,7 @@ import '../../../helpers/mock_analytics_repository.dart';
 
 class _MockFetchCategories extends Mock implements FetchCategories {}
 
-class _MockSubmitScore extends Mock implements SubmitScore {}
+class _MockRecords extends Mock implements PlayModeRecordRepository {}
 
 class _FakeRandom implements Random {
   _FakeRandom(this._values);
@@ -39,7 +40,7 @@ class _FakeRandom implements Random {
 
 void main() {
   late _MockFetchCategories fetchCategories;
-  late _MockSubmitScore submitScore;
+  late _MockRecords records;
   late StreamController<int> ticks;
 
   final animals = WordCategory(
@@ -59,7 +60,7 @@ void main() {
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
     fetchCategories = _MockFetchCategories();
-    submitScore = _MockSubmitScore();
+    records = _MockRecords();
     ticks = StreamController<int>.broadcast();
   });
 
@@ -73,7 +74,7 @@ void main() {
       when(() => fetchCategories()).thenAnswer((_) async => [animals, fruits]);
       return CategoryRaceBloc(
         fetchCategories: fetchCategories,
-        submitScore: submitScore,
+        records: records,
         analytics: analytics,
         random: _FakeRandom([
           1,
@@ -102,7 +103,7 @@ void main() {
       when(() => fetchCategories()).thenAnswer((_) async => [fruits]);
       return CategoryRaceBloc(
         fetchCategories: fetchCategories,
-        submitScore: submitScore,
+        records: records,
         analytics: analytics,
         random: _FakeRandom([0]), // viable letters [A, B] => pick A
         roundSeconds: 2,
@@ -137,16 +138,18 @@ void main() {
   );
 
   blocTest<CategoryRaceBloc, CategoryRaceState>(
-    'valid answer adds to list; finish submits score with race_<id>',
+    'valid answer adds to list; finish keeps the local best word count',
     build: () {
       when(() => fetchCategories()).thenAnswer((_) async => [fruits]);
       when(
-        () => submitScore(modeKey: 'race_fruits', points: 50, timeSeconds: 2),
-      ).thenAnswer((_) async => true);
+        () => records.recordScore('bonus_category_race_fruits', 1),
+      ).thenAnswer(
+        (_) async => const LocalBest(best: 1, previous: 0, improved: true),
+      );
 
       return CategoryRaceBloc(
         fetchCategories: fetchCategories,
-        submitScore: submitScore,
+        records: records,
         analytics: analytics,
         random: _FakeRandom([0]), // viable letters [A, B] => pick A
         roundSeconds: 2,
@@ -202,11 +205,18 @@ void main() {
           .having((s) => s.status, 'status', CategoryRaceStatus.navigating)
           .having((s) => s.resultsExtra?.title, 'title', 'Round over')
           .having((s) => s.resultsExtra?.improved, 'improved', isTrue)
-          .having((s) => s.resultsExtra?.points, 'points', 50),
+          .having((s) => s.resultsExtra?.points, 'points', 50)
+          .having((s) => s.resultsExtra?.local?.score, 'score', 1)
+          .having((s) => s.resultsExtra?.local?.bestScore, 'best', 1)
+          .having(
+            (s) => s.resultsExtra?.local?.kind,
+            'kind',
+            LocalResultKind.bonus,
+          ),
     ],
     verify: (_) {
       verify(
-        () => submitScore(modeKey: 'race_fruits', points: 50, timeSeconds: 2),
+        () => records.recordScore('bonus_category_race_fruits', 1),
       ).called(1);
     },
   );
@@ -215,7 +225,7 @@ void main() {
     when(() => fetchCategories()).thenAnswer((_) async => [fruits]);
     final bloc = CategoryRaceBloc(
       fetchCategories: fetchCategories,
-      submitScore: submitScore,
+      records: records,
       analytics: analytics,
       random: Random(0),
       roundSeconds: 2,

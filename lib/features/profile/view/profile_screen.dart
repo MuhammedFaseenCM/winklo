@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_urls.dart';
-import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
@@ -27,9 +26,11 @@ import 'widgets/about_game_dialog.dart';
 import 'widgets/avatar_edit_sheet.dart';
 import 'widgets/delete_account_confirm_dialog.dart';
 import 'widgets/name_edit_sheet.dart';
+import 'widgets/profile_settings_entry.dart';
 import 'widgets/profile_settings_list.dart';
 import 'widgets/profile_shimmer.dart';
 import 'widgets/profile_signed_out_mock.dart';
+import 'widgets/profile_stats_section.dart';
 import 'widgets/sign_out_confirm_dialog.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -40,7 +41,7 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: ZipColors.ink,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           AppStrings.profileTitle,
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
@@ -64,6 +65,7 @@ class ProfileScreen extends StatelessWidget {
                 updateDisplayName: context.read<UpdateDisplayName>(),
                 updateAvatar: context.read<UpdateAvatar>(),
                 uid: user.uid,
+                analytics: context.read<AnalyticsRepository>(),
               ),
               child: _SignedInBody(fallbackUser: user),
             );
@@ -74,49 +76,22 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _SignedOutBody extends StatefulWidget {
+class _SignedOutBody extends StatelessWidget {
   const _SignedOutBody();
 
   @override
-  State<_SignedOutBody> createState() => _SignedOutBodyState();
-}
-
-class _SignedOutBodyState extends State<_SignedOutBody> {
-  @override
   Widget build(BuildContext context) {
-    final sfx = context.read<SfxService>();
     return BlurredMockEmptyBody(
       background: const ProfileSignedOutMock(),
       message: AppStrings.profileSignedOutBody,
       action: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(
-              Icons.volume_up_outlined,
-              color: ZipColors.teal,
-            ),
-            title: Text(
-              AppStrings.profileSoundEffects,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: ZipColors.onInk,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            trailing: Switch.adaptive(
-              value: sfx.isEnabled,
-              onChanged: (value) async {
-                await sfx.setEnabled(value);
-                if (!mounted) return;
-                setState(() {});
-              },
-            ),
-          ),
+          const ProfileSettingsEntry(),
           const SizedBox(height: 8),
           FilledButton(
             onPressed: () => showSignInSheet(context),
-            child: const Text(AppStrings.signInWithGoogle),
+            child: Text(AppStrings.signInWithGoogle),
           ),
         ],
       ),
@@ -190,7 +165,8 @@ class _SignedInBodyState extends State<_SignedInBody> {
   /// Play requires an in-app path to account deletion. The deletion itself
   /// happens on the web page, which needs a real browser for Google sign-in.
   /// Signing out first stops this phone from syncing the account's progress
-  /// back after the wipe (its ID token stays valid for up to an hour).
+  /// back after the wipe (its ID token stays valid for up to an hour), and
+  /// the account's progress on this phone goes too.
   Future<void> _deleteAccount(BuildContext context) async {
     final confirmed = await showDeleteAccountConfirmDialog(context);
     if (!confirmed || !context.mounted) return;
@@ -198,11 +174,11 @@ class _SignedInBodyState extends State<_SignedInBody> {
     final messenger = ScaffoldMessenger.of(context);
     await context.read<AnalyticsRepository>().logProfileDeleteAccountOpened();
     if (!context.mounted) return;
-    await context.read<AuthCubit>().signOut();
+    await context.read<AuthCubit>().signOutForAccountDeletion();
     final opened = await links.open(Uri.parse(AppUrls.accountDeletion));
     if (!opened) {
       messenger.showSnackBar(
-        const SnackBar(content: Text(AppStrings.deleteAccountOpenFailed)),
+        SnackBar(content: Text(AppStrings.deleteAccountOpenFailed)),
       );
     }
   }
@@ -210,7 +186,6 @@ class _SignedInBodyState extends State<_SignedInBody> {
   @override
   Widget build(BuildContext context) {
     final layout = AppLayout.of(context);
-    final sfx = context.read<SfxService>();
     return BlocListener<ProfileCubit, ProfileState>(
       listenWhen: (previous, next) =>
           next.status == ProfileStatus.failure &&
@@ -239,7 +214,9 @@ class _SignedInBodyState extends State<_SignedInBody> {
             onRefresh: () => context.read<ProfileCubit>().refresh(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: layout.pagePadding,
+              // Clear of the shell's floating nav dock (extendBody), so the
+              // last row isn't under it.
+              padding: layout.scrollPadding(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -325,7 +302,7 @@ class _SignedInBodyState extends State<_SignedInBody> {
                         size: 15,
                         color: ZipColors.ember,
                       ),
-                      label: const Text(
+                      label: Text(
                         AppStrings.profileEditDisplayName,
                         style: TextStyle(
                           color: ZipColors.ember,
@@ -335,13 +312,10 @@ class _SignedInBodyState extends State<_SignedInBody> {
                     ),
                   ),
                   SizedBox(height: layout.space(16)),
+                  const ProfileStatsSection(),
+                  SizedBox(height: layout.space(16)),
                   ProfileSettingsList(
-                    sfxEnabled: sfx.isEnabled,
-                    onSfxChanged: (value) async {
-                      await sfx.setEnabled(value);
-                      if (!mounted) return;
-                      setState(() {});
-                    },
+                    onSettings: () => unawaited(openSettings(context)),
                     onPrivacy: () => unawaited(_openPrivacy(context)),
                     onAbout: () => unawaited(showAboutGameDialog(context)),
                     onReport: () => unawaited(_openReport(context)),

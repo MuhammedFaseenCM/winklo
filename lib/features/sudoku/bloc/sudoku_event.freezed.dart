@@ -55,7 +55,7 @@ extension SudokuEventPatterns on SudokuEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SudokuStarted value)?  started,TResult Function( SudokuCellSelected value)?  cellSelected,TResult Function( SudokuDigitTapped value)?  digitTapped,TResult Function( SudokuErase value)?  erase,TResult Function( SudokuNotesModeToggled value)?  notesModeToggled,TResult Function( SudokuHint value)?  hint,TResult Function( SudokuDismissHint value)?  dismissHint,TResult Function( SudokuReset value)?  reset,TResult Function( SudokuPauseRun value)?  pauseRun,TResult Function( SudokuResumeRun value)?  resumeRun,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SudokuStarted value)?  started,TResult Function( SudokuCellSelected value)?  cellSelected,TResult Function( SudokuDigitTapped value)?  digitTapped,TResult Function( SudokuErase value)?  erase,TResult Function( SudokuNotesModeToggled value)?  notesModeToggled,TResult Function( SudokuHint value)?  hint,TResult Function( SudokuDismissHint value)?  dismissHint,TResult Function( SudokuReset value)?  reset,TResult Function( SudokuPauseRun value)?  pauseRun,TResult Function( SudokuResumeRun value)?  resumeRun,TResult Function( SudokuNewBoard value)?  newBoard,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case SudokuStarted() when started != null:
@@ -68,7 +68,8 @@ return hint(_that);case SudokuDismissHint() when dismissHint != null:
 return dismissHint(_that);case SudokuReset() when reset != null:
 return reset(_that);case SudokuPauseRun() when pauseRun != null:
 return pauseRun(_that);case SudokuResumeRun() when resumeRun != null:
-return resumeRun(_that);case _:
+return resumeRun(_that);case SudokuNewBoard() when newBoard != null:
+return newBoard(_that);case _:
   return orElse();
 
 }
@@ -86,7 +87,7 @@ return resumeRun(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SudokuStarted value)  started,required TResult Function( SudokuCellSelected value)  cellSelected,required TResult Function( SudokuDigitTapped value)  digitTapped,required TResult Function( SudokuErase value)  erase,required TResult Function( SudokuNotesModeToggled value)  notesModeToggled,required TResult Function( SudokuHint value)  hint,required TResult Function( SudokuDismissHint value)  dismissHint,required TResult Function( SudokuReset value)  reset,required TResult Function( SudokuPauseRun value)  pauseRun,required TResult Function( SudokuResumeRun value)  resumeRun,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SudokuStarted value)  started,required TResult Function( SudokuCellSelected value)  cellSelected,required TResult Function( SudokuDigitTapped value)  digitTapped,required TResult Function( SudokuErase value)  erase,required TResult Function( SudokuNotesModeToggled value)  notesModeToggled,required TResult Function( SudokuHint value)  hint,required TResult Function( SudokuDismissHint value)  dismissHint,required TResult Function( SudokuReset value)  reset,required TResult Function( SudokuPauseRun value)  pauseRun,required TResult Function( SudokuResumeRun value)  resumeRun,required TResult Function( SudokuNewBoard value)  newBoard,}){
 final _that = this;
 switch (_that) {
 case SudokuStarted():
@@ -99,7 +100,8 @@ return hint(_that);case SudokuDismissHint():
 return dismissHint(_that);case SudokuReset():
 return reset(_that);case SudokuPauseRun():
 return pauseRun(_that);case SudokuResumeRun():
-return resumeRun(_that);}
+return resumeRun(_that);case SudokuNewBoard():
+return newBoard(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -113,7 +115,7 @@ return resumeRun(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SudokuStarted value)?  started,TResult? Function( SudokuCellSelected value)?  cellSelected,TResult? Function( SudokuDigitTapped value)?  digitTapped,TResult? Function( SudokuErase value)?  erase,TResult? Function( SudokuNotesModeToggled value)?  notesModeToggled,TResult? Function( SudokuHint value)?  hint,TResult? Function( SudokuDismissHint value)?  dismissHint,TResult? Function( SudokuReset value)?  reset,TResult? Function( SudokuPauseRun value)?  pauseRun,TResult? Function( SudokuResumeRun value)?  resumeRun,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SudokuStarted value)?  started,TResult? Function( SudokuCellSelected value)?  cellSelected,TResult? Function( SudokuDigitTapped value)?  digitTapped,TResult? Function( SudokuErase value)?  erase,TResult? Function( SudokuNotesModeToggled value)?  notesModeToggled,TResult? Function( SudokuHint value)?  hint,TResult? Function( SudokuDismissHint value)?  dismissHint,TResult? Function( SudokuReset value)?  reset,TResult? Function( SudokuPauseRun value)?  pauseRun,TResult? Function( SudokuResumeRun value)?  resumeRun,TResult? Function( SudokuNewBoard value)?  newBoard,}){
 final _that = this;
 switch (_that) {
 case SudokuStarted() when started != null:
@@ -126,7 +128,8 @@ return hint(_that);case SudokuDismissHint() when dismissHint != null:
 return dismissHint(_that);case SudokuReset() when reset != null:
 return reset(_that);case SudokuPauseRun() when pauseRun != null:
 return pauseRun(_that);case SudokuResumeRun() when resumeRun != null:
-return resumeRun(_that);case _:
+return resumeRun(_that);case SudokuNewBoard() when newBoard != null:
+return newBoard(_that);case _:
   return null;
 
 }
@@ -143,7 +146,7 @@ return resumeRun(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( Cell cell)?  cellSelected,TResult Function( int digit)?  digitTapped,TResult Function()?  erase,TResult Function()?  notesModeToggled,TResult Function()?  hint,TResult Function()?  dismissHint,TResult Function()?  reset,TResult Function()?  pauseRun,TResult Function()?  resumeRun,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( DateTime? date)?  started,TResult Function( Cell cell)?  cellSelected,TResult Function( int digit)?  digitTapped,TResult Function()?  erase,TResult Function()?  notesModeToggled,TResult Function()?  hint,TResult Function()?  dismissHint,TResult Function()?  reset,TResult Function()?  pauseRun,TResult Function()?  resumeRun,TResult Function()?  newBoard,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SudokuStarted() when started != null:
 return started(_that.date);case SudokuCellSelected() when cellSelected != null:
@@ -155,7 +158,8 @@ return hint();case SudokuDismissHint() when dismissHint != null:
 return dismissHint();case SudokuReset() when reset != null:
 return reset();case SudokuPauseRun() when pauseRun != null:
 return pauseRun();case SudokuResumeRun() when resumeRun != null:
-return resumeRun();case _:
+return resumeRun();case SudokuNewBoard() when newBoard != null:
+return newBoard();case _:
   return orElse();
 
 }
@@ -173,7 +177,7 @@ return resumeRun();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( Cell cell)  cellSelected,required TResult Function( int digit)  digitTapped,required TResult Function()  erase,required TResult Function()  notesModeToggled,required TResult Function()  hint,required TResult Function()  dismissHint,required TResult Function()  reset,required TResult Function()  pauseRun,required TResult Function()  resumeRun,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( DateTime? date)  started,required TResult Function( Cell cell)  cellSelected,required TResult Function( int digit)  digitTapped,required TResult Function()  erase,required TResult Function()  notesModeToggled,required TResult Function()  hint,required TResult Function()  dismissHint,required TResult Function()  reset,required TResult Function()  pauseRun,required TResult Function()  resumeRun,required TResult Function()  newBoard,}) {final _that = this;
 switch (_that) {
 case SudokuStarted():
 return started(_that.date);case SudokuCellSelected():
@@ -185,7 +189,8 @@ return hint();case SudokuDismissHint():
 return dismissHint();case SudokuReset():
 return reset();case SudokuPauseRun():
 return pauseRun();case SudokuResumeRun():
-return resumeRun();}
+return resumeRun();case SudokuNewBoard():
+return newBoard();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -199,7 +204,7 @@ return resumeRun();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( Cell cell)?  cellSelected,TResult? Function( int digit)?  digitTapped,TResult? Function()?  erase,TResult? Function()?  notesModeToggled,TResult? Function()?  hint,TResult? Function()?  dismissHint,TResult? Function()?  reset,TResult? Function()?  pauseRun,TResult? Function()?  resumeRun,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( DateTime? date)?  started,TResult? Function( Cell cell)?  cellSelected,TResult? Function( int digit)?  digitTapped,TResult? Function()?  erase,TResult? Function()?  notesModeToggled,TResult? Function()?  hint,TResult? Function()?  dismissHint,TResult? Function()?  reset,TResult? Function()?  pauseRun,TResult? Function()?  resumeRun,TResult? Function()?  newBoard,}) {final _that = this;
 switch (_that) {
 case SudokuStarted() when started != null:
 return started(_that.date);case SudokuCellSelected() when cellSelected != null:
@@ -211,7 +216,8 @@ return hint();case SudokuDismissHint() when dismissHint != null:
 return dismissHint();case SudokuReset() when reset != null:
 return reset();case SudokuPauseRun() when pauseRun != null:
 return pauseRun();case SudokuResumeRun() when resumeRun != null:
-return resumeRun();case _:
+return resumeRun();case SudokuNewBoard() when newBoard != null:
+return newBoard();case _:
   return null;
 
 }
@@ -633,6 +639,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
   return 'SudokuEvent.resumeRun()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class SudokuNewBoard implements SudokuEvent {
+  const SudokuNewBoard();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SudokuNewBoard);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+  return 'SudokuEvent.newBoard()';
 }
 
 

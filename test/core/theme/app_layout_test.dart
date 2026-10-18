@@ -43,4 +43,30 @@ void main() {
     expect(layout.pagePadding.left, closeTo(20, 0.01));
     expect(layout.sectionGap, closeTo(12, 0.01));
   });
+
+  testWidgets('scroll padding clears the bottom inset (the nav dock)', (
+    tester,
+  ) async {
+    late EdgeInsets padding;
+    late AppLayout layout;
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: AppLayout.designSize,
+          padding: EdgeInsets.only(bottom: 88),
+        ),
+        child: Builder(
+          builder: (context) {
+            layout = AppLayout.of(context);
+            padding = layout.scrollPadding(context);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(padding.bottom, closeTo(layout.pagePadding.bottom + 88, 0.01));
+    expect(padding.top, layout.pagePadding.top);
+    expect(padding.left, layout.pagePadding.left);
+  });
 }

@@ -1,21 +1,31 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/dev_flags.dart';
+import '../../core/haptics/haptics_service.dart';
 import '../../core/strings/app_strings.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/next_puzzle_countdown.dart';
 import '../../core/widgets/zip_ui.dart';
 import '../../domain/game_ids.dart';
+import '../../domain/play_period.dart';
 import '../../domain/repositories/analytics_repository.dart';
 import '../../domain/usecases/submit_leaderboard_time.dart';
+import '../achievements/view/new_achievements_banner.dart';
 import '../auth/cubit/auth_cubit.dart';
 import '../auth/view/sign_in_sheet.dart';
+import '../path_words/view/widgets/path_words_results_panel.dart';
 import 'results_args.dart';
 import 'view/counting_play_time.dart';
 import 'view/ember_burst.dart';
+import 'view/hint_penalty_line.dart';
+import 'view/local_results_view.dart';
 import 'view/mini_leaderboard_panel.dart';
+import 'view/results_actions.dart';
 import 'view/results_board_tease.dart';
 
 class ResultsScreen extends StatelessWidget {
@@ -34,6 +44,8 @@ class ResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Archive, practice and bonus runs: a local best, nothing of the dailies.
+    if (args.local != null) return LocalResultsView(args: args);
     switch (args.gameId) {
       case GameIds.zip:
       case GameIds.pathWords:
@@ -139,7 +151,7 @@ class ResultsScreen extends StatelessWidget {
                       if (!context.mounted) return;
                       context.pushReplacement('/zip');
                     },
-                    child: const Text('Next puzzle'),
+                    child: Text(AppStrings.resultsNextPuzzle),
                   ),
                 ],
                 if (!replayDaily) ...[
@@ -166,6 +178,12 @@ class ResultsScreen extends StatelessWidget {
 class _CelebrateAndClaimResults extends StatelessWidget {
   const _CelebrateAndClaimResults({required this.args});
 
+  /// The mini board's title, a row or two and the actions footer.
+  static const _minBoardHeight = 300.0;
+
+  /// Enough of the celebration to show the clear time.
+  static const _minHeaderHeight = 200.0;
+
   final ResultsArgs args;
 
   Future<void> _signInAndSync(BuildContext context) async {
@@ -185,6 +203,8 @@ class _CelebrateAndClaimResults extends StatelessWidget {
         usedHints: args.usedHints ?? true,
         hadMistakes: args.hadMistakes ?? true,
         currentStreak: args.currentStreak ?? 0,
+        dayId: args.leaderboardDay,
+        proof: args.leaderboardProof,
       );
     } catch (_) {
       // Best-effort remote sync; signed-in UI still shows live board.
@@ -203,27 +223,56 @@ class _CelebrateAndClaimResults extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
             child: signedIn
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Flexible(
-                        flex: 2,
-                        child: SingleChildScrollView(
-                          child: _celebrationHeader(context, compact: true),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        flex: 3,
-                        child: MiniLeaderboardPanel(
-                          gameId: gameId,
-                          timeSeconds: args.timeSeconds,
-                          usedHints: args.usedHints,
-                          hadMistakes: args.hadMistakes,
-                          currentStreak: args.currentStreak,
-                        ),
-                      ),
-                    ],
+                ? LayoutBuilder(
+                    builder: (context, constraints) {
+                      final height = constraints.maxHeight;
+                      final board = MiniLeaderboardPanel(
+                        gameId: gameId,
+                        timeSeconds: args.timeSeconds,
+                        usedHints: args.usedHints,
+                        hadMistakes: args.hadMistakes,
+                        currentStreak: args.currentStreak,
+                        footer: ResultsActions(args: args),
+                        dayId: args.leaderboardDay,
+                        leaderboardProof: args.leaderboardProof,
+                      );
+                      if (height < _minHeaderHeight + 12 + _minBoardHeight) {
+                        // Sideways or split screen: no room for both, so the
+                        // whole page scrolls, celebration first.
+                        return SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _celebrationHeader(context, compact: true),
+                              const SizedBox(height: 12),
+                              SizedBox(height: _minBoardHeight, child: board),
+                            ],
+                          ),
+                        );
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // The celebration takes the height it needs, up to
+                          // just over half the screen and never squeezing the
+                          // board below its minimum (it scrolls past that);
+                          // the board gets the rest.
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: math.min(
+                                height * 0.55,
+                                height - 12 - _minBoardHeight,
+                              ),
+                            ),
+                            child: SingleChildScrollView(
+                              child: _celebrationHeader(context, compact: true),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Expanded(child: board),
+                        ],
+                      );
+                    },
                   )
                 : LayoutBuilder(
                     builder: (context, constraints) {
@@ -249,15 +298,6 @@ class _CelebrateAndClaimResults extends StatelessWidget {
                                     curve: Curves.easeOutCubic,
                                   ),
                               const SizedBox(height: 16),
-                              if (args.replayDaily) ...[
-                                Text(
-                                  AppStrings.newPuzzleUnlocksTomorrow,
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: ZipColors.inkSoft),
-                                ).animate().fadeIn(delay: 700.ms),
-                                const SizedBox(height: 12),
-                              ],
                               ZipPrimaryButton(
                                     label: AppStrings.saveTimeToBoard(
                                       timeLabel,
@@ -307,6 +347,7 @@ class _CelebrateAndClaimResults extends StatelessWidget {
               improved: args.improved,
               // Leaderboard ranks by time — points clutter the win card.
               points: null,
+              hintPenaltySeconds: args.hintPenaltySeconds,
               currentStreak: args.currentStreak,
               longestStreak: args.longestStreak,
               celebrateMotion: true,
@@ -315,6 +356,47 @@ class _CelebrateAndClaimResults extends StatelessWidget {
             .animate()
             .fadeIn(delay: 160.ms, duration: 450.ms)
             .slideY(begin: 0.12, curve: Curves.easeOutCubic),
+        SizedBox(height: compact ? 10 : 14),
+        _NextPuzzleLine(day: args.day).animate().fadeIn(delay: 700.ms),
+        NewAchievementsBanner(occasion: args),
+        if (args.pathWords != null) ...[
+          SizedBox(height: compact ? 12 : 16),
+          PathWordsResultsPanel(
+            summary: args.pathWords!,
+          ).animate().fadeIn(delay: 800.ms),
+        ],
+      ],
+    );
+  }
+}
+
+/// "New puzzle in 6h 12m" under the daily result.
+class _NextPuzzleLine extends StatelessWidget {
+  const _NextPuzzleLine({this.day});
+
+  final DateTime? day;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelLarge?.copyWith(
+      color: ZipColors.inkSoft,
+      fontWeight: FontWeight.w600,
+    );
+    final period = DevFlags.playPeriod;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.schedule_rounded, size: 16, color: style?.color),
+        const SizedBox(width: 6),
+        Flexible(
+          child: NextPuzzleCountdown(
+            period: period,
+            // The run's day is a date, which can't place a minute-long
+            // debug period.
+            periodOf: PlayPeriod.isSubDaily(period) ? null : day,
+            style: style,
+          ),
+        ),
       ],
     );
   }
@@ -325,6 +407,7 @@ class _ResultsCelebrationCard extends StatefulWidget {
     required this.timeSeconds,
     required this.improved,
     this.points,
+    this.hintPenaltySeconds = 0,
     this.currentStreak,
     this.longestStreak,
     this.celebrateMotion = false,
@@ -334,6 +417,9 @@ class _ResultsCelebrationCard extends StatefulWidget {
   final int timeSeconds;
   final bool improved;
   final int? points;
+
+  /// Seconds hints added to [timeSeconds]; shown under the time when any.
+  final int hintPenaltySeconds;
   final int? currentStreak;
   final int? longestStreak;
   final bool celebrateMotion;
@@ -349,7 +435,7 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
 
   void _onTimeLanded() {
     if (!mounted || _showBurst) return;
-    HapticFeedback.lightImpact();
+    context.read<HapticsService?>()?.play(HapticKind.light);
     setState(() => _showBurst = true);
   }
 
@@ -446,9 +532,13 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               color: ZipColors.inkSoft,
               fontWeight: FontWeight.w700,
-              letterSpacing: 2.5,
+              letterSpacing: latinTracking(2.5),
             ),
           ),
+          if (widget.hintPenaltySeconds > 0) ...[
+            SizedBox(height: compact ? 4 : 6),
+            HintPenaltyLine(seconds: widget.hintPenaltySeconds),
+          ],
           if (widget.points != null) ...[
             const SizedBox(height: 18),
             badgeWrap(
@@ -473,7 +563,7 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
                           ),
                     ),
                     Text(
-                      'points',
+                      AppStrings.resultsPointsLabel,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: ZipColors.inkSoft,
                         fontWeight: FontWeight.w700,

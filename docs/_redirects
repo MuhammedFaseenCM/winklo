@@ -1,0 +1,3 @@
+# Cloudflare Pages: every league invite (/join/CODE) is served the
+# /join/ page, which sends people without the app to the landing page.
+/join/*  /join/  200

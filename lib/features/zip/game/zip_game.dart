@@ -5,10 +5,10 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_id.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../domain/entities/zip_level.dart';
-import '../../../domain/repositories/hint_quota_repository.dart';
 import '../logic/path_validator.dart';
 import '../logic/zip_hints.dart';
 import '../logic/zip_rule_tip.dart';
@@ -19,6 +19,7 @@ import 'zip_tip_sparks.dart';
 typedef ZipWinCallback = void Function();
 typedef ZipRuleTipCallback = void Function(ZipRuleTip tip);
 typedef ZipSfxCallback = void Function(SfxId id);
+typedef ZipHapticCallback = void Function(HapticKind kind);
 
 class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   ZipGame({
@@ -28,11 +29,10 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     this.onPathChanged,
     this.onRuleTip,
     this.onSfx,
+    this.onHaptic,
     this.readOnly = false,
-    int initialHintsRemaining = HintQuotaRepository.cap,
     this._initialPath = const [],
-  }) : _validator = PathValidator(level),
-       hintsRemaining = initialHintsRemaining;
+  }) : _validator = PathValidator(level);
 
   final ZipLevel level;
   final ZipWinCallback onWin;
@@ -40,6 +40,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   final void Function(List<Cell> path)? onPathChanged;
   final ZipRuleTipCallback? onRuleTip;
   final ZipSfxCallback? onSfx;
+  final ZipHapticCallback? onHaptic;
   final bool readOnly;
   final PathValidator _validator;
   final List<Cell> _initialPath;
@@ -53,12 +54,20 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
 
   /// True after [onTapDown] armed a stroke; drag may cancel the tap later.
   bool _armedFromTapDown = false;
-  int hintsRemaining;
   int hintRevealLength = 0;
   int hintFromIndex = 0;
   DateTime? _hintFlashStartedAt;
   double _celebrateT = 0;
   bool _celebrate = false;
+
+  /// Cells drawn per second while a review replays the saved path.
+  static const replayCellsPerSecond = 12.0;
+  List<Cell>? _replayCells;
+  double _replayElapsed = 0;
+  void Function()? _onReplayFinished;
+
+  /// True while [replay] is drawing the path.
+  bool get isReplaying => _replayCells != null;
 
   @override
   Color backgroundColor() => const Color(0x00000000);
@@ -100,12 +109,61 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
     if (_celebrate) {
       _celebrateT += dt;
     }
+    _advanceReplay(dt);
     if (_drawing && _clampedLiveTip() != null) {
       _tipSparks.ensureActive(seed: path.length);
       _tipSparks.update(dt);
     } else if (_tipSparks.isActive) {
       _tipSparks.clear();
     }
+  }
+
+  /// Redraws [cells] from the first one, about [replayCellsPerSecond] a
+  /// second, then rests on the full path and calls [onReplayFinished] once.
+  ///
+  /// Review only. Returns false (and does nothing) for a playable board, an
+  /// empty path, or while a replay is already running.
+  bool replay(List<Cell> cells, {void Function()? onReplayFinished}) {
+    if (!readOnly || cells.isEmpty || isReplaying) return false;
+    _replayCells = List<Cell>.unmodifiable(cells);
+    _replayElapsed = 0;
+    _onReplayFinished = onReplayFinished;
+    path
+      ..clear()
+      ..add(cells.first);
+    return true;
+  }
+
+  void _advanceReplay(double dt) {
+    final cells = _replayCells;
+    if (cells == null) return;
+    _replayElapsed += dt;
+    final shown = math.min(
+      cells.length,
+      1 + (_replayElapsed * replayCellsPerSecond).floor(),
+    );
+    if (shown != path.length) {
+      path
+        ..clear()
+        ..addAll(cells.take(shown));
+    }
+    if (shown < cells.length) return;
+    final finished = _onReplayFinished;
+    _replayCells = null;
+    _onReplayFinished = null;
+    finished?.call();
+  }
+
+  /// Where the replay's tip is between the last drawn cell and the next, so
+  /// the stroke slides rather than jumps.
+  Offset? _replayTip() {
+    final cells = _replayCells;
+    if (cells == null || path.isEmpty || path.length >= cells.length) {
+      return null;
+    }
+    final progress = _replayElapsed * replayCellsPerSecond;
+    final t = (progress - progress.floor()).clamp(0.0, 1.0);
+    return Offset.lerp(_centerOf(path.last), _centerOf(cells[path.length]), t);
   }
 
   void _layout() {
@@ -155,7 +213,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
   );
 
   bool get canHint {
-    if (_won || readOnly || hintsRemaining <= 0) return false;
+    if (_won || readOnly) return false;
     return ZipHints.canReveal(
       solution: level.solution,
       path: path,
@@ -233,7 +291,8 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
       ..clear()
       ..addAll(extended);
     _notifyStats();
-    if (path.length > before) {
+    final grew = path.length > before;
+    if (grew) {
       onSfx?.call(SfxId.tap);
     }
 
@@ -241,7 +300,17 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
       _won = true;
       _celebrate = true;
       onSfx?.call(SfxId.clear);
+      onHaptic?.call(HapticKind.win);
       onWin();
+      return;
+    }
+    if (grew) {
+      // Reaching the next number (after 1, where every path starts) is a
+      // step done; any other cell is a tick.
+      final number = level.numbers[path.last];
+      onHaptic?.call(
+        number != null && number > 1 ? HapticKind.success : HapticKind.tick,
+      );
     }
   }
 
@@ -604,7 +673,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
 
     final width = _cellSize * 0.46;
     final centers = [for (final cell in path) _centerOf(cell)];
-    final live = _clampedLiveTip();
+    final live = _clampedLiveTip() ?? _replayTip();
     final pts = ZipStroke.points(cellCenters: centers, liveTip: live);
     if (pts.isEmpty) return;
 

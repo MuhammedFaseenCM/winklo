@@ -19,9 +19,11 @@ import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/path_words_puzzle.dart';
 import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/repositories/language_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+import 'package:winklo/features/settings/cubit/locale_cubit.dart';
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -32,7 +34,10 @@ class _MockSignOut extends Mock implements SignOut {}
 /// Daily puzzles come only from Firestore, which tests don't have.
 class _FixedPathWords extends GenerateDailyPathWords {
   @override
-  Future<PathWordsPuzzle> call({required DateTime day}) async {
+  Future<PathWordsPuzzle> call({
+    required DateTime day,
+    Duration? period,
+  }) async {
     return PathWordsPuzzle(
       id: 'daily_test',
       day: day,
@@ -50,6 +55,15 @@ class _FixedPathWords extends GenerateDailyPathWords {
     );
   }
 }
+
+/// The app's language, as main.dart provides it (English here).
+Widget _withLocale(Widget app) => BlocProvider(
+  create: (context) => LocaleCubit(
+    languages: context.read<LanguageRepository>(),
+    deviceLanguageCodes: () => const ['en'],
+  ),
+  child: app,
+);
 
 Widget _buildTestApp(SharedPreferences prefs, {AppUser? authUser}) {
   final baseProviders = [
@@ -73,7 +87,7 @@ Widget _buildTestApp(SharedPreferences prefs, {AppUser? authUser}) {
           signInWithGoogle: _MockSignInWithGoogle(),
           signOut: _MockSignOut(),
         ),
-        child: const WinkloApp(),
+        child: _withLocale(const WinkloApp()),
       ),
     );
   }
@@ -86,7 +100,7 @@ Widget _buildTestApp(SharedPreferences prefs, {AppUser? authUser}) {
         signInWithGoogle: context.read<SignInWithGoogle>(),
         signOut: context.read<SignOut>(),
       ),
-      child: const WinkloApp(),
+      child: _withLocale(const WinkloApp()),
     ),
   );
 }
@@ -156,10 +170,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
 
     expect(find.text(AppStrings.streakLabel(3)), findsOneWidget);
-    expect(find.textContaining(AppStrings.longestStreakLabel(5)), findsNothing);
+    // The tile's stats line: best time and longest streak.
+    expect(
+      find.textContaining(AppStrings.longestStreakLabel(5)),
+      findsOneWidget,
+    );
     expect(find.text(AppStrings.cleared), findsNothing);
     expect(find.text(AppStrings.result), findsOneWidget);
-    expect(find.text(AppStrings.comeBackTomorrow), findsNothing);
     expect(find.text(AppStrings.playAgain), findsNothing);
     expect(find.text(AppStrings.playTodaysPathWords), findsNothing);
     expect(find.text(AppStrings.playTodaysZip), findsOneWidget);
@@ -175,5 +192,8 @@ void main() {
     expect(find.text(AppStrings.pathWordsTitle), findsOneWidget);
     expect(find.byWidgetPredicate((w) => w is GameWidget), findsOneWidget);
     expect(find.text(AppStrings.pathWordsUndo), findsNothing);
+    // Review mode sums up the clear instead.
+    expect(find.text('Cleared\u00A0in\u00A00:29'), findsOneWidget);
+    expect(find.text(AppStrings.resultsFullBoard), findsOneWidget);
   });
 }

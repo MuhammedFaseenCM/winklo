@@ -7,6 +7,8 @@ import '../../domain/entities/game_streak.dart';
 import '../../domain/failures.dart';
 import '../../domain/game_ids.dart';
 import '../../domain/repositories/progress_remote_repository.dart';
+import '../../domain/streak_calculator.dart';
+import '../progress_batch_writer.dart';
 import '../progress_collections.dart';
 
 const _syncedGameIds = {GameIds.zip, GameIds.pathWords, GameIds.sudoku};
@@ -44,6 +46,7 @@ const streakFirestoreKeys = {
   'longest',
   'lastClearedDateId',
   'freezeAvailable',
+  'freezeCount',
   'updatedAt',
 };
 
@@ -92,15 +95,61 @@ GameDayRecord? gameDayFromFirestore(
   );
 }
 
+/// Parses every game day doc (`(docId, data)`) of the daily games. Docs whose
+/// ids are missing, malformed or don't match the doc id are skipped.
+List<GameDayRecord> gameDaysFromFirestoreDocs(
+  Iterable<(String, Map<String, dynamic>)> docs,
+) {
+  final days = <GameDayRecord>[];
+  for (final (docId, data) in docs) {
+    final gameId = data['gameId'];
+    final playId = data['playId'];
+    if (gameId is! String || playId is! String) continue;
+    if (!_syncedGameIds.contains(gameId) || !_playIdPattern.hasMatch(playId)) {
+      continue;
+    }
+    if (docId != gameDayDocId(gameId, playId)) continue;
+    days.add(gameDayFromFirestore(data, gameId: gameId, playId: playId)!);
+  }
+  return days;
+}
+
+/// [gameDaysFromFirestoreDocs] of a collection read. With
+/// [requireConfirmed], throws while the read shows this device's
+/// unacknowledged writes (even a server read does, e.g. a history batch that
+/// timed out but is still queued): comparing with them could skip days the
+/// server later rejects, so the caller retries later.
+List<GameDayRecord> confirmedGameDays(
+  Iterable<(String, Map<String, dynamic>)> docs, {
+  required bool requireConfirmed,
+  required bool hasPendingWrites,
+}) {
+  if (requireConfirmed && hasPendingWrites) {
+    throw const Failure(
+      'Progress history has unconfirmed local writes.',
+      reportable: false,
+    );
+  }
+  return gameDaysFromFirestoreDocs(docs);
+}
+
 /// Firestore payload for [streak]. `lastClearedDateId` is always written (null
 /// clears it); `isOnFreeze` is display-only and never stored.
-Map<String, dynamic> streakToFirestore(GameStreak streak) => {
-  'current': streak.current < 0 ? 0 : streak.current,
-  'longest': streak.longest < 0 ? 0 : streak.longest,
-  'lastClearedDateId': streak.lastClearedDateId,
-  'freezeAvailable': streak.freezeAvailable,
-  'updatedAt': FieldValue.serverTimestamp(),
-};
+///
+/// `freezeAvailable` is still written, as `freezeCount > 0`, for older
+/// builds, which read only the flag (and merge-write it without touching
+/// `freezeCount`; see [StreakCalculator.storedFreezeCount]).
+Map<String, dynamic> streakToFirestore(GameStreak streak) {
+  final freezes = streak.freezeCount.clamp(0, GameStreak.maxFreezes).toInt();
+  return {
+    'current': streak.current < 0 ? 0 : streak.current,
+    'longest': streak.longest < 0 ? 0 : streak.longest,
+    'lastClearedDateId': streak.lastClearedDateId,
+    'freezeAvailable': freezes > 0,
+    'freezeCount': freezes,
+    'updatedAt': FieldValue.serverTimestamp(),
+  };
+}
 
 /// Parses a streak doc for [gameId]. Returns null when [data] is null.
 GameStreak? streakFromFirestore(
@@ -116,7 +165,10 @@ GameStreak? streakFromFirestore(
     lastClearedDateId: last is String && _dateIdPattern.hasMatch(last)
         ? last
         : null,
-    freezeAvailable: _boolOrNull(data['freezeAvailable']) ?? true,
+    freezeCount: StreakCalculator.storedFreezeCount(
+      count: _intOrNull(data['freezeCount']),
+      available: _boolOrNull(data['freezeAvailable']),
+    ),
   );
 }
 
@@ -149,6 +201,15 @@ int? _nonNegativeInt(Object? value) {
 
 bool? _boolOrNull(Object? value) => value is bool ? value : null;
 
+/// Whole numbers only (Firestore may hand back a double for an int).
+int? _intOrNull(Object? value) {
+  if (value is int) return value;
+  if (value is num && value.isFinite && value == value.truncate()) {
+    return value.toInt();
+  }
+  return null;
+}
+
 String? _boardOrNull(Object? value) =>
     value is String && value.isNotEmpty && value.length <= maxBoardLength
     ? value
@@ -164,6 +225,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
   ProgressRemoteRepositoryImpl({
     this._firestore,
     this.timeout = const Duration(seconds: 10),
+    this.historyTimeout = const Duration(seconds: 30),
   });
 
   final FirebaseFirestore? _firestore;
@@ -172,6 +234,9 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
   /// persistence but its future only completes on server ack; timing out
   /// reports a failure (so the caller retries later) instead of hanging.
   final Duration timeout;
+
+  /// Bounds the whole-history read and each history batch commit.
+  final Duration historyTimeout;
 
   FirebaseFirestore? get _db {
     if (!FirebaseBootstrap.isReady) return null;
@@ -312,6 +377,74 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
       debugPrint('Progress saveStreak failed: $e');
       debugPrint('$st');
       throw Failure('Could not save progress.', cause: e);
+    }
+  }
+
+  @override
+  Future<List<GameDayRecord>> fetchAllDays({
+    required String uid,
+    bool fromServer = false,
+  }) async {
+    if (uid.isEmpty) throw const Failure('Sign in required to sync progress.');
+    final db = _db;
+    if (db == null) throw _unavailable;
+    try {
+      final snap = await db
+          .collection('users')
+          .doc(uid)
+          .collection(progressCollections().gameDays)
+          .get(fromServer ? const GetOptions(source: Source.server) : null)
+          .timeout(historyTimeout);
+      return confirmedGameDays(
+        [for (final doc in snap.docs) (doc.id, doc.data())],
+        requireConfirmed: fromServer,
+        hasPendingWrites: snap.metadata.hasPendingWrites,
+      );
+    } catch (e, st) {
+      debugPrint('Progress fetchAllDays failed: $e');
+      debugPrint('$st');
+      if (e is Failure) rethrow;
+      throw Failure('Could not load progress history.', cause: e);
+    }
+  }
+
+  /// Merge writes, like [saveDay]; see [commitWithRejectionFallback].
+  @override
+  Future<int> saveDayBatch({
+    required String uid,
+    required List<GameDayRecord> records,
+  }) async {
+    if (records.length > ProgressRemoteRepository.maxDayBatch) {
+      throw ArgumentError.value(records.length, 'records', 'Batch too large');
+    }
+    for (final record in records) {
+      _assertIds(uid: uid, gameId: record.gameId);
+      _assertPlayId(record.playId);
+    }
+    if (records.isEmpty) return 0;
+    final db = _db;
+    if (db == null) throw _unavailable;
+    DocumentReference<Map<String, dynamic>> ref(GameDayRecord r) =>
+        _dayRef(db, uid, r.gameId, r.playId);
+    try {
+      return await commitWithRejectionFallback<GameDayRecord>(
+        records: records,
+        commitBatch: (all) {
+          final batch = db.batch();
+          for (final r in all) {
+            batch.set(ref(r), gameDayToFirestore(r), SetOptions(merge: true));
+          }
+          return batch.commit().timeout(historyTimeout);
+        },
+        commitOne: (r) => ref(
+          r,
+        ).set(gameDayToFirestore(r), SetOptions(merge: true)).timeout(timeout),
+        isRejection: isFirestoreRejection,
+      );
+    } catch (e, st) {
+      debugPrint('Progress saveDayBatch failed: $e');
+      debugPrint('$st');
+      throw Failure('Could not save progress history.', cause: e);
     }
   }
 }

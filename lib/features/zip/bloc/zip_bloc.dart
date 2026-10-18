@@ -1,17 +1,24 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/bloc/sequential.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
+import '../../../domain/entities/leaderboard_proof.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/hint_penalty.dart';
 import '../../../domain/logic/run_rollover.dart';
+import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/get_best_points.dart';
@@ -22,6 +29,7 @@ import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
+import '../logic/daily_puzzle_generator.dart';
 import '../logic/zip_board_codec.dart';
 import 'zip_event.dart';
 import 'zip_state.dart';
@@ -36,12 +44,17 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     required this.getClearBoard,
     required this.isNewPersonalBest,
     required this.analytics,
+    required this.hintQuota,
     required this.inProgressRuns,
     ZipLevelRepository? zipLevelRepository,
     Future<ZipLevel> Function(DateTime date, {Duration period})?
     fetchDailyLevel,
     this.ignoreDailyLock = false,
     this.playPeriod = PlayPeriod.daily,
+    this.mode = PlayMode.daily,
+    this.modeRecords,
+    ZipLevel Function(int seed)? practiceLevel,
+    int Function()? newPracticeSeed,
     this.celebrationDuration = const Duration(seconds: 2),
     DateTime? now,
     DateTime Function()? clockNow,
@@ -50,6 +63,14 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
          zipLevelRepository != null || fetchDailyLevel != null,
          'ZipBloc requires zipLevelRepository or fetchDailyLevel',
        ),
+       assert(
+         mode == PlayMode.daily || modeRecords != null,
+         'Archive and practice runs keep their bests in modeRecords',
+       ),
+       practiceLevel =
+           practiceLevel ??
+           ((seed) => DailyPuzzleGenerator.practice(seed: seed)),
+       _newPracticeSeed = newPracticeSeed ?? (() => Random().nextInt(1 << 31)),
        fetchDailyLevel =
            fetchDailyLevel ??
            ((date, {period = PlayPeriod.daily}) =>
@@ -65,10 +86,12 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     on<ZipStarted>(_onStarted);
     on<ZipPathChanged>(_onPathChanged);
     on<ZipCompleted>(_onCompleted);
-    on<ZipHint>(_onHint);
+    // One at a time: each hint costs time, so none may race another.
+    on<ZipHint>(_onHint, transformer: sequential());
     on<ZipReset>(_onReset);
     on<ZipPauseRun>(_onPauseRun);
     on<ZipResumeRun>(_onResumeRun);
+    on<ZipNewBoard>(_onNewBoard);
   }
 
   final SubmitScore submitScore;
@@ -79,20 +102,40 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   final GetClearBoard getClearBoard;
   final IsNewPersonalBest isNewPersonalBest;
   final AnalyticsRepository analytics;
+
+  /// Where this mode counts its hints (the daily count for a daily).
+  final HintQuotaRepository hintQuota;
   final InProgressRunRepository inProgressRuns;
   final Future<ZipLevel> Function(DateTime date, {Duration period})
   fetchDailyLevel;
   final bool ignoreDailyLock;
   final Duration playPeriod;
   final Duration celebrationDuration;
+
+  /// Daily, archive or practice. Only daily runs touch streaks, boards, the
+  /// daily best and the cleared lock.
+  final PlayMode mode;
+
+  /// Bests of archive and practice runs; required for those modes.
+  final PlayModeRecordRepository? modeRecords;
+
+  /// Builds a practice board from a seed.
+  final ZipLevel Function(int seed) practiceLevel;
+  final int Function() _newPracticeSeed;
+
+  /// Seed of the practice board on screen, kept in its draft.
+  int? _practiceSeed;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   PlayRunClock? _clock;
   String? _playId;
 
-  /// Period of the run on screen. The screen spends hints against it, so a
-  /// run left open over midnight keeps its own quota.
+  /// Period of the run on screen. Hints count against it, so a run left
+  /// open over midnight keeps its own count.
   String get playId => _playId ?? PlayPeriod.id(state.day, playPeriod);
+
+  /// Where this daily's best is stored, for showing it in review.
+  String get clearModeKey => 'zip_${state.level.id}';
 
   static ZipState _initialState(DateTime now, {required Duration playPeriod}) {
     return ZipState.initial(now, period: playPeriod);
@@ -107,6 +150,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   }
 
   Future<void> _onStarted(ZipStarted event, Emitter<ZipState> emit) async {
+    if (!mode.isDaily) return _startOffDaily(emit);
     final seed = event.date ?? _now();
     final day = DateTime(seed.year, seed.month, seed.day);
     final playId = PlayPeriod.id(seed, playPeriod);
@@ -170,17 +214,25 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       return;
     }
 
-    final draft = await inProgressRuns.load(
-      gameId: GameIds.zip,
-      playId: playId,
-    );
+    var draft = await inProgressRuns.load(gameId: GameIds.zip, playId: playId);
     if (emit.isDone) return;
+    var keptHints = false;
+    if (draft != null && !draft.isForBoard(level.fingerprint)) {
+      // Ops replaced today's board; the saved path belongs to the old one.
+      // Hints spent on it still count, as after a reset.
+      keptHints = draft.usedHintsThisRun;
+      await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
+      if (emit.isDone) return;
+      draft = null;
+    }
 
     final now = _now();
     final path = draft == null ? const <Cell>[] : _pathFromDraft(draft);
-    _clock = draft == null
-        ? PlayRunClock.start(at: now)
+    final hintsUsed = hintQuota.usedFor(GameIds.zip, playId);
+    final clock = draft == null
+        ? HintPenalty.startClock(at: now, mode: mode, hintsUsed: hintsUsed)
         : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+    _clock = clock;
 
     emit(
       ZipState(
@@ -188,13 +240,23 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         level: level,
         status: ZipStatus.ready,
         finished: false,
-        usedHintsThisRun: draft?.usedHintsThisRun ?? false,
-        elapsedMs: draft?.elapsedMs ?? 0,
+        usedHintsThisRun: draft?.usedHintsThisRun ?? keptHints,
+        hintsUsed: hintsUsed,
+        hintPenaltySeconds:
+            draft?.hintPenaltySeconds ??
+            HintPenalty.chargedSeconds(mode, hintsUsed: hintsUsed),
+        elapsedMs: clock.elapsedMs,
         resumedAt: now,
         path: path,
       ),
     );
-    await analytics.logGameStarted(gameId: GameIds.zip);
+    // Save the kept flags under the new board straight away.
+    if (keptHints) await _persistDraft();
+    await analytics.logGameStarted(
+      gameId: GameIds.zip,
+      dayId: playId,
+      resumed: draft != null,
+    );
   }
 
   Future<void> _onPathChanged(
@@ -210,6 +272,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     if (state.finished || state.status != ZipStatus.ready) {
       return;
     }
+    if (!mode.isDaily) return _completeOffDaily(emit);
 
     final now = _now();
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
@@ -255,6 +318,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       dateId: StreakCalculator.dateId(state.day),
     );
 
+    final proof = ZipLeaderboardProof(state.path);
     try {
       await submitLeaderboardTime(
         gameId: GameIds.zip,
@@ -266,6 +330,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         dayId: leaderboardDayId(state.day),
         // Lets a successful submit mark this clear as posted for the sync.
         playId: playId,
+        proof: proof,
       );
     } catch (_) {
       // Best-effort remote sync; local score already saved.
@@ -276,6 +341,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       points: points,
       timeSeconds: elapsed,
       streak: streak.current,
+      dayId: playId,
+      usedHints: state.usedHintsThisRun,
     );
 
     if (emit.isDone) return;
@@ -297,17 +364,43 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           gameId: GameIds.zip,
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
+          hintPenaltySeconds: state.hintPenaltySeconds,
+          day: state.day,
+          leaderboardProof: proof,
         ),
       ),
     );
   }
 
+  /// The game already revealed the cells; this spends the hint and adds
+  /// its time to the run clock.
   Future<void> _onHint(ZipHint event, Emitter<ZipState> emit) async {
-    emit(state.copyWith(usedHintsThisRun: true));
+    if (state.finished || state.status != ZipStatus.ready) return;
+    final spent = await spendHint(
+      quota: hintQuota,
+      mode: mode,
+      gameId: GameIds.zip,
+      playId: playId,
+    );
+    // The run may have finished meanwhile; its time is already posted.
+    if (state.finished || state.status != ZipStatus.ready) return;
+    final clock = (_clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs))
+        .addPenalty(Duration(seconds: spent.penaltySeconds));
+    _clock = clock;
+    emit(
+      state.copyWith(
+        usedHintsThisRun: true,
+        hintsUsed: spent.hintsUsed,
+        hintPenaltySeconds: state.hintPenaltySeconds + spent.penaltySeconds,
+        elapsedMs: clock.elapsedMs,
+        resumedAt: clock.resumedAt,
+      ),
+    );
     await _persistDraft();
     await analytics.logHintUsed(
       gameId: GameIds.zip,
-      hintsRemaining: event.hintsRemaining,
+      hintsUsed: spent.hintsUsed,
+      penaltySeconds: spent.penaltySeconds,
     );
   }
 
@@ -335,8 +428,11 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     final now = _now();
     final playId = _playId;
     // A run left open over midnight finishes for its own day; one older than
-    // that gives way to today's puzzle.
-    if (playId != null && !canFinishRun(playId, now, playPeriod)) {
+    // that gives way to today's puzzle. Archive and practice runs have no
+    // day to leave behind.
+    if (mode.isDaily &&
+        playId != null &&
+        !canFinishRun(playId, now, playPeriod)) {
       await inProgressRuns.clear(gameId: GameIds.zip, playId: playId);
       add(ZipEvent.started(date: now));
       return;
@@ -346,6 +442,184 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     final resumed = clock.resume(at: now);
     _clock = resumed;
     emit(state.copyWith(elapsedMs: resumed.elapsedMs, resumedAt: now));
+  }
+
+  Future<void> _onNewBoard(ZipNewBoard event, Emitter<ZipState> emit) async {
+    if (!mode.isPractice) return;
+    if (state.status == ZipStatus.celebrating ||
+        state.status == ZipStatus.submitting ||
+        state.status == ZipStatus.navigating) {
+      return;
+    }
+    await _startOffDaily(emit, freshPractice: true);
+  }
+
+  /// Starts (or resumes) an archive or practice run. It never reads the
+  /// daily lock or today's draft: the run has its own id ([PlayMode.runId]).
+  Future<void> _startOffDaily(
+    Emitter<ZipState> emit, {
+    bool freshPractice = false,
+  }) async {
+    final runId = mode.runId(dailyPlayId: '');
+    _playId = runId;
+    _clock = null;
+    final today = _now();
+    final day = mode.day ?? DateTime(today.year, today.month, today.day);
+    emit(
+      ZipState(
+        day: day,
+        level: ZipLevel(
+          id: mode.isArchive ? 'daily_$runId' : 'practice',
+          size: 1,
+          numbers: const {},
+          walls: const [],
+        ),
+        status: ZipStatus.initial,
+      ),
+    );
+
+    if (freshPractice) {
+      await inProgressRuns.clear(gameId: GameIds.zip, playId: runId);
+      if (emit.isDone) return;
+    }
+    var draft = freshPractice
+        ? null
+        : await inProgressRuns.load(gameId: GameIds.zip, playId: runId);
+    if (emit.isDone) return;
+
+    late final ZipLevel level;
+    try {
+      if (mode.isArchive) {
+        // Past days are always live and read by id, like the dailies.
+        level = await fetchDailyLevel(day, period: PlayPeriod.daily);
+      } else {
+        final saved = draft?.board['seed'];
+        final seed = saved is num ? saved.toInt() : _newPracticeSeed();
+        _practiceSeed = seed;
+        level = practiceLevel(seed);
+      }
+    } catch (_) {
+      if (emit.isDone) return;
+      emit(
+        state.copyWith(
+          status: ZipStatus.failed,
+          errorMessage: AppStrings.zipFailed,
+        ),
+      );
+      return;
+    }
+    if (emit.isDone) return;
+
+    if (draft != null && !draft.isForBoard(level.fingerprint)) {
+      await inProgressRuns.clear(gameId: GameIds.zip, playId: runId);
+      if (emit.isDone) return;
+      draft = null;
+    }
+    if (draft == null && mode.isArchive) {
+      // A fresh archive run starts with no hints spent.
+      await modeRecords!.clearHints(GameIds.zip, runId);
+      if (emit.isDone) return;
+    }
+
+    final now = _now();
+    final hintsUsed = hintQuota.usedFor(GameIds.zip, runId);
+    final clock = draft == null
+        ? HintPenalty.startClock(at: now, mode: mode, hintsUsed: hintsUsed)
+        : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+    _clock = clock;
+    emit(
+      ZipState(
+        day: day,
+        level: level,
+        status: ZipStatus.ready,
+        usedHintsThisRun: draft?.usedHintsThisRun ?? false,
+        hintsUsed: hintsUsed,
+        hintPenaltySeconds:
+            draft?.hintPenaltySeconds ??
+            HintPenalty.chargedSeconds(mode, hintsUsed: hintsUsed),
+        elapsedMs: clock.elapsedMs,
+        resumedAt: now,
+        path: draft == null ? const <Cell>[] : _pathFromDraft(draft),
+      ),
+    );
+    // Keep the practice seed, so leaving and coming back finds this board.
+    if (draft == null && mode.isPractice) await _persistDraft();
+    await analytics.logGameStarted(
+      gameId: GameIds.zip,
+      dayId: runId,
+      resumed: draft != null,
+    );
+  }
+
+  /// Finishes an archive or practice run: a local best, no score, streak,
+  /// leaderboard or daily best.
+  Future<void> _completeOffDaily(Emitter<ZipState> emit) async {
+    final now = _now();
+    final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
+    final elapsed = clock.displayedSeconds(at: now);
+    _clock = clock.pause(at: now);
+    final points = (1000 - elapsed * 5).clamp(50, 1000);
+    final runId = mode.runId(dailyPlayId: '');
+
+    emit(
+      state.copyWith(
+        finished: true,
+        status: ZipStatus.celebrating,
+        points: points,
+        timeSeconds: elapsed,
+        elapsedMs: _clock!.elapsedMs,
+        resumedAt: null,
+      ),
+    );
+
+    await inProgressRuns.clear(gameId: GameIds.zip, playId: runId);
+    await _wait(celebrationDuration);
+    if (emit.isDone) return;
+    emit(state.copyWith(status: ZipStatus.submitting));
+
+    final records = modeRecords!;
+    final best = await records.recordTime(mode.recordKey(GameIds.zip), elapsed);
+    if (mode.isArchive) await records.clearHints(GameIds.zip, runId);
+
+    await analytics.logGameCompleted(
+      gameId: GameIds.zip,
+      points: points,
+      timeSeconds: elapsed,
+      dayId: runId,
+      usedHints: state.usedHintsThisRun,
+    );
+    if (emit.isDone) return;
+
+    emit(
+      state.copyWith(
+        improved: best.improved,
+        status: ZipStatus.navigating,
+        resultsExtra: ResultsArgs(
+          title: AppStrings.zipClearedTitle,
+          subtitle: '',
+          timeSeconds: elapsed,
+          improved: best.improved,
+          points: points,
+          gameId: GameIds.zip,
+          usedHints: state.usedHintsThisRun,
+          hadMistakes: false,
+          hintPenaltySeconds: state.hintPenaltySeconds,
+          day: mode.day,
+          local: LocalResultInfo(
+            kind: mode.isArchive
+                ? LocalResultKind.archive
+                : LocalResultKind.practice,
+            label: mode.isArchive
+                ? AppStrings.archiveRunLabel(mode.day!)
+                : AppStrings.practiceRunLabel,
+            bestSeconds: best.best,
+            againLocation: mode.isPractice
+                ? PlayMode.practice.location('/zip')
+                : null,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _persistDraft() async {
@@ -361,8 +635,11 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         playId: playId,
         elapsedMs: elapsedMs,
         usedHintsThisRun: state.usedHintsThisRun,
+        hintPenaltySeconds: state.hintPenaltySeconds,
+        boardFingerprint: state.level.fingerprint,
         board: {
           'path': [for (final cell in state.path) cell.toList()],
+          if (mode.isPractice && _practiceSeed != null) 'seed': _practiceSeed,
         },
       ),
     );

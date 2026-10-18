@@ -17,6 +17,7 @@ import 'package:winklo/domain/repositories/external_link_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
+import 'package:winklo/domain/usecases/forget_account_progress.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_issue_report.dart';
@@ -25,6 +26,8 @@ import 'package:winklo/domain/usecases/update_display_name.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/profile/view/profile_screen.dart';
 import 'package:winklo/features/profile/view/report_issue_screen.dart';
+import 'package:winklo/features/profile/view/widgets/profile_settings_entry.dart';
+import 'package:winklo/features/profile/view/widgets/profile_signed_out_mock.dart';
 import 'package:winklo/features/profile/view/widgets/profile_shimmer.dart';
 import '../../../helpers/mock_analytics_repository.dart';
 
@@ -33,6 +36,9 @@ class _MockAuthRepository extends Mock implements AuthRepository {}
 class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
 
 class _MockSignOut extends Mock implements SignOut {}
+
+class _MockForgetAccountProgress extends Mock
+    implements ForgetAccountProgress {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -53,6 +59,7 @@ void main() {
 
   late _MockAuthRepository auth;
   late _MockSignOut signOut;
+  late _MockForgetAccountProgress forgetProgress;
   late _MockProfileRepository profile;
   late MockAnalyticsRepository analytics;
   late _MockSfxSettingsRepository sfxSettings;
@@ -67,6 +74,8 @@ void main() {
     when(() => links.open(deletionPage)).thenAnswer((_) async => true);
     auth = _MockAuthRepository();
     signOut = _MockSignOut();
+    forgetProgress = _MockForgetAccountProgress();
+    when(() => forgetProgress(any())).thenAnswer((_) async {});
     profile = _MockProfileRepository();
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
@@ -109,6 +118,7 @@ void main() {
             authRepository: auth,
             signInWithGoogle: _MockSignInWithGoogle(),
             signOut: signOut,
+            forgetAccountProgress: forgetProgress,
           ),
           child: MaterialApp(
             theme: buildAppTheme(),
@@ -209,6 +219,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verifyInOrder([() => analytics.logProfileSignOut(), () => signOut()]);
+      verifyNever(() => forgetProgress(any()));
     },
   );
 
@@ -249,6 +260,8 @@ void main() {
     verifyInOrder([
       () => analytics.logProfileDeleteAccountOpened(),
       () => signOut(),
+      // Not stashed for a uid that will never sign in again.
+      () => forgetProgress('u1'),
       () => links.open(deletionPage),
     ]);
     expect(find.text(AppStrings.deleteAccountOpenFailed), findsNothing);
@@ -263,6 +276,7 @@ void main() {
 
     verifyNever(() => analytics.logProfileDeleteAccountOpened());
     verifyNever(() => signOut());
+    verifyNever(() => forgetProgress(any()));
     verifyNever(() => links.open(any()));
   });
 
@@ -326,27 +340,92 @@ void main() {
     expect(find.text(AppStrings.signOut), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
 
-    final tiles = tester.widgetList<ListTile>(find.byType(ListTile));
+    final tiles = tester.widgetList<ListTile>(
+      find.descendant(
+        of: find.byType(ProfileSignedOutMock),
+        matching: find.byType(ListTile),
+      ),
+    );
     expect(tiles, isNotEmpty);
     expect(tiles.every((tile) => tile.onTap == null), isTrue);
-    expect(find.text(AppStrings.profileSoundEffects), findsOneWidget);
-    expect(find.byType(Switch), findsOneWidget);
+    // Sound and vibration moved to Settings, which works signed out.
+    expect(find.text(AppStrings.profileSoundEffects), findsNothing);
+    expect(find.byType(Switch), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(ProfileSettingsEntry),
+        matching: find.text(AppStrings.profileSettings),
+      ),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('signed-out foreground sound switch mutes SfxService', (
-    tester,
-  ) async {
-    await pumpProfile(tester);
+  Future<void> pumpWithSettingsRoute(
+    WidgetTester tester, {
+    AppUser? signedIn,
+  }) async {
+    when(() => auth.currentUser).thenReturn(signedIn);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream<AppUser?>.value(signedIn));
+    if (signedIn != null) {
+      when(
+        () => profile.watchProfile(signedIn.uid),
+      ).thenAnswer((_) => Stream<AppUser?>.value(signedIn));
+    }
+    final router = GoRouter(
+      initialLocation: '/profile',
+      routes: [
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(),
+          routes: [
+            GoRoute(
+              path: 'settings',
+              builder: (context, state) => const Text('settings screen'),
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: profileProviders(),
+        child: BlocProvider(
+          create: (_) => AuthCubit(
+            authRepository: auth,
+            signInWithGoogle: _MockSignInWithGoogle(),
+            signOut: signOut,
+          ),
+          child: MaterialApp.router(
+            theme: buildAppTheme(),
+            routerConfig: router,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+  }
 
-    expect(sfx.isEnabled, isTrue);
-    expect(find.text(AppStrings.profileSoundEffects), findsOneWidget);
-    expect(find.byType(Switch), findsOneWidget);
-
-    await tester.tap(find.byType(Switch));
+  testWidgets('signed out, the Settings row opens Settings', (tester) async {
+    await pumpWithSettingsRoute(tester);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ProfileSettingsEntry),
+        matching: find.text(AppStrings.profileSettings),
+      ),
+    );
     await tester.pumpAndSettle();
+    expect(find.text('settings screen'), findsOneWidget);
+  });
 
-    expect(sfx.isEnabled, isFalse);
-    verify(() => sfxSettings.setEnabled(false)).called(1);
+  testWidgets('signed in, the Settings row opens Settings', (tester) async {
+    await pumpWithSettingsRoute(tester, signedIn: user);
+    expect(find.text(AppStrings.profileSoundEffects), findsNothing);
+    await tester.tap(find.text(AppStrings.profileSettings));
+    await tester.pumpAndSettle();
+    expect(find.text('settings screen'), findsOneWidget);
   });
 
   testWidgets('report row opens the report screen', (tester) async {

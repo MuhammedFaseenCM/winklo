@@ -130,6 +130,53 @@ abstract final class SudokuGenerator {
     );
   }
 
+  /// Givens of a practice board, as the cron's hard dailies (winklo-admin
+  /// `generate_sudoku.ts`): 8 or 9.
+  static const practiceClues = (min: 8, max: 9);
+
+  /// An endless practice board in the style of the hard dailies: 6×6 with
+  /// boxes 2×3 and 8–9 givens that leave exactly one solution. When no dig
+  /// gets that low it keeps the sparsest unique board found, which is never
+  /// a solved one. The same [seed] always gives the same board.
+  static SudokuPuzzle practice({required int seed}) {
+    final rng = Random(seed);
+    List<int>? best;
+    List<int>? bestFull;
+    var bestClues = cellCount + 1;
+    for (var attempt = 0; attempt < 40; attempt++) {
+      final full = _randomFullGrid(Random(rng.nextInt(1 << 31)));
+      final target =
+          practiceClues.min +
+          rng.nextInt(practiceClues.max - practiceClues.min + 1);
+      final given = List<int>.from(full);
+      var clues = cellCount;
+      final order = List<int>.generate(cellCount, (i) => i)..shuffle(rng);
+      for (final index in order) {
+        if (clues <= target) break;
+        final saved = given[index];
+        given[index] = 0;
+        if (_countSolutions(given, limit: 2) == 1) {
+          clues--;
+        } else {
+          given[index] = saved;
+        }
+      }
+      if (clues < bestClues) {
+        best = given;
+        bestFull = full;
+        bestClues = clues;
+      }
+      if (clues <= practiceClues.max) break;
+    }
+    return SudokuPuzzle(
+      id: 'practice_$seed',
+      dateId: '',
+      given: best!,
+      solution: bestFull!,
+      difficulty: SudokuDifficulty.hard,
+    );
+  }
+
   /// Calendar day id helper for tests / callers that use streak ids.
   static String calendarDateId(DateTime day) => StreakCalculator.dateId(day);
 

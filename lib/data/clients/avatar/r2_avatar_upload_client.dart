@@ -22,14 +22,14 @@ class R2AvatarUploadClient implements AvatarUploadClient {
   }) async {
     final root = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
     if (root.isEmpty) {
-      throw const Failure('Avatar upload is not configured.');
+      throw Failure(AppStrings.avatarUploadUnavailable);
     }
     if (bytes.isEmpty) {
-      throw const Failure('Could not update profile.');
+      throw Failure(AppStrings.profileUpdateFailed);
     }
     // The Worker refuses anything larger; say why instead of a generic error.
     if (bytes.length > _maxBytes) {
-      throw const Failure(AppStrings.profilePhotoTooLarge);
+      throw Failure(AppStrings.profilePhotoTooLarge);
     }
 
     final uri = Uri.parse('$root/v1/avatar');
@@ -44,7 +44,7 @@ class R2AvatarUploadClient implements AvatarUploadClient {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Failure(
-        'Could not update profile.',
+        AppStrings.profileUpdateFailed,
         cause: 'HTTP ${response.statusCode}: ${response.body}',
       );
     }
@@ -52,17 +52,17 @@ class R2AvatarUploadClient implements AvatarUploadClient {
     try {
       final decoded = jsonDecode(response.body);
       if (decoded is! Map<String, dynamic>) {
-        throw const Failure('Could not update profile.');
+        throw Failure(AppStrings.profileUpdateFailed);
       }
       final photoUrl = decoded['photoUrl'];
       if (photoUrl is! String || photoUrl.isEmpty) {
-        throw const Failure('Could not update profile.');
+        throw Failure(AppStrings.profileUpdateFailed);
       }
       return Uri.parse(photoUrl);
     } on Failure {
       rethrow;
     } catch (e) {
-      throw Failure('Could not update profile.', cause: e);
+      throw Failure(AppStrings.profileUpdateFailed, cause: e);
     }
   }
 }

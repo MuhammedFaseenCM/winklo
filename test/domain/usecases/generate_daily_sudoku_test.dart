@@ -21,7 +21,15 @@ void main() {
       'boxCols': 3,
       'difficulty': 'easy',
       'given': List.filled(36, 0),
-      'solution': List.filled(36, 1),
+      // fromJson checks the solution is a real 6×6 Sudoku.
+      'solution': [
+        1, 2, 3, 4, 5, 6, //
+        4, 5, 6, 1, 2, 3,
+        2, 3, 1, 5, 6, 4,
+        5, 6, 4, 2, 3, 1,
+        3, 1, 2, 6, 4, 5,
+        6, 4, 5, 3, 1, 2,
+      ],
     };
 
     final puzzle = SudokuPuzzle.fromJson(json);

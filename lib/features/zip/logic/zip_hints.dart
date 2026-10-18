@@ -55,12 +55,19 @@ abstract final class ZipHints {
       fromIndex: fromIndex,
       revealLength: revealLength,
     );
+    // Hints cost time, so only offer one that shows a cell not shown yet.
+    final shown = revealedCells(
+      solution: solution,
+      path: path,
+      fromIndex: fromIndex,
+      revealLength: revealLength,
+    ).toSet();
     return revealedCells(
       solution: solution,
       path: path,
       fromIndex: next.fromIndex,
       revealLength: next.revealLength,
-    ).isNotEmpty;
+    ).any((cell) => !shown.contains(cell));
   }
 
   static int _matchingPrefixLength(List<Cell> solution, List<Cell> path) {

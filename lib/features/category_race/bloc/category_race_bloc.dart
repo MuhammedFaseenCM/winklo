@@ -3,11 +3,15 @@ import 'dart:math';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/haptics/haptics_service.dart';
+import '../../../core/sfx/sfx_id.dart';
+import '../../../core/sfx/sfx_service.dart';
+import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/word_category.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/usecases/fetch_categories.dart';
-import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
 import 'category_race_event.dart';
 import 'category_race_state.dart';
@@ -15,8 +19,10 @@ import 'category_race_state.dart';
 class CategoryRaceBloc extends Bloc<CategoryRaceEvent, CategoryRaceState> {
   CategoryRaceBloc({
     required this.fetchCategories,
-    required this.submitScore,
+    required this.records,
     required this.analytics,
+    this.sfx,
+    this.haptics,
     Random? random,
     int roundSeconds = 60,
     Stream<int> Function()? ticker,
@@ -39,8 +45,17 @@ class CategoryRaceBloc extends Bloc<CategoryRaceEvent, CategoryRaceState> {
   }
 
   final FetchCategories fetchCategories;
-  final SubmitScore submitScore;
+
+  /// The local best word count per category. A bonus game never touches
+  /// the dailies' scores, streaks, boards or sync.
+  final PlayModeRecordRepository records;
   final AnalyticsRepository analytics;
+  final SfxService? sfx;
+  final HapticsService? haptics;
+
+  /// Where a category's best count is kept.
+  static String recordKey(String categoryId) =>
+      'bonus_category_race_$categoryId';
   final Random _rng;
   final int _roundSeconds;
   final Stream<int> Function() _ticker;
@@ -89,9 +104,14 @@ class CategoryRaceBloc extends Bloc<CategoryRaceEvent, CategoryRaceState> {
           letter: letter,
         ),
       );
-    } catch (e) {
+    } catch (_) {
       if (emit.isDone) return;
-      emit(state.copyWith(status: CategoryRaceStatus.failure, error: '$e'));
+      emit(
+        state.copyWith(
+          status: CategoryRaceStatus.failure,
+          error: AppStrings.bonusLoadFailed,
+        ),
+      );
     }
   }
 
@@ -153,22 +173,24 @@ class CategoryRaceBloc extends Bloc<CategoryRaceEvent, CategoryRaceState> {
     final word = raw.toLowerCase();
     final letterLower = state.letter.toLowerCase();
 
+    String? rejection;
     if (!word.startsWith(letterLower)) {
-      emit(state.copyWith(feedback: 'Must start with ${state.letter}'));
-      return;
+      rejection = AppStrings.categoryRaceMustStart(state.letter);
+    } else if (!category.normalizedWords.contains(word)) {
+      rejection = AppStrings.categoryRaceNotIn(category.name);
+    } else if (state.answers.contains(word)) {
+      rejection = AppStrings.categoryRaceAlreadyUsed;
     }
-
-    if (!category.normalizedWords.contains(word)) {
-      emit(state.copyWith(feedback: 'Not in ${category.name}'));
-      return;
-    }
-
-    if (state.answers.contains(word)) {
-      emit(state.copyWith(feedback: 'Already used'));
+    if (rejection != null) {
+      emit(state.copyWith(feedback: rejection));
+      unawaited(sfx?.play(SfxId.reject) ?? Future<void>.value());
+      haptics?.play(HapticKind.light);
       return;
     }
 
     emit(state.copyWith(answers: [word, ...state.answers], feedback: null));
+    unawaited(sfx?.play(SfxId.success) ?? Future<void>.value());
+    haptics?.play(HapticKind.success);
   }
 
   Future<void> _onFinishRequested(
@@ -185,10 +207,11 @@ class CategoryRaceBloc extends Bloc<CategoryRaceEvent, CategoryRaceState> {
     _tickerSub = null;
 
     final points = state.answers.length * 50;
-    final improved = await submitScore(
-      modeKey: 'race_${category.id}',
-      points: points,
-      timeSeconds: state.totalSeconds,
+    unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());
+    haptics?.play(HapticKind.win);
+    final best = await records.recordScore(
+      recordKey(category.id),
+      state.answers.length,
     );
 
     await analytics.logGameCompleted(
@@ -202,15 +225,24 @@ class CategoryRaceBloc extends Bloc<CategoryRaceEvent, CategoryRaceState> {
     emit(
       state.copyWith(
         status: CategoryRaceStatus.navigating,
-        improved: improved,
+        improved: best.improved,
         resultsExtra: ResultsArgs(
-          title: 'Round over',
-          subtitle:
-              '${category.name} · ${state.letter} · ${state.answers.length} words',
+          title: AppStrings.categoryRaceRoundOver,
+          subtitle: '${category.name} · ${state.letter}',
           timeSeconds: state.totalSeconds,
-          improved: improved,
+          improved: best.improved,
           points: points,
           gameId: GameIds.categoryRace,
+          local: LocalResultInfo(
+            kind: LocalResultKind.bonus,
+            label: AppStrings.bonusRunLabel(
+              AppStrings.categoryRace,
+              '${category.name} · ${state.letter}',
+            ),
+            score: state.answers.length,
+            bestScore: best.best,
+            againLocation: '/category-race',
+          ),
         ),
       ),
     );

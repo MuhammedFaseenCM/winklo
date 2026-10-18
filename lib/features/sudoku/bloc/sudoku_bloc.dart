@@ -1,20 +1,29 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart' show listEquals;
+import '../../../core/bloc/sequential.dart';
 
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_id.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
+import '../../../domain/entities/leaderboard_proof.dart';
 import '../../../domain/entities/sudoku_puzzle.dart';
+import '../../../domain/failures.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/hint_penalty.dart';
 import '../../../domain/logic/run_rollover.dart';
+import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/sudoku/sudoku_hint_coach.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/sudoku/sudoku_generator.dart';
@@ -47,7 +56,19 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     this.celebrationDuration = const Duration(seconds: 2),
     this.playPeriod = PlayPeriod.daily,
     this.sfx,
-  }) : generatePuzzle =
+    this.haptics,
+    this.mode = PlayMode.daily,
+    this.modeRecords,
+    SudokuPuzzle Function(int seed)? practicePuzzle,
+    int Function()? newPracticeSeed,
+  }) : assert(
+         mode == PlayMode.daily || modeRecords != null,
+         'Archive and practice runs keep their bests in modeRecords',
+       ),
+       practicePuzzle =
+           practicePuzzle ?? ((seed) => SudokuGenerator.practice(seed: seed)),
+       _newPracticeSeed = newPracticeSeed ?? (() => Random().nextInt(1 << 31)),
+       generatePuzzle =
            generatePuzzle ??
            (({required DateTime day}) => SudokuGenerator.generate(day: day)),
        _now = now ?? DateTime.now,
@@ -58,11 +79,14 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     on<SudokuDigitTapped>(_onDigitTapped);
     on<SudokuErase>(_onErase);
     on<SudokuNotesModeToggled>(_onNotesModeToggled);
-    on<SudokuHint>(_onHint);
+    // One at a time: each hint costs time, so a quick second tap must see
+    // the first one's result.
+    on<SudokuHint>(_onHint, transformer: sequential());
     on<SudokuDismissHint>(_onDismissHint);
     on<SudokuReset>(_onReset);
     on<SudokuPauseRun>(_onPauseRun);
     on<SudokuResumeRun>(_onResumeRun);
+    on<SudokuNewBoard>(_onNewBoard);
   }
 
   final SubmitScore submitScore;
@@ -78,6 +102,21 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   final Duration celebrationDuration;
   final Duration playPeriod;
   final SfxService? sfx;
+  final HapticsService? haptics;
+
+  /// Daily, archive or practice. Only daily runs touch streaks, boards, the
+  /// daily best and the cleared lock; [hintQuota] is the mode's own.
+  final PlayMode mode;
+
+  /// Bests of archive and practice runs; required for those modes.
+  final PlayModeRecordRepository? modeRecords;
+
+  /// Builds a practice board from a seed.
+  final SudokuPuzzle Function(int seed) practicePuzzle;
+  final int Function() _newPracticeSeed;
+
+  /// Seed of the practice board on screen, kept in its draft.
+  int? _practiceSeed;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   var _unitFlashGeneration = 0;
@@ -85,13 +124,21 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
   String? _playId;
   PlayRunClock? _clock;
 
+  /// The last hint paid for and the grid it was for. Asking again on that
+  /// grid shows it again for free: the player already paid for that help.
+  ({List<int> grid, SudokuCoachHint coach})? _paidHint;
+
   /// Period of the run on screen; hints count against it, not the clock.
   String get _runPlayId => _playId ?? PlayPeriod.id(state.day, playPeriod);
+
+  /// Where this daily's best is stored, for showing it in review.
+  String get clearModeKey => 'sudoku_$_runPlayId';
 
   Future<void> _onStarted(
     SudokuStarted event,
     Emitter<SudokuState> emit,
   ) async {
+    if (!mode.isDaily) return _startOffDaily(emit);
     final seed = event.date ?? _now();
     final day = DateTime(seed.year, seed.month, seed.day);
     final playId = PlayPeriod.id(seed, playPeriod);
@@ -114,6 +161,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         hintFlashIndex: null,
         errorIndices: const <int>{},
         usedHintsThisRun: false,
+        hintPenaltySeconds: 0,
         hadMistakesThisRun: false,
         activeCoachHint: null,
         showNoSimpleHint: false,
@@ -128,16 +176,20 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       ),
     );
     _clock = null;
+    _paidHint = null;
 
     late final SudokuPuzzle puzzle;
     try {
       puzzle = await generatePuzzle(day: PlayPeriod.bucket(seed, playPeriod));
-    } catch (_) {
+    } catch (e) {
       if (emit.isDone) return;
+      final unsupported = e is UnsupportedPuzzle;
       emit(
         state.copyWith(
-          status: SudokuStatus.failed,
-          errorMessage: AppStrings.sudokuFailed,
+          status: unsupported ? SudokuStatus.unsupported : SudokuStatus.failed,
+          errorMessage: unsupported
+              ? AppStrings.puzzleNeedsUpdate
+              : AppStrings.sudokuFailed,
         ),
       );
       return;
@@ -158,11 +210,22 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       return;
     }
 
-    final draft = await inProgressRuns.load(
+    var draft = await inProgressRuns.load(
       gameId: GameIds.sudoku,
       playId: playId,
     );
     if (emit.isDone) return;
+    var keptHints = false;
+    var keptMistakes = false;
+    if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
+      // Ops replaced today's board; the saved digits belong to the old one.
+      // Hints and mistakes on it still count, as after a reset.
+      keptHints = draft.usedHintsThisRun;
+      keptMistakes = draft.hadMistakesThisRun;
+      await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
+      if (emit.isDone) return;
+      draft = null;
+    }
 
     final now = _now();
     if (draft != null) {
@@ -179,7 +242,8 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           resumedAt: now,
           selectedIndex: null,
           finished: false,
-          hintsRemaining: hintQuota.remaining(GameIds.sudoku, playId),
+          hintsUsed: hintQuota.usedFor(GameIds.sudoku, playId),
+          hintPenaltySeconds: draft.hintPenaltySeconds,
           activeCoachHint: null,
           showNoSimpleHint: false,
           usedHintsThisRun: draft.usedHintsThisRun,
@@ -193,27 +257,43 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         ),
       );
     } else {
-      _clock = PlayRunClock.start(at: now);
+      final hintsUsed = hintQuota.usedFor(GameIds.sudoku, playId);
+      final clock = HintPenalty.startClock(
+        at: now,
+        mode: mode,
+        hintsUsed: hintsUsed,
+      );
+      _clock = clock;
       emit(
         state.copyWith(
           status: SudokuStatus.ready,
           puzzle: puzzle,
           grid: SudokuRules.initialGrid(puzzle),
           notes: SudokuRules.emptyNotes(puzzle.cellCount),
-          elapsedMs: 0,
+          elapsedMs: clock.elapsedMs,
           resumedAt: now,
           selectedIndex: null,
           notesMode: false,
           finished: false,
-          hintsRemaining: hintQuota.remaining(GameIds.sudoku, playId),
+          hintsUsed: hintsUsed,
+          hintPenaltySeconds: HintPenalty.chargedSeconds(
+            mode,
+            hintsUsed: hintsUsed,
+          ),
           activeCoachHint: null,
           showNoSimpleHint: false,
-          usedHintsThisRun: false,
-          hadMistakesThisRun: false,
+          usedHintsThisRun: keptHints,
+          hadMistakesThisRun: keptMistakes,
         ),
       );
+      // Save the kept flags under the new board straight away.
+      if (keptHints || keptMistakes) await _persistDraft();
     }
-    await analytics.logGameStarted(gameId: GameIds.sudoku);
+    await analytics.logGameStarted(
+      gameId: GameIds.sudoku,
+      dayId: playId,
+      resumed: draft != null,
+    );
   }
 
   void _onCellSelected(SudokuCellSelected event, Emitter<SudokuState> emit) {
@@ -249,6 +329,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           hintFlashIndex: null,
         ),
       );
+      haptics?.play(HapticKind.tick);
       await _persistDraft();
       return;
     }
@@ -300,9 +381,13 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     }
 
     if (SudokuRules.isSolved(result.grid, puzzle.solution)) {
+      haptics?.play(HapticKind.win);
       await _finish(emit);
       return;
     }
+    haptics?.play(
+      unitFlash.unitIds.isNotEmpty ? HapticKind.success : HapticKind.tick,
+    );
 
     await _persistDraft();
     await _clearUnitFlashAfterDelay(emit, unitFlash.cells);
@@ -351,7 +436,6 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
 
   Future<void> _onHint(SudokuHint event, Emitter<SudokuState> emit) async {
     if (!_canPlay) return;
-    if (state.hintsRemaining <= 0) return;
     final puzzle = state.puzzle;
     if (puzzle == null) return;
 
@@ -372,11 +456,40 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       emit(state.copyWith(showNoSimpleHint: true, activeCoachHint: null));
       return;
     }
+    final paid = _paidHint;
+    if (paid != null &&
+        listEquals(paid.grid, state.grid) &&
+        _sameHelp(paid.coach, coach)) {
+      emit(
+        state.copyWith(
+          activeCoachHint: coach,
+          showNoSimpleHint: false,
+          selectedIndex: coach.targetIndex ?? state.selectedIndex,
+          hintFlashIndex: null,
+        ),
+      );
+      return;
+    }
+    final grid = List<int>.of(state.grid);
 
-    final remaining = await hintQuota.tryConsume(GameIds.sudoku, _runPlayId);
+    final spent = await spendHint(
+      quota: hintQuota,
+      mode: mode,
+      gameId: GameIds.sudoku,
+      playId: _runPlayId,
+    );
+    // The run may have finished meanwhile; its time is already posted.
+    if (!_canPlay) return;
+    _paidHint = (grid: grid, coach: coach);
+    final clock = (_clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs))
+        .addPenalty(Duration(seconds: spent.penaltySeconds));
+    _clock = clock;
     emit(
       state.copyWith(
-        hintsRemaining: remaining,
+        hintsUsed: spent.hintsUsed,
+        hintPenaltySeconds: state.hintPenaltySeconds + spent.penaltySeconds,
+        elapsedMs: clock.elapsedMs,
+        resumedAt: clock.resumedAt,
         activeCoachHint: coach,
         showNoSimpleHint: false,
         selectedIndex: coach.targetIndex ?? state.selectedIndex,
@@ -387,9 +500,16 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     await _persistDraft();
     await analytics.logHintUsed(
       gameId: GameIds.sudoku,
-      hintsRemaining: remaining,
+      hintsUsed: spent.hintsUsed,
+      penaltySeconds: spent.penaltySeconds,
     );
   }
+
+  static bool _sameHelp(SudokuCoachHint a, SudokuCoachHint b) =>
+      a.technique == b.technique &&
+      a.targetIndex == b.targetIndex &&
+      a.digit == b.digit &&
+      a.row == b.row;
 
   void _onDismissHint(SudokuDismissHint event, Emitter<SudokuState> emit) {
     emit(state.copyWith(activeCoachHint: null, showNoSimpleHint: false));
@@ -411,7 +531,6 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         notesMode: false,
         hintFlashIndex: null,
         errorIndices: const <int>{},
-        hintsRemaining: hintQuota.remaining(GameIds.sudoku, _runPlayId),
         activeCoachHint: null,
         showNoSimpleHint: false,
         unitFlashIndices: const <int>{},
@@ -450,8 +569,11 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
     final now = _now();
     final playId = _playId;
     // A run left open over midnight finishes for its own day; one older than
-    // that gives way to today's puzzle.
-    if (playId != null && !canFinishRun(playId, now, playPeriod)) {
+    // that gives way to today's puzzle. Archive and practice runs have no
+    // day to leave behind.
+    if (mode.isDaily &&
+        playId != null &&
+        !canFinishRun(playId, now, playPeriod)) {
       await inProgressRuns.clear(gameId: GameIds.sudoku, playId: playId);
       add(SudokuEvent.started(date: now));
       return;
@@ -487,6 +609,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         state.status == SudokuStatus.navigating) {
       return;
     }
+    if (!mode.isDaily) return _finishOffDaily(emit);
     final now = _now();
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     final elapsed = clock.displayedSeconds(at: now);
@@ -536,6 +659,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       dateId: dateId,
     );
 
+    final proof = SudokuLeaderboardProof(state.grid);
     try {
       await submitLeaderboardTime(
         gameId: GameIds.sudoku,
@@ -547,6 +671,7 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         dayId: leaderboardDayId(state.day),
         // Lets a successful submit mark this clear as posted for the sync.
         playId: playId,
+        proof: proof,
       );
     } catch (_) {
       // Best-effort remote sync; local score already saved.
@@ -557,6 +682,8 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
       points: points,
       timeSeconds: elapsed,
       streak: streak.current,
+      dayId: _runPlayId,
+      usedHints: state.usedHintsThisRun,
     );
 
     if (emit.isDone) return;
@@ -578,6 +705,231 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
           gameId: GameIds.sudoku,
           usedHints: state.usedHintsThisRun,
           hadMistakes: state.hadMistakesThisRun,
+          hintPenaltySeconds: state.hintPenaltySeconds,
+          day: state.day,
+          leaderboardProof: proof,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onNewBoard(
+    SudokuNewBoard event,
+    Emitter<SudokuState> emit,
+  ) async {
+    if (!mode.isPractice) return;
+    if (state.status == SudokuStatus.celebrating ||
+        state.status == SudokuStatus.submitting ||
+        state.status == SudokuStatus.navigating) {
+      return;
+    }
+    await _startOffDaily(emit, freshPractice: true);
+  }
+
+  /// Starts (or resumes) an archive or practice run. It never reads the
+  /// daily lock or today's draft: the run has its own id ([PlayMode.runId]).
+  Future<void> _startOffDaily(
+    Emitter<SudokuState> emit, {
+    bool freshPractice = false,
+  }) async {
+    final runId = mode.runId(dailyPlayId: '');
+    _playId = runId;
+    _clock = null;
+    _paidHint = null;
+    _unitFlashGeneration++;
+    final today = _now();
+    final day = mode.day ?? DateTime(today.year, today.month, today.day);
+    emit(
+      state.copyWith(
+        status: SudokuStatus.loading,
+        day: day,
+        puzzle: null,
+        grid: const [],
+        notes: const [],
+        selectedIndex: null,
+        notesMode: false,
+        elapsedMs: 0,
+        resumedAt: null,
+        hintFlashIndex: null,
+        errorIndices: const <int>{},
+        usedHintsThisRun: false,
+        hintPenaltySeconds: 0,
+        hadMistakesThisRun: false,
+        activeCoachHint: null,
+        showNoSimpleHint: false,
+        unitFlashIndices: const <int>{},
+        celebratedUnitIds: const <String>{},
+        finished: false,
+        errorMessage: null,
+        points: null,
+        timeSeconds: null,
+        improved: null,
+        resultsExtra: null,
+      ),
+    );
+
+    if (freshPractice) {
+      await inProgressRuns.clear(gameId: GameIds.sudoku, playId: runId);
+      if (emit.isDone) return;
+    }
+    var draft = freshPractice
+        ? null
+        : await inProgressRuns.load(gameId: GameIds.sudoku, playId: runId);
+    if (emit.isDone) return;
+
+    late final SudokuPuzzle puzzle;
+    try {
+      if (mode.isArchive) {
+        // Past days are always live and read by id, like the dailies.
+        puzzle = await generatePuzzle(day: day);
+      } else {
+        final saved = draft?.board['seed'];
+        final seed = saved is num ? saved.toInt() : _newPracticeSeed();
+        _practiceSeed = seed;
+        puzzle = practicePuzzle(seed);
+      }
+    } catch (e) {
+      if (emit.isDone) return;
+      final unsupported = e is UnsupportedPuzzle;
+      emit(
+        state.copyWith(
+          status: unsupported ? SudokuStatus.unsupported : SudokuStatus.failed,
+          errorMessage: unsupported
+              ? AppStrings.puzzleNeedsUpdate
+              : AppStrings.sudokuFailed,
+        ),
+      );
+      return;
+    }
+    if (emit.isDone) return;
+
+    if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
+      await inProgressRuns.clear(gameId: GameIds.sudoku, playId: runId);
+      if (emit.isDone) return;
+      draft = null;
+    }
+    if (draft == null && mode.isArchive) {
+      // A fresh archive run starts with no hints spent.
+      await modeRecords!.clearHints(GameIds.sudoku, runId);
+      if (emit.isDone) return;
+    }
+
+    final now = _now();
+    final restored = draft == null
+        ? null
+        : _restoreFromDraft(puzzle: puzzle, draft: draft);
+    final grid = restored?.grid ?? SudokuRules.initialGrid(puzzle);
+    final hintsUsed = hintQuota.usedFor(GameIds.sudoku, runId);
+    final clock = draft == null
+        ? HintPenalty.startClock(at: now, mode: mode, hintsUsed: hintsUsed)
+        : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+    _clock = clock;
+    emit(
+      state.copyWith(
+        status: SudokuStatus.ready,
+        puzzle: puzzle,
+        grid: grid,
+        notes: restored?.notes ?? SudokuRules.emptyNotes(puzzle.cellCount),
+        notesMode: restored?.notesMode ?? false,
+        elapsedMs: clock.elapsedMs,
+        resumedAt: now,
+        selectedIndex: null,
+        finished: false,
+        hintsUsed: hintsUsed,
+        hintPenaltySeconds:
+            draft?.hintPenaltySeconds ??
+            HintPenalty.chargedSeconds(mode, hintsUsed: hintsUsed),
+        activeCoachHint: null,
+        showNoSimpleHint: false,
+        usedHintsThisRun: draft?.usedHintsThisRun ?? false,
+        hadMistakesThisRun: draft?.hadMistakesThisRun ?? false,
+        errorIndices: SudokuRules.errorIndices(puzzle: puzzle, grid: grid),
+        celebratedUnitIds: const <String>{},
+        unitFlashIndices: const <int>{},
+      ),
+    );
+    // Keep the practice seed, so leaving and coming back finds this board.
+    if (draft == null && mode.isPractice) await _persistDraft();
+    await analytics.logGameStarted(
+      gameId: GameIds.sudoku,
+      dayId: runId,
+      resumed: draft != null,
+    );
+  }
+
+  /// Finishes an archive or practice run: a local best, no score, streak,
+  /// leaderboard or daily best.
+  Future<void> _finishOffDaily(Emitter<SudokuState> emit) async {
+    final now = _now();
+    final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
+    final elapsed = clock.displayedSeconds(at: now);
+    _clock = clock.pause(at: now);
+    final points = SudokuScoring.pointsForElapsed(elapsed);
+    final runId = mode.runId(dailyPlayId: '');
+
+    emit(
+      state.copyWith(
+        finished: true,
+        status: SudokuStatus.celebrating,
+        points: points,
+        timeSeconds: elapsed,
+        elapsedMs: _clock!.elapsedMs,
+        resumedAt: null,
+        hintFlashIndex: null,
+        errorIndices: const <int>{},
+        unitFlashIndices: const <int>{},
+      ),
+    );
+    unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());
+
+    await inProgressRuns.clear(gameId: GameIds.sudoku, playId: runId);
+    await _wait(celebrationDuration);
+    if (emit.isDone) return;
+    emit(state.copyWith(status: SudokuStatus.submitting));
+
+    final records = modeRecords!;
+    final best = await records.recordTime(
+      mode.recordKey(GameIds.sudoku),
+      elapsed,
+    );
+    if (mode.isArchive) await records.clearHints(GameIds.sudoku, runId);
+
+    await analytics.logGameCompleted(
+      gameId: GameIds.sudoku,
+      points: points,
+      timeSeconds: elapsed,
+      dayId: runId,
+      usedHints: state.usedHintsThisRun,
+    );
+    if (emit.isDone) return;
+
+    emit(
+      state.copyWith(
+        improved: best.improved,
+        status: SudokuStatus.navigating,
+        resultsExtra: ResultsArgs(
+          title: AppStrings.sudokuClearedTitle,
+          subtitle: '',
+          timeSeconds: elapsed,
+          improved: best.improved,
+          points: points,
+          gameId: GameIds.sudoku,
+          usedHints: state.usedHintsThisRun,
+          hadMistakes: state.hadMistakesThisRun,
+          hintPenaltySeconds: state.hintPenaltySeconds,
+          day: mode.day,
+          local: LocalResultInfo(
+            kind: mode.isArchive
+                ? LocalResultKind.archive
+                : LocalResultKind.practice,
+            label: mode.isArchive
+                ? AppStrings.archiveRunLabel(mode.day!)
+                : AppStrings.practiceRunLabel,
+            bestSeconds: best.best,
+            againLocation: mode.isPractice
+                ? PlayMode.practice.location('/sudoku')
+                : null,
+          ),
         ),
       ),
     );
@@ -597,10 +949,13 @@ class SudokuBloc extends Bloc<SudokuEvent, SudokuState> {
         elapsedMs: elapsedMs,
         usedHintsThisRun: state.usedHintsThisRun,
         hadMistakesThisRun: state.hadMistakesThisRun,
+        hintPenaltySeconds: state.hintPenaltySeconds,
+        boardFingerprint: state.puzzle?.fingerprint,
         board: {
           'grid': state.grid,
           'notes': [for (final note in state.notes) note.toList()..sort()],
           'notesMode': state.notesMode,
+          if (mode.isPractice && _practiceSeed != null) 'seed': _practiceSeed,
         },
       ),
     );

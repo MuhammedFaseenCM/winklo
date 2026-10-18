@@ -43,6 +43,20 @@ class AppLayout {
     space(isCompact ? 16 : 20),
   );
 
+  /// [pagePadding] for a scrolling page, with the bottom inset added: the
+  /// floating nav dock inside the dashboard (its Scaffold has extendBody),
+  /// plus the system home-indicator. The last row then ends clear of the dock.
+  ///
+  /// Keep in sync with the floating nav dock chrome: outer pad 12 +
+  /// inner vertical pads 16 + tab row 48 + breathing room 8.
+  EdgeInsets scrollPadding(BuildContext context) {
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    const dockChrome = 12.0 + 16.0 + 48.0 + 8.0;
+    return pagePadding.copyWith(
+      bottom: pagePadding.bottom + dockChrome + bottomInset,
+    );
+  }
+
   double get sectionGap => space(isCompact ? 10 : 12);
 
   double get tileGap => space(isCompact ? 8 : 10);
@@ -57,9 +71,6 @@ class AppLayout {
   );
 
   double get tileArtSize => space(isCompact ? 44 : 52);
-
-  /// Estimated tile height used to decide whether home needs a scroll fallback.
-  double get homeMinTileHeight => isCompact ? 128 : 140;
 
   EdgeInsets get buttonPadding => EdgeInsets.symmetric(
     horizontal: space(isCompact ? 16 : 22),

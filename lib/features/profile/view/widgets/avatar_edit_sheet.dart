@@ -111,7 +111,7 @@ class AvatarEditSheet extends StatelessWidget {
                       ? null
                       : () => unawaited(_pickPhoto(context)),
                   icon: const Icon(Icons.photo_library_outlined, size: 18),
-                  label: const Text(AppStrings.profileChoosePhoto),
+                  label: Text(AppStrings.profileChoosePhoto),
                 ),
               ],
             );
@@ -143,7 +143,7 @@ class AvatarEditSheet extends StatelessWidget {
     } on PlatformException catch (error) {
       if (!context.mounted || !_isPermissionDenied(error)) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.profilePermissionDenied)),
+        SnackBar(content: Text(AppStrings.profilePermissionDenied)),
       );
     }
   }

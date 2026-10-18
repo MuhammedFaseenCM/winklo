@@ -7,6 +7,11 @@
 /// 120, so names with multi-byte characters fit however `size()` counts them.
 const leaderboardDisplayNameMaxLength = 40;
 
+/// The name stored for a player who has none. Other players read it on the
+/// boards, so it stays English whatever language this phone shows; the
+/// screens show `AppStrings.playerFallbackName` where a row has no name.
+const storedFallbackName = 'Player';
+
 /// Longest avatar id the rules accept.
 const leaderboardAvatarIdMaxLength = 64;
 
@@ -28,10 +33,10 @@ const leaderboardPhotoUrlPattern =
 final _photoUrl = RegExp(leaderboardPhotoUrlPattern);
 
 /// [name] trimmed and cut to [leaderboardDisplayNameMaxLength] UTF-16 units
-/// without splitting a surrogate pair; `'Player'` when blank.
+/// without splitting a surrogate pair; [storedFallbackName] when blank.
 String leaderboardDisplayName(String name) {
   final trimmed = name.trim();
-  if (trimmed.isEmpty) return 'Player';
+  if (trimmed.isEmpty) return storedFallbackName;
   if (trimmed.length <= leaderboardDisplayNameMaxLength) return trimmed;
   var end = leaderboardDisplayNameMaxLength;
   final last = trimmed.codeUnitAt(end - 1);

@@ -8,18 +8,25 @@ import 'core/bloc/app_bloc_observer.dart';
 import 'core/di/app_repositories.dart';
 import 'core/errors/client_error_reporter.dart';
 import 'core/firebase/firebase_bootstrap.dart';
+import 'core/theme/font_licenses.dart';
 import 'data/repositories/client_error_repository_impl.dart';
+import 'domain/repositories/analytics_repository.dart';
 import 'domain/repositories/auth_repository.dart';
+import 'domain/repositories/language_repository.dart';
 import 'domain/usecases/clear_notification_token.dart';
+import 'domain/usecases/forget_account_progress.dart';
 import 'domain/usecases/initialize_notifications.dart';
+import 'domain/usecases/refresh_habit_surfaces.dart';
 import 'domain/usecases/sign_in_with_google.dart';
 import 'domain/usecases/sign_out.dart';
 import 'domain/usecases/sync_fcm_token.dart';
 import 'domain/usecases/sync_progress.dart';
 import 'features/auth/cubit/auth_cubit.dart';
+import 'features/settings/cubit/locale_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicenses();
   await FirebaseBootstrap.init();
 
   final clientErrorRepository = ClientErrorRepositoryImpl();
@@ -49,16 +56,34 @@ Future<void> main() async {
           clientErrorRepository: clientErrorRepository,
         ),
       ],
+      // Above everything else, so AppStrings is in the chosen language
+      // before anything reads it.
       child: BlocProvider(
-        create: (context) => AuthCubit(
-          authRepository: context.read<AuthRepository>(),
-          signInWithGoogle: context.read<SignInWithGoogle>(),
-          signOut: context.read<SignOut>(),
-          syncFcmToken: context.read<SyncFcmToken>(),
-          clearNotificationToken: context.read<ClearNotificationToken>(),
-          syncProgress: context.read<SyncProgress>(),
+        lazy: false,
+        create: (context) => LocaleCubit(
+          languages: context.read<LanguageRepository>(),
+          deviceLanguageCodes: () => [
+            for (final locale
+                in WidgetsBinding.instance.platformDispatcher.locales)
+              locale.languageCode,
+          ],
+          // Reminders and the home-screen widget carry copy written when
+          // they were planned.
+          onLanguageChanged: () => context.read<RefreshHabitSurfaces>()(),
         ),
-        child: const _BootstrapNotifications(child: WinkloApp()),
+        child: BlocProvider(
+          create: (context) => AuthCubit(
+            authRepository: context.read<AuthRepository>(),
+            signInWithGoogle: context.read<SignInWithGoogle>(),
+            signOut: context.read<SignOut>(),
+            syncFcmToken: context.read<SyncFcmToken>(),
+            clearNotificationToken: context.read<ClearNotificationToken>(),
+            syncProgress: context.read<SyncProgress>(),
+            analytics: context.read<AnalyticsRepository>(),
+            forgetAccountProgress: context.read<ForgetAccountProgress>(),
+          ),
+          child: const _BootstrapNotifications(child: WinkloApp()),
+        ),
       ),
     ),
   );

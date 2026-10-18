@@ -1,25 +1,53 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_layout.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_shimmer.dart';
+import 'leaderboard_table.dart';
 
-/// Skeleton matching [LeaderboardRow] list layout (rank · avatar · name · time).
+/// Skeleton of the board table: a header strip and [rowCount] rows shaped
+/// like [LeaderboardTableRow] (rank · avatar · name · time).
 class LeaderboardShimmer extends StatelessWidget {
-  const LeaderboardShimmer({super.key, this.rowCount = 8});
+  const LeaderboardShimmer({super.key, this.rowCount = 10});
 
   final int rowCount;
 
   @override
   Widget build(BuildContext context) {
-    final layout = AppLayout.of(context);
-    return AppShimmer(
-      child: ListView.separated(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: layout.pagePadding,
-        itemCount: rowCount,
-        separatorBuilder: (_, _) => SizedBox(height: layout.space(8)),
-        itemBuilder: (_, _) => const _LeaderboardRowShimmer(),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: leaderboardTableMaxWidth),
+          child: DecoratedBox(
+            decoration: leaderboardTableDecoration(),
+            child: AppShimmer(
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      height: 30,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: AppShimmerBox(
+                            width: 64,
+                            height: 8,
+                            borderRadius: 4,
+                          ),
+                        ),
+                      ),
+                    ),
+                    for (var i = 0; i < rowCount; i++)
+                      const _LeaderboardRowShimmer(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -30,35 +58,31 @@ class _LeaderboardRowShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mirrors LeaderboardRow: padding 14/12, radius 14, rank 28, avatar r=18.
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: ZipColors.wall,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Row(
-        children: [
-          SizedBox(
-            width: 28,
-            child: Center(
-              child: AppShimmerBox(width: 18, height: 18, borderRadius: 4),
+    // Mirrors LeaderboardTableRow: 48px, rank 28, avatar r=14, time 56.
+    return const SizedBox(
+      height: leaderboardTableRowHeight,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 28,
+              child: Center(
+                child: AppShimmerBox(width: 14, height: 14, borderRadius: 4),
+              ),
             ),
-          ),
-          AppShimmerCircle(radius: 18),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppShimmerBox(width: 120, height: 14, borderRadius: 4),
-                SizedBox(height: 6),
-                AppShimmerBox(width: 48, height: 10, borderRadius: 4),
-              ],
+            SizedBox(width: 10),
+            AppShimmerCircle(radius: 14),
+            SizedBox(width: 10),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: AppShimmerBox(width: 120, height: 12, borderRadius: 4),
+              ),
             ),
-          ),
-          AppShimmerBox(width: 40, height: 16, borderRadius: 4),
-        ],
+            AppShimmerBox(width: 40, height: 14, borderRadius: 4),
+          ],
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import '../../../../core/strings/app_strings.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../domain/game_ids.dart';
 import '../../../../domain/repositories/analytics_repository.dart';
+import '../../../../domain/repositories/tutorial_repository.dart';
 
 class SudokuHowToPlayButton extends StatelessWidget {
   const SudokuHowToPlayButton({super.key});
@@ -14,30 +15,66 @@ class SudokuHowToPlayButton extends StatelessWidget {
     return IconButton(
       tooltip: AppStrings.sudokuHowToPlayTitle,
       onPressed: () async {
-        try {
-          await context.read<AnalyticsRepository>().logHowToPlayOpened(
-            gameId: GameIds.sudoku,
-          );
-        } on ProviderNotFoundException {
-          // Analytics may not be provided in focused widget tests.
-        }
+        await _analytics(context)?.logHowToPlayOpened(gameId: GameIds.sudoku);
         if (!context.mounted) return;
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: ZipColors.paper,
-            title: const Text(AppStrings.sudokuHowToPlayTitle),
-            content: const Text(AppStrings.sudokuHowToPlayBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text(AppStrings.sudokuHowToPlayGotIt),
-              ),
-            ],
-          ),
-        );
+        await SudokuHowToPlay.show(context);
       },
       icon: const Icon(Icons.help_outline_rounded),
     );
+  }
+}
+
+class SudokuHowToPlay {
+  SudokuHowToPlay._();
+
+  static Future<void> show(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ZipColors.paper,
+        title: Text(AppStrings.sudokuHowToPlayTitle),
+        content: Text(AppStrings.sudokuHowToPlayBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(AppStrings.sudokuHowToPlayGotIt),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Opens the rules once, on a player's first Sudoku; Zip and Path Words do
+  /// the same with their animated tutorials. [onOpen] and [onClose] run only
+  /// when the dialog shows, so the screen can stop the clock while it's read.
+  static Future<void> maybeShow(
+    BuildContext context, {
+    VoidCallback? onOpen,
+    VoidCallback? onClose,
+  }) async {
+    final TutorialRepository repo;
+    try {
+      repo = context.read<TutorialRepository>();
+    } on ProviderNotFoundException {
+      return; // Not provided in focused widget tests.
+    }
+    if (await repo.hasSeen(GameIds.sudoku)) return;
+    if (!context.mounted) return;
+    final analytics = _analytics(context);
+    await analytics?.logTutorialShown(gameId: GameIds.sudoku);
+    if (!context.mounted) return;
+    onOpen?.call();
+    await show(context);
+    onClose?.call();
+    await analytics?.logTutorialDismissed(gameId: GameIds.sudoku);
+    await repo.markSeen(GameIds.sudoku);
+  }
+}
+
+AnalyticsRepository? _analytics(BuildContext context) {
+  try {
+    return context.read<AnalyticsRepository>();
+  } on ProviderNotFoundException {
+    return null; // Analytics may not be provided in focused widget tests.
   }
 }

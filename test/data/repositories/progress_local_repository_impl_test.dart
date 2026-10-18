@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/data/repositories/progress_local_repository_impl.dart';
+import 'package:winklo/domain/entities/cell.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
 import 'package:winklo/domain/repositories/progress_local_repository.dart';
 
 void main() {
@@ -110,6 +114,15 @@ void main() {
       expect(repo.ownerUid, 'u1');
     });
 
+    test('removes the announced achievements with the progress', () async {
+      final (repo, prefs) = await build({
+        'achievements_seen': ['first_clear_zip'],
+        'history_uploaded_u1': true,
+      });
+      await repo.purgeUserProgress();
+      expect(prefs.getKeys(), {'history_uploaded_u1'});
+    });
+
     test('purged keys are gone after a reload', () async {
       final (repo, _) = await build({'best_time_sudoku_20261007': 80});
       await repo.purgeUserProgress();
@@ -122,6 +135,134 @@ void main() {
       final (repo, prefs) = await build();
       await repo.purgeUserProgress();
       expect(prefs.getKeys(), isEmpty);
+    });
+  });
+
+  group('clear proofs', () {
+    const zip = ZipLeaderboardProof([Cell(0, 0), Cell(0, 1)]);
+
+    test('are kept per daily mode key as the Worker reads them', () async {
+      final (repo, prefs) = await build();
+      expect(repo.clearProof('zip', '20261007'), isNull);
+
+      await repo.setClearProof('zip', '20261007', zip);
+      await repo.setClearProof(
+        'sudoku',
+        '20261007',
+        const SudokuLeaderboardProof([1, 2]),
+      );
+
+      expect(
+        jsonDecode(prefs.getString('clear_proof_zip_daily_20261007')!),
+        zip.toJson(),
+      );
+      expect(prefs.getString('clear_proof_sudoku_20261007'), isNotNull);
+      expect(repo.clearProof('zip', '20261007')?.toJson(), zip.toJson());
+      expect(repo.clearProof('zip', '20261008'), isNull);
+      expect(repo.clearProof('sudoku', '20261007')?.toJson(), {
+        'grid': [1, 2],
+      });
+    });
+
+    test('an unreadable proof reads as none', () async {
+      final (repo, _) = await build({
+        'clear_proof_zip_daily_20261007': '{not json',
+        'clear_proof_sudoku_20261007': '{"path":[[0,0]]}',
+      });
+      expect(repo.clearProof('zip', '20261007'), isNull);
+      expect(repo.clearProof('sudoku', '20261007'), isNull);
+    });
+
+    test('are per-user progress: purged, stashed and restored', () async {
+      final (repo, prefs) = await build();
+      await repo.setClearProof('zip', '20261007', zip);
+
+      await repo.stashUserProgress('a');
+      await repo.purgeUserProgress();
+      expect(repo.clearProof('zip', '20261007'), isNull);
+      expect(prefs.getKeys(), {'progress_stash_a'});
+
+      expect(await repo.restoreStashedProgress('a'), isTrue);
+      expect(repo.clearProof('zip', '20261007')?.toJson(), zip.toJson());
+    });
+  });
+
+  group('forgetUserProgress (a deleted account)', () {
+    test('drops its live progress, its stash and its upload flag', () async {
+      final (repo, prefs) = await build({
+        'progress_owner_uid': 'u1',
+        'best_time_zip_daily_20261007': 12,
+        'clear_proof_zip_daily_20261007': '{"path":[[0,0]]}',
+        'sync_lb_zip_20261007': '12',
+        'progress_stash_u1': '{"best_time_zip_daily_20261001":["i",9]}',
+        'history_uploaded_u1': true,
+        'progress_stash_u2': '{"best_time_zip_daily_20261001":["i",8]}',
+        'history_uploaded_u2': true,
+        'tutorial_seen_zip': true,
+        'sfx_enabled': false,
+      });
+
+      await repo.forgetUserProgress('u1');
+
+      expect(prefs.getKeys(), {
+        'progress_stash_u2',
+        'history_uploaded_u2',
+        'tutorial_seen_zip',
+        'sfx_enabled',
+      });
+      expect(repo.ownerUid, isNull);
+      // Nothing is left for a later sign-in to stash under the old uid.
+      await repo.stashUserProgress('u1');
+      expect(prefs.containsKey('progress_stash_u1'), isFalse);
+    });
+
+    test('unclaimed progress goes with the signed-in account', () async {
+      final (repo, prefs) = await build({'best_time_sudoku_20261007': 80});
+
+      await repo.forgetUserProgress('u1');
+
+      expect(prefs.getKeys(), isEmpty);
+    });
+
+    test('keeps the live progress of another account', () async {
+      final (repo, prefs) = await build({
+        'progress_owner_uid': 'u2',
+        'best_time_sudoku_20261007': 80,
+        'progress_stash_u1': '{"best_time_zip_daily_20261001":["i",9]}',
+      });
+
+      await repo.forgetUserProgress('u1');
+
+      expect(prefs.getKeys(), {
+        'progress_owner_uid',
+        'best_time_sudoku_20261007',
+      });
+      expect(repo.ownerUid, 'u2');
+    });
+  });
+
+  group('history upload flag', () {
+    test('is unset until set, per uid', () async {
+      final (repo, prefs) = await build();
+      expect(repo.isHistoryUploaded('u1'), isFalse);
+      await repo.setHistoryUploaded('u1');
+      expect(repo.isHistoryUploaded('u1'), isTrue);
+      expect(repo.isHistoryUploaded('u2'), isFalse);
+      expect(prefs.getBool('history_uploaded_u1'), isTrue);
+    });
+
+    test('survives a purge and a stash restore', () async {
+      final (repo, _) = await build({'best_time_zip_daily_20261007': 12});
+      await repo.setHistoryUploaded('u1');
+      await repo.stashUserProgress('u1');
+      await repo.purgeUserProgress();
+      await repo.restoreStashedProgress('u1');
+      expect(repo.isHistoryUploaded('u1'), isTrue);
+    });
+
+    test('an empty uid is never uploaded', () async {
+      final (repo, _) = await build({'history_uploaded_': true});
+      expect(repo.isHistoryUploaded(''), isFalse);
     });
   });
 

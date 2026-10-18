@@ -14,6 +14,9 @@ enum SudokuStatus {
   navigating,
   locked,
   failed,
+
+  /// Loaded a board this build can't play; retrying won't help.
+  unsupported,
 }
 
 @freezed
@@ -31,7 +34,10 @@ sealed class SudokuState with _$SudokuState {
     @Default(0) int elapsedMs,
     DateTime? resumedAt,
     int? hintFlashIndex,
-    @Default(3) int hintsRemaining,
+    @Default(0) int hintsUsed,
+
+    /// Seconds hints added to the clock this run; Results reports it.
+    @Default(0) int hintPenaltySeconds,
     SudokuCoachHint? activeCoachHint,
     @Default(false) bool showNoSimpleHint,
     @Default(false) bool usedHintsThisRun,

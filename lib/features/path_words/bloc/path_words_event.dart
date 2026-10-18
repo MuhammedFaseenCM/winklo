@@ -17,4 +17,7 @@ sealed class PathWordsEvent with _$PathWordsEvent {
   const factory PathWordsEvent.reset() = PathWordsReset;
   const factory PathWordsEvent.pauseRun() = PathWordsPauseRun;
   const factory PathWordsEvent.resumeRun() = PathWordsResumeRun;
+
+  /// Practice only: drop the board on screen and start a fresh one.
+  const factory PathWordsEvent.newBoard() = PathWordsNewBoard;
 }

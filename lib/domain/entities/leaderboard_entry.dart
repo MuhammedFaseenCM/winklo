@@ -10,6 +10,7 @@ class LeaderboardEntry {
     this.usedHints,
     this.hadMistakes,
     this.currentStreak,
+    this.daysCleared,
   });
 
   final String uid;
@@ -31,4 +32,23 @@ class LeaderboardEntry {
   /// Current game streak at last sync. Daily board shows a chip when `>= 2`.
   /// Missing / null means unknown (legacy docs) — no chip.
   final int? currentStreak;
+
+  /// Weekly board only: days of the week cleared. [timeSeconds] is then the
+  /// week's total.
+  final int? daysCleared;
+
+  /// This entry at another place on the board.
+  LeaderboardEntry withRank(int rank) => LeaderboardEntry(
+    uid: uid,
+    displayName: displayName,
+    photoUrl: photoUrl,
+    avatarId: avatarId,
+    timeSeconds: timeSeconds,
+    updatedAt: updatedAt,
+    rank: rank,
+    usedHints: usedHints,
+    hadMistakes: hadMistakes,
+    currentStreak: currentStreak,
+    daysCleared: daysCleared,
+  );
 }

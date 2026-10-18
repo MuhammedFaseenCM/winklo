@@ -4,31 +4,24 @@ import '../entities/path_words_puzzle.dart';
 class PathWordsRules {
   PathWordsRules._();
 
-  static Set<Cell> lockedCells(
-    PathWordsPuzzle puzzle,
-    Set<String> completedTargetIds,
-  ) {
-    final locked = <Cell>{};
-    for (final target in puzzle.targets) {
-      if (completedTargetIds.contains(target.id)) {
-        locked.addAll(target.path);
-      }
-    }
-    return locked;
-  }
-
   static Set<Cell> occupiedCells(Iterable<PathWordsStroke> strokes) {
     return {for (final stroke in strokes) ...stroke.cells};
   }
 
-  /// Cells a new stroke must not enter: solved words and every placed stroke.
+  /// Cells a new stroke must not enter: solved words, where they were traced
+  /// (as the board draws them), and every placed stroke.
   static Set<Cell> blockedCells({
     required PathWordsPuzzle puzzle,
     required Set<String> completedTargetIds,
-    required Iterable<PathWordsStroke> placedPaths,
+    required List<PathWordsStroke> placedPaths,
   }) {
     return {
-      ...lockedCells(puzzle, completedTargetIds),
+      for (final path in completedPaths(
+        puzzle: puzzle,
+        completedTargetIds: completedTargetIds,
+        placedPaths: placedPaths,
+      ).values)
+        ...path,
       ...occupiedCells(placedPaths),
     };
   }
@@ -118,6 +111,19 @@ class PathWordsRules {
     }
     return false;
   }
+
+  /// Index of the latest stroke that found no word, or null when every
+  /// stroke is a found word. Undo takes back only these.
+  static int? lastIncorrectIndex(List<PathWordsStroke> strokes) {
+    for (var i = strokes.length - 1; i >= 0; i--) {
+      if (!strokes[i].isCorrect) return i;
+    }
+    return null;
+  }
+
+  /// The letters [cells] spell on [puzzle], in order (lower case).
+  static String spell(PathWordsPuzzle puzzle, List<Cell> cells) =>
+      cells.map(puzzle.letterAt).join();
 
   static List<PathWordsStroke> withoutIncorrect(List<PathWordsStroke> strokes) {
     return [
@@ -322,18 +328,51 @@ class PathWordsRules {
     return (first.row * 31 + first.col * 17 + path.length * 13).abs() % count;
   }
 
+  /// Cells to draw for each found word: the stroke the player traced, which
+  /// can differ from the stored route, or the stored route when no stroke is
+  /// kept (review mode).
+  static Map<String, List<Cell>> completedPaths({
+    required PathWordsPuzzle puzzle,
+    required Set<String> completedTargetIds,
+    required List<PathWordsStroke> placedPaths,
+  }) {
+    final traced = {
+      for (final stroke in placedPaths)
+        if (stroke.targetId != null) stroke.targetId!: stroke.cells,
+    };
+    return {
+      for (final target in puzzle.targets)
+        if (completedTargetIds.contains(target.id))
+          target.id: traced[target.id] ?? target.path,
+    };
+  }
+
   static PathWordsTarget? completedTarget({
     required PathWordsPuzzle puzzle,
     required List<Cell> path,
     required Set<String> completedTargetIds,
   }) {
-    for (final target in puzzle.targets) {
-      if (completedTargetIds.contains(target.id)) {
-        continue;
-      }
+    final remaining = [
+      for (final target in puzzle.targets)
+        if (!completedTargetIds.contains(target.id)) target,
+    ];
+    for (final target in remaining) {
       if (_pathsEqual(path, target.path)) {
         return target;
       }
+    }
+    // Hand-made boards can hide a word along more than one route. Accept any
+    // route that spells it, as long as it stays off every other word's cells:
+    // taking those would leave that word impossible to trace.
+    final spelled = path.map(puzzle.letterAt).join();
+    for (final target in remaining) {
+      if (target.word.toLowerCase() != spelled) continue;
+      final othersCells = {
+        for (final other in puzzle.targets)
+          if (other.id != target.id) ...other.path,
+      };
+      if (path.any(othersCells.contains)) continue;
+      return target;
     }
     return null;
   }

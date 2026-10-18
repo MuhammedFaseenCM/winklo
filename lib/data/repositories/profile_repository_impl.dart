@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
+import '../../core/strings/app_strings.dart';
 import '../clients/avatar/avatar_upload_client.dart';
 import '../../domain/entities/app_user.dart';
 import '../../domain/entities/leaderboard_period.dart';
@@ -12,9 +13,7 @@ import '../../domain/repositories/profile_repository.dart';
 import '../leaderboard_identity.dart';
 import '../leaderboard_root.dart';
 
-const _profileUnavailable = Failure(
-  'Firebase is unavailable. Try again later.',
-);
+Failure get _profileUnavailable => Failure(AppStrings.serviceUnavailable);
 
 /// Games whose leaderboard rows get name / avatar refreshes.
 const leaderboardIdentityGameIds = [
@@ -43,7 +42,7 @@ AppUser? mapUserProfile(String uid, Map<String, dynamic>? data) {
     uid: uid,
     displayName: name is String && name.trim().isNotEmpty
         ? name.trim()
-        : 'Player',
+        : storedFallbackName,
     photoUrl: photo is String && photo.isNotEmpty ? photo : null,
     avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
   );
@@ -79,7 +78,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
   User _requireAuthUser() {
     final user = _firebaseAuth?.currentUser;
     if (user == null) {
-      throw const Failure('Sign in required.');
+      throw Failure(AppStrings.signInRequiredShort);
     }
     return user;
   }
@@ -114,7 +113,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     } on Failure {
       rethrow;
     } catch (e) {
-      throw Failure('Could not load profile.', cause: e);
+      throw Failure(AppStrings.profileLoadFailed, cause: e);
     }
   }
 
@@ -136,7 +135,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     } catch (e, st) {
       debugPrint('updateDisplayName failed: $e');
       debugPrint('$st');
-      throw Failure('Could not update profile.', cause: e);
+      throw Failure(AppStrings.profileUpdateFailed, cause: e);
     }
   }
 
@@ -159,7 +158,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     } catch (e, st) {
       debugPrint('updateAvatarPreset failed: $e');
       debugPrint('$st');
-      throw Failure('Could not update profile.', cause: e);
+      throw Failure(AppStrings.profileUpdateFailed, cause: e);
     }
   }
 
@@ -172,16 +171,16 @@ class ProfileRepositoryImpl implements ProfileRepository {
     final authUser = _requireAuthUser();
     final uploader = _avatarUploadClient;
     if (uploader == null) {
-      throw const Failure('Avatar upload is not configured.');
+      throw Failure(AppStrings.avatarUploadUnavailable);
     }
     try {
       // v1: only JPEG path is supported by Worker.
       if (contentType != 'image/jpeg' && contentType != 'image/jpg') {
-        throw const Failure('Could not update profile.');
+        throw Failure(AppStrings.profileUpdateFailed);
       }
       final idToken = await authUser.getIdToken();
       if (idToken == null || idToken.isEmpty) {
-        throw const Failure('Sign in required.');
+        throw Failure(AppStrings.signInRequiredShort);
       }
       final photoUri = await uploader.uploadJpeg(
         idToken: idToken,
@@ -202,7 +201,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     } catch (e, st) {
       debugPrint('updateAvatarPhoto failed: $e');
       debugPrint('$st');
-      throw Failure('Could not update profile.', cause: e);
+      throw Failure(AppStrings.profileUpdateFailed, cause: e);
     }
   }
 
@@ -219,7 +218,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     final snap = await db.collection('users').doc(uid).get();
     final profile = mapUserProfile(uid, snap.data());
     if (profile == null) {
-      throw const Failure('Could not update profile.');
+      throw Failure(AppStrings.profileUpdateFailed);
     }
     return profile;
   }

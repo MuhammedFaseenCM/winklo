@@ -12,6 +12,8 @@ import 'package:winklo/core/lifecycle/progress_sync_lifecycle.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/app_user.dart';
+import 'package:winklo/domain/game_ids.dart';
+import 'package:winklo/domain/logic/progress_merge.dart';
 import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
@@ -397,5 +399,63 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('leaderboard:path_words'), findsOneWidget);
+  });
+
+  group('tile stats', () {
+    GoRouter homeOnly() => GoRouter(
+      initialLocation: '/',
+      routes: [GoRoute(path: '/', builder: (_, _) => const HomeScreen())],
+    );
+
+    String dayId(DateTime day) => PlayPeriod.id(day, PlayPeriod.daily);
+
+    testWidgets('a cleared tile counts down to the next puzzle and shows '
+        'the best time and longest streak', (tester) async {
+      final now = DateTime.now();
+      final today = dayId(now);
+      SharedPreferences.setMockInitialValues({
+        'best_time_${modeKeyFor(GameIds.zip, today)}': 72,
+        'best_time_${modeKeyFor(GameIds.zip, dayId(now.subtract(const Duration(days: 3))))}':
+            48,
+        'streak_current_zip': 3,
+        'streak_longest_zip': 9,
+        'streak_last_zip': today,
+      });
+      final prefs = await SharedPreferences.getInstance();
+
+      await pumpHome(tester, prefs: prefs, router: homeOnly());
+
+      expect(find.textContaining('New puzzle in'), findsOneWidget);
+      expect(find.text(AppStrings.zipTagline), findsNothing);
+      expect(
+        find.text(AppStrings.homeTileStats(bestSeconds: 48, longestStreak: 9)),
+        findsOneWidget,
+      );
+      expect(find.text('Best 0:48 · Longest streak 9'), findsOneWidget);
+      // Games not played yet keep their taglines and no stats.
+      expect(find.text(AppStrings.pathWordsTagline), findsOneWidget);
+      expect(find.text(AppStrings.sudokuTagline), findsOneWidget);
+    });
+
+    testWidgets('a streak shows its freeze until it is used', (tester) async {
+      final today = dayId(DateTime.now());
+      SharedPreferences.setMockInitialValues({
+        'best_time_${modeKeyFor(GameIds.zip, today)}': 72,
+        'streak_current_zip': 3,
+        'streak_longest_zip': 3,
+        'streak_last_zip': today,
+        'best_time_${modeKeyFor(GameIds.pathWords, today)}': 90,
+        'streak_current_path_words': 2,
+        'streak_longest_path_words': 2,
+        'streak_last_path_words': today,
+        'streak_freeze_path_words': false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+
+      await pumpHome(tester, prefs: prefs, router: homeOnly());
+
+      // Zip still has its freeze; Path Words spent it; Sudoku has no streak.
+      expect(find.byTooltip(AppStrings.streakFreezeReady), findsOneWidget);
+    });
   });
 }

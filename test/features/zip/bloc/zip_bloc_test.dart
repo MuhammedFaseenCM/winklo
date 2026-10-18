@@ -1,10 +1,12 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
 import 'package:winklo/domain/entities/zip_level.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/play_period.dart';
+import 'package:winklo/domain/repositories/hint_quota_repository.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
@@ -57,6 +59,22 @@ class _MemoryInProgressRuns implements InProgressRunRepository {
   }
 }
 
+class _FakeHintQuota implements HintQuotaRepository {
+  _FakeHintQuota([this._used = 0]);
+
+  int _used;
+
+  @override
+  Future<int> consume(String gameId, String playId) async => ++_used;
+
+  @override
+  int usedFor(String gameId, String playId) => _used;
+
+  @override
+  Future<bool> restoreUsed(String gameId, String playId, int used) async =>
+      false;
+}
+
 void main() {
   late _MockSubmitScore submitScore;
   late _MockSubmitLeaderboardTime submitLeaderboardTime;
@@ -96,6 +114,7 @@ void main() {
         currentStreak: any(named: 'currentStreak'),
         dayId: any(named: 'dayId'),
         playId: any(named: 'playId'),
+        proof: any(named: 'proof'),
       ),
     ).thenAnswer((_) async {});
   });
@@ -105,10 +124,12 @@ void main() {
     DateTime Function()? clockNow,
     Future<void> Function(Duration duration)? wait,
     _MemoryInProgressRuns? drafts,
+    _FakeHintQuota? quota,
     Future<ZipLevel> Function(DateTime date, {Duration period})?
     fetchDailyLevel,
   }) {
     return ZipBloc(
+      hintQuota: quota ?? _FakeHintQuota(),
       inProgressRuns: drafts ?? _MemoryInProgressRuns(),
       submitScore: submitScore,
       submitLeaderboardTime: submitLeaderboardTime,
@@ -162,16 +183,21 @@ void main() {
       );
       bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
       await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
-      bloc.add(const ZipEvent.hint(hintsRemaining: 2));
+      bloc.add(const ZipEvent.hint());
       await bloc.stream.firstWhere((s) => s.usedHintsThisRun);
       bloc.add(const ZipEvent.completed());
-      await bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
+      final done = await bloc.stream.firstWhere(
+        (s) => s.status == ZipStatus.navigating,
+      );
 
+      // No time passed; the hint's 10s is the whole time.
+      expect(done.timeSeconds, 10);
+      expect(done.resultsExtra?.hintPenaltySeconds, 10);
       verify(
         () => submitScore(
           modeKey: 'zip_daily_20260913',
           points: any(named: 'points'),
-          timeSeconds: any(named: 'timeSeconds'),
+          timeSeconds: 10,
           usedHints: true,
           hadMistakes: false,
           board: any(named: 'board'),
@@ -180,14 +206,27 @@ void main() {
       verify(
         () => submitLeaderboardTime(
           gameId: GameIds.zip,
-          timeSeconds: any(named: 'timeSeconds'),
+          timeSeconds: 10,
           usedHints: true,
           hadMistakes: false,
           currentStreak: 1,
           dayId: '2026-09-13',
           playId: '20260913',
+          proof: any(named: 'proof'),
         ),
       ).called(1);
+      verify(
+        () => analytics.logGameCompleted(
+          gameId: GameIds.zip,
+          points: any(named: 'points'),
+          timeSeconds: any(named: 'timeSeconds'),
+          streak: 1,
+          dayId: '20260913',
+          usedHints: true,
+        ),
+      ).called(1);
+      // Review reads the clear back from the key it was saved under.
+      expect(bloc.clearModeKey, 'zip_daily_20260913');
       await bloc.close();
     },
   );
@@ -225,6 +264,7 @@ void main() {
       bloc.add(ZipEvent.started(date: DateTime.utc(2026, 9, 13)));
       await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
 
+      bloc.add(ZipEvent.pathChanged(path: const [Cell(0, 0), Cell(0, 1)]));
       now = DateTime.utc(2026, 9, 13, 0, 0, 12);
       bloc.add(const ZipEvent.completed());
       await bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
@@ -232,6 +272,7 @@ void main() {
       expect(bloc.state.points, 940);
       expect(bloc.state.timeSeconds, 12);
       expect(bloc.state.resultsExtra?.currentStreak, 3);
+      expect(bloc.state.resultsExtra?.day, DateTime(2026, 9, 13));
       verify(
         () => submitScore(
           modeKey: 'zip_daily_20260913',
@@ -251,8 +292,21 @@ void main() {
           currentStreak: 3,
           dayId: '2026-09-13',
           playId: '20260913',
+          proof: any(
+            named: 'proof',
+            that: isA<ZipLeaderboardProof>().having(
+              (p) => p.path,
+              'path',
+              const [Cell(0, 0), Cell(0, 1)],
+            ),
+          ),
         ),
       ).called(1);
+      // Results keeps the proof for a guest who signs in to save the time.
+      expect(
+        bloc.state.resultsExtra?.leaderboardProof,
+        isA<ZipLeaderboardProof>(),
+      );
       await bloc.close();
     },
   );
@@ -330,27 +384,278 @@ void main() {
     build: buildBloc,
     act: (b) => b.add(ZipEvent.started(date: DateTime.utc(2026, 9, 14))),
     verify: (_) {
-      verify(() => analytics.logGameStarted(gameId: GameIds.zip)).called(1);
-    },
-  );
-
-  blocTest<ZipBloc, ZipState>(
-    'ZipHint marks usedHintsThisRun and logs hint_used',
-    build: buildBloc,
-    act: (b) => b.add(const ZipEvent.hint(hintsRemaining: 2)),
-    expect: () => [
-      isA<ZipState>().having(
-        (s) => s.usedHintsThisRun,
-        'usedHintsThisRun',
-        isTrue,
-      ),
-    ],
-    verify: (_) {
       verify(
-        () => analytics.logHintUsed(gameId: GameIds.zip, hintsRemaining: 2),
+        () => analytics.logGameStarted(
+          gameId: GameIds.zip,
+          dayId: '20260914',
+          resumed: false,
+        ),
       ).called(1);
     },
   );
+
+  test('returning to a saved run logs game_started as resumed', () async {
+    final drafts = _MemoryInProgressRuns();
+    drafts.runs['${GameIds.zip}_20260913'] = const InProgressRun(
+      gameId: GameIds.zip,
+      playId: '20260913',
+      elapsedMs: 4000,
+      board: {'path': <List<int>>[]},
+    );
+    final bloc = buildBloc(now: DateTime(2026, 9, 13), drafts: drafts);
+
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
+    await pumpEventQueue();
+
+    verify(
+      () => analytics.logGameStarted(
+        gameId: GameIds.zip,
+        dayId: '20260913',
+        resumed: true,
+      ),
+    ).called(1);
+    await bloc.close();
+  });
+
+  test('ZipHint spends a hint, charges its time and logs hint_used', () async {
+    final quota = _FakeHintQuota();
+    final bloc = buildBloc(
+      now: DateTime(2026, 9, 13),
+      clockNow: () => DateTime(2026, 9, 13),
+      quota: quota,
+    );
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == ZipStatus.ready,
+    );
+    expect(ready.hintsUsed, 0);
+
+    bloc.add(const ZipEvent.hint());
+    final first = await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+    expect(first.usedHintsThisRun, isTrue);
+    expect(first.elapsedMs, 10000);
+    expect(first.isClockRunning, isTrue);
+
+    bloc.add(const ZipEvent.hint());
+    final second = await bloc.stream.firstWhere((s) => s.hintsUsed == 2);
+    expect(second.elapsedMs, 30000);
+    expect(quota.usedFor(GameIds.zip, '20260913'), 2);
+    await pumpEventQueue();
+
+    verify(
+      () => analytics.logHintUsed(
+        gameId: GameIds.zip,
+        hintsUsed: 1,
+        penaltySeconds: 10,
+      ),
+    ).called(1);
+    verify(
+      () => analytics.logHintUsed(
+        gameId: GameIds.zip,
+        hintsUsed: 2,
+        penaltySeconds: 20,
+      ),
+    ).called(1);
+    await bloc.close();
+  });
+
+  test('ZipHint before the board is ready costs nothing', () async {
+    final quota = _FakeHintQuota();
+    final bloc = buildBloc(quota: quota);
+    bloc.add(const ZipEvent.hint());
+    await pumpEventQueue();
+    expect(quota.usedFor(GameIds.zip, '20260913'), 0);
+    expect(bloc.state.usedHintsThisRun, isFalse);
+    await bloc.close();
+  });
+
+  test('a fresh run carries the time of hints already counted', () async {
+    // Ops replaced the board, or the run began on another device.
+    final bloc = buildBloc(
+      now: DateTime(2026, 9, 13),
+      quota: _FakeHintQuota(2),
+    );
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == ZipStatus.ready,
+    );
+    expect(ready.hintsUsed, 2);
+    expect(ready.elapsedMs, 30000);
+    await bloc.close();
+  });
+
+  group('Results report the hint time the clock carries', () {
+    setUp(() {
+      when(
+        () => submitScore(
+          modeKey: any(named: 'modeKey'),
+          points: any(named: 'points'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          board: any(named: 'board'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => recordDailyClear(
+          gameId: any(named: 'gameId'),
+          dateId: any(named: 'dateId'),
+        ),
+      ).thenAnswer(
+        (_) async => const GameStreak(
+          gameId: GameIds.zip,
+          current: 1,
+          longest: 1,
+          lastClearedDateId: '20260913',
+        ),
+      );
+    });
+
+    Future<ZipState> finish(ZipBloc bloc) async {
+      bloc.add(ZipEvent.pathChanged(path: bloc.state.level.solution));
+      bloc.add(const ZipEvent.completed());
+      return bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
+    }
+
+    test('a resumed run keeps the hint time it saved', () async {
+      final drafts = _MemoryInProgressRuns();
+      final quota = _FakeHintQuota();
+      final first = buildBloc(
+        now: DateTime(2026, 9, 13),
+        drafts: drafts,
+        quota: quota,
+      );
+      first.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+      await first.stream.firstWhere((s) => s.status == ZipStatus.ready);
+      first.add(const ZipEvent.hint());
+      await first.stream.firstWhere((s) => s.hintsUsed == 1);
+      await pumpEventQueue();
+      await first.close();
+      expect(drafts.runs['${GameIds.zip}_20260913']?.hintPenaltySeconds, 10);
+
+      final again = buildBloc(
+        now: DateTime(2026, 9, 13),
+        drafts: drafts,
+        quota: quota,
+        wait: (_) async {},
+      );
+      again.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+      final resumed = await again.stream.firstWhere(
+        (s) => s.status == ZipStatus.ready,
+      );
+      expect(resumed.hintPenaltySeconds, 10);
+      final done = await finish(again);
+      expect(done.timeSeconds, 10);
+      expect(done.resultsExtra?.hintPenaltySeconds, 10);
+      await again.close();
+    });
+
+    test('a run saved before hints cost time reports none', () async {
+      // Saved by the previous build: two hints counted, none charged.
+      final drafts = _MemoryInProgressRuns();
+      final level = DailyPuzzleGenerator.forDate(DateTime(2026, 9, 13));
+      drafts.runs['${GameIds.zip}_20260913'] = InProgressRun(
+        gameId: GameIds.zip,
+        playId: '20260913',
+        elapsedMs: 5000,
+        usedHintsThisRun: true,
+        board: const {'path': []},
+        boardFingerprint: level.fingerprint,
+      );
+      final bloc = buildBloc(
+        now: DateTime(2026, 9, 13),
+        drafts: drafts,
+        quota: _FakeHintQuota(2),
+        wait: (_) async {},
+      );
+      bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+      final ready = await bloc.stream.firstWhere(
+        (s) => s.status == ZipStatus.ready,
+      );
+      expect(ready.elapsedMs, 5000);
+      final done = await finish(bloc);
+      expect(done.timeSeconds, 5);
+      expect(done.resultsExtra?.hintPenaltySeconds, 0);
+      await bloc.close();
+    });
+
+    test('a hint that lands after the finish is dropped', () async {
+      final quota = _FakeHintQuota();
+      final bloc = buildBloc(
+        now: DateTime(2026, 9, 13),
+        quota: quota,
+        wait: (_) async {},
+      );
+      bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+      await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
+      bloc.add(ZipEvent.pathChanged(path: bloc.state.level.solution));
+      bloc.add(const ZipEvent.hint());
+      bloc.add(const ZipEvent.completed());
+      final done = await bloc.stream.firstWhere(
+        (s) => s.status == ZipStatus.navigating,
+      );
+      await pumpEventQueue();
+
+      expect(done.timeSeconds, 0);
+      expect(done.resultsExtra?.hintPenaltySeconds, 0);
+      expect(bloc.state.hintPenaltySeconds, 0);
+      expect(bloc.state.elapsedMs, 0);
+      await bloc.close();
+    });
+  });
+
+  test('a replaced board drops the saved run but keeps its hint use', () async {
+    final drafts = _MemoryInProgressRuns();
+    drafts.runs['${GameIds.zip}_20260913'] = const InProgressRun(
+      gameId: GameIds.zip,
+      playId: '20260913',
+      elapsedMs: 9000,
+      usedHintsThisRun: true,
+      board: {
+        'path': [
+          [0, 0],
+        ],
+      },
+      boardFingerprint: 'replaced',
+    );
+    final bloc = buildBloc(now: DateTime(2026, 9, 13), drafts: drafts);
+
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == ZipStatus.ready,
+    );
+
+    expect(ready.path, isEmpty);
+    expect(ready.elapsedMs, 0);
+    // Hints spent on the old board still count, as after a reset.
+    expect(ready.usedHintsThisRun, isTrue);
+    // The old run is gone; what's saved now is the new board's run.
+    final saved = drafts.runs['${GameIds.zip}_20260913'];
+    expect(saved?.boardFingerprint, ready.level.fingerprint);
+    expect(saved?.elapsedMs, 0);
+    expect(saved?.usedHintsThisRun, isTrue);
+    await bloc.close();
+  });
+
+  test('saved runs carry the board fingerprint', () async {
+    final drafts = _MemoryInProgressRuns();
+    final bloc = buildBloc(now: DateTime(2026, 9, 13), drafts: drafts);
+    bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
+    final ready = await bloc.stream.firstWhere(
+      (s) => s.status == ZipStatus.ready,
+    );
+
+    bloc.add(ZipEvent.pathChanged(path: [const Cell(0, 0)]));
+    await bloc.stream.firstWhere((s) => s.path.isNotEmpty);
+    await pumpEventQueue();
+
+    expect(
+      drafts.runs['${GameIds.zip}_20260913']?.boardFingerprint,
+      ready.level.fingerprint,
+    );
+    await bloc.close();
+  });
 
   test('ZipReset clears the path but keeps usedHintsThisRun', () async {
     final drafts = _MemoryInProgressRuns();
@@ -362,7 +667,7 @@ void main() {
     bloc.add(ZipEvent.started(date: DateTime(2026, 9, 13)));
     await bloc.stream.firstWhere((s) => s.status == ZipStatus.ready);
     bloc.add(ZipEvent.pathChanged(path: [const Cell(0, 0)]));
-    bloc.add(const ZipEvent.hint(hintsRemaining: 2));
+    bloc.add(const ZipEvent.hint());
     bloc.add(const ZipEvent.reset());
     await bloc.stream.firstWhere((s) => s.usedHintsThisRun && s.path.isEmpty);
     await Future<void>.delayed(Duration.zero);
@@ -387,6 +692,7 @@ void main() {
         isNewPersonalBest: isNewPersonalBest,
         getClearBoard: getClearBoard,
         analytics: analytics,
+        hintQuota: _FakeHintQuota(),
         now: DateTime(2026, 9, 20, 14, 31, 40),
         playPeriod: PlayPeriod.minute,
         fetchDailyLevel: (date, {period = PlayPeriod.daily}) async =>

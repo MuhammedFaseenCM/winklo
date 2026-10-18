@@ -13,27 +13,38 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_image.dart';
+import '../../../core/widgets/next_puzzle_countdown.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/app_update_decision.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/app_update_repository.dart';
 import '../../../domain/usecases/check_app_update.dart';
+import '../../../domain/usecases/get_best_daily_time_seconds.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_streak.dart';
-import '../../../domain/usecases/schedule_engagement_notifications.dart';
+import '../../../domain/usecases/prefetch_tomorrow_puzzles.dart';
 import '../../../domain/repositories/notification_repository.dart';
+import '../../../domain/repositories/update_banner_snooze_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
-import 'widgets/home_update_banner.dart';
+import '../logic/today_summary.dart';
+import 'widgets/home_freeze_badge.dart';
+import 'widgets/home_habit_cards.dart';
+import 'widgets/home_more_play_entry.dart';
+import 'widgets/home_soft_update_section.dart';
+import 'widgets/home_today_summary.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.now});
 
   static const permissionPromptedKey = 'notif_permission_prompted';
+
+  /// The clock, for tests.
+  final DateTime Function()? now;
 
   @override
   Widget build(BuildContext context) {
@@ -41,22 +52,26 @@ class HomeScreen extends StatelessWidget {
       create: (context) => HomeCubit(
         getBestPoints: context.read<GetBestPoints>(),
         getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
+        getBestDailyTimeSeconds: context.read<GetBestDailyTimeSeconds>(),
         getStreak: context.read<GetStreak>(),
         analytics: context.read<AnalyticsRepository>(),
         checkAppUpdate: context.read<CheckAppUpdate>(),
         appUpdateRepository: context.read<AppUpdateRepository>(),
-        scheduleEngagementNotifications: context
-            .read<ScheduleEngagementNotifications>(),
         zipLevelRepository: context.read<ZipLevelRepository>(),
+        updateBannerSnooze: context.read<UpdateBannerSnoozeRepository>(),
+        prefetchTomorrowPuzzles: context.read<PrefetchTomorrowPuzzles>(),
+        clock: now,
         playPeriod: DevFlags.playPeriod,
       )..load(),
-      child: const _HomeView(),
+      child: _HomeView(now: now),
     );
   }
 }
 
 class _HomeView extends StatefulWidget {
-  const _HomeView();
+  const _HomeView({this.now});
+
+  final DateTime Function()? now;
 
   @override
   State<_HomeView> createState() => _HomeViewState();
@@ -149,6 +164,7 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
             state.pathWordsBestPoints > 0 ||
             state.pathWordsBestTimeSeconds != null;
         final isSoftUpdate = state.updateStatus == AppUpdateStatus.soft;
+        final clock = widget.now ?? DateTime.now;
 
         Future<void> openZip() async {
           final ok = await ensureSignedInForPlay(context);
@@ -204,8 +220,17 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                   context.go('/leaderboard?game=${GameIds.zip}');
                 },
                 streak: state.currentStreak,
+                longestStreak: state.longestStreak,
                 isOnFreeze: state.isOnFreeze,
+                freezeAvailable: state.freezeAvailable,
+                freezeCount: state.freezeCount,
+                lifetimeBestSeconds: state.lifetimeBestSeconds,
+                loadedAt: state.loadedAt,
                 cleared: zipCleared,
+                // Home reads only the Zip daily; the cron marks all three
+                // of a day by the same date rule.
+                weekendSpecial: state.dailyLevel.isWeekendSpecial,
+                clock: clock,
               )
               .animate()
               .fadeIn(delay: 80.ms, duration: 450.ms)
@@ -233,8 +258,15 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     context.go('/leaderboard?game=${GameIds.pathWords}');
                   },
                   streak: state.pathWordsCurrentStreak,
+                  longestStreak: state.pathWordsLongestStreak,
                   isOnFreeze: state.pathWordsIsOnFreeze,
+                  freezeAvailable: state.pathWordsFreezeAvailable,
+                  freezeCount: state.pathWordsFreezeCount,
+                  lifetimeBestSeconds: state.pathWordsLifetimeBestSeconds,
+                  loadedAt: state.loadedAt,
                   cleared: pathWordsCleared,
+                  weekendSpecial: state.dailyLevel.isWeekendSpecial,
+                  clock: clock,
                 )
                 .animate()
                 .fadeIn(delay: 160.ms, duration: 450.ms)
@@ -261,13 +293,21 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                     context.go('/leaderboard?game=${GameIds.sudoku}');
                   },
                   streak: state.sudokuCurrentStreak,
+                  longestStreak: state.sudokuLongestStreak,
                   isOnFreeze: state.sudokuIsOnFreeze,
+                  freezeAvailable: state.sudokuFreezeAvailable,
+                  freezeCount: state.sudokuFreezeCount,
+                  lifetimeBestSeconds: state.sudokuLifetimeBestSeconds,
+                  loadedAt: state.loadedAt,
                   cleared: sudokuCleared,
+                  weekendSpecial: state.dailyLevel.isWeekendSpecial,
+                  clock: clock,
                 )
                 .animate()
                 .fadeIn(delay: 240.ms, duration: 450.ms)
                 .slideY(begin: 0.1, curve: Curves.easeOutCubic),
           ],
+          const HomeMorePlayEntry(),
         ];
 
         return Scaffold(
@@ -291,20 +331,25 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                                   begin: 0.08,
                                   curve: Curves.easeOutCubic,
                                 ),
-                            if (isSoftUpdate) ...[
-                              SizedBox(height: layout.space(12)),
-                              HomeUpdateBanner(
-                                currentLabel: state.updateCurrentLabel,
-                                requiredLabel: state.updateRequiredLabel,
-                                onUpdate: () {
-                                  unawaited(
-                                    context.read<HomeCubit>().openStore(),
-                                  );
-                                },
+                            Expanded(
+                              child: _HomeScrollPane(
+                                above: [
+                                  if (isSoftUpdate)
+                                    HomeSoftUpdateSection(
+                                      gap: layout.space(12),
+                                      currentLabel: state.updateCurrentLabel,
+                                      requiredLabel: state.updateRequiredLabel,
+                                      storeUrl: state.updateStoreUrl,
+                                    ),
+                                  HomeHabitCards(now: widget.now),
+                                  SizedBox(height: layout.sectionGap),
+                                  HomeTodaySummary(
+                                    summary: TodaySummary.of(state),
+                                  ),
+                                ],
+                                tiles: gameTiles,
                               ),
-                            ],
-                            SizedBox(height: layout.sectionGap),
-                            Expanded(child: _HomeGamesPane(tiles: gameTiles)),
+                            ),
                           ],
                         ),
                       );
@@ -374,7 +419,7 @@ class _HomeHeader extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      'DAILY',
+                      AppStrings.homeDailyBadge,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: ZipColors.ember,
                         fontWeight: FontWeight.w800,
@@ -404,53 +449,35 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
-/// Packs game tiles tightly; scrolls only when they cannot fit.
-class _HomeGamesPane extends StatelessWidget {
-  const _HomeGamesPane({required this.tiles});
+/// Everything under the header, in one scroll view: the update banner, the
+/// habit cards and today's summary ([above], each empty when there's
+/// nothing to say), then the game tiles packed tightly at the top.
+///
+/// It scrolls only when that can't fit, and sizes itself to the real
+/// content, so a busy day (or a tall tile, a large font) never overflows a
+/// short screen and every tile stays reachable.
+class _HomeScrollPane extends StatelessWidget {
+  const _HomeScrollPane({required this.above, required this.tiles});
 
+  final List<Widget> above;
   final List<Widget> tiles;
 
   @override
   Widget build(BuildContext context) {
-    final layout = AppLayout.of(context);
-    final gap = layout.tileGap;
-    final count = tiles.length;
-    if (count == 0) return const SizedBox.shrink();
+    final gap = AppLayout.of(context).tileGap;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final gaps = gap * (count - 1);
-        final needed = count * layout.homeMinTileHeight + gaps;
-        final fits = constraints.maxHeight >= needed;
-
-        final column = Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < count; i++) ...[
-              if (i > 0) SizedBox(height: gap),
-              tiles[i],
-            ],
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ...above,
+          for (var i = 0; i < tiles.length; i++) ...[
+            if (i > 0) SizedBox(height: gap),
+            tiles[i],
           ],
-        );
-
-        if (fits) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [column, const Spacer()],
-          );
-        }
-
-        return ListView(
-          physics: const BouncingScrollPhysics(),
-          children: [
-            for (var i = 0; i < count; i++) ...[
-              if (i > 0) SizedBox(height: gap),
-              tiles[i],
-            ],
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 }
@@ -468,8 +495,15 @@ class _DailyGameTile extends StatelessWidget {
     this.onViewResult,
     this.playBackground,
     this.streak = 0,
+    this.longestStreak = 0,
     this.isOnFreeze = false,
+    this.freezeAvailable = false,
+    this.freezeCount = 0,
+    this.lifetimeBestSeconds,
+    this.loadedAt,
     this.cleared = false,
+    this.weekendSpecial = false,
+    this.clock = DateTime.now,
   });
 
   final Color accent;
@@ -483,13 +517,35 @@ class _DailyGameTile extends StatelessWidget {
   final VoidCallback? onViewResult;
   final Color? playBackground;
   final int streak;
+  final int longestStreak;
   final bool isOnFreeze;
+  final bool freezeAvailable;
+  final int freezeCount;
+  final int? lifetimeBestSeconds;
+
+  /// When the tile's data was read; the countdown runs to the end of that
+  /// period, so a stale tile says a new puzzle is ready.
+  final DateTime? loadedAt;
   final bool cleared;
+
+  /// The day's dailies are weekend specials: the pill says so instead of
+  /// "Today".
+  final bool weekendSpecial;
+
+  /// What the next-puzzle countdown counts from.
+  final DateTime Function() clock;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final layout = AppLayout.of(context);
+    final stats = AppStrings.homeTileStats(
+      bestSeconds: lifetimeBestSeconds,
+      longestStreak: longestStreak,
+    );
+    // A freeze only matters while there is a streak to protect; once it is
+    // protecting one, "Streak protected" says so instead.
+    final showFreeze = streak > 0 && freezeAvailable && !isOnFreeze;
     final titleStyle = textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w800,
       fontSize: layout.isCompact ? 16 : 18,
@@ -594,7 +650,9 @@ class _DailyGameTile extends StatelessWidget {
                               ),
                               SizedBox(width: layout.space(5)),
                               Text(
-                                AppStrings.today,
+                                weekendSpecial
+                                    ? AppStrings.weekendSpecial
+                                    : AppStrings.today,
                                 style: textTheme.labelMedium?.copyWith(
                                   color: accent,
                                   fontWeight: FontWeight.w700,
@@ -621,6 +679,10 @@ class _DailyGameTile extends StatelessWidget {
                           ),
                         ],
                         const Spacer(),
+                        if (showFreeze) ...[
+                          HomeFreezeBadge(count: freezeCount),
+                          SizedBox(width: layout.space(6)),
+                        ],
                         if (streak > 0)
                           ZipHudPill(
                             icon: Icons.local_fire_department_rounded,
@@ -652,14 +714,42 @@ class _DailyGameTile extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               SizedBox(height: layout.space(2)),
-                              Text(
-                                tagline,
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: ZipColors.inkSoft,
-                                  height: 1.25,
+                              if (cleared)
+                                NextPuzzleCountdown(
+                                  period: DevFlags.playPeriod,
+                                  periodOf: loadedAt,
+                                  clock: clock,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: accent,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.25,
+                                  ),
+                                )
+                              else
+                                Text(
+                                  tagline,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: ZipColors.inkSoft,
+                                    height: 1.25,
+                                  ),
+                                  maxLines: stats.isEmpty ? 2 : 1,
+                                  overflow: stats.isEmpty
+                                      ? null
+                                      : TextOverflow.ellipsis,
                                 ),
-                                maxLines: 2,
-                              ),
+                              if (stats.isNotEmpty) ...[
+                                SizedBox(height: layout.space(2)),
+                                Text(
+                                  stats,
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: ZipColors.inkSoft,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.25,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ],
                           ),
                         ),

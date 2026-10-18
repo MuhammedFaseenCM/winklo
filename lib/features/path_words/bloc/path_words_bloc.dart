@@ -1,16 +1,24 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:bloc/bloc.dart';
 
+import '../../../core/bloc/sequential.dart';
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_id.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/entities/in_progress_run.dart';
 import '../../../domain/entities/leaderboard_period.dart';
+import '../../../domain/entities/leaderboard_proof.dart';
+import '../../../domain/entities/path_words_clear_summary.dart';
 import '../../../domain/entities/path_words_puzzle.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/hint_penalty.dart';
 import '../../../domain/logic/run_rollover.dart';
+import '../../../domain/path_words/path_words_generator.dart';
+import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/path_words/path_words_rules.dart';
@@ -18,6 +26,8 @@ import '../../../domain/path_words/path_words_scoring.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/play_mode_record_repository.dart';
+import '../../../domain/repositories/word_list_repository.dart';
 import '../../../domain/streak_calculator.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
@@ -47,7 +57,23 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     this.celebrationDuration = const Duration(seconds: 2),
     this.playPeriod = PlayPeriod.daily,
     this.sfx,
-  }) : _now = now ?? DateTime.now,
+    this.haptics,
+    this.wordList,
+    this.mode = PlayMode.daily,
+    this.modeRecords,
+    this.practiceWords,
+    PathWordsPuzzle Function(int seed, List<String> words)? practicePuzzle,
+    int Function()? newPracticeSeed,
+  }) : assert(
+         mode == PlayMode.daily || modeRecords != null,
+         'Archive and practice runs keep their bests in modeRecords',
+       ),
+       practicePuzzle =
+           practicePuzzle ??
+           ((seed, words) =>
+               PathWordsGenerator.practice(seed: seed, words: words)),
+       _newPracticeSeed = newPracticeSeed ?? (() => Random().nextInt(1 << 31)),
+       _now = now ?? DateTime.now,
        _wait = wait ?? ((duration) => Future<void>.delayed(duration)),
        super(PathWordsState.initial((now ?? DateTime.now)())) {
     on<PathWordsStarted>(_onStarted);
@@ -55,10 +81,13 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     on<PathWordsPointerEnter>(_onPointerEnter);
     on<PathWordsPointerUp>(_onPointerUp);
     on<PathWordsUndo>(_onUndo);
-    on<PathWordsHint>(_onHint);
+    // One at a time: each hint costs time, so a quick second tap must see
+    // what the first revealed.
+    on<PathWordsHint>(_onHint, transformer: sequential());
     on<PathWordsReset>(_onReset);
     on<PathWordsPauseRun>(_onPauseRun);
     on<PathWordsResumeRun>(_onResumeRun);
+    on<PathWordsNewBoard>(_onNewBoard);
   }
 
   final GenerateDailyPathWords generateDailyPathWords;
@@ -74,18 +103,51 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
   final Duration celebrationDuration;
   final Duration playPeriod;
   final SfxService? sfx;
+  final HapticsService? haptics;
+
+  /// Bonus words come from its list; without it every non-target stroke is
+  /// a wrong stroke, as before.
+  final WordListRepository? wordList;
+
+  /// Daily, archive or practice. Only daily runs touch streaks, boards, the
+  /// daily best and the cleared lock; [hintQuota] is the mode's own.
+  final PlayMode mode;
+
+  /// Bests of archive and practice runs; required for those modes.
+  final PlayModeRecordRepository? modeRecords;
+
+  /// Practice words; the bundled list from [wordList] by default.
+  final Future<List<String>> Function()? practiceWords;
+
+  /// Builds a practice board from a seed.
+  final PathWordsPuzzle Function(int seed, List<String> words) practicePuzzle;
+  final int Function() _newPracticeSeed;
+
+  /// Seed of the practice board on screen, kept in its draft.
+  int? _practiceSeed;
   final DateTime Function() _now;
   final Future<void> Function(Duration duration) _wait;
   String? _playId;
   PlayRunClock? _clock;
 
+  /// Loaded in the background when a run starts; null until then.
+  Set<String>? _bonusWordList;
+
+  /// Bonus words are 4–8 letters (the bundled list's range).
+  static const _bonusMinLength = 4;
+  static const _bonusMaxLength = 8;
+
   /// Period of the run on screen; hints count against it, not the clock.
   String get _runPlayId => _playId ?? PlayPeriod.id(state.day, playPeriod);
+
+  /// Where this daily's best is stored, for showing it in review.
+  String get clearModeKey => 'path_words_$_runPlayId';
 
   Future<void> _onStarted(
     PathWordsStarted event,
     Emitter<PathWordsState> emit,
   ) async {
+    if (!mode.isDaily) return _startOffDaily(emit);
     final seed = event.date ?? _now();
     final day = DateTime(seed.year, seed.month, seed.day);
     final playId = PlayPeriod.id(seed, playPeriod);
@@ -100,7 +162,9 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         activePath: const [],
         placedPaths: const [],
         completedTargetIds: const {},
-        hintsRemaining: hintQuota.remaining(GameIds.pathWords, _runPlayId),
+        bonusWords: const [],
+        hintsUsed: hintQuota.usedFor(GameIds.pathWords, _runPlayId),
+        hintPenaltySeconds: 0,
         hintRevealLength: 0,
         usedHintsThisRun: false,
         elapsedMs: 0,
@@ -145,11 +209,21 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         return;
       }
 
-      final draft = await inProgressRuns.load(
+      unawaited(_loadBonusWordList());
+      var draft = await inProgressRuns.load(
         gameId: GameIds.pathWords,
         playId: playId,
       );
       if (emit.isDone) return;
+      var keptHints = false;
+      if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
+        // Ops replaced today's board; the saved words belong to the old one.
+        // Hints spent on it still count, as after a reset.
+        keptHints = draft.usedHintsThisRun;
+        await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
+        if (emit.isDone) return;
+        draft = null;
+      }
 
       final now = _now();
       if (draft != null) {
@@ -163,12 +237,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
             puzzle: puzzle,
             elapsedMs: draft.elapsedMs,
             resumedAt: now,
-            hintsRemaining: hintQuota.remaining(GameIds.pathWords, _runPlayId),
+            hintsUsed: hintQuota.usedFor(GameIds.pathWords, _runPlayId),
+            hintPenaltySeconds: draft.hintPenaltySeconds,
             hintRevealLength: restored.hintRevealLength,
             usedHintsThisRun: draft.usedHintsThisRun,
             activePath: restored.activePath,
             placedPaths: restored.placedPaths,
             completedTargetIds: restored.completedTargetIds,
+            bonusWords: restored.bonusWords,
             hintFlashCell: null,
             errorMessage: null,
             ruleTip: null,
@@ -180,16 +256,26 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           ),
         );
       } else {
-        _clock = PlayRunClock.start(at: now);
+        final hintsUsed = hintQuota.usedFor(GameIds.pathWords, _runPlayId);
+        final clock = HintPenalty.startClock(
+          at: now,
+          mode: mode,
+          hintsUsed: hintsUsed,
+        );
+        _clock = clock;
         emit(
           state.copyWith(
             status: PathWordsStatus.ready,
             puzzle: puzzle,
-            elapsedMs: 0,
+            elapsedMs: clock.elapsedMs,
             resumedAt: now,
-            hintsRemaining: hintQuota.remaining(GameIds.pathWords, _runPlayId),
+            hintsUsed: hintsUsed,
+            hintPenaltySeconds: HintPenalty.chargedSeconds(
+              mode,
+              hintsUsed: hintsUsed,
+            ),
             hintRevealLength: 0,
-            usedHintsThisRun: false,
+            usedHintsThisRun: keptHints,
             activePath: const [],
             placedPaths: const [],
             completedTargetIds: const {},
@@ -203,8 +289,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
             resultsExtra: null,
           ),
         );
+        // Save the kept flag under the new board straight away.
+        if (keptHints) await _persistDraft();
       }
-      await analytics.logGameStarted(gameId: GameIds.pathWords);
+      await analytics.logGameStarted(
+        gameId: GameIds.pathWords,
+        dayId: playId,
+        resumed: draft != null,
+      );
     } catch (_) {
       if (emit.isDone) return;
       emit(
@@ -274,6 +366,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
             ruleTip: null,
           ),
         );
+        haptics?.play(HapticKind.tick);
         return;
       }
 
@@ -333,6 +426,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         ruleTip: null,
       ),
     );
+    haptics?.play(HapticKind.tick);
   }
 
   void _onPointerEnter(
@@ -386,6 +480,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     );
     if (grew) {
       unawaited(sfx?.play(SfxId.tap) ?? Future<void>.value());
+      haptics?.play(HapticKind.tick);
     }
   }
 
@@ -425,6 +520,27 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         paletteLength: 8,
       ),
     );
+
+    // A real word that isn't a target: a bonus find, and the stroke clears
+    // without counting as a wrong one.
+    final bonus = stroke.isCorrect
+        ? null
+        : _bonusWordFor(puzzle, state.activePath);
+    if (bonus != null) {
+      emit(
+        state.copyWith(
+          status: PathWordsStatus.playing,
+          activePath: const [],
+          bonusWords: [...state.bonusWords, bonus],
+          hintFlashCell: null,
+          ruleTip: null,
+        ),
+      );
+      haptics?.play(HapticKind.light);
+      await _persistDraft();
+      return;
+    }
+
     final placed = [...state.placedPaths, stroke];
     final updatedCompleted = stroke.targetId == null
         ? state.completedTargetIds
@@ -452,11 +568,15 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       ),
     );
 
+    final solved = updatedCompleted.length >= puzzle.targets.length;
     if (stroke.targetId != null) {
       unawaited(sfx?.play(SfxId.success) ?? Future<void>.value());
     }
-    if (updatedCompleted.length >= puzzle.targets.length) {
+    if (solved) {
       unawaited(sfx?.play(SfxId.clear) ?? Future<void>.value());
+      haptics?.play(HapticKind.win);
+    } else if (stroke.targetId != null) {
+      haptics?.play(HapticKind.success);
     }
 
     if (updatedCompleted.length >= puzzle.targets.length) {
@@ -466,6 +586,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     }
   }
 
+  /// Takes back the stroke being drawn (one cell at a time) or else the last
+  /// wrong stroke. A found word is locked: undo never removes it (reset does).
   void _onUndo(PathWordsUndo event, Emitter<PathWordsState> emit) {
     if (state.finished) return;
     if (state.status != PathWordsStatus.ready &&
@@ -473,32 +595,27 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       return;
     }
 
-    if (state.placedPaths.isNotEmpty) {
-      final placed = state.placedPaths.sublist(0, state.placedPaths.length - 1);
+    if (state.activePath.isNotEmpty) {
+      final undone = PathWordsRules.undoActive(state.activePath);
       emit(
         state.copyWith(
           status: PathWordsStatus.playing,
-          placedPaths: placed,
-          completedTargetIds: {
-            for (final stroke in placed)
-              if (stroke.targetId != null) stroke.targetId!,
-          },
+          activePath: undone,
           hintFlashCell: null,
-          ruleTip: null,
         ),
       );
       unawaited(_persistDraft());
       return;
     }
 
-    if (state.activePath.isEmpty) return;
-
-    final undone = PathWordsRules.undoActive(state.activePath);
+    final wrong = PathWordsRules.lastIncorrectIndex(state.placedPaths);
+    if (wrong == null) return;
     emit(
       state.copyWith(
         status: PathWordsStatus.playing,
-        activePath: undone,
+        placedPaths: [...state.placedPaths]..removeAt(wrong),
         hintFlashCell: null,
+        ruleTip: null,
       ),
     );
     unawaited(_persistDraft());
@@ -511,17 +628,17 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     if (state.finished) return;
     final puzzle = state.puzzle;
     if (puzzle == null) return;
-    if (state.hintsRemaining <= 0) return;
 
     if (PathWordsRules.hasIncorrectStroke(state.placedPaths)) {
-      final remaining = await hintQuota.tryConsume(
-        GameIds.pathWords,
-        _runPlayId,
-      );
+      final spent = await _spendHint();
+      if (spent == null) return;
       emit(
         state.copyWith(
           placedPaths: PathWordsRules.withoutIncorrect(state.placedPaths),
-          hintsRemaining: remaining,
+          hintsUsed: spent.hintsUsed,
+          hintPenaltySeconds: state.hintPenaltySeconds + spent.penaltySeconds,
+          elapsedMs: _clock!.elapsedMs,
+          resumedAt: _clock!.resumedAt,
           hintFlashCell: null,
           ruleTip: null,
           usedHintsThisRun: true,
@@ -529,7 +646,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       );
       await analytics.logHintUsed(
         gameId: GameIds.pathWords,
-        hintsRemaining: remaining,
+        hintsUsed: spent.hintsUsed,
+        penaltySeconds: spent.penaltySeconds,
       );
       await _persistDraft();
       return;
@@ -545,10 +663,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       return;
     }
 
-    final remaining = await hintQuota.tryConsume(GameIds.pathWords, _runPlayId);
+    final spent = await _spendHint();
+    if (spent == null) return;
     emit(
       state.copyWith(
-        hintsRemaining: remaining,
+        hintsUsed: spent.hintsUsed,
+        hintPenaltySeconds: state.hintPenaltySeconds + spent.penaltySeconds,
+        elapsedMs: _clock!.elapsedMs,
+        resumedAt: _clock!.resumedAt,
         hintFlashCell: path.last,
         hintRevealLength: path.length,
         usedHintsThisRun: true,
@@ -556,9 +678,25 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     );
     await analytics.logHintUsed(
       gameId: GameIds.pathWords,
-      hintsRemaining: remaining,
+      hintsUsed: spent.hintsUsed,
+      penaltySeconds: spent.penaltySeconds,
     );
     await _persistDraft();
+  }
+
+  /// Spends a hint and adds its time to the run clock. Null when the run
+  /// finished meanwhile: its time is already posted, so nothing is charged.
+  Future<SpentHint?> _spendHint() async {
+    final spent = await spendHint(
+      quota: hintQuota,
+      mode: mode,
+      gameId: GameIds.pathWords,
+      playId: _runPlayId,
+    );
+    if (state.finished) return null;
+    _clock = (_clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs))
+        .addPenalty(Duration(seconds: spent.penaltySeconds));
+    return spent;
   }
 
   /// Clears the board but not the run: the clock, the hints spent and the
@@ -577,7 +715,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         activePath: const [],
         placedPaths: const [],
         completedTargetIds: const {},
-        hintsRemaining: hintQuota.remaining(GameIds.pathWords, _runPlayId),
+        bonusWords: const [],
         hintRevealLength: 0,
         hintFlashCell: null,
         errorMessage: null,
@@ -623,8 +761,11 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     final now = _now();
     final playId = _playId;
     // A run left open over midnight finishes for its own day; one older than
-    // that gives way to today's puzzle.
-    if (playId != null && !canFinishRun(playId, now, playPeriod)) {
+    // that gives way to today's puzzle. Archive and practice runs have no
+    // day to leave behind.
+    if (mode.isDaily &&
+        playId != null &&
+        !canFinishRun(playId, now, playPeriod)) {
       await inProgressRuns.clear(gameId: GameIds.pathWords, playId: playId);
       add(PathWordsEvent.started(date: now));
       return;
@@ -643,6 +784,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         state.status == PathWordsStatus.navigating) {
       return;
     }
+    if (!mode.isDaily) return _finishOffDaily(emit);
     final now = _now();
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
     final elapsed = clock.displayedSeconds(at: now);
@@ -681,6 +823,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       timeSeconds: elapsed,
       usedHints: state.usedHintsThisRun,
       hadMistakes: false,
+      // Kept with the clear meta; they don't change the time or the flags.
+      bonusWords: state.bonusWords.isEmpty ? null : state.bonusWords,
     );
 
     final streak = await recordDailyClear(
@@ -688,6 +832,14 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       dateId: dateId,
     );
 
+    final puzzle = state.puzzle;
+    final proof = puzzle == null
+        ? null
+        : PathWordsLeaderboardProof.fromRun(
+            puzzle: puzzle,
+            completedTargetIds: state.completedTargetIds,
+            placedPaths: state.placedPaths,
+          );
     try {
       await submitLeaderboardTime(
         gameId: GameIds.pathWords,
@@ -699,6 +851,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         dayId: leaderboardDayId(state.day),
         // Lets a successful submit mark this clear as posted for the sync.
         playId: playId,
+        proof: proof,
       );
     } catch (_) {
       // Best-effort remote sync; local score already saved.
@@ -709,6 +862,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       points: points,
       timeSeconds: elapsed,
       streak: streak.current,
+      dayId: _runPlayId,
+      usedHints: state.usedHintsThisRun,
     );
 
     if (emit.isDone) return;
@@ -730,9 +885,263 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           gameId: GameIds.pathWords,
           usedHints: state.usedHintsThisRun,
           hadMistakes: false,
+          hintPenaltySeconds: state.hintPenaltySeconds,
+          day: state.day,
+          leaderboardProof: proof,
+          pathWords: _clearSummary(),
         ),
       ),
     );
+  }
+
+  Future<void> _onNewBoard(
+    PathWordsNewBoard event,
+    Emitter<PathWordsState> emit,
+  ) async {
+    if (!mode.isPractice) return;
+    if (state.status == PathWordsStatus.celebrating ||
+        state.status == PathWordsStatus.submitting ||
+        state.status == PathWordsStatus.navigating) {
+      return;
+    }
+    await _startOffDaily(emit, freshPractice: true);
+  }
+
+  /// Starts (or resumes) an archive or practice run. It never reads the
+  /// daily lock or today's draft: the run has its own id ([PlayMode.runId]).
+  Future<void> _startOffDaily(
+    Emitter<PathWordsState> emit, {
+    bool freshPractice = false,
+  }) async {
+    final runId = mode.runId(dailyPlayId: '');
+    _playId = runId;
+    _clock = null;
+    final today = _now();
+    final day = mode.day ?? DateTime(today.year, today.month, today.day);
+    emit(
+      state.copyWith(
+        status: PathWordsStatus.loading,
+        day: day,
+        puzzle: null,
+        activePath: const [],
+        placedPaths: const [],
+        completedTargetIds: const {},
+        bonusWords: const [],
+        hintsUsed: hintQuota.usedFor(GameIds.pathWords, runId),
+        hintPenaltySeconds: 0,
+        hintRevealLength: 0,
+        usedHintsThisRun: false,
+        elapsedMs: 0,
+        resumedAt: null,
+        hintFlashCell: null,
+        errorMessage: null,
+        ruleTip: null,
+        finished: false,
+        points: null,
+        timeSeconds: null,
+        improved: null,
+        resultsExtra: null,
+      ),
+    );
+
+    try {
+      if (freshPractice) {
+        await inProgressRuns.clear(gameId: GameIds.pathWords, playId: runId);
+        if (emit.isDone) return;
+      }
+      var draft = freshPractice
+          ? null
+          : await inProgressRuns.load(gameId: GameIds.pathWords, playId: runId);
+      if (emit.isDone) return;
+
+      final PathWordsPuzzle puzzle;
+      if (mode.isArchive) {
+        // Past days are always live and read by id, like the dailies.
+        puzzle = await generateDailyPathWords(
+          day: day,
+          period: PlayPeriod.daily,
+        );
+      } else {
+        final saved = draft?.board['seed'];
+        final seed = saved is num ? saved.toInt() : _newPracticeSeed();
+        _practiceSeed = seed;
+        final words =
+            await (practiceWords?.call() ??
+                wordList?.loadPracticeWords() ??
+                Future<List<String>>.error(StateError('No practice words')));
+        puzzle = practicePuzzle(seed, words);
+      }
+      if (emit.isDone) return;
+
+      if (draft != null && !draft.isForBoard(puzzle.fingerprint)) {
+        await inProgressRuns.clear(gameId: GameIds.pathWords, playId: runId);
+        if (emit.isDone) return;
+        draft = null;
+      }
+      if (draft == null && mode.isArchive) {
+        // A fresh archive run starts with no hints spent.
+        await modeRecords!.clearHints(GameIds.pathWords, runId);
+        if (emit.isDone) return;
+      }
+
+      unawaited(_loadBonusWordList());
+      final now = _now();
+      final restored = draft == null ? null : _restoreFromDraft(draft);
+      final hintsUsed = hintQuota.usedFor(GameIds.pathWords, runId);
+      final clock = draft == null
+          ? HintPenalty.startClock(at: now, mode: mode, hintsUsed: hintsUsed)
+          : PlayRunClock.restore(elapsedMs: draft.elapsedMs).resume(at: now);
+      _clock = clock;
+      emit(
+        state.copyWith(
+          status: PathWordsStatus.ready,
+          puzzle: puzzle,
+          elapsedMs: clock.elapsedMs,
+          resumedAt: now,
+          hintsUsed: hintsUsed,
+          hintPenaltySeconds:
+              draft?.hintPenaltySeconds ??
+              HintPenalty.chargedSeconds(mode, hintsUsed: hintsUsed),
+          hintRevealLength: restored?.hintRevealLength ?? 0,
+          usedHintsThisRun: draft?.usedHintsThisRun ?? false,
+          activePath: restored?.activePath ?? const [],
+          placedPaths: restored?.placedPaths ?? const [],
+          completedTargetIds: restored?.completedTargetIds ?? const {},
+          bonusWords: restored?.bonusWords ?? const [],
+        ),
+      );
+      // Keep the practice seed, so leaving and coming back finds this board.
+      if (draft == null && mode.isPractice) await _persistDraft();
+      await analytics.logGameStarted(
+        gameId: GameIds.pathWords,
+        dayId: runId,
+        resumed: draft != null,
+      );
+    } catch (_) {
+      if (emit.isDone) return;
+      emit(
+        state.copyWith(
+          status: PathWordsStatus.failed,
+          errorMessage: AppStrings.pathWordsFailed,
+        ),
+      );
+    }
+  }
+
+  /// Finishes an archive or practice run: a local best, no score, streak,
+  /// leaderboard or daily best.
+  Future<void> _finishOffDaily(Emitter<PathWordsState> emit) async {
+    final now = _now();
+    final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
+    final elapsed = clock.displayedSeconds(at: now);
+    _clock = clock.pause(at: now);
+    final points = PathWordsScoring.pointsForElapsed(elapsed);
+    final runId = mode.runId(dailyPlayId: '');
+
+    emit(
+      state.copyWith(
+        finished: true,
+        status: PathWordsStatus.celebrating,
+        points: points,
+        timeSeconds: elapsed,
+        elapsedMs: _clock!.elapsedMs,
+        resumedAt: null,
+        hintFlashCell: null,
+      ),
+    );
+
+    await inProgressRuns.clear(gameId: GameIds.pathWords, playId: runId);
+    await _wait(celebrationDuration);
+    if (emit.isDone) return;
+    emit(state.copyWith(status: PathWordsStatus.submitting));
+
+    final records = modeRecords!;
+    final best = await records.recordTime(
+      mode.recordKey(GameIds.pathWords),
+      elapsed,
+    );
+    if (mode.isArchive) await records.clearHints(GameIds.pathWords, runId);
+
+    await analytics.logGameCompleted(
+      gameId: GameIds.pathWords,
+      points: points,
+      timeSeconds: elapsed,
+      dayId: runId,
+      usedHints: state.usedHintsThisRun,
+    );
+    if (emit.isDone) return;
+
+    emit(
+      state.copyWith(
+        improved: best.improved,
+        status: PathWordsStatus.navigating,
+        resultsExtra: ResultsArgs(
+          title: AppStrings.pathWordsClearedTitle,
+          subtitle: '',
+          timeSeconds: elapsed,
+          improved: best.improved,
+          points: points,
+          gameId: GameIds.pathWords,
+          usedHints: state.usedHintsThisRun,
+          hadMistakes: false,
+          hintPenaltySeconds: state.hintPenaltySeconds,
+          day: mode.day,
+          pathWords: _clearSummary(),
+          local: LocalResultInfo(
+            kind: mode.isArchive
+                ? LocalResultKind.archive
+                : LocalResultKind.practice,
+            label: mode.isArchive
+                ? AppStrings.archiveRunLabel(mode.day!)
+                : AppStrings.practiceRunLabel,
+            bestSeconds: best.best,
+            againLocation: mode.isPractice
+                ? PlayMode.practice.location('/path-words')
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  PathWordsClearSummary? _clearSummary() {
+    final puzzle = state.puzzle;
+    if (puzzle == null) return null;
+    return PathWordsClearSummary(
+      theme: puzzle.theme,
+      words: [
+        for (final target in PathWordsRules.orderedTargets(puzzle)) target.word,
+      ],
+      definitions: puzzle.definitions,
+      bonusWords: state.bonusWords,
+    );
+  }
+
+  Future<void> _loadBonusWordList() async {
+    final source = wordList;
+    if (source == null || _bonusWordList != null) return;
+    try {
+      _bonusWordList = await source.loadBonusWords();
+    } catch (_) {
+      // No bonus words this run; strokes behave as before.
+    }
+  }
+
+  /// The word [cells] spell, when it is a real word of 4–8 letters that
+  /// isn't a target and wasn't found as a bonus already; null otherwise.
+  String? _bonusWordFor(PathWordsPuzzle puzzle, List<Cell> cells) {
+    final list = _bonusWordList;
+    if (list == null) return null;
+    if (cells.length < _bonusMinLength || cells.length > _bonusMaxLength) {
+      return null;
+    }
+    final spelled = PathWordsRules.spell(puzzle, cells).toLowerCase();
+    if (!list.contains(spelled)) return null;
+    if (state.bonusWords.contains(spelled)) return null;
+    if (puzzle.targets.any((t) => t.word.toLowerCase() == spelled)) {
+      return null;
+    }
+    return spelled;
   }
 
   Future<void> _persistDraft() async {
@@ -752,6 +1161,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         playId: playId,
         elapsedMs: elapsedMs,
         usedHintsThisRun: state.usedHintsThisRun,
+        hintPenaltySeconds: state.hintPenaltySeconds,
+        boardFingerprint: state.puzzle?.fingerprint,
         board: {
           'activePath': [for (final cell in state.activePath) cell.toList()],
           'placedPaths': [
@@ -764,6 +1175,8 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           ],
           'completedTargetIds': state.completedTargetIds.toList(),
           'hintRevealLength': state.hintRevealLength,
+          if (state.bonusWords.isNotEmpty) 'bonusWords': state.bonusWords,
+          if (mode.isPractice && _practiceSeed != null) 'seed': _practiceSeed,
         },
       ),
     );
@@ -774,6 +1187,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     List<PathWordsStroke> placedPaths,
     Set<String> completedTargetIds,
     int hintRevealLength,
+    List<String> bonusWords,
   })
   _restoreFromDraft(InProgressRun draft) {
     final board = draft.board;
@@ -803,11 +1217,18 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           if (id is String) id,
     };
     final hintRevealLength = (board['hintRevealLength'] as num?)?.toInt() ?? 0;
+    final bonusRaw = board['bonusWords'];
+    final bonusWords = <String>[
+      if (bonusRaw is List)
+        for (final word in bonusRaw)
+          if (word is String) word,
+    ];
     return (
       activePath: activePath,
       placedPaths: placedPaths,
       completedTargetIds: completedTargetIds,
       hintRevealLength: hintRevealLength,
+      bonusWords: bonusWords,
     );
   }
 }

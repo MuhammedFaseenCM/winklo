@@ -15,16 +15,16 @@ class SubmitIssueReport {
     final trimmedTitle = title.trim();
     final trimmedDescription = description.trim();
     if (trimmedTitle.isEmpty) {
-      throw const Failure(AppStrings.profileReportTitleEmpty);
+      throw Failure(AppStrings.profileReportTitleEmpty);
     }
     if (trimmedTitle.length > 80) {
-      throw const Failure(AppStrings.profileReportTitleTooLong);
+      throw Failure(AppStrings.profileReportTitleTooLong);
     }
     if (trimmedDescription.isEmpty) {
-      throw const Failure(AppStrings.profileReportDescriptionEmpty);
+      throw Failure(AppStrings.profileReportDescriptionEmpty);
     }
     if (trimmedDescription.length > 2000) {
-      throw const Failure(AppStrings.profileReportDescriptionTooLong);
+      throw Failure(AppStrings.profileReportDescriptionTooLong);
     }
     return _repo.submit(
       title: trimmedTitle,

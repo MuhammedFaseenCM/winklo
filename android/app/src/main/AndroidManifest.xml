@@ -36,6 +36,22 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- App Links: brain-zip-app.web.app/zip etc. (Firebase Hosting).
+                 Verified via /.well-known/assetlinks.json on that host. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="true" />
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="brain-zip-app.web.app"/>
+                <data android:path="/zip"/>
+                <data android:path="/path-words"/>
+                <data android:path="/sudoku"/>
+                <data android:path="/leaderboard"/>
+                <data android:pathPrefix="/join/"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
@@ -53,11 +69,34 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_accent" />
-        <!-- Route background FCM notifications to the high-importance channel
+        <!-- Route background FCM notifications to the announcements channel
              created by FirebaseNotificationClient (heads-up / peek). -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="winklo_high_importance" />
+            android:value="winklo_announcements" />
+        <!-- Home-screen widget (today's games and streaks). -->
+        <receiver
+            android:name=".WinkloWidgetProvider"
+            android:exported="false"
+            android:label="@string/winklo_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/winklo_widget_info" />
+        </receiver>
+        <!-- Delivers the widget's midnight redraws (HomeWidget.scheduleWidgetUpdates)
+             and re-arms them after a reboot or an app update. -->
+        <receiver
+            android:name="es.antonborri.home_widget.HomeWidgetScheduledUpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

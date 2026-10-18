@@ -21,6 +21,49 @@ void main() {
     expect(find.text(AppStrings.updateNow), findsOneWidget);
   });
 
+  testWidgets('soft banner has a close button only when it can snooze', (
+    tester,
+  ) async {
+    var snoozed = 0;
+    Widget banner({VoidCallback? onSnooze}) => MaterialApp(
+      home: Scaffold(
+        body: HomeUpdateBanner(
+          currentLabel: '',
+          requiredLabel: '',
+          onUpdate: () {},
+          onSnooze: onSnooze,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(banner());
+    expect(find.byTooltip(AppStrings.updateSnooze), findsNothing);
+
+    await tester.pumpWidget(banner(onSnooze: () => snoozed++));
+    await tester.tap(find.byTooltip(AppStrings.updateSnooze));
+    expect(snoozed, 1);
+  });
+
+  testWidgets('soft banner button can be relabelled and disabled', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: HomeUpdateBanner(
+            currentLabel: '',
+            requiredLabel: '',
+            onUpdate: null,
+            updateLabel: AppStrings.updateDownloading,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text(AppStrings.updateDownloading), findsOneWidget);
+    expect(find.text(AppStrings.updateNow), findsNothing);
+  });
+
   testWidgets('force overlay blocks underlying button', (tester) async {
     var tapped = false;
     await tester.pumpWidget(

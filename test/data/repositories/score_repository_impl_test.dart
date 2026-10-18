@@ -127,6 +127,26 @@ void main() {
       expect(repo.getClearMeta('zip_x'), isNull);
     });
 
+    test('submitScore stores the bonus words with the flags', () async {
+      final (repo, _) = await build();
+      await repo.submitScore(
+        modeKey: 'path_words_20261017',
+        points: 900,
+        timeSeconds: 40,
+        usedHints: false,
+        hadMistakes: false,
+        bonusWords: const ['stare', 'tears'],
+      );
+      expect(
+        repo.getClearMeta('path_words_20261017'),
+        const ClearMeta(
+          usedHints: false,
+          hadMistakes: false,
+          bonusWords: ['stare', 'tears'],
+        ),
+      );
+    });
+
     test('submitScore ignores partial flags', () async {
       final (repo, _) = await build();
       await repo.submitScore(
@@ -449,6 +469,53 @@ void main() {
         timeSeconds: 80,
       );
       expect(repo.getBestDailyTimeSeconds('sudoku'), 80);
+    });
+  });
+
+  group('dailyPlayIds', () {
+    test('returns the game\'s daily play ids, sorted', () async {
+      final (repo, _) = await build({
+        'best_time_zip_daily_20261003': 70,
+        'best_time_zip_daily_20261001': 95,
+        'best_time_zip_daily_202610021530': 40, // debug minute period
+        'best_time_path_words_20261002': 12,
+        'best_time_sudoku_20261001': 80,
+      });
+      expect(repo.dailyPlayIds('zip'), [
+        '20261001',
+        '202610021530',
+        '20261003',
+      ]);
+      expect(repo.dailyPlayIds('path_words'), ['20261002']);
+      expect(repo.dailyPlayIds('sudoku'), ['20261001']);
+    });
+
+    test('ignores archive, practice and other prefixes', () async {
+      final (repo, _) = await build({
+        'best_time_zip_daily_20261001': 95,
+        'best_time_zip_archive_20261002': 61,
+        'best_time_zip_practice': 30,
+        'best_time_zip_level_1': 5,
+        'best_time_path_words_archive_20261002': 12,
+        'best_time_path_words_practice': 12,
+        'best_time_sudoku_archive_20261003': 80,
+        'best_pts_sudoku_20261004': 900, // points only: not a clear
+        'clear_meta_sudoku_20261005': '{}',
+      });
+      expect(repo.dailyPlayIds('zip'), ['20261001']);
+      expect(repo.dailyPlayIds('path_words'), isEmpty);
+      expect(repo.dailyPlayIds('sudoku'), isEmpty);
+    });
+
+    test('ignores malformed play ids', () async {
+      final (repo, _) = await build({
+        'best_time_zip_daily_2026100': 95,
+        'best_time_zip_daily_20261001x': 95,
+        'best_time_zip_daily_': 95,
+        'best_time_sudoku_2026-10-01': 80,
+      });
+      expect(repo.dailyPlayIds('zip'), isEmpty);
+      expect(repo.dailyPlayIds('sudoku'), isEmpty);
     });
   });
 }

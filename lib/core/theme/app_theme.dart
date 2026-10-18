@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../strings/app_strings.dart';
+
 /// Dark Ink & Ember — canvas matches app icon ink; ember path accent.
 abstract final class ZipColors {
   /// App canvas / scaffold (app icon background).
@@ -80,6 +82,49 @@ abstract final class ZipColors {
   static const glassBorder = Color(0x3394A3B8);
 }
 
+/// [spacing] for a Latin label, and none in Malayalam: tracking pulls
+/// Malayalam's conjuncts apart.
+double latinTracking(double spacing) =>
+    AppStrings.languageCode == 'ml' ? 0 : spacing;
+
+/// [style] with Noto Sans Malayalam after its own fallbacks: Lexend has no
+/// Malayalam. The font is bundled under `assets/google_fonts/`, so
+/// google_fonts loads it offline; it has Regular and Bold, Bold standing in
+/// from w600 up.
+TextStyle withMalayalamFallback(TextStyle style) {
+  final weight = style.fontWeight ?? FontWeight.w400;
+  final malayalam = GoogleFonts.notoSansMalayalam(
+    fontWeight: weight.value >= FontWeight.w600.value
+        ? FontWeight.w700
+        : FontWeight.w400,
+  ).fontFamily!;
+  return style.copyWith(
+    fontFamilyFallback: [...?style.fontFamilyFallback, malayalam],
+  );
+}
+
+TextTheme _withMalayalamFallbacks(TextTheme theme) {
+  TextStyle? f(TextStyle? style) =>
+      style == null ? null : withMalayalamFallback(style);
+  return TextTheme(
+    displayLarge: f(theme.displayLarge),
+    displayMedium: f(theme.displayMedium),
+    displaySmall: f(theme.displaySmall),
+    headlineLarge: f(theme.headlineLarge),
+    headlineMedium: f(theme.headlineMedium),
+    headlineSmall: f(theme.headlineSmall),
+    titleLarge: f(theme.titleLarge),
+    titleMedium: f(theme.titleMedium),
+    titleSmall: f(theme.titleSmall),
+    bodyLarge: f(theme.bodyLarge),
+    bodyMedium: f(theme.bodyMedium),
+    bodySmall: f(theme.bodySmall),
+    labelLarge: f(theme.labelLarge),
+    labelMedium: f(theme.labelMedium),
+    labelSmall: f(theme.labelSmall),
+  );
+}
+
 ThemeData buildAppTheme() {
   final base = ThemeData(
     useMaterial3: true,
@@ -110,24 +155,28 @@ ThemeData buildAppTheme() {
       error: Color(0xFFF87171),
       onError: ZipColors.ink,
     ),
-    textTheme: textTheme.copyWith(
-      displayLarge: textTheme.displayLarge?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -1.5,
-      ),
-      displaySmall: textTheme.displaySmall?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: -1,
-      ),
-      headlineMedium: textTheme.headlineMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.5,
-      ),
-      titleLarge: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-      titleMedium: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-      labelLarge: textTheme.labelLarge?.copyWith(
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.2,
+    textTheme: _withMalayalamFallbacks(
+      textTheme.copyWith(
+        displayLarge: textTheme.displayLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -1.5,
+        ),
+        displaySmall: textTheme.displaySmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -1,
+        ),
+        headlineMedium: textTheme.headlineMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+        ),
+        titleLarge: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        titleMedium: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        labelLarge: textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
       ),
     ),
     appBarTheme: AppBarTheme(
@@ -137,10 +186,12 @@ ThemeData buildAppTheme() {
       backgroundColor: Colors.transparent,
       foregroundColor: ZipColors.onInk,
       systemOverlayStyle: SystemUiOverlayStyle.light,
-      titleTextStyle: GoogleFonts.lexend(
-        fontWeight: FontWeight.w700,
-        fontSize: 18,
-        color: ZipColors.onInk,
+      titleTextStyle: withMalayalamFallback(
+        GoogleFonts.lexend(
+          fontWeight: FontWeight.w700,
+          fontSize: 18,
+          color: ZipColors.onInk,
+        ),
       ),
       iconTheme: const IconThemeData(color: ZipColors.onInk),
     ),
@@ -157,9 +208,8 @@ ThemeData buildAppTheme() {
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: GoogleFonts.lexend(
-          fontWeight: FontWeight.w700,
-          fontSize: 16,
+        textStyle: withMalayalamFallback(
+          GoogleFonts.lexend(fontWeight: FontWeight.w700, fontSize: 16),
         ),
       ),
     ),
@@ -169,16 +219,17 @@ ThemeData buildAppTheme() {
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         side: const BorderSide(color: ZipColors.outline, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: GoogleFonts.lexend(
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
+        textStyle: withMalayalamFallback(
+          GoogleFonts.lexend(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: ZipColors.inkSoft,
-        textStyle: GoogleFonts.lexend(fontWeight: FontWeight.w600),
+        textStyle: withMalayalamFallback(
+          GoogleFonts.lexend(fontWeight: FontWeight.w600),
+        ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -229,12 +280,14 @@ ThemeData buildAppTheme() {
         ),
         visualDensity: VisualDensity.compact,
         textStyle: WidgetStateProperty.resolveWith((states) {
-          return GoogleFonts.lexend(
-            fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w700
-                : FontWeight.w500,
-            fontSize: 13.5,
-            letterSpacing: 0.2,
+          return withMalayalamFallback(
+            GoogleFonts.lexend(
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+              fontSize: 13.5,
+              letterSpacing: 0.2,
+            ),
           );
         }),
       ),

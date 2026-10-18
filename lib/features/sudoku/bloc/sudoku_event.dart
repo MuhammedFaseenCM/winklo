@@ -16,4 +16,7 @@ sealed class SudokuEvent with _$SudokuEvent {
   const factory SudokuEvent.reset() = SudokuReset;
   const factory SudokuEvent.pauseRun() = SudokuPauseRun;
   const factory SudokuEvent.resumeRun() = SudokuResumeRun;
+
+  /// Practice only: drop the board on screen and start a fresh one.
+  const factory SudokuEvent.newBoard() = SudokuNewBoard;
 }

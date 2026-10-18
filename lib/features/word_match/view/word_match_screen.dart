@@ -1,18 +1,29 @@
+import 'dart:async';
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/haptics/haptics_service.dart';
+import '../../../core/sfx/sfx_id.dart';
+import '../../../core/sfx/sfx_service.dart';
+import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/bonus_game_chrome.dart';
+import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/word_match_deck.dart';
+import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/usecases/fetch_word_match_deck_by_id.dart';
-import '../../../domain/usecases/submit_score.dart';
 import '../bloc/word_match_play_bloc.dart';
 import '../bloc/word_match_play_event.dart';
 import '../bloc/word_match_play_state.dart';
 import '../game/word_match_game.dart';
 
+/// A Word Match round: drag each word onto its pair before the clock runs
+/// out. A bonus game: its best time stays on the device.
 class WordMatchScreen extends StatefulWidget {
   const WordMatchScreen({super.key, required this.deckId});
 
@@ -24,6 +35,8 @@ class WordMatchScreen extends StatefulWidget {
 
 class _WordMatchScreenState extends State<WordMatchScreen> {
   late final WordMatchPlayBloc _bloc;
+  late final SfxService? _sfx;
+  late final HapticsService? _haptics;
   WordMatchGame? _game;
 
   WordMatchDeck? _deck;
@@ -43,12 +56,22 @@ class _WordMatchScreenState extends State<WordMatchScreen> {
     _game = WordMatchGame(
       deck: deck,
       onWin: (points, elapsedSeconds) {
+        unawaited(_sfx?.play(SfxId.clear));
+        _haptics?.play(HapticKind.win);
         _bloc.add(
           WordMatchPlayEvent.won(
             points: points,
             elapsedSeconds: elapsedSeconds,
           ),
         );
+      },
+      onMatch: () {
+        unawaited(_sfx?.play(SfxId.success));
+        _haptics?.play(HapticKind.success);
+      },
+      onMiss: () {
+        unawaited(_sfx?.play(SfxId.reject));
+        _haptics?.play(HapticKind.light);
       },
       onProgress: (m, t) {
         if (!mounted) return;
@@ -65,11 +88,26 @@ class _WordMatchScreenState extends State<WordMatchScreen> {
   @override
   void initState() {
     super.initState();
+    _sfx = context.read<SfxService?>();
+    _haptics = context.read<HapticsService?>();
     _bloc = WordMatchPlayBloc(
       fetchDeckById: context.read<FetchWordMatchDeckById>(),
-      submitScore: context.read<SubmitScore>(),
+      records: context.read<PlayModeRecordRepository>(),
       analytics: context.read<AnalyticsRepository>(),
-    )..add(WordMatchPlayEvent.started(deckId: widget.deckId));
+    );
+    // The rules come first on a player's first round; the clock starts
+    // after they close.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await BonusHowToPlay.maybeShow(
+        context,
+        gameId: GameIds.wordMatch,
+        title: AppStrings.zipHowToPlayTitle,
+        body: AppStrings.wordMatchHowToBody,
+      );
+      if (!mounted || _bloc.isClosed) return;
+      _bloc.add(WordMatchPlayEvent.started(deckId: widget.deckId));
+    });
   }
 
   @override
@@ -104,148 +142,106 @@ class _WordMatchScreenState extends State<WordMatchScreen> {
         ],
         child: BlocBuilder<WordMatchPlayBloc, WordMatchPlayState>(
           builder: (context, state) {
-            if (state.status == WordMatchPlayStatus.initial ||
-                state.status == WordMatchPlayStatus.loading) {
-              return const Scaffold(
-                backgroundColor: ZipColors.ink,
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            if (state.status == WordMatchPlayStatus.failure || _game == null) {
-              return Scaffold(
-                backgroundColor: ZipColors.ink,
-                appBar: AppBar(
-                  title: const Text('Word Match'),
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  foregroundColor: ZipColors.onInk,
-                ),
-                body: Center(
-                  child: Text(
-                    state.error ?? 'Unable to load deck',
-                    style: const TextStyle(color: ZipColors.onInk),
-                  ),
-                ),
-              );
-            }
-
-            final remaining = state.remainingSeconds;
-            final deck = _deck!;
-
+            final playing =
+                state.status != WordMatchPlayStatus.initial &&
+                state.status != WordMatchPlayStatus.loading &&
+                state.status != WordMatchPlayStatus.failure &&
+                _game != null;
             return Scaffold(
-              backgroundColor: ZipColors.ink,
-              appBar: AppBar(
-                title: Text(
-                  deck.title,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                foregroundColor: ZipColors.onInk,
-                actions: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: remaining <= 10
-                              ? const Color(0x33EF4444)
-                              : const Color(0x14FFFFFF),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: remaining <= 10
-                                ? const Color(0x88EF4444)
-                                : const Color(0x1AFFFFFF),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.timer_outlined,
-                              size: 14,
-                              color: remaining <= 10
-                                  ? const Color(0xFFEF4444)
-                                  : ZipColors.ember,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${remaining}s',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: remaining <= 10
-                                    ? const Color(0xFFEF4444)
-                                    : ZipColors.onInk,
-                              ),
-                            ),
-                          ],
-                        ),
+              body: ZipAtmosphere(
+                child: SafeArea(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      BonusGameHeader(
+                        title: _deck?.title ?? AppStrings.wordMatch,
+                        gameId: GameIds.wordMatch,
+                        howToPlayBody: AppStrings.wordMatchHowToBody,
+                        secondsLeft: playing ? state.remainingSeconds : null,
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              body: Column(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0x14FFFFFF),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0x1AFFFFFF)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: ZipColors.ember.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: ZipColors.ember.withValues(alpha: 0.4),
+                      if (state.status == WordMatchPlayStatus.failure)
+                        Expanded(
+                          child: BonusGameMessage(
+                            message: state.error ?? AppStrings.bonusLoadFailed,
+                            onRetry: () => _bloc.add(
+                              WordMatchPlayEvent.started(deckId: widget.deckId),
                             ),
                           ),
-                          child: Text(
-                            '$_matched / $_total',
-                            style: const TextStyle(
-                              color: ZipColors.ember,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
+                        )
+                      else if (!playing)
                         const Expanded(
-                          child: Text(
-                            'Drag word to its matching pair',
-                            style: TextStyle(
-                              color: ZipColors.inkSoft,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 13,
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else ...[
+                        _ProgressBar(matched: _matched, total: _total),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: GameWidget(game: _game!),
                             ),
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                  Expanded(child: GameWidget(game: _game!)),
-                ],
+                ),
               ),
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _ProgressBar extends StatelessWidget {
+  const _ProgressBar({required this.matched, required this.total});
+
+  final int matched;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0x14FFFFFF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0x1AFFFFFF)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: ZipColors.ember.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: ZipColors.ember.withValues(alpha: 0.4)),
+            ),
+            child: Text(
+              '$matched / $total',
+              style: const TextStyle(
+                color: ZipColors.ember,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              AppStrings.wordMatchInstruction,
+              style: TextStyle(
+                color: ZipColors.inkSoft,
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

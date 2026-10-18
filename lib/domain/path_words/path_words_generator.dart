@@ -66,6 +66,252 @@ abstract final class PathWordsGenerator {
     throw StateError('PathWordsGenerator failed for $dateId');
   }
 
+  /// Size of a practice board, as the cron's hard dailies.
+  static const practiceSize = 6;
+
+  /// Word lengths of a practice board, as the hard dailies.
+  static const practiceWordLengths = (min: 5, max: 6);
+
+  /// An endless practice board in the style of the hard dailies (a port of
+  /// winklo-admin `path_words_hard_board.ts`): one path through all 36 cells,
+  /// cut into 5–6 letter [words] with 3–6 lone blanks between them. Every
+  /// letter belongs to a word, every word turns, touches at least two other
+  /// words and can be traced only one way. The same [seed] and [words] give
+  /// the same board. Throws [StateError] when [words] can't fill a board.
+  static PathWordsPuzzle practice({
+    required int seed,
+    required List<String> words,
+    DateTime? day,
+    int attempts = 80,
+  }) {
+    final rng = Random(seed);
+    const size = practiceSize;
+    final band = practiceWordLengths;
+    final pool = <int, List<String>>{};
+    for (final raw in words) {
+      final word = raw.trim().toLowerCase();
+      if (!RegExp(r'^[a-z]+$').hasMatch(word)) continue;
+      if (word.length < band.min || word.length > band.max) continue;
+      // A palindrome traces both ways, so it never has one route.
+      if (word == word.split('').reversed.join()) continue;
+      final list = pool[word.length] ??= <String>[];
+      if (!list.contains(word)) list.add(word);
+    }
+    for (final list in pool.values) {
+      list.sort();
+    }
+
+    const cells = size * size;
+    final blankCounts = [
+      for (var b = (cells * 0.08).round(); b <= (cells * 0.17).round(); b++)
+        if (_canSplit(cells - b, band.min, band.max)) b,
+    ];
+
+    for (var attempt = 0; attempt < attempts; attempt++) {
+      final path = _randomHamiltonianPath(size, rng);
+      final blanks = blankCounts[rng.nextInt(blankCounts.length)];
+      final lengths = _splitLengths(cells - blanks, band.min, band.max, rng);
+      if (blanks > lengths.length + 1) continue;
+
+      // Blanks go in distinct gaps between words along the path (or at its
+      // ends), so no two are neighbors on it.
+      final gaps = List<int>.generate(lengths.length + 1, (i) => i)
+        ..shuffle(rng);
+      final blankGaps = gaps.take(blanks).toSet();
+      final segments = <List<Cell>>[];
+      var at = 0;
+      for (var i = 0; i < lengths.length; i++) {
+        if (blankGaps.contains(i)) at++;
+        var segment = path.sublist(at, at + lengths[i]);
+        if (rng.nextBool()) segment = segment.reversed.toList();
+        segments.add(segment);
+        at += lengths[i];
+      }
+      if (segments.any((s) => _turnCount(s) < _practiceMinTurns(s.length))) {
+        continue;
+      }
+
+      for (var pick = 0; pick < 6; pick++) {
+        final chosen = _pickPracticeWords(lengths, pool, rng);
+        if (chosen == null) break;
+        final letters = List<String>.filled(cells, '');
+        final targets = <PathWordsTarget>[];
+        for (var i = 0; i < segments.length; i++) {
+          final segment = segments[i];
+          for (var s = 0; s < segment.length; s++) {
+            final cell = segment[s];
+            letters[cell.row * size + cell.col] = chosen[i][s];
+          }
+          targets.add(
+            PathWordsTarget(
+              id: 't${i + 1}',
+              word: chosen[i],
+              start: segment.first,
+              path: segment,
+              colorIndex: i,
+            ),
+          );
+        }
+        final puzzle = PathWordsPuzzle(
+          id: 'practice_$seed',
+          day: day ?? DateTime(2026),
+          size: size,
+          letters: letters,
+          targets: targets,
+        );
+        if (practiceBoardIssues(puzzle).isEmpty) return puzzle;
+      }
+    }
+    throw StateError('PathWordsGenerator could not build practice $seed');
+  }
+
+  /// Why [puzzle] falls short of a hard board; empty when it doesn't.
+  static List<String> practiceBoardIssues(PathWordsPuzzle puzzle) {
+    final size = puzzle.size;
+    final issues = <String>[];
+    final owner = <Cell, int>{};
+    for (var i = 0; i < puzzle.targets.length; i++) {
+      for (final cell in puzzle.targets[i].path) {
+        owner[cell] = i;
+      }
+    }
+    final blanks = <Cell>[
+      for (var r = 0; r < size; r++)
+        for (var c = 0; c < size; c++)
+          if (!puzzle.hasLetter(Cell(r, c))) Cell(r, c),
+    ];
+    if (blanks.isEmpty) issues.add('no blank cells');
+    final blankSet = blanks.toSet();
+    if (blanks.any((b) => _neighbors(b, size).any(blankSet.contains))) {
+      issues.add('blank cells touch');
+    }
+    for (var i = 0; i < puzzle.targets.length; i++) {
+      final target = puzzle.targets[i];
+      if (_turnCount(target.path) < _practiceMinTurns(target.word.length)) {
+        issues.add('"${target.word}" is too straight');
+      }
+      final touched = <int>{
+        for (final cell in target.path)
+          for (final n in _neighbors(cell, size))
+            if (owner[n] != null && owner[n] != i) owner[n]!,
+      };
+      if (touched.length < min(2, puzzle.targets.length - 1)) {
+        issues.add('"${target.word}" touches too few words');
+      }
+      if (routeCount(puzzle, target.word) != 1) {
+        issues.add('"${target.word}" has more than one route');
+      }
+    }
+    return issues;
+  }
+
+  /// How many routes over distinct, orthogonally adjacent cells spell
+  /// [word] on [puzzle], counting up to [limit].
+  static int routeCount(PathWordsPuzzle puzzle, String word, {int limit = 2}) {
+    final size = puzzle.size;
+    var count = 0;
+    final visited = <Cell>{};
+    void visit(Cell cell, int k) {
+      if (count >= limit || visited.contains(cell)) return;
+      if (puzzle.letterAt(cell) != word[k]) return;
+      if (k == word.length - 1) {
+        count++;
+        return;
+      }
+      visited.add(cell);
+      for (final next in _neighbors(cell, size)) {
+        visit(next, k + 1);
+      }
+      visited.remove(cell);
+    }
+
+    for (var r = 0; r < size && count < limit; r++) {
+      for (var c = 0; c < size && count < limit; c++) {
+        visit(Cell(r, c), 0);
+      }
+    }
+    return count;
+  }
+
+  static int _practiceMinTurns(int length) {
+    if (length >= 6) return 2;
+    if (length >= 4) return 1;
+    return 0;
+  }
+
+  /// A path through every cell, by "backbite" moves from a serpentine.
+  static List<Cell> _randomHamiltonianPath(int size, Random rng) {
+    final path = <Cell>[
+      for (var r = 0; r < size; r++)
+        for (var k = 0; k < size; k++) Cell(r, r.isEven ? k : size - 1 - k),
+    ];
+    final steps = 30 * size * size;
+    for (var s = 0; s < steps; s++) {
+      if (rng.nextBool()) {
+        final reversed = path.reversed.toList();
+        path
+          ..clear()
+          ..addAll(reversed);
+      }
+      final last = path.length - 1;
+      final options = _neighbors(path[last], size);
+      final pick = options[rng.nextInt(options.length)];
+      final j = path.indexOf(pick);
+      if (j == last - 1) continue;
+      final tail = path.sublist(j + 1).reversed.toList();
+      path.replaceRange(j + 1, path.length, tail);
+    }
+    return path;
+  }
+
+  static bool _canSplit(int total, int minLen, int maxLen) {
+    if (total == 0) return true;
+    for (var k = 1; k * minLen <= total; k++) {
+      if (total <= k * maxLen) return true;
+    }
+    return false;
+  }
+
+  static List<int> _splitLengths(
+    int total,
+    int minLen,
+    int maxLen,
+    Random rng,
+  ) {
+    final out = <int>[];
+    var left = total;
+    while (left > 0) {
+      final options = [
+        for (var len = minLen; len <= maxLen; len++)
+          if (len <= left && _canSplit(left - len, minLen, maxLen)) len,
+      ];
+      final len = options[rng.nextInt(options.length)];
+      out.add(len);
+      left -= len;
+    }
+    return out;
+  }
+
+  static List<String>? _pickPracticeWords(
+    List<int> lengths,
+    Map<int, List<String>> pool,
+    Random rng,
+  ) {
+    final used = <String>{};
+    final chosen = <String>[];
+    for (final len in lengths) {
+      final options = [
+        for (final w in pool[len] ?? const <String>[])
+          if (!used.contains(w)) w,
+      ];
+      if (options.isEmpty) return null;
+      final word = options[rng.nextInt(options.length)];
+      used.add(word);
+      chosen.add(word);
+    }
+    return chosen;
+  }
+
   static PathWordsPuzzle? _tryPack({
     required Random rng,
     required DateTime day,

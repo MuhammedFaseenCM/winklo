@@ -24,7 +24,6 @@ void main() {
     final game = gameWith();
 
     expect(game.hint(), isTrue);
-    expect(game.hintsRemaining, 3);
     expect(game.hintedCells, const [Cell(0, 1)]);
   });
 
@@ -69,14 +68,16 @@ void main() {
     game.clearPath();
 
     expect(game.hintedCells, isEmpty);
-    expect(game.hintsRemaining, 3);
   });
 
-  test('clearPath does not restore hintsRemaining', () {
+  test('hints keep coming until the path is fully shown', () {
     final game = gameWith();
-    game.hintsRemaining = 1;
-    game.clearPath();
-    expect(game.hintsRemaining, 1);
+    // The game has no count of its own; the bloc charges each hint.
+    expect(game.hint(), isTrue);
+    expect(game.hint(), isTrue);
+    expect(game.hint(), isTrue);
+    expect(game.hintedCells, const [Cell(0, 1), Cell(1, 1), Cell(1, 0)]);
+    expect(game.canHint, isFalse);
   });
 
   test('hint after drawing past the spent window shows the next cell', () {
@@ -117,13 +118,11 @@ void main() {
 
     expect(game.canHint, isFalse);
     expect(game.hint(), isFalse);
-    expect(game.hintsRemaining, 3);
   });
 
   test('hint does nothing in review', () {
     final game = gameWith(readOnly: true);
 
     expect(game.hint(), isFalse);
-    expect(game.hintsRemaining, 3);
   });
 }

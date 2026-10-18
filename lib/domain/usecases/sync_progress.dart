@@ -4,8 +4,10 @@ import '../entities/client_error_report.dart';
 import '../entities/clear_meta.dart';
 import '../entities/game_day_record.dart';
 import '../entities/game_streak.dart';
+import '../entities/leaderboard_proof.dart';
 import '../failures.dart';
 import '../game_ids.dart';
+import '../logic/local_game_day.dart';
 import '../logic/progress_merge.dart';
 import '../repositories/auth_repository.dart';
 import '../repositories/hint_quota_repository.dart';
@@ -16,6 +18,7 @@ import '../repositories/score_repository.dart';
 import '../repositories/streak_repository.dart';
 import '../streak_calculator.dart';
 import 'report_client_error.dart';
+import 'upload_progress_history.dart';
 
 /// Outcome of one [SyncProgress] run.
 class SyncProgressResult {
@@ -48,7 +51,8 @@ class SyncProgressResult {
 ///
 /// Per run: ownership (claim / stash + purge on account switch) -> the
 /// current period's days -> streaks -> the previous period's days (pull +
-/// merge, restore local, push) -> leaderboard for each cleared day. Restores
+/// merge, restore local, push) -> leaderboard for each cleared day -> on a
+/// full run, the one-time history upload (`UploadProgressHistory`). Restores
 /// come first so the sign-in gate (`ensureSignedInForPlay`) sees today's
 /// locks as early as possible. Every item is best-effort; "last pushed"
 /// markers are written only after the remote write succeeded, so failures
@@ -69,6 +73,7 @@ class SyncProgress {
     required this._leaderboard,
     required this._playPeriod,
     this._reportClientError,
+    this._uploadHistory,
     bool Function()? isRemoteAvailable,
     DateTime Function()? now,
     this.leaderboardTimeout = const Duration(seconds: 20),
@@ -90,6 +95,10 @@ class SyncProgress {
   final LeaderboardRepository _leaderboard;
   final Duration _playPeriod;
   final ReportClientError? _reportClientError;
+
+  /// Uploads this device's older daily clears once per account, at the end
+  /// of a full (pull) run.
+  final UploadProgressHistory? _uploadHistory;
 
   /// Domain cannot see Firebase; DI passes e.g. `() => FirebaseBootstrap.isReady`.
   final bool Function() _isRemoteAvailable;
@@ -237,12 +246,26 @@ class _Run {
       for (final playId in playIds) {
         if (playId != current) await syncDays(playId);
       }
+      // The upload writes the same `game_days` docs: it waits for a run whose
+      // pull and day sync went through. Leaderboard backfills don't hold it.
+      final syncFailures = _failures;
       for (final gameId in SyncProgress.gameIds) {
         for (final playId in playIds) {
           final day = days['${gameId}_$playId'];
           if (day == null || _leaderboardStalled) continue;
           await _attempt(() => _syncLeaderboard(day));
         }
+      }
+      // Skipped after a failure above (likely offline): it retries on the
+      // next full sync instead of holding this one.
+      final upload = _s._uploadHistory;
+      if (_pull && upload != null && syncFailures == 0) {
+        await _attempt(() async {
+          await upload(
+            _uid,
+            isCancelled: () => _s._auth.currentUser?.uid != _uid,
+          );
+        });
       }
     }
 
@@ -293,7 +316,7 @@ class _Run {
     final owner = _s._local.ownerUid;
     if (owner == _uid) return;
     if (owner != null) {
-      if (await _hasUnpushedProgress()) {
+      if (await _hasUnpushedProgress() || _hasUnuploadedHistory(owner)) {
         await _s._local.stashUserProgress(owner);
       }
       await _s._local.purgeUserProgress();
@@ -304,6 +327,19 @@ class _Run {
     if (owner != null && await _s._local.restoreStashedProgress(_uid)) {
       _localChanged = true;
     }
+  }
+
+  /// Whether [owner] has daily clears on this device that the one-time
+  /// history upload hasn't sent yet (older than the sync window, so
+  /// [_hasUnpushedProgress] doesn't see them).
+  bool _hasUnuploadedHistory(String owner) {
+    if (_s._uploadHistory == null || _s._local.isHistoryUploaded(owner)) {
+      return false;
+    }
+    return readLocalDailyHistory(
+      scores: _s._scores,
+      hintQuota: _s._hintQuota,
+    ).any((day) => day.cleared);
   }
 
   /// Whether a streak, window day or window leaderboard time of the current
@@ -439,43 +475,17 @@ class _Run {
     return merged;
   }
 
-  GameDayRecord _localDay(String gameId, String playId) {
-    final modeKey = modeKeyFor(gameId, playId);
-    final time = _s._scores.getBestTimeSeconds(modeKey);
-    final points = _s._scores.getBestPoints(modeKey);
-    final hintsUsed = _s._hintQuota.usedFor(gameId, playId);
-    final record = GameDayRecord(
-      gameId: gameId,
-      playId: playId,
-      timeSeconds: time,
-      points: points > 0 ? points : null,
-      hintsUsed: hintsUsed,
-    );
-    if (time == null) return record;
-
-    final cleared = record.copyWith(board: _s._scores.getClearBoard(modeKey));
-    final meta = _s._scores.getClearMeta(modeKey);
-    if (meta != null) {
-      return cleared.copyWith(
-        usedHints: meta.usedHints,
-        hadMistakes: meta.hadMistakes,
-        flagsKnown: true,
-      );
-    }
-    return _withLegacyFlags(cleared);
-  }
+  GameDayRecord _localDay(String gameId, String playId) => readLocalGameDay(
+    scores: _s._scores,
+    hintQuota: _s._hintQuota,
+    gameId: gameId,
+    playId: playId,
+  );
 
   /// Cleared records without real flags get the conservative legacy guess
   /// (recomputed from the merged hint count).
-  GameDayRecord _withLegacyFlags(GameDayRecord record) {
-    if (!record.cleared || record.flagsKnown == true) return record;
-    final flags = legacyClearFlags(record.gameId, record.hintsUsed);
-    return record.copyWith(
-      usedHints: flags.usedHints,
-      hadMistakes: flags.hadMistakes,
-      flagsKnown: false,
-    );
-  }
+  GameDayRecord _withLegacyFlags(GameDayRecord record) =>
+      withLegacyClearFlags(record);
 
   Future<void> _restoreDay(GameDayRecord merged) async {
     _ensureSameAccount();
@@ -506,6 +516,12 @@ class _Run {
   /// Posts a cleared day to its daily board (and all-time) once per best time.
   /// A 0 s (sub-second) clear is still a local clear but the board requires
   /// `timeSeconds > 0`, so it is never submitted.
+  ///
+  /// The proof saved with the clear sends it through the leaderboard Worker.
+  /// A clear from before proofs were saved is written directly, while the
+  /// rules still allow that (an older Zip clear rebuilds its proof from the
+  /// saved path instead). A refusal, the Worker's or the rules', is final:
+  /// the day is marked posted and never sent again.
   Future<void> _syncLeaderboard(GameDayRecord day) async {
     final time = day.timeSeconds;
     if (time == null || time <= 0) return;
@@ -531,14 +547,25 @@ class _Run {
             dayId: leaderboardDayIdForPlayId(day.playId),
             // The repository refuses the write if the account switched.
             expectedUid: _uid,
+            proof: _proofFor(day),
           )
           .timeout(_s.leaderboardTimeout);
     } on TimeoutException {
       _leaderboardStalled = true;
       rethrow;
+    } on LeaderboardSubmitRefused {
+      // Final: it will be refused every time, so stop sending it.
     }
     await _s._local.setPushedSignature(markerKey, signature);
   }
+
+  /// The proof saved with the clear; for an older Zip clear, the one its
+  /// saved path rebuilds.
+  LeaderboardProof? _proofFor(GameDayRecord day) =>
+      _s._local.clearProof(day.gameId, day.playId) ??
+      (day.gameId == GameIds.zip
+          ? ZipLeaderboardProof.fromBoard(day.board)
+          : null);
 
   /// Decayed current streak, as Home / `GetStreak` show it.
   Future<int> _currentStreak(String gameId) async {

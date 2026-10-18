@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/lifecycle/app_open_lifecycle.dart';
+import 'core/lifecycle/habit_refresh_lifecycle.dart';
 import 'core/lifecycle/progress_change_signal.dart';
 import 'core/lifecycle/progress_sync_lifecycle.dart';
 import 'core/router/app_router.dart';
@@ -17,8 +18,10 @@ import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/notification_repository.dart';
 import 'domain/usecases/handle_notification_tap.dart';
 import 'domain/usecases/record_app_open.dart';
+import 'domain/usecases/refresh_habit_surfaces.dart';
 import 'domain/usecases/sync_progress.dart';
 import 'features/auth/cubit/auth_cubit.dart';
+import 'features/settings/view/app_language_scope.dart';
 
 class WinkloApp extends StatefulWidget {
   const WinkloApp({super.key});
@@ -33,6 +36,7 @@ class _WinkloAppState extends State<WinkloApp> {
   bool _tapListening = false;
   AppOpenLifecycle? _appOpenLifecycle;
   ProgressSyncLifecycle? _progressSyncLifecycle;
+  HabitRefreshLifecycle? _habitRefreshLifecycle;
 
   @override
   void didChangeDependencies() {
@@ -40,6 +44,7 @@ class _WinkloAppState extends State<WinkloApp> {
     _ensureTapListening();
     _ensureAppOpenLifecycle();
     _ensureProgressSyncLifecycle();
+    _ensureHabitRefreshLifecycle();
   }
 
   void _ensureAppOpenLifecycle() {
@@ -63,6 +68,18 @@ class _WinkloAppState extends State<WinkloApp> {
     lifecycle.start();
   }
 
+  /// Reminders and the home-screen widget follow clears, syncs and midnight.
+  void _ensureHabitRefreshLifecycle() {
+    if (_habitRefreshLifecycle != null) return;
+    final lifecycle = HabitRefreshLifecycle(
+      refresh: context.read<RefreshHabitSurfaces>().call,
+      localChanges: context.read<ProgressChangeSignal>().changes,
+      restored: _progressSyncLifecycle?.restored,
+    );
+    _habitRefreshLifecycle = lifecycle;
+    lifecycle.start();
+  }
+
   void _ensureTapListening() {
     if (_tapListening) return;
     _tapListening = true;
@@ -82,6 +99,8 @@ class _WinkloAppState extends State<WinkloApp> {
     _appOpenLifecycle = null;
     _progressSyncLifecycle?.dispose();
     _progressSyncLifecycle = null;
+    _habitRefreshLifecycle?.dispose();
+    _habitRefreshLifecycle = null;
     super.dispose();
   }
 
@@ -95,22 +114,28 @@ class _WinkloAppState extends State<WinkloApp> {
     // go_router 18 hard-codes RootBackButtonDispatcher on RouterConfig; pass
     // the safe dispatcher explicitly so empty-match Android backs don't crash
     // (flutter/flutter#187616).
-    final app = MaterialApp.router(
-      title: AppStrings.appTitle,
-      theme: buildAppTheme(),
-      themeMode: ThemeMode.dark,
-      routeInformationProvider: router.routeInformationProvider,
-      routeInformationParser: router.routeInformationParser,
-      routerDelegate: router.routerDelegate,
-      backButtonDispatcher: SafeGoRouterBackButtonDispatcher(() => router),
-      debugShowCheckedModeBanner: false,
-      // Global tap-outside-to-dismiss: wraps every routed screen so a tap on
-      // empty space drops keyboard focus app-wide. `translucent` lets taps on
-      // real controls (buttons, list rows) still pass through underneath.
-      builder: (context, child) => GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: AppTextScale(child: child ?? const SizedBox.shrink()),
+    // In the LocaleCubit's language; a change rebuilds the whole app.
+    final app = AppLanguageScope(
+      builder: (context, locale) => MaterialApp.router(
+        title: AppStrings.appTitle,
+        locale: locale,
+        supportedLocales: AppLanguageScope.supportedLocales,
+        localizationsDelegates: AppLanguageScope.localizationsDelegates,
+        theme: buildAppTheme(),
+        themeMode: ThemeMode.dark,
+        routeInformationProvider: router.routeInformationProvider,
+        routeInformationParser: router.routeInformationParser,
+        routerDelegate: router.routerDelegate,
+        backButtonDispatcher: SafeGoRouterBackButtonDispatcher(() => router),
+        debugShowCheckedModeBanner: false,
+        // Global tap-outside-to-dismiss: wraps every routed screen so a tap on
+        // empty space drops keyboard focus app-wide. `translucent` lets taps on
+        // real controls (buttons, list rows) still pass through underneath.
+        builder: (context, child) => GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: AppTextScale(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     );
     final progressSync = _progressSyncLifecycle;

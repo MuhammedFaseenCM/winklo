@@ -1,7 +1,9 @@
 export 'cell.dart';
 export 'wall.dart';
 
+import '../stable_seed.dart';
 import 'cell.dart';
+import 'daily_special.dart';
 import 'wall.dart';
 
 class ZipLevel {
@@ -12,6 +14,7 @@ class ZipLevel {
     required this.walls,
     this.order = 0,
     this.solution = const [],
+    this.special,
   });
 
   final String id;
@@ -21,9 +24,29 @@ class ZipLevel {
   final int order;
   final List<Cell> solution;
 
+  /// `weekend` on a weekend special (see [DailySpecial]); null otherwise.
+  /// Not part of the fingerprint.
+  final String? special;
+
+  bool get isWeekendSpecial => special == DailySpecial.weekend;
+
   int get maxNumber {
     if (numbers.isEmpty) return 0;
     return numbers.values.reduce((a, b) => a > b ? a : b);
+  }
+
+  /// Changes whenever the board does. Numbers and walls are sorted, so the
+  /// order Firestore returns them in doesn't matter.
+  String get fingerprint {
+    final numberKeys = [for (final e in numbers.entries) '${e.key}=${e.value}']
+      ..sort();
+    final wallKeys = [
+      for (final w in walls)
+        ([w.a.toString(), w.b.toString()]..sort()).join('|'),
+    ]..sort();
+    return boardFingerprint(
+      'zip|$size|${numberKeys.join(';')}|${wallKeys.join(';')}',
+    );
   }
 
   factory ZipLevel.fromJson(Map<String, dynamic> json, {String? id}) {
@@ -46,6 +69,7 @@ class ZipLevel {
       walls: walls,
       order: (json['order'] as num?)?.toInt() ?? 0,
       solution: solution,
+      special: readDailySpecial(json['special']),
     );
   }
 
@@ -57,5 +81,6 @@ class ZipLevel {
     'walls': walls.map((w) => w.toJson()).toList(),
     if (solution.isNotEmpty)
       'solution': solution.map((c) => c.toList()).toList(),
+    if (special != null) 'special': special,
   };
 }

@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/failures.dart';
+import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/profile_repository.dart';
 import 'package:winklo/domain/usecases/update_avatar.dart';
 import 'package:winklo/domain/usecases/update_display_name.dart';
@@ -13,6 +14,8 @@ import 'package:winklo/features/profile/cubit/profile_cubit.dart';
 import 'package:winklo/features/profile/cubit/profile_state.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockAnalytics extends Mock implements AnalyticsRepository {}
 
 void main() {
   const original = AppUser(uid: 'u1', displayName: 'Ada');
@@ -39,6 +42,64 @@ void main() {
     updateAvatar: UpdateAvatar(repo),
     uid: uid,
   );
+
+  group('analytics', () {
+    late _MockAnalytics analytics;
+
+    setUp(() {
+      analytics = _MockAnalytics();
+      when(() => analytics.logProfileNameChanged()).thenAnswer((_) async {});
+      when(
+        () => analytics.logProfileAvatarChanged(source: any(named: 'source')),
+      ).thenAnswer((_) async {});
+    });
+
+    ProfileCubit cubitWithAnalytics() => ProfileCubit(
+      profileRepository: repo,
+      updateDisplayName: UpdateDisplayName(repo),
+      updateAvatar: UpdateAvatar(repo),
+      uid: 'u1',
+      analytics: analytics,
+    );
+
+    test('a saved name logs profile_name_changed', () async {
+      when(
+        () => repo.updateDisplayName('Grace'),
+      ).thenAnswer((_) async => updated);
+      final cubit = cubitWithAnalytics()..setNameDraft('Grace');
+
+      await cubit.saveName();
+
+      verify(() => analytics.logProfileNameChanged()).called(1);
+      await cubit.close();
+    });
+
+    test('a failed name save logs nothing', () async {
+      when(
+        () => repo.updateDisplayName('Grace'),
+      ).thenThrow(const Failure('nope'));
+      final cubit = cubitWithAnalytics()..setNameDraft('Grace');
+
+      await cubit.saveName();
+
+      verifyNever(() => analytics.logProfileNameChanged());
+      await cubit.close();
+    });
+
+    test('a preset avatar logs source preset', () async {
+      when(
+        () => repo.updateAvatarPreset(any()),
+      ).thenAnswer((_) async => original);
+      final cubit = cubitWithAnalytics();
+
+      await cubit.selectPreset('preset_02');
+
+      verify(
+        () => analytics.logProfileAvatarChanged(source: 'preset'),
+      ).called(1);
+      await cubit.close();
+    });
+  });
 
   blocTest<ProfileCubit, ProfileState>(
     'saveName success emits idle with updated profile',
@@ -70,7 +131,7 @@ void main() {
     seed: () => const ProfileState(nameDraft: '   '),
     act: (cubit) => cubit.saveName(),
     expect: () => [
-      const ProfileState(
+      ProfileState(
         status: ProfileStatus.failure,
         nameDraft: '   ',
         error: AppStrings.profileNameEmpty,

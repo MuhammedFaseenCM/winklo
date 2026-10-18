@@ -64,6 +64,17 @@ class ScoreRepositoryImpl implements ScoreRepository {
   }
 
   @override
+  List<String> dailyPlayIds(String gameId) {
+    final prefix = '${_prefix}time_${modeKeyFor(gameId, '')}';
+    return [
+      for (final key in _prefs.getKeys())
+        if (key.startsWith(prefix) &&
+            _playIdPattern.hasMatch(key.substring(prefix.length)))
+          key.substring(prefix.length),
+    ]..sort();
+  }
+
+  @override
   Future<bool> submitScore({
     required String modeKey,
     required int points,
@@ -71,6 +82,7 @@ class ScoreRepositoryImpl implements ScoreRepository {
     bool? usedHints,
     bool? hadMistakes,
     String? board,
+    List<String>? bonusWords,
   }) async {
     final pointsImproved = await _improvePoints(modeKey, points);
     final timeImproved = await _improveTime(modeKey, timeSeconds);
@@ -79,7 +91,11 @@ class ScoreRepositoryImpl implements ScoreRepository {
       timeSeconds: timeSeconds,
       timeImproved: timeImproved,
       meta: usedHints != null && hadMistakes != null
-          ? ClearMeta(usedHints: usedHints, hadMistakes: hadMistakes)
+          ? ClearMeta(
+              usedHints: usedHints,
+              hadMistakes: hadMistakes,
+              bonusWords: bonusWords ?? const [],
+            )
           : null,
     );
     final boardChanged = await _syncBoard(

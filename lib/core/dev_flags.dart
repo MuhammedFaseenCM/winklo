@@ -7,6 +7,17 @@ abstract final class DevFlags {
   /// Home shows only Zip, and today's Zip can be played again.
   static const zipOnlyTesting = false;
 
+  /// Temporary: Profile badges + `/profile/stats` show a fully unlocked
+  /// preview (no Firestore writes). Turn off before shipping.
+  static const previewFullProgress = false;
+
+  /// Stats/profile tests set this so they still hit [LoadGameHistory].
+  static bool disablePreviewFullProgressInTests = false;
+
+  /// Whether [StatsCubit] should emit the preview history.
+  static bool get showFullProgressPreview =>
+      kDebugMode && previewFullProgress && !disablePreviewFullProgressInTests;
+
   /// Widget tests run in debug; keep the daily keyspace stable there.
   static bool useDailyPlayPeriodInTests = false;
 

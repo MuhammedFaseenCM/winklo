@@ -117,4 +117,98 @@ void main() {
       expect(calls, 0);
     });
   });
+
+  group('freeze count', () {
+    Future<StreakRepositoryImpl> repoWith(Map<String, Object> values) async {
+      SharedPreferences.setMockInitialValues(values);
+      return StreakRepositoryImpl(await SharedPreferences.getInstance());
+    }
+
+    test('saves the count and the old bool', () async {
+      final repo = await repoWith({});
+      await repo.saveStreak(
+        const GameStreak(
+          gameId: 'zip',
+          current: 14,
+          longest: 14,
+          lastClearedDateId: '20261014',
+          freezeCount: 2,
+        ),
+      );
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('streak_freezes_zip'), 2);
+      expect(prefs.getBool('streak_freeze_zip'), isTrue);
+      expect((await repo.getStreak('zip')).freezeCount, 2);
+
+      await repo.saveStreak(
+        const GameStreak(gameId: 'zip', current: 1, freezeCount: 0),
+      );
+      expect(prefs.getInt('streak_freezes_zip'), 0);
+      expect(prefs.getBool('streak_freeze_zip'), isFalse);
+    });
+
+    test('reads the old bool when the count key is missing', () async {
+      final spent = await repoWith({
+        'streak_current_zip': 4,
+        'streak_freeze_zip': false,
+      });
+      expect((await spent.getStreak('zip')).freezeCount, 0);
+
+      final kept = await repoWith({
+        'streak_current_zip': 4,
+        'streak_freeze_zip': true,
+      });
+      expect((await kept.getStreak('zip')).freezeCount, 1);
+
+      final fresh = await repoWith({});
+      expect((await fresh.getStreak('zip')).freezeCount, 1);
+    });
+
+    test('an inconsistent pair follows storedFreezeCount', () async {
+      final repo = await repoWith({
+        'streak_freezes_zip': 2,
+        'streak_freeze_zip': false,
+      });
+      expect((await repo.getStreak('zip')).freezeCount, 1);
+    });
+
+    test('writes again when only the count changed', () async {
+      final repo = await repoWith({});
+      var calls = 0;
+      final watched = StreakRepositoryImpl(
+        await SharedPreferences.getInstance(),
+        onChanged: () => calls++,
+      );
+      const base = GameStreak(
+        gameId: 'zip',
+        current: 7,
+        longest: 7,
+        lastClearedDateId: '20261014',
+      );
+      await watched.saveStreak(base);
+      await watched.saveStreak(base.copyWith(freezeCount: 2));
+      expect(calls, 2);
+      expect((await repo.getStreak('zip')).freezeCount, 2);
+    });
+
+    test('a legacy streak without the count key is rewritten once', () async {
+      final repo = await repoWith({
+        'streak_current_zip': 3,
+        'streak_longest_zip': 3,
+        'streak_last_zip': '20261014',
+        'streak_freeze_zip': true,
+      });
+      final wrote = await repo.restoreStreak(
+        const GameStreak(
+          gameId: 'zip',
+          current: 3,
+          longest: 3,
+          lastClearedDateId: '20261014',
+        ),
+      );
+      expect(wrote, isTrue);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('streak_freezes_zip'), 1);
+    });
+  });
 }

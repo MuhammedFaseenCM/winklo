@@ -103,6 +103,28 @@ void main() {
     );
   });
 
+  test('canReveal is false once every remaining cell is already shown', () {
+    // Hints now cost time, so one that shows nothing new must not be offered.
+    expect(
+      ZipHints.canReveal(
+        solution: solution,
+        path: const [],
+        fromIndex: 1,
+        revealLength: solution.length - 1,
+      ),
+      isFalse,
+    );
+    expect(
+      ZipHints.canReveal(
+        solution: solution,
+        path: const [],
+        fromIndex: 1,
+        revealLength: solution.length - 2,
+      ),
+      isTrue,
+    );
+  });
+
   test('a new hint after catching up starts from the current cell', () {
     expect(
       ZipHints.afterHint(

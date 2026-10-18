@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -11,6 +12,8 @@ import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/client_error_report.dart';
 import 'package:winklo/domain/entities/game_day_record.dart';
 import 'package:winklo/domain/entities/game_streak.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
+import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
@@ -20,6 +23,7 @@ import 'package:winklo/domain/repositories/progress_remote_repository.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/domain/usecases/report_client_error.dart';
 import 'package:winklo/domain/usecases/sync_progress.dart';
+import 'package:winklo/domain/usecases/upload_progress_history.dart';
 
 class _MockAuth extends Mock implements AuthRepository {}
 
@@ -28,6 +32,8 @@ class _MockRemote extends Mock implements ProgressRemoteRepository {}
 class _MockLeaderboard extends Mock implements LeaderboardRepository {}
 
 class _MockClientErrors extends Mock implements ClientErrorRepository {}
+
+class _MockUploadHistory extends Mock implements UploadProgressHistory {}
 
 const _uid = 'u1';
 const _today = '20261007';
@@ -69,6 +75,7 @@ void main() {
     DateTime? at,
     DateTime Function()? clockFn,
     Duration leaderboardTimeout = const Duration(seconds: 20),
+    UploadProgressHistory? uploadHistory,
   }) async {
     SharedPreferences.setMockInitialValues(initial);
     prefs = await SharedPreferences.getInstance();
@@ -87,6 +94,7 @@ void main() {
       isRemoteAvailable: () => remoteAvailable,
       now: clockFn ?? () => clock,
       leaderboardTimeout: leaderboardTimeout,
+      uploadHistory: uploadHistory,
     );
   }
 
@@ -100,6 +108,22 @@ void main() {
         currentStreak: any(named: 'currentStreak'),
         dayId: any(named: 'dayId'),
         expectedUid: any(named: 'expectedUid'),
+      ),
+    ).thenAnswer((_) async {});
+  }
+
+  /// Like [stubSubmit], for calls that pass a proof.
+  void stubSubmitWithProof() {
+    when(
+      () => leaderboard.submitBestTime(
+        gameId: any(named: 'gameId'),
+        timeSeconds: any(named: 'timeSeconds'),
+        usedHints: any(named: 'usedHints'),
+        hadMistakes: any(named: 'hadMistakes'),
+        currentStreak: any(named: 'currentStreak'),
+        dayId: any(named: 'dayId'),
+        expectedUid: any(named: 'expectedUid'),
+        proof: any(named: 'proof'),
       ),
     ).thenAnswer((_) async {});
   }
@@ -223,6 +247,158 @@ void main() {
       // No purge without a remote copy to restore from.
       expect(prefs.getInt('best_time_zip_daily_$_today'), 30);
       expect(local.ownerUid, 'someone_else');
+    });
+  });
+
+  group('history upload', () {
+    late _MockUploadHistory upload;
+    bool Function()? lastIsCancelled;
+
+    setUp(() {
+      upload = _MockUploadHistory();
+      lastIsCancelled = null;
+      when(
+        () => upload(any(), isCancelled: any(named: 'isCancelled')),
+      ).thenAnswer((inv) async {
+        lastIsCancelled = inv.namedArguments[#isCancelled] as bool Function()?;
+        return const UploadProgressHistoryResult(ran: true);
+      });
+    });
+
+    test(
+      'a full sync runs it for the signed-in uid after the window',
+      () async {
+        await build(
+          initial: {'best_time_zip_daily_$_today': 30},
+          uploadHistory: upload,
+        );
+
+        final result = await sync();
+
+        expect(result.failures, 0);
+        verifyInOrder([
+          () => remote.saveDay(
+            uid: _uid,
+            record: any(named: 'record'),
+          ),
+          () => upload(_uid, isCancelled: any(named: 'isCancelled')),
+        ]);
+        expect(lastIsCancelled!(), isFalse);
+        when(
+          () => auth.currentUser,
+        ).thenReturn(const AppUser(uid: 'other', displayName: 'Bo'));
+        expect(lastIsCancelled!(), isTrue);
+      },
+    );
+
+    test('a push-only sync skips it', () async {
+      await build(
+        initial: {'best_time_zip_daily_$_today': 30},
+        uploadHistory: upload,
+      );
+
+      await sync(pull: false);
+
+      verifyNever(() => upload(any(), isCancelled: any(named: 'isCancelled')));
+    });
+
+    test('a failed upload counts as a failure', () async {
+      when(
+        () => upload(any(), isCancelled: any(named: 'isCancelled')),
+      ).thenThrow(const Failure('offline', reportable: false));
+      await build(uploadHistory: upload);
+
+      final result = await sync();
+
+      expect(result.failures, 1);
+    });
+
+    test('a failed leaderboard backfill does not hold it', () async {
+      when(
+        () => leaderboard.submitBestTime(
+          gameId: any(named: 'gameId'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          currentStreak: any(named: 'currentStreak'),
+          dayId: any(named: 'dayId'),
+          expectedUid: any(named: 'expectedUid'),
+          proof: any(named: 'proof'),
+        ),
+      ).thenThrow(const Failure('Could not sync leaderboard.'));
+      await build(
+        initial: {'best_time_zip_daily_$_today': 30},
+        uploadHistory: upload,
+      );
+
+      final result = await sync();
+
+      expect(result.failures, 1);
+      verify(() => upload(_uid, isCancelled: any(named: 'isCancelled')));
+    });
+
+    test('it waits for a run without failures', () async {
+      when(
+        () => remote.saveDay(
+          uid: any(named: 'uid'),
+          record: any(named: 'record'),
+        ),
+      ).thenThrow(const Failure('offline', reportable: false));
+      await build(
+        initial: {'best_time_zip_daily_$_today': 30},
+        uploadHistory: upload,
+      );
+
+      final result = await sync();
+
+      expect(result.failures, greaterThan(0));
+      verifyNever(() => upload(any(), isCancelled: any(named: 'isCancelled')));
+    });
+
+    test(
+      'an account switch stashes history the owner never uploaded',
+      () async {
+        await build(
+          initial: {
+            'progress_owner_uid': 'previous',
+            'best_time_zip_daily_20260901': 50,
+          },
+          uploadHistory: upload,
+        );
+
+        await sync();
+
+        expect(prefs.getInt('best_time_zip_daily_20260901'), isNull);
+        expect(prefs.getString('progress_stash_previous'), isNotNull);
+      },
+    );
+
+    test(
+      'an account switch purges history the owner already uploaded',
+      () async {
+        await build(
+          initial: {
+            'progress_owner_uid': 'previous',
+            'history_uploaded_previous': true,
+            'best_time_zip_daily_20260901': 50,
+          },
+          uploadHistory: upload,
+        );
+
+        await sync();
+
+        expect(prefs.getInt('best_time_zip_daily_20260901'), isNull);
+        expect(prefs.getString('progress_stash_previous'), isNull);
+      },
+    );
+
+    test('it does not run when the remote is unavailable', () async {
+      remoteAvailable = false;
+      await build(uploadHistory: upload);
+
+      await sync();
+
+      verifyNever(() => upload(any(), isCancelled: any(named: 'isCancelled')));
     });
   });
 
@@ -735,6 +911,176 @@ void main() {
       expect(prefs.getInt('streak_current_path_words'), 0);
       expect(prefs.getInt('streak_longest_path_words'), 5);
       expect(remoteStreaks['path_words']!.current, 0);
+    });
+
+    test('a Zip clear with its saved path sends it as the proof', () async {
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 30,
+          'clear_board_zip_daily_$_today': '0,0;0,1;1,1',
+        },
+      );
+
+      await sync();
+
+      final proof =
+          verify(
+                () => leaderboard.submitBestTime(
+                  gameId: 'zip',
+                  timeSeconds: 30,
+                  usedHints: any(named: 'usedHints'),
+                  hadMistakes: any(named: 'hadMistakes'),
+                  currentStreak: any(named: 'currentStreak'),
+                  dayId: '2026-10-07',
+                  expectedUid: _uid,
+                  proof: captureAny(named: 'proof'),
+                ),
+              ).captured.single
+              as ZipLeaderboardProof;
+      expect(proof.path, const [Cell(0, 0), Cell(0, 1), Cell(1, 1)]);
+    });
+
+    LeaderboardProof? submittedProof(String gameId) =>
+        verify(
+              () => leaderboard.submitBestTime(
+                gameId: gameId,
+                timeSeconds: any(named: 'timeSeconds'),
+                usedHints: any(named: 'usedHints'),
+                hadMistakes: any(named: 'hadMistakes'),
+                currentStreak: any(named: 'currentStreak'),
+                dayId: any(named: 'dayId'),
+                expectedUid: any(named: 'expectedUid'),
+                proof: captureAny(named: 'proof'),
+              ),
+            ).captured.single
+            as LeaderboardProof?;
+
+    test('the proof saved with a clear goes with its backfill', () async {
+      stubSubmitWithProof();
+      final sudoku = jsonEncode(
+        const SudokuLeaderboardProof([1, 2, 3]).toJson(),
+      );
+      final pathWords = jsonEncode(
+        const PathWordsLeaderboardProof([
+          PathWordsProofStroke(targetId: 't1', cells: [Cell(0, 0)]),
+        ]).toJson(),
+      );
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_sudoku_$_today': 120,
+          'clear_proof_sudoku_$_today': sudoku,
+          'best_time_path_words_$_yesterday': 50,
+          'clear_proof_path_words_$_yesterday': pathWords,
+        },
+      );
+
+      final result = await sync();
+
+      expect(result.failures, 0);
+      expect(submittedProof('sudoku')?.toJson(), {
+        'grid': [1, 2, 3],
+      });
+      expect(submittedProof('path_words')?.toJson(), jsonDecode(pathWords));
+    });
+
+    test('a saved Zip proof wins over the rebuilt board', () async {
+      stubSubmitWithProof();
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 30,
+          'clear_board_zip_daily_$_today': '0,0;0,1',
+          'clear_proof_zip_daily_$_today': '{"path":[[1,1],[1,0]]}',
+        },
+      );
+
+      await sync();
+
+      expect((submittedProof('zip') as ZipLeaderboardProof?)?.path, const [
+        Cell(1, 1),
+        Cell(1, 0),
+      ]);
+    });
+
+    test('an old clear without a saved proof is sent without one', () async {
+      stubSubmitWithProof();
+      await build(
+        initial: {'progress_owner_uid': _uid, 'best_time_sudoku_$_today': 120},
+      );
+
+      await sync();
+
+      expect(submittedProof('sudoku'), isNull);
+    });
+
+    test('a direct write the rules deny is final and not reported', () async {
+      when(
+        () => leaderboard.submitBestTime(
+          gameId: any(named: 'gameId'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          currentStreak: any(named: 'currentStreak'),
+          dayId: any(named: 'dayId'),
+          expectedUid: any(named: 'expectedUid'),
+          proof: any(named: 'proof'),
+        ),
+      ).thenThrow(
+        const LeaderboardSubmitRefused(
+          LeaderboardSubmitRefused.permissionDenied,
+        ),
+      );
+      await build(
+        initial: {'progress_owner_uid': _uid, 'best_time_sudoku_$_today': 120},
+      );
+
+      final result = await sync();
+      await sync();
+
+      expect(result.failures, 0);
+      expect(prefs.getString('sync_lb_sudoku_$_today'), '120');
+      verify(
+        () => leaderboard.submitBestTime(
+          gameId: any(named: 'gameId'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          currentStreak: any(named: 'currentStreak'),
+          dayId: any(named: 'dayId'),
+          expectedUid: any(named: 'expectedUid'),
+          proof: any(named: 'proof'),
+        ),
+      ).called(1);
+      verifyNever(() => clientErrors.report(any()));
+    });
+
+    test('a clear the Worker refuses is marked posted, not failed', () async {
+      when(
+        () => leaderboard.submitBestTime(
+          gameId: any(named: 'gameId'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          currentStreak: any(named: 'currentStreak'),
+          dayId: any(named: 'dayId'),
+          expectedUid: any(named: 'expectedUid'),
+          proof: any(named: 'proof'),
+        ),
+      ).thenThrow(const LeaderboardSubmitRefused('bad_proof'));
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 30,
+          'clear_board_zip_daily_$_today': '0,0;0,1',
+        },
+      );
+
+      final result = await sync();
+
+      expect(result.failures, 0);
+      expect(prefs.getString('sync_lb_zip_$_today'), '30');
     });
 
     test('a 0 s clear pushes the day but is never submitted', () async {

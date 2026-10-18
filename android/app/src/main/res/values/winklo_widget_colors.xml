@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget, light: the app's ink on mist, with the deeper game
+     accents (ZipColors.emberDeep, skyDeep, Sudoku's play green). -->
+<resources>
+    <color name="winklo_widget_background">#F8FAFC</color>
+    <color name="winklo_widget_border">#1F0F172A</color>
+    <color name="winklo_widget_row">#FFFFFF</color>
+    <color name="winklo_widget_text">#0F172A</color>
+    <color name="winklo_widget_muted">#475569</color>
+    <color name="winklo_widget_zip_accent">#E85A1C</color>
+    <color name="winklo_widget_path_words_accent">#0369A1</color>
+    <color name="winklo_widget_sudoku_accent">#059669</color>
+</resources>

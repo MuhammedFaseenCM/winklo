@@ -7,17 +7,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/dev_flags.dart';
+import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
+import '../../../core/widgets/play_mode_strip.dart';
+import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
-import '../../../domain/entities/cell.dart';
+import '../../../domain/game_ids.dart';
+import '../../../domain/play_mode.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/repositories/analytics_repository.dart';
-import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/word_list_repository.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
@@ -25,13 +29,18 @@ import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
+import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
+import '../../../core/router/pop_or_go_home.dart';
 import '../bloc/path_words_bloc.dart';
 import '../bloc/path_words_event.dart';
 import '../bloc/path_words_state.dart';
 import '../game/path_words_board_view.dart';
 import '../game/path_words_game.dart';
+import 'widgets/path_words_bonus_toast.dart';
 import 'widgets/path_words_how_to_play.dart';
+import 'widgets/path_words_paused_cover.dart';
 import 'widgets/path_words_shimmer.dart';
+import 'widgets/path_words_theme_line.dart';
 import 'widgets/path_words_tutorial.dart';
 import 'widgets/path_words_word_list.dart';
 
@@ -41,9 +50,13 @@ class PathWordsScreen extends StatefulWidget {
     this.date,
     this.bloc,
     this.autoStart = true,
+    this.mode = PlayMode.daily,
   });
 
   final DateTime? date;
+
+  /// Daily (default), archive or practice.
+  final PlayMode mode;
   final PathWordsBloc? bloc;
   final bool autoStart;
 
@@ -75,12 +88,11 @@ class _PathWordsScreenState extends State<PathWordsScreen>
     final puzzle = state.puzzle;
     if (puzzle == null) return null;
 
-    final completedPaths = <String, List<Cell>>{};
-    for (final target in puzzle.targets) {
-      if (state.completedTargetIds.contains(target.id)) {
-        completedPaths[target.id] = target.path;
-      }
-    }
+    final completedPaths = PathWordsRules.completedPaths(
+      puzzle: puzzle,
+      completedTargetIds: state.completedTargetIds,
+      placedPaths: state.placedPaths,
+    );
 
     return PathWordsBoardView(
       puzzle: puzzle,
@@ -170,10 +182,14 @@ class _PathWordsScreenState extends State<PathWordsScreen>
           getBestTimeSeconds: context.read<GetBestTimeSeconds>(),
           isNewPersonalBest: context.read<IsNewPersonalBest>(),
           analytics: context.read<AnalyticsRepository>(),
-          hintQuota: context.read<HintQuotaRepository>(),
+          hintQuota: context.hintQuotaFor(widget.mode),
           inProgressRuns: context.read<InProgressRunRepository>(),
           playPeriod: DevFlags.playPeriod,
           sfx: context.read<SfxService>(),
+          haptics: context.read<HapticsService?>(),
+          wordList: context.read<WordListRepository?>(),
+          mode: widget.mode,
+          modeRecords: context.modeRecordsFor(widget.mode),
         );
 
     if (widget.autoStart) {
@@ -243,6 +259,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                 prev.puzzle?.id != curr.puzzle?.id,
             listener: (context, state) => _maybeShowTutorial(state),
           ),
+          pathWordsBonusToastListener(),
         ],
         child: BlocBuilder<PathWordsBloc, PathWordsState>(
           builder: (context, state) {
@@ -258,10 +275,12 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                 (state.status == PathWordsStatus.ready ||
                     state.status == PathWordsStatus.playing) &&
                 puzzle != null;
+            // Found words are locked, so only a live or wrong stroke undoes.
             final canUndo =
                 isReadyToPlay &&
-                (state.activePath.isNotEmpty || state.placedPaths.isNotEmpty);
-            final canHint = isReadyToPlay && state.hintsRemaining > 0;
+                (state.activePath.isNotEmpty ||
+                    PathWordsRules.hasIncorrectStroke(state.placedPaths));
+            final canHint = isReadyToPlay;
 
             return Scaffold(
               body: ZipAtmosphere(
@@ -273,13 +292,13 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                         child: Row(
                           children: [
                             IconButton(
-                              onPressed: () => context.pop(),
+                              onPressed: () => popOrGoHome(context),
                               icon: const Icon(Icons.arrow_back_rounded),
                             ),
                             Expanded(
-                              child: Text(
-                                AppStrings.pathWordsTitle,
-                                style: Theme.of(context).textTheme.titleLarge,
+                              child: GameScreenTitle(
+                                title: AppStrings.pathWordsTitle,
+                                special: puzzle?.special,
                               ),
                             ),
                             if (isReadyToPlay)
@@ -299,6 +318,14 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                             const PathWordsHowToPlayButton(),
                           ],
                         ),
+                      ),
+                      PlayModeStrip(
+                        mode: widget.mode,
+                        onNewBoard:
+                            isReadyToPlay ||
+                                state.status == PathWordsStatus.failed
+                            ? () => _bloc.add(const PathWordsEvent.newBoard())
+                            : null,
                       ),
                       Expanded(
                         child: Padding(
@@ -393,9 +420,21 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                 placedPaths: state.placedPaths,
                                 completedTargetIds: state.completedTargetIds,
                                 palette: PathWordsGame.pathColors,
+                                definitionsEnabled: isReview,
                               ),
                             ],
-                            if (!isReview) ...[
+                            if (isReview) ...[
+                              if (puzzle?.theme != null) ...[
+                                const SizedBox(height: 10),
+                                PathWordsThemeLine(theme: puzzle?.theme),
+                              ],
+                              const SizedBox(height: 12),
+                              ClearedSummaryCard(
+                                gameId: GameIds.pathWords,
+                                modeKey: _bloc.clearModeKey,
+                                day: state.day,
+                              ),
+                            ] else ...[
                               const SizedBox(height: 10),
                               Row(
                                 children: [
@@ -407,9 +446,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                             )
                                           : null,
                                       icon: const Icon(Icons.undo_rounded),
-                                      label: const Text(
-                                        AppStrings.pathWordsUndo,
-                                      ),
+                                      label: Text(AppStrings.pathWordsUndo),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -434,8 +471,9 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                           : null,
                                       icon: const Icon(Icons.lightbulb_rounded),
                                       label: Text(
-                                        AppStrings.pathWordsHintWithCount(
-                                          state.hintsRemaining,
+                                        hintLabelFor(
+                                          widget.mode,
+                                          hintsUsed: state.hintsUsed,
                                         ),
                                       ),
                                     ),
@@ -474,7 +512,7 @@ class _BoardPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final g = game;
-    if (g != null) return GameWidget(game: g);
+    if (g != null) return PathWordsPausedCover(child: GameWidget(game: g));
 
     if (status == PathWordsStatus.failed) {
       return Container(
@@ -506,7 +544,7 @@ class _BoardPane extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text(AppStrings.retry),
+                label: Text(AppStrings.retry),
               ),
             ],
           ),

@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../domain/entities/cell.dart';
 import '../../../../domain/entities/path_words_puzzle.dart';
 import '../../../../domain/path_words/path_words_rules.dart';
+import 'path_words_definition_sheet.dart';
 
 class PathWordsWordList extends StatelessWidget {
   const PathWordsWordList({
@@ -14,6 +15,7 @@ class PathWordsWordList extends StatelessWidget {
     required this.placedPaths,
     required this.completedTargetIds,
     required this.palette,
+    this.definitionsEnabled = false,
   });
 
   final PathWordsPuzzle puzzle;
@@ -21,6 +23,9 @@ class PathWordsWordList extends StatelessWidget {
   final List<PathWordsStroke> placedPaths;
   final Set<String> completedTargetIds;
   final List<Color> palette;
+
+  /// After a clear: a found word with a definition opens it when tapped.
+  final bool definitionsEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +65,9 @@ class PathWordsWordList extends StatelessWidget {
               ),
               done: completedTargetIds.contains(orderedTargets[i].id),
               fill: fills[orderedTargets[i].id],
+              definition: definitionsEnabled
+                  ? puzzle.definitionFor(orderedTargets[i].word)
+                  : null,
             ),
           ],
         ],
@@ -82,12 +90,16 @@ class _WordRow extends StatelessWidget {
     required this.color,
     required this.done,
     required this.fill,
+    this.definition,
   });
 
   final PathWordsTarget target;
   final Color color;
   final bool done;
   final PathWordsListFill? fill;
+
+  /// Set only when the word can be tapped for its meaning.
+  final String? definition;
 
   @override
   Widget build(BuildContext context) {
@@ -96,15 +108,19 @@ class _WordRow extends StatelessWidget {
         ? [for (var i = 0; i < word.length; i++) word[i]]
         : fill?.letters ?? const <String>[];
     final overflowCount = done ? 0 : (fill?.overflowCount ?? 0);
-    final semanticsLabel = done
+    final meaning = done ? definition : null;
+    final semanticsLabel = meaning != null
+        ? AppStrings.pathWordsWordWithMeaningLabel(word)
+        : done
         ? word
         : filledLetters.isEmpty
         ? AppStrings.pathWordsUnfoundWordLabel(target.word.length)
         : AppStrings.pathWordsTracingWordLabel(filledLetters.join());
 
-    return Semantics(
+    final row = Semantics(
       key: Key('pathWordsWord_${target.id}'),
       label: semanticsLabel,
+      button: meaning != null,
       excludeSemantics: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -140,8 +156,24 @@ class _WordRow extends StatelessWidget {
                   )
                 : null,
           ),
+          if (meaning != null) ...[
+            const SizedBox(width: 2),
+            Icon(
+              Icons.menu_book_rounded,
+              key: Key('pathWordsMeaning_${target.id}'),
+              size: 16,
+              color: ZipColors.sky,
+            ),
+          ],
         ],
       ),
+    );
+    if (meaning == null) return row;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () =>
+          showPathWordsDefinition(context, word: word, definition: meaning),
+      child: row,
     );
   }
 }

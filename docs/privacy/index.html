@@ -96,7 +96,7 @@
     <main>
       <p class="brand">Winklo</p>
       <h1>Privacy Policy</h1>
-      <p class="muted updated">Last updated: 10 October 2026</p>
+      <p class="muted updated">Last updated: 17 October 2026</p>
 
       <p>
         Winklo is a set of quick daily solo puzzles — Zip, Path Words, and
@@ -111,15 +111,19 @@
         leaderboard, and profile. Your game progress syncs privately to your
         account. We use Google Firebase (Auth, Firestore, Analytics,
         Crashlytics, Remote Config, Cloud Messaging) and Cloudflare (avatar
-        upload Worker + R2) to run those features.
+        upload Worker + R2, and a Worker that records app opens, including
+        opens when you are not signed in) to run those features.
       </div>
 
       <h2>Information stored on your device</h2>
       <p>
         Local preferences may include tutorial flags, sound settings,
         notification schedules, unfinished puzzle runs, game progress, and
-        cached puzzle data. Uninstalling Winklo or clearing app storage removes
-        local data. Your cloud profile and leaderboard scores are separate (see
+        cached puzzle data, and an install ID: a random identifier the app
+        creates the first time it opens, used to count app opens (see below).
+        Uninstalling Winklo or clearing app storage removes local data,
+        including the install ID; the app then creates a new one the next time
+        it opens. Your cloud profile and leaderboard scores are separate (see
         below).
       </p>
       <p>
@@ -162,6 +166,30 @@
         made mistakes on that run, your current streak, and when it was
         updated. Other players can see these on those boards.
       </p>
+      <p>
+        Our website (winklo.pages.dev) shows the three fastest clears of each
+        day’s puzzles and how many players cleared them. There, your name is
+        shortened to its first word and the initial of the last (for example
+        “Arun K.”), next to your time, clean-run flags, and streak. The
+        website doesn’t show your photo, avatar, or uid.
+      </p>
+      <p>
+        To keep the boards fair, the app sends each cleared run (your sign-in
+        token, the game, the day, your time, the clean-run flags, your streak,
+        your display name and avatar/photo, and how you solved the puzzle) to
+        our Cloudflare Worker, which checks it against that day’s puzzle and
+        then writes your entries. If the Worker can’t be reached, the app
+        writes them directly as before. The weekly board keeps, for each
+        player, the best time of each day this week, the number of days
+        cleared and their total, with the same display name and avatar/photo.
+      </p>
+      <p>
+        <strong>Leagues.</strong> If you create or join a private league, we
+        store its name, its invite code, who created it and the uids of its
+        members (at most 30). Anyone signed in who has the invite code can see
+        the league’s name and member list; a league’s board shows its members’
+        leaderboard entries.
+      </p>
 
       <h2>Synced game progress</h2>
       <p>
@@ -182,9 +210,20 @@
         <li>
           <strong>Cloud Firestore</strong> — puzzle catalogs; the user,
           leaderboard, and synced progress data described above; a daily
-          app-open record (uid, first/last open time, platform); issue reports
-          you submit (with your uid, display name, avatar, and app version);
-          and app error reports.
+          app-open record (uid, first/last open time, platform, how many
+          times you opened the app that day, app version, and an install ID
+          the app creates); if you use the app without signing in, the same
+          daily record keyed by that install ID instead of an account; issue
+          reports you submit (with your uid, display name, avatar, and app
+          version); and app error reports.
+        </li>
+        <li>
+          <strong>Cloudflare Workers</strong> — the Worker that records app
+          opens receives, for an open when you are not signed in, your install
+          ID, the day, your platform and the app version and build, and writes
+          them to Firestore. It uses your IP address only to limit how fast one
+          network can send requests; the IP address is not written to the
+          record.
         </li>
         <li>
           <strong>Firebase Analytics</strong> — product events (screens, games
@@ -236,10 +275,13 @@
 
       <h2>Your choices and account deletion</h2>
       <p>
-        You can sign out in Profile. You can stop using network features by
-        staying signed out (Zip, Path Words, and Sudoku require sign-in).
-        Analytics and Crashlytics collection is required for the app’s current
-        design (no in-app opt-out toggle).
+        You can sign out in Profile. Zip, Path Words, and Sudoku require
+        sign-in, but staying signed out does not stop all network use: when you
+        open the app without signing in, it still records that open under your
+        install ID, as described above. Clearing the app’s data or reinstalling
+        gives you a new install ID. There is no in-app way to turn this off, and
+        Analytics and Crashlytics collection is also required for the app’s
+        current design (no in-app opt-out toggle).
       </p>
       <p>
         To delete your account and associated cloud data (profile, leaderboard
@@ -252,6 +294,11 @@
         account you use in the app and confirm; deletion is immediate. We keep a
         short record of each deletion request (your user id, email address, the
         time and whether it succeeded) as proof that it was carried out.
+      </p>
+      <p>
+        App-open records made while you were not signed in are keyed by an
+        install ID, not an account, so they are not linked to your account and
+        account deletion does not remove them.
       </p>
       <p>
         If the deletion page fails or you cannot access it,

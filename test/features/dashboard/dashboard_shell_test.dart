@@ -5,10 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/domain/entities/app_update_decision.dart';
+import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
 import 'package:winklo/features/dashboard/view/dashboard_shell.dart';
 import 'package:winklo/features/home/view/widgets/home_force_update_overlay.dart';
+
+import '../../helpers/mock_analytics_repository.dart';
 
 class _MockCheckAppUpdate extends Mock implements CheckAppUpdate {}
 
@@ -17,8 +20,11 @@ class _MockAppUpdateRepository extends Mock implements AppUpdateRepository {}
 void main() {
   late _MockCheckAppUpdate checkAppUpdate;
   late _MockAppUpdateRepository appUpdateRepository;
+  late MockAnalyticsRepository analytics;
 
   setUp(() {
+    analytics = MockAnalyticsRepository();
+    stubAnalytics(analytics);
     checkAppUpdate = _MockCheckAppUpdate();
     appUpdateRepository = _MockAppUpdateRepository();
     when(
@@ -30,6 +36,7 @@ void main() {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<CheckAppUpdate>.value(value: checkAppUpdate),
+        RepositoryProvider<AnalyticsRepository>.value(value: analytics),
         RepositoryProvider<AppUpdateRepository>.value(
           value: appUpdateRepository,
         ),
@@ -39,7 +46,9 @@ void main() {
   }
 
   GoRouter buildTestRouter() {
+    final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
     return GoRouter(
+      navigatorKey: rootNavigatorKey,
       initialLocation: '/',
       routes: [
         StatefulShellRoute.indexedStack(
@@ -65,6 +74,13 @@ void main() {
                 GoRoute(
                   path: '/profile',
                   builder: (_, _) => const Text('profile-body'),
+                  routes: [
+                    GoRoute(
+                      path: 'stats',
+                      parentNavigatorKey: rootNavigatorKey,
+                      builder: (_, _) => const Text('stats-body'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -91,6 +107,28 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle();
     expect(find.text('profile-body'), findsOneWidget);
+  });
+
+  testWidgets('profile sub-screens hide the bottom nav', (tester) async {
+    final router = buildTestRouter();
+
+    await tester.pumpWidget(wrap(MaterialApp.router(routerConfig: router)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(AppStrings.navProfile));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('floating_nav_dock')), findsOneWidget);
+
+    router.push('/profile/stats');
+    await tester.pumpAndSettle();
+
+    expect(find.text('stats-body'), findsOneWidget);
+    expect(find.byKey(const Key('floating_nav_dock')), findsNothing);
+
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('profile-body'), findsOneWidget);
+    expect(find.byKey(const Key('floating_nav_dock')), findsOneWidget);
   });
 
   testWidgets('system back from profile returns to home instead of crashing', (

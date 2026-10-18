@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../repositories/language_repository_impl.dart';
 import 'android_notification_display.dart';
 
 /// Top-level FCM background handler (must not be a class method).
@@ -21,6 +23,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final body = _stringData(message.data, 'body');
   if (title == null && body == null) return;
 
+  await _useStoredLanguage();
   final plugin = FlutterLocalNotificationsPlugin();
   await plugin.initialize(
     settings: const InitializationSettings(
@@ -35,7 +38,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         AndroidFlutterLocalNotificationsPlugin
       >();
   await androidPlugin?.createNotificationChannel(
-    AndroidNotificationDisplay.channel,
+    AndroidNotificationDisplay.announcementsChannel,
   );
 
   final type = _stringData(message.data, 'type') ?? 'general';
@@ -47,7 +50,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     id: id,
     title: title,
     body: body,
-    notificationDetails: AndroidNotificationDisplay.notificationDetails(),
+    notificationDetails: AndroidNotificationDisplay.announcementDetails(),
     payload: jsonEncode({
       'id': message.messageId ?? id.toString(),
       'title': title ?? '',
@@ -57,6 +60,20 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     }),
   );
+}
+
+/// This isolate never ran the app, so AppStrings would read English, and
+/// Android renames an existing channel to whatever name it's given: put the
+/// strings in the player's language first.
+Future<void> _useStoredLanguage() async {
+  try {
+    useStoredLanguage(await SharedPreferences.getInstance(), [
+      for (final locale in PlatformDispatcher.instance.locales)
+        locale.languageCode,
+    ]);
+  } catch (e) {
+    debugPrint('FCM background: no stored language ($e); using English.');
+  }
 }
 
 String? _stringData(Map<String, dynamic> data, String key) {

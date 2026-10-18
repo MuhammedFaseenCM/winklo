@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_layout.dart';
@@ -13,6 +15,7 @@ import '../../../domain/entities/leaderboard_entry.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../../domain/repositories/league_repository.dart';
 import '../../../domain/usecases/watch_leaderboard.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/cubit/auth_state.dart';
@@ -20,8 +23,14 @@ import '../../auth/view/ensure_signed_in_for_play.dart';
 import '../../auth/view/sign_in_sheet.dart';
 import '../cubit/leaderboard_cubit.dart';
 import '../cubit/leaderboard_state.dart';
-import 'widgets/leaderboard_row.dart';
+import '../logic/board_calendar.dart';
+import 'widgets/leaderboard_board_sheet.dart';
+import 'widgets/leaderboard_filter_row.dart';
+import 'widgets/leaderboard_game_tabs.dart';
+import 'widgets/leaderboard_scope_sheet.dart';
 import 'widgets/leaderboard_shimmer.dart';
+import 'widgets/leaderboard_table.dart';
+import 'widgets/player_card_sheet.dart';
 
 class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({
@@ -41,6 +50,7 @@ class LeaderboardScreen extends StatelessWidget {
       create: (context) => LeaderboardCubit(
         watchLeaderboard: context.read<WatchLeaderboard>(),
         authRepository: context.read<AuthRepository>(),
+        leagueRepository: context.read<LeagueRepository?>(),
         initialGameId: _resolveLeaderboardGameId(initialGameId),
       ),
       child: _RouteGameSync(
@@ -78,6 +88,10 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
   GoRouter? _router;
   String? _appliedLocation;
 
+  /// The last `league` query applied, so coming back to the tab doesn't undo
+  /// a later pick in the scope bar.
+  String? _appliedLeagueQuery;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -110,9 +124,16 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
     if (sameLeaderboard) return;
     final game = uri.queryParameters['game'];
     final gameId = _resolveLeaderboardGameId(game);
+    final leagueId = uri.queryParameters['league'];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<LeaderboardCubit>().selectGame(gameId);
+      final cubit = context.read<LeaderboardCubit>();
+      cubit.selectGame(gameId);
+      // `/leaderboard?league={id}`: that league's board.
+      if (leagueId != null && leagueId != _appliedLeagueQuery) {
+        cubit.selectLeague(leagueId);
+      }
+      _appliedLeagueQuery = leagueId;
     });
   }
 
@@ -213,14 +234,23 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     if (_showAllTimeLeaderboard) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _showAllTimeLeaderboard) return;
-      context.read<LeaderboardCubit>().selectPeriod(LeaderboardPeriod.daily);
+      final cubit = context.read<LeaderboardCubit>();
+      if (cubit.state.period != LeaderboardPeriod.allTime) return;
+      cubit.selectPeriod(LeaderboardPeriod.daily);
     });
   }
 
-  String _formatTime(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
+  /// From a scroll notification: a ballistic scroll can start mid-layout,
+  /// when the rows can't be measured yet, so then it waits for the frame.
+  void _onBoardScrolled(AppLayout layout, int userIndex) {
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase != SchedulerPhase.persistentCallbacks) {
+      _checkUserVisibility(layout, userIndex);
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkUserVisibility(layout, userIndex);
+    });
   }
 
   void _checkUserVisibility(AppLayout layout, int userIndex) {
@@ -237,10 +267,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
   bool _isUserReached(AppLayout layout, int userIndex) {
     if (userIndex == -1) return true;
 
-    final hasNavDock = !GoRouter.of(context).canPop();
-    final dockOffset = hasNavDock ? (layout.isCompact ? 76.0 : 84.0) : 0.0;
-    final pinnedHeight = 64.0 + layout.space(10);
-    final overlayThreshold = dockOffset + pinnedHeight;
+    // The dashboard's SafeArea already keeps the board above the nav dock;
+    // only the pinned row covers the bottom of the list.
+    final overlayThreshold = leaderboardTableRowHeight + layout.space(10);
 
     final userContext = _userRowKey.currentContext;
     final listContext = _listKey.currentContext;
@@ -264,8 +293,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     final viewportHeight = position.viewportDimension;
     if (viewportHeight <= 0) return userIndex < 6;
 
-    final approxItemHeight = 64.0 + layout.space(8);
-    final userItemTop = layout.pagePadding.top + userIndex * approxItemHeight;
+    final userItemTop = userIndex * leaderboardTableRowHeight;
     final currentBottom = position.pixels + viewportHeight;
 
     return currentBottom >= (userItemTop + overlayThreshold);
@@ -273,17 +301,57 @@ class _LeaderboardViewState extends State<_LeaderboardView>
 
   void _scrollToUser(int userIndex, AppLayout layout) {
     if (!_scrollController.hasClients) return;
-    final approxItemHeight = 64.0 + layout.space(8);
-    final targetOffset =
-        (layout.pagePadding.top + userIndex * approxItemHeight - 100.0).clamp(
-          0.0,
-          _scrollController.position.maxScrollExtent,
-        );
+    final targetOffset = (userIndex * leaderboardTableRowHeight - 100.0).clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
     _scrollController.animateTo(
       targetOffset,
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  Future<void> _pickBoard(BuildContext context) async {
+    final cubit = context.read<LeaderboardCubit>();
+    final choice = await showLeaderboardBoardSheet(
+      context,
+      period: cubit.state.period,
+      dayId: cubit.state.dayId,
+      recentDayIds: cubit.recentDayIds,
+      showAllTime: _showAllTimeLeaderboard,
+    );
+    if (choice == null || !mounted || cubit.isClosed) return;
+    // Remote Config may have hidden All-time while the sheet was open.
+    if (choice.period == LeaderboardPeriod.allTime &&
+        !_showAllTimeLeaderboard) {
+      return;
+    }
+    cubit.selectBoard(choice.period, dayId: choice.dayId);
+  }
+
+  Future<void> _pickScope(BuildContext context) async {
+    final cubit = context.read<LeaderboardCubit>();
+    final router = GoRouter.of(context);
+    final choice = await showLeaderboardScopeSheet(
+      context,
+      leagues: cubit.state.leagues,
+      selectedLeagueId: cubit.state.leagueId,
+    );
+    if (choice == null || !mounted || cubit.isClosed) return;
+    if (choice.manageLeagues) {
+      unawaited(router.push('/leagues'));
+      return;
+    }
+    cubit.selectLeague(choice.leagueId);
+  }
+
+  /// The empty board's message when there's nothing to play for on a past day.
+  String? _quietEmptyMessage(LeaderboardState state) {
+    if (state.period == LeaderboardPeriod.daily && state.dayId != null) {
+      return AppStrings.leaderboardPastDayEmpty;
+    }
+    return null;
   }
 
   @override
@@ -298,7 +366,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
         _scrollController.jumpTo(0);
       }
     } else if (cubitState.period != _previousPeriod) {
-      _slideDirection = cubitState.period == LeaderboardPeriod.allTime
+      _slideDirection = cubitState.period.index > _previousPeriod.index
           ? 1.0
           : -1.0;
       _previousPeriod = cubitState.period;
@@ -318,7 +386,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                 children: [
                   Padding(
                     padding: layout.pagePadding.copyWith(
-                      bottom: layout.space(12),
+                      bottom: layout.space(10),
                     ),
                     child: Row(
                       children: [
@@ -368,90 +436,60 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                     padding: EdgeInsets.symmetric(horizontal: layout.space(16)),
                     child: BlocBuilder<LeaderboardCubit, LeaderboardState>(
                       buildWhen: (p, n) => p.gameId != n.gameId,
+                      builder: (context, state) => LeaderboardGameTabs(
+                        gameId: state.gameId,
+                        onChanged: context.read<LeaderboardCubit>().selectGame,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: layout.space(10)),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: layout.space(16)),
+                    child: BlocBuilder<LeaderboardCubit, LeaderboardState>(
+                      buildWhen: (p, n) =>
+                          p.period != n.period ||
+                          p.dayId != n.dayId ||
+                          p.leagueId != n.leagueId ||
+                          p.leagues != n.leagues ||
+                          p.currentUid != n.currentUid,
                       builder: (context, state) {
-                        final selectedIndex = switch (state.gameId) {
-                          GameIds.pathWords => 1,
-                          GameIds.sudoku => 2,
-                          _ => 0,
-                        };
-                        return _LeaderboardPillTrack(
-                          selectedIndex: selectedIndex,
-                          segmentCount: 3,
-                          child: _LeaderboardSegmentBar<String>(
-                            selected: state.gameId,
-                            onChanged: (value) {
-                              context.read<LeaderboardCubit>().selectGame(
-                                value,
-                              );
-                            },
-                            segments: const [
-                              _LeaderboardSegment(
-                                value: GameIds.zip,
-                                icon: Icons.bolt_rounded,
-                                label: AppStrings.zipTitle,
-                              ),
-                              _LeaderboardSegment(
-                                value: GameIds.pathWords,
-                                icon: Icons.route_rounded,
-                                label: AppStrings.pathWordsTab,
-                              ),
-                              _LeaderboardSegment(
-                                value: GameIds.sudoku,
-                                icon: Icons.grid_on_rounded,
-                                label: AppStrings.sudokuTitle,
-                              ),
-                            ],
+                        final cubit = context.read<LeaderboardCubit>();
+                        final league = state.league;
+                        final canPickScope =
+                            state.currentUid != null &&
+                            context.read<LeagueRepository?>() != null;
+                        return LeaderboardFilterRow(
+                          boardIcon: switch (state.period) {
+                            LeaderboardPeriod.daily => Icons.today_rounded,
+                            LeaderboardPeriod.weekly =>
+                              Icons.date_range_rounded,
+                            LeaderboardPeriod.allTime =>
+                              Icons.military_tech_rounded,
+                          },
+                          boardLabel: leaderboardBoardLabel(
+                            period: state.period,
+                            dayId: state.dayId,
+                            recentDayIds: cubit.recentDayIds,
                           ),
+                          onBoardTap: () => _pickBoard(context),
+                          scopeIcon: league == null
+                              ? Icons.public_rounded
+                              : Icons.group_rounded,
+                          scopeLabel: canPickScope
+                              ? (league?.name ??
+                                    AppStrings.leaderboardScopeEveryone)
+                              : null,
+                          onScopeTap: () => _pickScope(context),
                         );
                       },
                     ),
                   ),
-                  if (_showAllTimeLeaderboard) ...[
-                    SizedBox(height: layout.space(10)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: layout.space(16),
-                      ),
-                      child: BlocBuilder<LeaderboardCubit, LeaderboardState>(
-                        buildWhen: (p, n) => p.period != n.period,
-                        builder: (context, state) {
-                          final selectedIndex =
-                              state.period == LeaderboardPeriod.allTime ? 1 : 0;
-                          return _LeaderboardPillTrack(
-                            selectedIndex: selectedIndex,
-                            isSecondary: true,
-                            child: _LeaderboardSegmentBar<LeaderboardPeriod>(
-                              selected: state.period,
-                              isSecondary: true,
-                              onChanged: (value) {
-                                context.read<LeaderboardCubit>().selectPeriod(
-                                  value,
-                                );
-                              },
-                              segments: const [
-                                _LeaderboardSegment(
-                                  value: LeaderboardPeriod.daily,
-                                  icon: Icons.today_rounded,
-                                  label: AppStrings.leaderboardDaily,
-                                  iconSize: 16,
-                                ),
-                                _LeaderboardSegment(
-                                  value: LeaderboardPeriod.allTime,
-                                  icon: Icons.military_tech_rounded,
-                                  label: AppStrings.leaderboardAllTime,
-                                  iconSize: 16,
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                  SizedBox(height: layout.space(12)),
+                  SizedBox(height: layout.space(10)),
                   Expanded(
                     child: _LeaderboardSlideSwitch(
-                      switchKey: '${cubitState.gameId}_${cubitState.period}',
+                      switchKey:
+                          '${cubitState.gameId}_${cubitState.period}_'
+                          '${cubitState.dayId}_${cubitState.leagueId}',
                       direction: _slideDirection,
                       child: BlocBuilder<LeaderboardCubit, LeaderboardState>(
                         builder: (context, state) {
@@ -464,13 +502,22 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                               return const LeaderboardShimmer();
                             case LeaderboardStatus.failure:
                               return CenteredMessageBody(
-                                message:
-                                    state.error ?? AppStrings.leaderboardFailed,
+                                message: AppStrings.leaderboardFailed,
                                 actionLabel: AppStrings.retry,
                                 onAction: () =>
                                     context.read<LeaderboardCubit>().retry(),
                               );
                             case LeaderboardStatus.ready:
+                              final quietEmpty = _quietEmptyMessage(state);
+                              if (state.entries.isEmpty && quietEmpty != null) {
+                                return CenteredMessageBody(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 28,
+                                    vertical: 24,
+                                  ),
+                                  message: quietEmpty,
+                                );
+                              }
                               if (state.entries.isEmpty) {
                                 final gameTitle = switch (state.gameId) {
                                   GameIds.pathWords =>
@@ -529,7 +576,11 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                     ),
                                   ),
                                   iconSpacing: 20,
-                                  message: AppStrings.leaderboardEmpty,
+                                  message: state.leagueId != null
+                                      ? AppStrings.leaderboardLeagueEmpty
+                                      : state.period == LeaderboardPeriod.weekly
+                                      ? AppStrings.leaderboardWeeklyEmpty
+                                      : AppStrings.leaderboardEmpty,
                                   messageStyle: Theme.of(context)
                                       .textTheme
                                       .titleMedium
@@ -542,7 +593,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                   action: SizedBox(
                                     width: 220,
                                     child: ZipPrimaryButton(
-                                      label: 'Play $gameTitle',
+                                      label: AppStrings.leaderboardPlayGame(
+                                        gameTitle,
+                                      ),
                                       icon: Icons.play_arrow_rounded,
                                       onPressed: () async {
                                         final ok = await ensureSignedInForPlay(
@@ -570,6 +623,11 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                               final inInitialList =
                                   userIndex != -1 && userIndex < 6;
                               final hasNavDock = !GoRouter.of(context).canPop();
+                              // Under the card; the shell's SafeArea already
+                              // ends above the nav dock.
+                              final bottomGap = hasNavDock
+                                  ? layout.space(8)
+                                  : layout.pagePadding.bottom;
                               final showSignInFab = auth.user == null;
                               final showPinned =
                                   userEntry != null &&
@@ -584,41 +642,74 @@ class _LeaderboardViewState extends State<_LeaderboardView>
 
                               return Stack(
                                 children: [
-                                  NotificationListener<ScrollNotification>(
-                                    onNotification: (_) {
-                                      _checkUserVisibility(layout, userIndex);
-                                      return false;
-                                    },
-                                    child: ListView.separated(
-                                      key: _listKey,
-                                      controller: _scrollController,
-                                      padding: layout.pagePadding.copyWith(
-                                        bottom:
-                                            layout.pagePadding.bottom +
-                                            (hasNavDock ? 88.0 : 0.0) +
-                                            (showPinned ? 76.0 : 0.0) +
-                                            (showSignInFab ? 80.0 : 0.0),
-                                      ),
-                                      itemCount: state.entries.length,
-                                      separatorBuilder: (_, _) =>
-                                          SizedBox(height: layout.space(8)),
-                                      itemBuilder: (context, index) {
-                                        final entry = state.entries[index];
-                                        final isYou =
-                                            entry.uid == state.currentUid;
-                                        return LeaderboardRow(
-                                          key: isYou ? _userRowKey : null,
-                                          entry: entry,
-                                          timeLabel: _formatTime(
-                                            entry.timeSeconds,
+                                  Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      12,
+                                      0,
+                                      12,
+                                      bottomGap,
+                                    ),
+                                    child: LeaderboardTableCard(
+                                      period: state.period,
+                                      child:
+                                          NotificationListener<
+                                            ScrollNotification
+                                          >(
+                                            onNotification: (_) {
+                                              _onBoardScrolled(
+                                                layout,
+                                                userIndex,
+                                              );
+                                              return false;
+                                            },
+                                            child: ListView.builder(
+                                              key: _listKey,
+                                              controller: _scrollController,
+                                              padding: EdgeInsets.only(
+                                                bottom:
+                                                    // Kept while the pin can
+                                                    // show, so hiding it
+                                                    // doesn't move the rows.
+                                                    (userEntry != null &&
+                                                            !inInitialList
+                                                        ? 64.0
+                                                        : 0.0) +
+                                                    (showSignInFab
+                                                        ? 80.0
+                                                        : 0.0),
+                                              ),
+                                              itemExtent:
+                                                  leaderboardTableRowHeight,
+                                              itemCount: state.entries.length,
+                                              itemBuilder: (context, index) {
+                                                final entry =
+                                                    state.entries[index];
+                                                final isYou =
+                                                    entry.uid ==
+                                                    state.currentUid;
+                                                return LeaderboardTableRow(
+                                                  key: isYou
+                                                      ? _userRowKey
+                                                      : null,
+                                                  entry: entry,
+                                                  period: state.period,
+                                                  gameId: state.gameId,
+                                                  isYou: isYou,
+                                                  showDivider:
+                                                      index <
+                                                      state.entries.length - 1,
+                                                  onTap: () =>
+                                                      showPlayerCardSheet(
+                                                        context,
+                                                        entry: entry,
+                                                        gameId: state.gameId,
+                                                        period: state.period,
+                                                        isYou: isYou,
+                                                      ),
+                                                );
+                                              },
+                                            ),
                                           ),
-                                          isYou: isYou,
-                                          showCleanRunChips:
-                                              state.period ==
-                                              LeaderboardPeriod.daily,
-                                          gameId: state.gameId,
-                                        );
-                                      },
                                     ),
                                   ),
                                   if (userEntry != null && !inInitialList)
@@ -669,27 +760,17 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                                         ],
                                                       ),
                                                     ),
-                                                    padding: EdgeInsets.fromLTRB(
-                                                      layout.pagePadding.left,
-                                                      layout.space(10),
-                                                      layout.pagePadding.right,
-                                                      hasNavDock
-                                                          ? (layout.isCompact
-                                                                ? 76.0
-                                                                : 84.0)
-                                                          : layout
-                                                                .pagePadding
-                                                                .bottom,
-                                                    ),
+                                                    padding:
+                                                        EdgeInsets.fromLTRB(
+                                                          12,
+                                                          layout.space(10),
+                                                          12,
+                                                          bottomGap +
+                                                              layout.space(6),
+                                                        ),
                                                     child: _PinnedUserRow(
                                                       entry: userEntry,
-                                                      timeLabel: _formatTime(
-                                                        userEntry.timeSeconds,
-                                                      ),
-                                                      showCleanRunChips:
-                                                          state.period ==
-                                                          LeaderboardPeriod
-                                                              .daily,
+                                                      period: state.period,
                                                       gameId: state.gameId,
                                                       onTap: () =>
                                                           _scrollToUser(
@@ -725,7 +806,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                     child: FilledButton(
                       key: const Key('leaderboard_sign_in_fab'),
                       onPressed: () => showSignInSheet(context),
-                      child: const Text(AppStrings.signInWithGoogle),
+                      child: Text(AppStrings.signInWithGoogle),
                     ),
                   );
                 },
@@ -733,174 +814,6 @@ class _LeaderboardViewState extends State<_LeaderboardView>
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LeaderboardSegment<T> {
-  const _LeaderboardSegment({
-    required this.value,
-    required this.icon,
-    required this.label,
-    this.iconSize = 18,
-  });
-
-  final T value;
-  final IconData icon;
-  final String label;
-  final double iconSize;
-}
-
-class _LeaderboardSegmentBar<T> extends StatelessWidget {
-  const _LeaderboardSegmentBar({
-    required this.segments,
-    required this.selected,
-    required this.onChanged,
-    this.isSecondary = false,
-  });
-
-  final List<_LeaderboardSegment<T>> segments;
-  final T selected;
-  final ValueChanged<T> onChanged;
-  final bool isSecondary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (final segment in segments)
-          Expanded(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => onChanged(segment.value),
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  height: 40,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          segment.icon,
-                          size: segment.iconSize,
-                          color: segment.value == selected
-                              ? (isSecondary ? ZipColors.ember : Colors.white)
-                              : ZipColors.inkSoft,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            segment.label,
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.lexend(
-                              fontWeight: segment.value == selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              fontSize: 13,
-                              letterSpacing: 0.2,
-                              color: segment.value == selected
-                                  ? (isSecondary
-                                        ? ZipColors.ember
-                                        : Colors.white)
-                                  : ZipColors.inkSoft,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _LeaderboardPillTrack extends StatelessWidget {
-  const _LeaderboardPillTrack({
-    required this.selectedIndex,
-    required this.child,
-    this.segmentCount = 2,
-    this.isSecondary = false,
-  });
-
-  final int selectedIndex;
-  final Widget child;
-  final int segmentCount;
-  final bool isSecondary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isSecondary
-            ? ZipColors.wall.withValues(alpha: 0.65)
-            : ZipColors.wall.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isSecondary
-              ? ZipColors.outlineQuiet.withValues(alpha: 0.5)
-              : ZipColors.outlineQuiet.withValues(alpha: 0.7),
-          width: 1,
-        ),
-        boxShadow: isSecondary
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.22),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-      ),
-      padding: const EdgeInsets.all(4),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final pillWidth = constraints.maxWidth / segmentCount;
-          final pillLeft = selectedIndex * pillWidth;
-
-          return Stack(
-            children: [
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                left: pillLeft,
-                top: 0,
-                bottom: 0,
-                width: pillWidth,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSecondary ? ZipColors.emberSoft : ZipColors.ember,
-                    borderRadius: BorderRadius.circular(12),
-                    border: isSecondary
-                        ? Border.all(
-                            color: ZipColors.ember.withValues(alpha: 0.45),
-                            width: 1,
-                          )
-                        : null,
-                    boxShadow: isSecondary
-                        ? null
-                        : [
-                            BoxShadow(
-                              color: ZipColors.emberGlow,
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                  ),
-                ),
-              ),
-              child,
-            ],
-          );
-        },
       ),
     );
   }
@@ -981,90 +894,95 @@ class _LeaderboardSlideSwitchState extends State<_LeaderboardSlideSwitch>
 class _PinnedUserRow extends StatelessWidget {
   const _PinnedUserRow({
     required this.entry,
-    required this.timeLabel,
+    required this.period,
+    required this.gameId,
     required this.onTap,
-    this.showCleanRunChips = false,
-    this.gameId,
   });
 
   final LeaderboardEntry entry;
-  final String timeLabel;
+  final LeaderboardPeriod period;
+  final String gameId;
   final VoidCallback onTap;
-  final bool showCleanRunChips;
-  final String? gameId;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.65),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: leaderboardTableMaxWidth),
+        child: Container(
+          decoration: BoxDecoration(
+            color: ZipColors.wall,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: ZipColors.ember.withValues(alpha: 0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.65),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: ZipColors.ember.withValues(alpha: 0.28),
+                blurRadius: 16,
+                spreadRadius: -2,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
-          BoxShadow(
-            color: ZipColors.ember.withValues(alpha: 0.28),
-            blurRadius: 16,
-            spreadRadius: -2,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              LeaderboardRow(
-                entry: entry,
-                timeLabel: timeLabel,
-                isYou: true,
-                showCleanRunChips: showCleanRunChips,
-                gameId: gameId,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(13),
+                child: LeaderboardTableRow(
+                  entry: entry,
+                  period: period,
+                  gameId: gameId,
+                  isYou: true,
+                  showDivider: false,
+                  onTap: onTap,
+                ),
               ),
               Positioned(
                 top: -8,
                 right: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2.5,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: ZipColors.emberGradient,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ZipColors.ember.withValues(alpha: 0.4),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.my_location_rounded,
-                        size: 11,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Your Rank',
-                        style: GoogleFonts.lexend(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
+                child: IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2.5,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: ZipColors.emberGradient,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: ZipColors.ember.withValues(alpha: 0.4),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.my_location_rounded,
+                          size: 11,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          AppStrings.leaderboardYourRank,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 0.3,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
