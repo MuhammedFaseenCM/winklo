@@ -22,6 +22,7 @@ void main() {
               onSettings: () => opened++,
               onPrivacy: () {},
               onAbout: () {},
+              onRate: () {},
               onReport: () {},
               onSignOut: () {},
               onDeleteAccount: () {},
@@ -50,6 +51,7 @@ void main() {
               onSettings: () {},
               onPrivacy: () {},
               onAbout: () {},
+              onRate: () {},
               onReport: () {},
               onSignOut: () {},
               onDeleteAccount: () {},
@@ -78,6 +80,7 @@ void main() {
             child: ProfileSettingsList(
               onPrivacy: () {},
               onAbout: () {},
+              onRate: () {},
               onReport: () {},
               onSignOut: () {},
               onDeleteAccount: () {},
@@ -101,6 +104,7 @@ void main() {
             child: ProfileSettingsList(
               onPrivacy: () {},
               onAbout: () {},
+              onRate: () {},
               onReport: () {},
               onSignOut: () {},
               onDeleteAccount: () => deleteTaps++,
@@ -114,5 +118,32 @@ void main() {
     await tester.pump();
 
     expect(deleteTaps, 1);
+  });
+
+  testWidgets('rate on Play Store row calls onRate', (tester) async {
+    var rateTaps = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ProfileSettingsList(
+              onPrivacy: () {},
+              onAbout: () {},
+              onRate: () => rateTaps++,
+              onReport: () {},
+              onSignOut: () {},
+              onDeleteAccount: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text(AppStrings.profileRateOnPlayStore));
+    await tester.pump();
+
+    expect(rateTaps, 1);
   });
 }

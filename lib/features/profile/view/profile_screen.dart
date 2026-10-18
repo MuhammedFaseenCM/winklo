@@ -13,6 +13,7 @@ import '../../../core/widgets/user_avatar.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/app_user.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/app_review_repository.dart';
 import '../../../domain/repositories/external_link_repository.dart';
 import '../../../domain/repositories/profile_repository.dart';
 import '../../../domain/usecases/update_avatar.dart';
@@ -145,6 +146,26 @@ class _SignedInBodyState extends State<_SignedInBody> {
     await context.read<AnalyticsRepository>().logProfilePrivacyOpened();
     if (!context.mounted) return;
     await context.push('/profile/privacy');
+  }
+
+  Future<void> _rateOnPlayStore(BuildContext context) async {
+    final review = context.read<AppReviewRepository>();
+    final analytics = context.read<AnalyticsRepository>();
+    final outcome = await review.requestReviewOrOpenStore();
+    await analytics.logReviewPrompt(
+      source: 'profile',
+      outcome: switch (outcome) {
+        ReviewOutcome.inApp => 'in_app',
+        ReviewOutcome.store => 'store',
+        ReviewOutcome.failed => 'failed',
+      },
+    );
+    if (!context.mounted) return;
+    if (outcome == ReviewOutcome.failed) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(AppStrings.reviewOpenStoreFailed)));
+    }
   }
 
   Future<void> _openReport(BuildContext context) async {
@@ -318,6 +339,7 @@ class _SignedInBodyState extends State<_SignedInBody> {
                     onSettings: () => unawaited(openSettings(context)),
                     onPrivacy: () => unawaited(_openPrivacy(context)),
                     onAbout: () => unawaited(showAboutGameDialog(context)),
+                    onRate: () => unawaited(_rateOnPlayStore(context)),
                     onReport: () => unawaited(_openReport(context)),
                     onSignOut: () => unawaited(_signOut(context)),
                     onDeleteAccount: () => unawaited(_deleteAccount(context)),
