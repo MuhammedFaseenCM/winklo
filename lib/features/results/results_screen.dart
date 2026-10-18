@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import '../../core/widgets/zip_ui.dart';
 import '../../domain/game_ids.dart';
 import '../../domain/play_period.dart';
 import '../../domain/repositories/analytics_repository.dart';
+import '../../domain/repositories/app_review_repository.dart';
 import '../../domain/usecases/submit_leaderboard_time.dart';
 import '../achievements/view/new_achievements_banner.dart';
 import '../auth/cubit/auth_cubit.dart';
@@ -217,110 +219,116 @@ class _CelebrateAndClaimResults extends StatelessWidget {
     final timeLabel = AppStrings.formatPlayTime(args.timeSeconds);
     final gameId = args.gameId!;
 
-    return Scaffold(
-      body: ZipAtmosphere(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-            child: signedIn
-                ? LayoutBuilder(
-                    builder: (context, constraints) {
-                      final height = constraints.maxHeight;
-                      final board = MiniLeaderboardPanel(
-                        gameId: gameId,
-                        timeSeconds: args.timeSeconds,
-                        usedHints: args.usedHints,
-                        hadMistakes: args.hadMistakes,
-                        currentStreak: args.currentStreak,
-                        footer: ResultsActions(args: args),
-                        dayId: args.leaderboardDay,
-                        leaderboardProof: args.leaderboardProof,
-                      );
-                      if (height < _minHeaderHeight + 12 + _minBoardHeight) {
-                        // Sideways or split screen: no room for both, so the
-                        // whole page scrolls, celebration first.
-                        return SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _celebrationHeader(context, compact: true),
-                              const SizedBox(height: 12),
-                              SizedBox(height: _minBoardHeight, child: board),
-                            ],
-                          ),
+    return _ReviewPromptHost(
+      args: args,
+      child: Scaffold(
+        body: ZipAtmosphere(
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+              child: signedIn
+                  ? LayoutBuilder(
+                      builder: (context, constraints) {
+                        final height = constraints.maxHeight;
+                        final board = MiniLeaderboardPanel(
+                          gameId: gameId,
+                          timeSeconds: args.timeSeconds,
+                          usedHints: args.usedHints,
+                          hadMistakes: args.hadMistakes,
+                          currentStreak: args.currentStreak,
+                          footer: ResultsActions(args: args),
+                          dayId: args.leaderboardDay,
+                          leaderboardProof: args.leaderboardProof,
                         );
-                      }
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // The celebration takes the height it needs, up to
-                          // just over half the screen and never squeezing the
-                          // board below its minimum (it scrolls past that);
-                          // the board gets the rest.
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight: math.min(
-                                height * 0.55,
-                                height - 12 - _minBoardHeight,
+                        if (height < _minHeaderHeight + 12 + _minBoardHeight) {
+                          // Sideways or split screen: no room for both, so the
+                          // whole page scrolls, celebration first.
+                          return SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _celebrationHeader(context, compact: true),
+                                const SizedBox(height: 12),
+                                SizedBox(height: _minBoardHeight, child: board),
+                              ],
+                            ),
+                          );
+                        }
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // The celebration takes the height it needs, up to
+                            // just over half the screen and never squeezing the
+                            // board below its minimum (it scrolls past that);
+                            // the board gets the rest.
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: math.min(
+                                  height * 0.55,
+                                  height - 12 - _minBoardHeight,
+                                ),
+                              ),
+                              child: SingleChildScrollView(
+                                child: _celebrationHeader(
+                                  context,
+                                  compact: true,
+                                ),
                               ),
                             ),
-                            child: SingleChildScrollView(
-                              child: _celebrationHeader(context, compact: true),
+                            const SizedBox(height: 12),
+                            Expanded(child: board),
+                          ],
+                        );
+                      },
+                    )
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _celebrationHeader(context, compact: true),
+                                const SizedBox(height: 14),
+                                ResultsBoardTease(
+                                      height: 120,
+                                      onTap: () => _signInAndSync(context),
+                                    )
+                                    .animate()
+                                    .fadeIn(delay: 500.ms, duration: 400.ms)
+                                    .slideY(
+                                      begin: 0.08,
+                                      curve: Curves.easeOutCubic,
+                                    ),
+                                const SizedBox(height: 16),
+                                ZipPrimaryButton(
+                                      label: AppStrings.saveTimeToBoard(
+                                        timeLabel,
+                                      ),
+                                      icon: Icons.emoji_events_rounded,
+                                      onPressed: () => _signInAndSync(context),
+                                    )
+                                    .animate()
+                                    .fadeIn(delay: 850.ms, duration: 400.ms)
+                                    .slideY(
+                                      begin: 0.15,
+                                      curve: Curves.easeOutCubic,
+                                    ),
+                                TextButton(
+                                  onPressed: () => context.go('/'),
+                                  child: Text(AppStrings.backHome),
+                                ).animate().fadeIn(delay: 950.ms),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Expanded(child: board),
-                        ],
-                      );
-                    },
-                  )
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _celebrationHeader(context, compact: true),
-                              const SizedBox(height: 14),
-                              ResultsBoardTease(
-                                    height: 120,
-                                    onTap: () => _signInAndSync(context),
-                                  )
-                                  .animate()
-                                  .fadeIn(delay: 500.ms, duration: 400.ms)
-                                  .slideY(
-                                    begin: 0.08,
-                                    curve: Curves.easeOutCubic,
-                                  ),
-                              const SizedBox(height: 16),
-                              ZipPrimaryButton(
-                                    label: AppStrings.saveTimeToBoard(
-                                      timeLabel,
-                                    ),
-                                    icon: Icons.emoji_events_rounded,
-                                    onPressed: () => _signInAndSync(context),
-                                  )
-                                  .animate()
-                                  .fadeIn(delay: 850.ms, duration: 400.ms)
-                                  .slideY(
-                                    begin: 0.15,
-                                    curve: Curves.easeOutCubic,
-                                  ),
-                              TextButton(
-                                onPressed: () => context.go('/'),
-                                child: Text(AppStrings.backHome),
-                              ).animate().fadeIn(delay: 950.ms),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ),
       ),
@@ -368,6 +376,55 @@ class _CelebrateAndClaimResults extends StatelessWidget {
       ],
     );
   }
+}
+
+/// One-shot Play Store review prompt after daily celebration settles.
+class _ReviewPromptHost extends StatefulWidget {
+  const _ReviewPromptHost({required this.args, required this.child});
+
+  final ResultsArgs args;
+  final Widget child;
+
+  @override
+  State<_ReviewPromptHost> createState() => _ReviewPromptHostState();
+}
+
+class _ReviewPromptHostState extends State<_ReviewPromptHost> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_maybeAsk());
+    });
+  }
+
+  Future<void> _maybeAsk() async {
+    await Future<void>.delayed(const Duration(seconds: 1));
+    if (!mounted) return;
+    final review = context.read<AppReviewRepository>();
+    final args = widget.args;
+    if (!review.shouldPromptAfterMilestone(
+      isPersonalBest: args.improved,
+      streak: args.currentStreak,
+    )) {
+      return;
+    }
+    final outcome = await review.requestReviewOrOpenStore();
+    await review.recordAutoPromptAttempt();
+    if (!mounted) return;
+    final source = args.improved ? 'personal_best' : 'streak';
+    await context.read<AnalyticsRepository>().logReviewPrompt(
+      source: source,
+      outcome: switch (outcome) {
+        ReviewOutcome.inApp => 'in_app',
+        ReviewOutcome.store => 'store',
+        ReviewOutcome.failed => 'failed',
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// "New puzzle in 6h 12m" under the daily result.

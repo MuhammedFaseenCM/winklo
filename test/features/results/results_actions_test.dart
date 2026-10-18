@@ -13,6 +13,7 @@ import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
+import 'package:winklo/domain/repositories/app_review_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/share_repository.dart';
 import 'package:winklo/domain/usecases/next_uncleared_daily.dart';
@@ -26,6 +27,7 @@ import 'package:winklo/features/results/results_screen.dart';
 import 'package:winklo/features/results/view/results_actions.dart';
 
 import '../../helpers/mock_analytics_repository.dart';
+import '../../helpers/mock_app_review_repository.dart';
 
 class _MockWatchLeaderboard extends Mock implements WatchLeaderboard {}
 
@@ -43,6 +45,7 @@ void main() {
   late _MockNextUnclearedDaily next;
   late _MockShareRepository share;
   late MockAnalyticsRepository analytics;
+  late MockAppReviewRepository review;
   late StreamController<List<LeaderboardEntry>> board;
 
   setUpAll(() => registerFallbackValue(LeaderboardPeriod.daily));
@@ -54,6 +57,8 @@ void main() {
     share = _MockShareRepository();
     analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
+    review = MockAppReviewRepository();
+    stubAppReviewNoAutoPrompt(review);
     board = StreamController<List<LeaderboardEntry>>.broadcast();
     when(
       () => watch(
@@ -108,6 +113,7 @@ void main() {
           RepositoryProvider<NextUnclearedDaily>.value(value: next),
           RepositoryProvider<ShareRepository>.value(value: share),
           RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+          RepositoryProvider<AppReviewRepository>.value(value: review),
         ],
         child: BlocProvider(
           create: (_) => AuthCubit(
@@ -145,6 +151,7 @@ void main() {
         providers: [
           RepositoryProvider<NextUnclearedDaily>.value(value: next),
           RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+          RepositoryProvider<AppReviewRepository>.value(value: review),
           RepositoryProvider<ShareRepository>.value(value: share),
         ],
         child: MaterialApp(

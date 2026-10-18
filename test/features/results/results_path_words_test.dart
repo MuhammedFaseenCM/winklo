@@ -26,6 +26,8 @@ import 'package:winklo/features/path_words/view/widgets/path_words_definition_sh
 import 'package:winklo/features/path_words/view/widgets/path_words_results_panel.dart';
 
 import '../../helpers/mock_analytics_repository.dart';
+import '../../helpers/mock_app_review_repository.dart';
+import 'package:winklo/domain/repositories/app_review_repository.dart';
 
 class _MockWatchLeaderboard extends Mock implements WatchLeaderboard {}
 
@@ -50,9 +52,12 @@ List<RepositoryProvider<Object>> _actionProviders() {
   ).thenReturn(null);
   final analytics = MockAnalyticsRepository();
   stubAnalytics(analytics);
+  final review = MockAppReviewRepository();
+  stubAppReviewNoAutoPrompt(review);
   return [
     RepositoryProvider<NextUnclearedDaily>.value(value: next),
     RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+    RepositoryProvider<AppReviewRepository>.value(value: review),
     RepositoryProvider<ShareRepository>.value(value: _MockShareRepository()),
   ];
 }

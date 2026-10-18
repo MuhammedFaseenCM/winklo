@@ -13,6 +13,7 @@ import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
+import 'package:winklo/domain/repositories/app_review_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/share_repository.dart';
 import 'package:winklo/domain/achievements/achievement.dart';
@@ -29,6 +30,7 @@ import 'package:winklo/features/results/view/mini_leaderboard_panel.dart';
 import 'package:winklo/features/results/view/results_board_tease.dart';
 
 import '../../helpers/mock_analytics_repository.dart';
+import '../../helpers/mock_app_review_repository.dart';
 
 class _MockWatchLeaderboard extends Mock implements WatchLeaderboard {}
 
@@ -58,9 +60,12 @@ List<RepositoryProvider<Object>> _actionProviders() {
   ).thenReturn(null);
   final analytics = MockAnalyticsRepository();
   stubAnalytics(analytics);
+  final review = MockAppReviewRepository();
+  stubAppReviewNoAutoPrompt(review);
   return [
     RepositoryProvider<NextUnclearedDaily>.value(value: next),
     RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+    RepositoryProvider<AppReviewRepository>.value(value: review),
     RepositoryProvider<ShareRepository>.value(value: _MockShareRepository()),
   ];
 }
