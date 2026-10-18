@@ -489,6 +489,8 @@ abstract final class AppStrings {
   static String get profileVibration => _t.profileVibration;
   static String get profilePrivacyPolicy => _t.profilePrivacyPolicy;
   static String get profileAboutGame => _t.profileAboutGame;
+  static String get profileRateOnPlayStore => _t.profileRateOnPlayStore;
+  static String get reviewOpenStoreFailed => _t.reviewOpenStoreFailed;
   static String get profileReportIssue => _t.profileReportIssue;
   static String get profileAboutBody => _t.profileAboutBody;
   static String get profileAboutGamesHeading => _t.profileAboutGamesHeading;

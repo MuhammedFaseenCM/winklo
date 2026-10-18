@@ -1251,6 +1251,12 @@ final class AppTextMl implements AppText {
   String get profileAboutGame => 'ഗെയിമിനെക്കുറിച്ച്';
 
   @override
+  String get profileRateOnPlayStore => 'Play Store-ൽ റേറ്റ് ചെയ്യൂ';
+
+  @override
+  String get reviewOpenStoreFailed => 'Play Store തുറക്കാനായില്ല';
+
+  @override
   String get profileReportIssue => 'പ്രശ്നം അറിയിക്കൂ';
 
   @override
