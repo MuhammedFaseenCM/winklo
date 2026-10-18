@@ -67,6 +67,7 @@ dependencies:
   audioplayers: ^6.8.1
   share_plus: ^13.3.1
   in_app_update: ^5.0.0
+  in_app_review: ^2.0.10
   home_widget: ^0.10.0
 
 dev_dependencies:
