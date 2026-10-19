@@ -1,12 +1,18 @@
-Winklo is a collection of quick solo mini-games you can finish in a spare minute.
+Winklo is a daily puzzle app. Every day brings a new Zip, a new Path Words board, and a new Sudoku. Clear them at your own pace, keep a streak, and post your time on a live leaderboard. No ads.
 
-ZIP
-Start at 1. Fill every cell. Finish on the last number. Move up, down, left, or right—not diagonally. A new puzzle each day.
+Zip
+Start at 1. Draw one path through every cell and finish on the last number. Move up, down, left, or right, not diagonally. A new puzzle each day.
 
-PATH WORDS
-Trace every word across the grid. Lift your finger anytime and keep going from the last cell. A new puzzle each day.
+Path Words
+Trace every hidden word across the letter grid. Lift your finger anytime and keep going from the last cell. A new word puzzle each day.
 
-SUDOKU
-Fill every cell with 1–6. No repeats in any row, column, or region. A new puzzle each day.
+Sudoku
+Fill a 6x6 board with 1-6. No number repeats in a row, column, or box. A new puzzle each day.
 
-Keep a streak, beat your best time, and come back tomorrow for a new puzzle.
+Play at your pace
+You get three hints per game. Leave whenever you want: the clock pauses and your run is saved. Beat your best time. One streak freeze can cover a missed day.
+
+Leaderboard
+The daily leaderboard ranks players by time. A clean run can earn Hint-free or Flawless. Sign in with Google to play. Your streak and progress sync when you switch phones.
+
+Come back tomorrow. A new set is waiting.

@@ -8,6 +8,7 @@ class ProfileSettingsList extends StatelessWidget {
     super.key,
     required this.onPrivacy,
     required this.onAbout,
+    required this.onRate,
     required this.onReport,
     required this.onSignOut,
     required this.onDeleteAccount,
@@ -17,6 +18,7 @@ class ProfileSettingsList extends StatelessWidget {
 
   final VoidCallback onPrivacy;
   final VoidCallback onAbout;
+  final VoidCallback onRate;
   final VoidCallback onReport;
   final VoidCallback onSignOut;
   final VoidCallback onDeleteAccount;
@@ -72,6 +74,13 @@ class ProfileSettingsList extends StatelessWidget {
               label: AppStrings.profileAboutGame,
               iconColor: ZipColors.ember,
               onTap: enabled ? onAbout : null,
+            ),
+            const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
+            _SettingsRow(
+              icon: Icons.star_outline_rounded,
+              label: AppStrings.profileRateOnPlayStore,
+              iconColor: const Color(0xFFFBBF24),
+              onTap: enabled ? onRate : null,
             ),
             const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
             _SettingsRow(

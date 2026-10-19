@@ -1194,6 +1194,12 @@ final class AppTextEn implements AppText {
   String get profileAboutGame => 'About the game';
 
   @override
+  String get profileRateOnPlayStore => 'Rate on Play Store';
+
+  @override
+  String get reviewOpenStoreFailed => "Couldn't open the Play Store";
+
+  @override
   String get profileReportIssue => 'Report an issue';
 
   @override

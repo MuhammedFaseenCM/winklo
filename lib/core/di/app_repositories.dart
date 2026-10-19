@@ -23,6 +23,8 @@ import 'package:winklo/data/clients/path_words/http_path_words_nouns_client.dart
 import 'package:winklo/data/clients/path_words/path_words_nouns_client.dart';
 import 'package:winklo/data/repositories/achievement_repository_impl.dart';
 import 'package:winklo/data/repositories/activity_repository_impl.dart';
+import 'package:winklo/data/clients/remote_config_client.dart';
+import 'package:winklo/data/repositories/app_review_repository_impl.dart';
 import 'package:winklo/data/repositories/app_update_repository_impl.dart';
 import 'package:winklo/data/repositories/external_link_repository_impl.dart';
 import 'package:winklo/data/repositories/auth_repository_impl.dart';
@@ -53,6 +55,7 @@ import 'package:winklo/data/repositories/zip_level_repository_impl.dart';
 import 'package:winklo/domain/repositories/achievement_repository.dart';
 import 'package:winklo/domain/repositories/activity_repository.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
+import 'package:winklo/domain/repositories/app_review_repository.dart';
 import 'package:winklo/domain/repositories/share_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/external_link_repository.dart';
@@ -160,6 +163,12 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (_) => FirebaseAnalyticsRepositoryImpl(),
     ),
     RepositoryProvider<ShareRepository>(create: (_) => ShareRepositoryImpl()),
+    RepositoryProvider<AppReviewRepository>(
+      create: (context) => AppReviewRepositoryImpl(
+        prefs: context.read<SharedPreferences>(),
+        playStoreUrl: RemoteConfigClient.instance.playStoreUrl,
+      ),
+    ),
     RepositoryProvider<NotificationClient>(
       create: (_) => FirebaseNotificationClient(),
     ),

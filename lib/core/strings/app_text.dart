@@ -425,6 +425,8 @@ abstract interface class AppText {
   String get profileVibration;
   String get profilePrivacyPolicy;
   String get profileAboutGame;
+  String get profileRateOnPlayStore;
+  String get reviewOpenStoreFailed;
   String get profileReportIssue;
   String get profileAboutBody;
   String get profileAboutGamesHeading;
