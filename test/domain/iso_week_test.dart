@@ -23,4 +23,17 @@ void main() {
   test('refuses a day that is not yyyy-MM-dd', () {
     expect(() => isoWeekIdForDayId('20261015'), throwsArgumentError);
   });
+
+  test('lists Monday…Sunday for the week holding a day', () {
+    expect(dayIdsInIsoWeekContaining('2026-10-15'), [
+      '2026-10-12',
+      '2026-10-13',
+      '2026-10-14',
+      '2026-10-15',
+      '2026-10-16',
+      '2026-10-17',
+      '2026-10-18',
+    ]);
+    expect(dayIdsInIsoWeekContaining('2026-10-12').first, '2026-10-12');
+  });
 }

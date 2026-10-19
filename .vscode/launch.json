@@ -10,11 +10,11 @@
             "type": "dart"
         },
         {
-            "name": "winklo (daily play period)",
+            "name": "winklo (minute play period)",
             "request": "launch",
             "type": "dart",
             "toolArgs": [
-                "--dart-define=DAILY_PLAY_PERIOD=true"
+                "--dart-define=DAILY_PLAY_PERIOD=false"
             ]
         },
         {

@@ -10,7 +10,7 @@ import '../../../../domain/entities/leaderboard_period.dart';
 import '../../../../domain/game_ids.dart';
 
 /// A board row's height; the board's list uses it as its item extent.
-const double leaderboardTableRowHeight = 48;
+const double leaderboardTableRowHeight = 56;
 
 /// The table's widest; on tablets it sits centred.
 const double leaderboardTableMaxWidth = 640;
@@ -20,10 +20,30 @@ const double _avatarRadius = 14;
 const double _daysWidth = 40;
 const double _timeWidth = 56;
 const double _gap = 10;
+const double _youBarWidth = 3;
 
 const _noHintColor = Color(0xFF7EE0C3);
 const _flawlessColor = Color(0xFF9EC0FF);
 const _streakColor = Color(0xFFFFC27A);
+
+const _gold = Color(0xFFFFD700);
+const _silver = Color(0xFFD4DFEB);
+const _bronze = Color(0xFFE28B52);
+
+/// Soft wash behind a top-3 row.
+Color? _podiumWash(int rank) => switch (rank) {
+  1 => _gold.withValues(alpha: 0.10),
+  2 => _silver.withValues(alpha: 0.08),
+  3 => _bronze.withValues(alpha: 0.09),
+  _ => null,
+};
+
+Color? _podiumAccent(int rank) => switch (rank) {
+  1 => _gold,
+  2 => _silver,
+  3 => _bronze,
+  _ => null,
+};
 
 /// The card the board's rows sit in, used by the shimmer too.
 BoxDecoration leaderboardTableDecoration() => BoxDecoration(
@@ -76,8 +96,9 @@ class LeaderboardTableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-      color: ZipColors.inkSoft,
-      fontWeight: FontWeight.w600,
+      color: ZipColors.inkSoft.withValues(alpha: 0.9),
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.2,
     );
     final timeLabel = switch (period) {
       LeaderboardPeriod.daily => AppStrings.leaderboardColumnTime,
@@ -88,9 +109,10 @@ class LeaderboardTableHeader extends StatelessWidget {
       height: 30,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.12),
         border: Border(
           bottom: BorderSide(
-            color: ZipColors.outlineQuiet.withValues(alpha: 0.7),
+            color: ZipColors.outlineQuiet.withValues(alpha: 0.55),
           ),
         ),
       ),
@@ -113,7 +135,7 @@ class LeaderboardTableHeader extends StatelessWidget {
             SizedBox(
               width: _daysWidth,
               child: _FitCell(
-                alignment: Alignment.center,
+                alignment: Alignment.centerRight,
                 child: Text(
                   AppStrings.leaderboardColumnDays,
                   maxLines: 1,
@@ -159,84 +181,136 @@ class LeaderboardTableRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final podium = _podiumWash(entry.rank);
+    final podiumAccent = _podiumAccent(entry.rank);
+    final wash = isYou
+        ? ZipColors.ember.withValues(alpha: 0.14)
+        : podium ?? Colors.transparent;
+    // "You" keeps the left ember bar; podium ranks get a full rounded border.
+    final showYouBar = isYou && podiumAccent == null;
     final numberStyle = textTheme.titleSmall?.copyWith(
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w800,
       fontFeatures: const [FontFeature.tabularFigures()],
+      letterSpacing: -0.2,
     );
-    return Material(
-      color: isYou
-          ? ZipColors.ember.withValues(alpha: 0.12)
-          : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          height: leaderboardTableRowHeight,
-          // The You bar takes 3px of the left padding, so columns line up.
-          padding: EdgeInsets.only(left: isYou ? 9 : 12, right: 12),
-          decoration: BoxDecoration(
-            border: Border(
-              left: isYou
-                  ? const BorderSide(color: ZipColors.ember, width: 3)
-                  : BorderSide.none,
-              bottom: showDivider
-                  ? BorderSide(
-                      color: ZipColors.outlineQuiet.withValues(alpha: 0.35),
-                    )
-                  : BorderSide.none,
+    final row = Row(
+      children: [
+        SizedBox(
+          width: _rankWidth,
+          child: Center(child: _rank(context)),
+        ),
+        const SizedBox(width: _gap),
+        UserAvatar(
+          displayName: entry.displayName,
+          photoUrl: entry.photoUrl,
+          avatarId: entry.avatarId,
+          radius: _avatarRadius,
+        ),
+        const SizedBox(width: _gap),
+        Expanded(child: _name(context)),
+        if (period == LeaderboardPeriod.weekly)
+          SizedBox(
+            width: _daysWidth,
+            child: _FitCell(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '${entry.daysCleared ?? 0}',
+                style: numberStyle?.copyWith(
+                  color: ZipColors.teal,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
-          child: Row(
-            children: [
-              SizedBox(
-                width: _rankWidth,
-                child: Center(child: _rank(context)),
+        SizedBox(
+          width: _timeWidth,
+          child: _FitCell(
+            alignment: Alignment.centerRight,
+            child: Text(
+              AppStrings.formatPlayTime(entry.timeSeconds),
+              maxLines: 1,
+              style: numberStyle?.copyWith(
+                color: isYou
+                    ? ZipColors.ember
+                    : ZipColors.onInk.withValues(alpha: 0.95),
               ),
-              const SizedBox(width: _gap),
-              UserAvatar(
-                displayName: entry.displayName,
-                photoUrl: entry.photoUrl,
-                avatarId: entry.avatarId,
-                radius: _avatarRadius,
-              ),
-              const SizedBox(width: _gap),
-              Expanded(child: _name(context)),
-              if (period == LeaderboardPeriod.weekly)
-                SizedBox(
-                  width: _daysWidth,
-                  child: _FitCell(
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${entry.daysCleared ?? 0}',
-                      style: numberStyle?.copyWith(color: ZipColors.teal),
-                    ),
-                  ),
-                ),
-              SizedBox(
-                width: _timeWidth,
-                child: _FitCell(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    AppStrings.formatPlayTime(entry.timeSeconds),
-                    maxLines: 1,
-                    style: numberStyle?.copyWith(
-                      color: isYou ? ZipColors.ember : ZipColors.onInk,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
+        ),
+      ],
+    );
+
+    const podiumRadius = 10.0;
+    return Material(
+      color: podiumAccent == null ? wash : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: podiumAccent != null
+            ? BorderRadius.circular(podiumRadius)
+            : BorderRadius.zero,
+        splashColor: ZipColors.ember.withValues(alpha: 0.12),
+        highlightColor: Colors.white.withValues(alpha: 0.04),
+        child: Container(
+          height: leaderboardTableRowHeight,
+          // Inset podium rows so the rounded stroke sits inside the list cell.
+          padding: podiumAccent != null
+              ? const EdgeInsets.symmetric(horizontal: 6, vertical: 3)
+              : EdgeInsets.only(
+                  left: showYouBar ? 12 - _youBarWidth : 12,
+                  right: 12,
+                ),
+          decoration: podiumAccent == null
+              ? BoxDecoration(
+                  border: Border(
+                    left: showYouBar
+                        ? const BorderSide(
+                            color: ZipColors.ember,
+                            width: _youBarWidth,
+                          )
+                        : BorderSide.none,
+                    bottom: showDivider
+                        ? BorderSide(
+                            color: ZipColors.outlineQuiet.withValues(
+                              alpha: 0.22,
+                            ),
+                          )
+                        : BorderSide.none,
+                  ),
+                )
+              : null,
+          child: podiumAccent == null
+              ? row
+              : DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: wash,
+                    borderRadius: BorderRadius.circular(podiumRadius),
+                    border: Border.all(
+                      color: podiumAccent.withValues(alpha: 0.8),
+                      width: 1.4,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: row,
+                  ),
+                ),
         ),
       ),
     );
   }
 
   Widget _rank(BuildContext context) {
+    final rankColor = switch (entry.rank) {
+      1 => _gold,
+      2 => _silver,
+      3 => _bronze,
+      _ => ZipColors.inkSoft,
+    };
     final text = Text(
       '${entry.rank}',
       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-        color: ZipColors.inkSoft,
-        fontWeight: FontWeight.w700,
+        color: rankColor,
+        fontWeight: FontWeight.w800,
         fontFeatures: const [FontFeature.tabularFigures()],
       ),
     );
@@ -246,13 +320,24 @@ class LeaderboardTableRow extends StatelessWidget {
       3 => 'medals/medal_bronze.png',
       _ => null,
     };
-    if (medal == null) return text;
+    if (medal == null) {
+      return Container(
+        width: 26,
+        height: 26,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: ZipColors.paper.withValues(alpha: 0.55),
+        ),
+        child: text,
+      );
+    }
     return Semantics(
       label: '${entry.rank}',
       excludeSemantics: true,
       child: SizedBox(
-        width: 24,
-        height: 24,
+        width: 26,
+        height: 26,
         child: AppImage.network(
           StaticAssetsConfig.url(medal),
           fit: BoxFit.contain,
@@ -266,6 +351,7 @@ class LeaderboardTableRow extends StatelessWidget {
   Widget _name(BuildContext context) {
     final daily = period == LeaderboardPeriod.daily;
     final streak = entry.currentStreak;
+    final theme = Theme.of(context);
     return Row(
       children: [
         Flexible(
@@ -273,12 +359,13 @@ class LeaderboardTableRow extends StatelessWidget {
             entry.displayName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            style: theme.textTheme.titleSmall?.copyWith(
               color: ZipColors.onInk,
-              fontWeight: FontWeight.w600,
+              fontWeight: isYou ? FontWeight.w700 : FontWeight.w600,
             ),
           ),
         ),
+        if (isYou) ...[const SizedBox(width: 6), const _YouPill()],
         if (daily && entry.usedHints == false) ...[
           const SizedBox(width: 6),
           const _NoHintIcon(),
@@ -312,7 +399,7 @@ class LeaderboardTableRow extends StatelessWidget {
                 ),
                 Text(
                   '$streak',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  style: theme.textTheme.labelSmall?.copyWith(
                     color: _streakColor,
                     fontWeight: FontWeight.w800,
                   ),
@@ -322,6 +409,32 @@ class LeaderboardTableRow extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Compact "You" marker next to the player's name.
+class _YouPill extends StatelessWidget {
+  const _YouPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: ZipColors.ember.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: ZipColors.ember.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        AppStrings.youLabel,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: ZipColors.ember,
+          fontWeight: FontWeight.w800,
+          fontSize: 10,
+          height: 1.1,
+        ),
+      ),
     );
   }
 }

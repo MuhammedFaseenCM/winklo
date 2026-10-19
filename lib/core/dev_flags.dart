@@ -23,15 +23,16 @@ abstract final class DevFlags {
 
   /// Debug: use calendar-day puzzle IDs like release (`daily_YYYYMMDD`).
   ///
-  /// Pass `--dart-define=DAILY_PLAY_PERIOD=true` (see `.vscode/launch.json`).
-  /// When false/absent, debug still rotates a new puzzle every minute.
+  /// On by default so `flutter run` loads today's Firestore puzzles. Pass
+  /// `--dart-define=DAILY_PLAY_PERIOD=false` (or the "minute play period"
+  /// launch config) to rotate a new puzzle every minute for local testing.
   static const dailyPlayPeriod = bool.fromEnvironment(
     'DAILY_PLAY_PERIOD',
-    defaultValue: false,
+    defaultValue: true,
   );
 
-  /// Debug builds rotate a new puzzle every minute unless tests or
-  /// [dailyPlayPeriod] force the release-like daily keyspace.
+  /// Debug builds rotate a new puzzle every minute only when
+  /// [dailyPlayPeriod] is off (and tests haven't forced the daily keyspace).
   static bool get minutePlayPeriod =>
       kDebugMode && !useDailyPlayPeriodInTests && !dailyPlayPeriod;
 

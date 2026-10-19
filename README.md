@@ -242,7 +242,7 @@ Items 16–19 are done. 17–19 are on `master` (17 reached players in 1.0.0+16)
 - **Percentile on Results.** "Faster than 78% of today's players", from the same counts. Two post-game specs deferred a "you'd be #N" teaser for guests. **S**
 - **Done: past days' boards.** The board sheet's calendar holds the last 14 days; past days are read-only, from the same `watchBoard(dayId:)`.
 - **Hint-free filter.** Entries already store `usedHints` (for the best-time run), so a toggle can rank only clean runs. It needs a composite index; since Fix first 5 the flag can be trusted. **S–M**
-- **Done: weekly board.** "This week" (in the board sheet) ranks by days cleared, then total time, in Days and Total columns. Entries live at `leaderboards/{game}/weekly/{yyyy-Www}/entries/{uid}`, and only the leaderboard Worker writes them, on each accepted submission, so there's no cron. Release root only: debug builds show the tab empty.
+- **Done: weekly board.** "This week" (in the board sheet) ranks by days cleared, then total time, in Days and Total columns. The app builds that board from the week's daily clears. The Worker also writes `leaderboards/{game}/weekly/{yyyy-Www}/entries/{uid}` on each accepted submission (no cron). The `leaderboards_debug` twin has no weekly board.
 - **Done: tap a player.** A sheet with the avatar, name, time, clean-run chips and streak, all from the entry. The Worker caps the streak at the player's synced streak + 1, but that synced streak is still the player's own `game_streaks` doc.
 - **Report a player.** Names and uploaded photos are shown to every player, with no way to report or hide one, and the avatar Worker checks only the declared type and the size. Google Play's user-generated content policy expects in-app reporting and blocking. Add "Report" to leaderboard rows, check the JPEG bytes in the Worker, and keep a way to reset a name or photo. **S–M**
 - **Done: friends and private leagues.** Create a league (up to 30 members), share `winklo.pages.dev/join/CODE`, join with the code, leave; the owner renames it, removes members or deletes it. The leaderboard's scope picker shows Everyone or a league, and a league's daily, weekly and past-day boards are its members' entries (one `whereIn` read, ranked on the phone). The rules are tested on the emulator (`firestore/rules_test`, `npm run test:emulator`; not in CI, which has no Java). Account deletion removes the player from leagues and deletes the ones they own. A removed member can rejoin with the same code until the league is deleted.
@@ -321,10 +321,10 @@ These aren't features, but they affect how cheap the ideas above are:
 
 ```bash
 flutter pub get
-flutter run --dart-define=DAILY_PLAY_PERIOD=true
+flutter run --dart-define=DAILY_PLAY_PERIOD=false
 ```
 
-- **`DAILY_PLAY_PERIOD=true`** makes a debug build use calendar days, like release. Without it, a debug build looks for a new puzzle every minute; those docs usually don't exist, so you get "Could not load today's puzzle". In VS Code, use the "winklo (daily play period)" launch config; the default "winklo" config doesn't pass the flag.
+- **`DAILY_PLAY_PERIOD`** defaults to **true** in debug, so calendar-day puzzles load like release. Pass `false` (or use the "winklo (minute play period)" launch config) to rotate a new puzzle every minute for local testing; those minute docs usually don't exist, so you get "Could not load today's puzzle".
 - **Sign-in:** playing needs Google sign-in, so your debug key's SHA-1 must be registered on the Firebase Android app.
 - **Debug data is only partly separate:** debug builds keep progress and leaderboards apart (`leaderboards_debug`, `users/{uid}/game_days_debug`, `game_streaks_debug`) but share everything else with production, including the puzzles, `users/{uid}` itself, `daily_activity`, `issue_reports` and `client_errors`.
 - **Other build flags** have production defaults: `STATIC_ASSETS_BASE_URL` (R2 images), `AVATAR_UPLOAD_BASE_URL` (the photo upload Worker; if it's empty, the picker still shows but uploads fail) and `PATH_WORDS_NOUNS_BASE_URL` (unused).

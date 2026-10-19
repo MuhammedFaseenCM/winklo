@@ -58,7 +58,7 @@ class _LeaderboardRowShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mirrors LeaderboardTableRow: 48px, rank 28, avatar r=14, time 56.
+    // Mirrors LeaderboardTableRow: 56px, rank 28, avatar r=14, time 56.
     return const SizedBox(
       height: leaderboardTableRowHeight,
       child: Padding(

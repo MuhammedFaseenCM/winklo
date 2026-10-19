@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -166,6 +168,80 @@ List<LeaderboardEntry> mapWeeklyLeaderboardRows(
     );
   }
   return entries;
+}
+
+/// Builds the weekly board from each day's best time (same rules as the
+/// Worker's `planWeeklyWrite`: days cleared, then sum of those times).
+///
+/// [dayRows] maps `yyyy-MM-dd` → that day's entry docs. The phone uses this
+/// while the Worker-only `weekly/{weekId}/entries` collection may be empty.
+List<LeaderboardEntry> aggregateWeeklyFromDailyRows(
+  Map<String, Iterable<({String id, Map<String, dynamic> data})>> dayRows,
+) {
+  final byUid = <String, _WeeklyAgg>{};
+  for (final MapEntry(key: dayId, value: rows) in dayRows.entries) {
+    for (final row in rows) {
+      final time = row.data['timeSeconds'];
+      if (time is! int || time <= 0) continue;
+      final agg = byUid.putIfAbsent(row.id, _WeeklyAgg.new);
+      agg.daySeconds[dayId] = time;
+      final updatedAtRaw = row.data['updatedAt'];
+      final updatedAt = updatedAtRaw is Timestamp
+          ? updatedAtRaw.toDate()
+          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+      if (updatedAt.isAfter(agg.updatedAt)) {
+        agg.updatedAt = updatedAt;
+        final name = row.data['displayName'];
+        final photo = row.data['photoUrl'];
+        final avatar = row.data['avatarId'];
+        if (name is String && name.trim().isNotEmpty) {
+          agg.displayName = name.trim();
+        }
+        agg.photoUrl = photo is String && photo.isNotEmpty ? photo : null;
+        agg.avatarId = avatar is String && avatar.isNotEmpty ? avatar : null;
+      }
+    }
+  }
+
+  final rows =
+      byUid.entries.map((e) {
+        final seconds = e.value.daySeconds.values.toList();
+        return (
+          id: e.key,
+          data: <String, dynamic>{
+            'daysCleared': seconds.length,
+            'totalSeconds': seconds.fold<int>(0, (total, t) => total + t),
+            'updatedAt': Timestamp.fromDate(e.value.updatedAt),
+            if (e.value.displayName != null) 'displayName': e.value.displayName,
+            if (e.value.photoUrl != null) 'photoUrl': e.value.photoUrl,
+            if (e.value.avatarId != null) 'avatarId': e.value.avatarId,
+          },
+        );
+      }).toList()..sort((a, b) {
+        final days = (b.data['daysCleared'] as int).compareTo(
+          a.data['daysCleared'] as int,
+        );
+        if (days != 0) return days;
+        final total = (a.data['totalSeconds'] as int).compareTo(
+          b.data['totalSeconds'] as int,
+        );
+        if (total != 0) return total;
+        final aAt = (a.data['updatedAt'] as Timestamp).toDate();
+        final bAt = (b.data['updatedAt'] as Timestamp).toDate();
+        final updated = aAt.compareTo(bAt);
+        if (updated != 0) return updated;
+        return a.id.compareTo(b.id);
+      });
+
+  return mapWeeklyLeaderboardRows(rows);
+}
+
+class _WeeklyAgg {
+  final daySeconds = <String, int>{};
+  DateTime updatedAt = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  String? displayName;
+  String? photoUrl;
+  String? avatarId;
 }
 
 /// Identity written onto leaderboard docs. Firestore profile wins when present.
@@ -344,9 +420,12 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     if (db == null) {
       return Stream.error(const Failure('Firebase is unavailable.'));
     }
-    // Only the Worker writes weekly totals, and only on the release boards.
-    if (period == LeaderboardPeriod.weekly && !_isReleaseRoot) {
-      return Stream.value(const []);
+    // Debug twin has no Worker-written weekly docs; release boards build
+    // "This week" from the week's daily clears (same totals the Worker would
+    // store under `weekly/{weekId}/entries`).
+    if (period == LeaderboardPeriod.weekly) {
+      if (!_isReleaseRoot) return Stream.value(const []);
+      return _watchWeeklyFromDaily(db: db, gameId: gameId, dayId: dayId);
     }
 
     // Daily path uses a subcollection under the day doc so queries stay flat.
@@ -357,15 +436,12 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       dayId: dayId,
     );
 
-    final Query<Map<String, dynamic>> ordered =
-        period == LeaderboardPeriod.weekly
-        ? collection
-              .orderBy('daysCleared', descending: true)
-              .orderBy('totalSeconds')
-              .orderBy('updatedAt')
-        : collection.orderBy('timeSeconds').orderBy('updatedAt');
-
-    return ordered.limit(50).snapshots().map((snap) => _mapRows(period, snap));
+    return collection
+        .orderBy('timeSeconds')
+        .orderBy('updatedAt')
+        .limit(50)
+        .snapshots()
+        .map((snap) => _mapRows(period, snap));
   }
 
   @override
@@ -381,9 +457,15 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       return Stream.error(const Failure('Firebase is unavailable.'));
     }
     final uids = memberUids.toSet().take(leaguesMaxMembers).toList();
-    if (uids.isEmpty ||
-        (period == LeaderboardPeriod.weekly && !_isReleaseRoot)) {
-      return Stream.value(const []);
+    if (uids.isEmpty) return Stream.value(const []);
+    if (period == LeaderboardPeriod.weekly) {
+      if (!_isReleaseRoot) return Stream.value(const []);
+      return _watchWeeklyFromDaily(
+        db: db,
+        gameId: gameId,
+        dayId: dayId,
+        memberUids: uids,
+      );
     }
     // A league has at most 30 members, the most `whereIn` takes; the board is
     // ranked here with the server boards' rules.
@@ -396,6 +478,45 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         .where(FieldPath.documentId, whereIn: uids)
         .snapshots()
         .map((snap) => rankLeaderboardEntries(_mapRows(period, snap), period));
+  }
+
+  /// Live weekly board from the seven daily boards in [dayId]'s ISO week.
+  Stream<List<LeaderboardEntry>> _watchWeeklyFromDaily({
+    required FirebaseFirestore db,
+    required String gameId,
+    String? dayId,
+    List<String>? memberUids,
+  }) {
+    final day = dayId ?? leaderboardDayId();
+    final weekDays = dayIdsInIsoWeekContaining(day);
+    final gameRef = db.collection(_root).doc(gameId);
+    final streams = weekDays.map((weekDay) {
+      Query<Map<String, dynamic>> query = gameRef
+          .collection('daily')
+          .doc(weekDay)
+          .collection('entries');
+      final uids = memberUids;
+      if (uids != null) {
+        query = query.where(FieldPath.documentId, whereIn: uids);
+      }
+      return query.snapshots();
+    }).toList();
+
+    return _combineLatestSnapshots(streams).map((snaps) {
+      final dayRows =
+          <String, Iterable<({String id, Map<String, dynamic> data})>>{};
+      for (var i = 0; i < weekDays.length; i++) {
+        dayRows[weekDays[i]] = snaps[i].docs.map(
+          (d) => (id: d.id, data: d.data()),
+        );
+      }
+      final entries = aggregateWeeklyFromDailyRows(dayRows);
+      final limited = entries.length > 50 ? entries.sublist(0, 50) : entries;
+      if (memberUids != null) {
+        return rankLeaderboardEntries(limited, LeaderboardPeriod.weekly);
+      }
+      return limited;
+    });
   }
 
   @override
@@ -597,4 +718,47 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       tx.set(ref, payload, SetOptions(merge: true));
     });
   }
+}
+
+/// Emits whenever every stream has produced at least one snapshot, then on
+/// each subsequent update (combine-latest).
+Stream<List<QuerySnapshot<Map<String, dynamic>>>> _combineLatestSnapshots(
+  List<Stream<QuerySnapshot<Map<String, dynamic>>>> streams,
+) {
+  if (streams.isEmpty) {
+    return Stream.value(const []);
+  }
+
+  late final StreamController<List<QuerySnapshot<Map<String, dynamic>>>>
+  controller;
+  final latest = List<QuerySnapshot<Map<String, dynamic>>?>.filled(
+    streams.length,
+    null,
+  );
+  final ready = List<bool>.filled(streams.length, false);
+  final subs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+
+  controller = StreamController<List<QuerySnapshot<Map<String, dynamic>>>>(
+    onListen: () {
+      for (var i = 0; i < streams.length; i++) {
+        final index = i;
+        subs.add(
+          streams[i].listen((snap) {
+            latest[index] = snap;
+            ready[index] = true;
+            if (ready.every((r) => r)) {
+              controller.add([for (final snap in latest) snap!]);
+            }
+          }, onError: controller.addError),
+        );
+      }
+    },
+    onCancel: () async {
+      for (final sub in subs) {
+        await sub.cancel();
+      }
+    },
+  );
+
+  return controller.stream;
 }

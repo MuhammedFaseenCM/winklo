@@ -81,7 +81,10 @@ void main() {
     expect(_labelled(AppStrings.leaderboardNoHintChip), findsOneWidget);
     expect(_labelled(AppStrings.leaderboardNoMistakesChip), findsOneWidget);
     expect(_labelled(AppStrings.streakLabel(5)), findsOneWidget);
-    expect(tester.getSize(find.byType(LeaderboardTableRow)).height, 48);
+    expect(
+      tester.getSize(find.byType(LeaderboardTableRow)).height,
+      leaderboardTableRowHeight,
+    );
   });
 
   testWidgets('Flawless is Sudoku only; no icons off the daily board', (
@@ -200,5 +203,19 @@ void main() {
     );
     await tester.tap(find.text('Ada'));
     expect(taps, 1);
+  });
+
+  testWidgets('your row shows a You pill next to the name', (tester) async {
+    await _pump(
+      tester,
+      LeaderboardTableRow(
+        entry: _entry(rank: 2),
+        period: LeaderboardPeriod.daily,
+        gameId: GameIds.zip,
+        isYou: true,
+      ),
+    );
+    expect(find.text(AppStrings.youLabel), findsOneWidget);
+    expect(find.text('Ada'), findsOneWidget);
   });
 }

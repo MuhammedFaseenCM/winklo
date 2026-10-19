@@ -32,6 +32,7 @@ class WinkloApp extends StatefulWidget {
 
 class _WinkloAppState extends State<WinkloApp> {
   GoRouter? _router;
+  SafeGoRouterBackButtonDispatcher? _backButtonDispatcher;
   StreamSubscription<NotificationTap>? _tapSub;
   bool _tapListening = false;
   AppOpenLifecycle? _appOpenLifecycle;
@@ -111,6 +112,10 @@ class _WinkloAppState extends State<WinkloApp> {
       authCubit: context.read<AuthCubit>(),
     );
     final router = _router!;
+    // Keep one root dispatcher for the app's life. A new one on every rebuild
+    // orphans ChildBackButtonDispatchers (BackButtonListener in the shell) and
+    // trips `hasCallbacks` during hot reload.
+    _backButtonDispatcher ??= SafeGoRouterBackButtonDispatcher(() => _router!);
     // go_router 18 hard-codes RootBackButtonDispatcher on RouterConfig; pass
     // the safe dispatcher explicitly so empty-match Android backs don't crash
     // (flutter/flutter#187616).
@@ -126,7 +131,7 @@ class _WinkloAppState extends State<WinkloApp> {
         routeInformationProvider: router.routeInformationProvider,
         routeInformationParser: router.routeInformationParser,
         routerDelegate: router.routerDelegate,
-        backButtonDispatcher: SafeGoRouterBackButtonDispatcher(() => router),
+        backButtonDispatcher: _backButtonDispatcher,
         debugShowCheckedModeBanner: false,
         // Global tap-outside-to-dismiss: wraps every routed screen so a tap on
         // empty space drops keyboard focus app-wide. `translucent` lets taps on

@@ -22,8 +22,9 @@ class LeaderboardSubmitRefused extends Failure {
 abstract class LeaderboardRepository {
   /// Live top entries for [gameId] and [period], ranked 1…n.
   /// For [LeaderboardPeriod.daily], [dayId] defaults to today's local calendar
-  /// day; for [LeaderboardPeriod.weekly] the board is the ISO week holding it.
-  /// Debug builds have no weekly board (only the Worker writes it): empty.
+  /// day; for [LeaderboardPeriod.weekly] the board is the ISO week holding it
+  /// (built from that week's daily clears). The `leaderboards_debug` twin has
+  /// no weekly board: empty.
   Stream<List<LeaderboardEntry>> watchBoard({
     required String gameId,
     required LeaderboardPeriod period,

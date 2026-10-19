@@ -40,6 +40,46 @@ void main() {
     });
   });
 
+  group('aggregateWeeklyFromDailyRows', () {
+    test('sums days and totals like the Worker weekly write', () {
+      final entries = aggregateWeeklyFromDailyRows({
+        '2026-10-12': [
+          (
+            id: 'a',
+            data: {
+              'timeSeconds': 60,
+              'displayName': 'Ada',
+              'updatedAt': Timestamp.fromDate(DateTime.utc(2026, 10, 12)),
+            },
+          ),
+          (
+            id: 'b',
+            data: {
+              'timeSeconds': 90,
+              'displayName': 'Bea',
+              'updatedAt': Timestamp.fromDate(DateTime.utc(2026, 10, 12)),
+            },
+          ),
+        ],
+        '2026-10-13': [
+          (
+            id: 'a',
+            data: {
+              'timeSeconds': 50,
+              'displayName': 'Ada',
+              'updatedAt': Timestamp.fromDate(DateTime.utc(2026, 10, 13)),
+            },
+          ),
+        ],
+      });
+      expect(entries.map((e) => e.uid), ['a', 'b']);
+      expect(entries.first.daysCleared, 2);
+      expect(entries.first.timeSeconds, 110);
+      expect(entries.last.daysCleared, 1);
+      expect(entries.last.timeSeconds, 90);
+    });
+  });
+
   test('debug builds have no weekly board', () async {
     final wasReady = FirebaseBootstrap.isReady;
     addTearDown(() => FirebaseBootstrap.isReady = wasReady);
