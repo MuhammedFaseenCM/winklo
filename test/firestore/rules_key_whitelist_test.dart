@@ -1,8 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winklo/data/clients/leaderboard/firestore_leaderboard_skip_log.dart';
+import 'package:winklo/data/clients/leaderboard/leaderboard_submit_client.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/progress_remote_repository_impl.dart';
+import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 
 /// Keys in the first `hasOnly([...])` after `function <name>(` in the rules.
 ///
@@ -61,5 +64,35 @@ void main() {
       _rulesWhitelist(rules, 'validLeaderboardKeys'),
       leaderboardFirestoreKeys,
     );
+  });
+
+  test('leaderboard_skips whitelist equals the skip log keys', () {
+    expect(
+      _rulesWhitelist(rules, 'validLeaderboardSkip'),
+      leaderboardSkipFirestoreKeys,
+    );
+  });
+
+  test('leaderboard_skips takes every final refusal code', () {
+    final header = rules.indexOf('function validLeaderboardSkip(');
+    expect(header, isNot(-1));
+    final list = RegExp(
+      r'data\.reason in \[([^\]]*)\]',
+    ).firstMatch(rules.substring(header));
+    expect(list, isNotNull, reason: 'no reason list in validLeaderboardSkip');
+    final reasons = RegExp(
+      r"'([a-z_]+)'",
+    ).allMatches(list!.group(1)!).map((m) => m.group(1)!).toSet();
+    // A refused token is retried, then written directly: never final.
+    final finalWorkerCodes = leaderboardSubmitRefusalCodes.difference({
+      'unauthorized',
+    });
+    expect(reasons, {
+      LeaderboardSubmitRefused.tooFast,
+      LeaderboardSubmitRefused.tooSlow,
+      LeaderboardSubmitRefused.notLive,
+      LeaderboardSubmitRefused.permissionDenied,
+      ...finalWorkerCodes,
+    });
   });
 }

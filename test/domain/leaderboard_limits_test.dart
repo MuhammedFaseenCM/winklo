@@ -4,8 +4,10 @@ import 'package:winklo/domain/leaderboard_limits.dart';
 
 void main() {
   test('accepts times from the game minimum to a day', () {
-    expect(leaderboardAcceptsTime(GameIds.zip, 9), isFalse);
-    expect(leaderboardAcceptsTime(GameIds.zip, 10), isTrue);
+    expect(leaderboardAcceptsTime(GameIds.zip, 2), isFalse);
+    expect(leaderboardAcceptsTime(GameIds.zip, 3), isTrue);
+    // A real 6 s clear of the 6×6 Zip daily on 2026-10-19.
+    expect(leaderboardAcceptsTime(GameIds.zip, 6), isTrue);
     expect(leaderboardAcceptsTime(GameIds.sudoku, 14), isFalse);
     expect(leaderboardAcceptsTime(GameIds.pathWords, 15), isTrue);
     expect(leaderboardAcceptsTime(GameIds.zip, leaderboardMaxSeconds), isTrue);

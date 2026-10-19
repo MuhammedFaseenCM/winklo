@@ -17,6 +17,7 @@ import '../../domain/leaderboard_limits.dart';
 import '../../domain/leaderboard_ranking.dart';
 import '../../domain/league_code.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
+import '../clients/leaderboard/leaderboard_skip_log.dart';
 import '../clients/leaderboard/leaderboard_submit_client.dart';
 import '../leaderboard_identity.dart';
 import '../leaderboard_root.dart';
@@ -327,13 +328,15 @@ void _recordRejectedSubmit(Object error, StackTrace stack) {
 
 class LeaderboardRepositoryImpl implements LeaderboardRepository {
   /// [submitClient] posts clears to the leaderboard Worker (release builds
-  /// only); without it every clear is written directly. [isDebugMode] and
-  /// [now] are for tests; [reportRejected] records a refused clear
-  /// (Crashlytics, as a non-fatal, by default).
+  /// only); without it every clear is written directly. [skipLog] logs every
+  /// clear the release boards refuse; without it refusals aren't logged.
+  /// [isDebugMode] and [now] are for tests; [reportRejected] records a clear
+  /// the Worker refused (Crashlytics, as a non-fatal, by default).
   LeaderboardRepositoryImpl({
     this._firestore,
     this._auth,
     this._submitClient,
+    this._skipLog,
     this._isDebugMode,
     DateTime Function()? now,
     void Function(Object error, StackTrace stack)? reportRejected,
@@ -343,6 +346,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
   final FirebaseFirestore? _firestore;
   final FirebaseAuth? _auth;
   final LeaderboardSubmitClient? _submitClient;
+  final LeaderboardSkipLog? _skipLog;
   final bool? _isDebugMode;
   final DateTime Function() _now;
   final void Function(Object error, StackTrace stack) _reportRejected;
@@ -538,12 +542,6 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       throw Failure('Invalid leaderboard day: $dayId');
     }
     final boardDayId = dayId ?? leaderboardDayId();
-    // The rules and the Worker refuse these, so there is nothing to post.
-    if (_isReleaseRoot &&
-        (!leaderboardAcceptsTime(gameId, timeSeconds) ||
-            !leaderboardDayIsLive(boardDayId, _now()))) {
-      return;
-    }
 
     final db = _db;
     final auth = _firebaseAuth;
@@ -571,6 +569,81 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     // The account may have switched during the profile read.
     _assertExpectedUser(auth, expectedUid);
 
+    try {
+      await _post(
+        db,
+        auth,
+        user,
+        gameId: gameId,
+        dayId: boardDayId,
+        timeSeconds: timeSeconds,
+        usedHints: usedHints,
+        hadMistakes: hadMistakes,
+        currentStreak: currentStreak,
+        identity: identity,
+        expectedUid: expectedUid,
+        proof: proof,
+      );
+    } on LeaderboardSubmitRefused catch (e) {
+      final log = _skipLog;
+      // The debug twin's refusals are tests and sandbox runs.
+      if (log != null && _isReleaseRoot) {
+        // Best effort, and never holds the results screen.
+        unawaited(
+          log.record(
+            LeaderboardSkip(
+              uid: user.uid,
+              gameId: gameId,
+              dayId: boardDayId,
+              timeSeconds: timeSeconds,
+              reason: e.code,
+              usedHints: usedHints,
+              hadMistakes: hadMistakes,
+              identity: identity,
+            ),
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  /// The refusal every release board answers this clear with, so it isn't
+  /// sent at all; null when one would take it.
+  String? _boardRefusal(String gameId, int timeSeconds, String dayId) {
+    if (!_isReleaseRoot) return null;
+    if (timeSeconds > leaderboardMaxSeconds) {
+      return LeaderboardSubmitRefused.tooSlow;
+    }
+    if (!leaderboardAcceptsTime(gameId, timeSeconds)) {
+      return LeaderboardSubmitRefused.tooFast;
+    }
+    if (!leaderboardDayIsLive(dayId, _now())) {
+      return LeaderboardSubmitRefused.notLive;
+    }
+    return null;
+  }
+
+  /// Posts one clear through the Worker, or writes it directly. Throws
+  /// [LeaderboardSubmitRefused] when it's refused.
+  Future<void> _post(
+    FirebaseFirestore db,
+    FirebaseAuth? auth,
+    User user, {
+    required String gameId,
+    required String dayId,
+    required int timeSeconds,
+    required bool usedHints,
+    required bool hadMistakes,
+    required int currentStreak,
+    required ({String displayName, String? photoUrl, String? avatarId})?
+    identity,
+    required String? expectedUid,
+    required LeaderboardProof? proof,
+  }) async {
+    final refusal = _boardRefusal(gameId, timeSeconds, dayId);
+    if (refusal != null) throw LeaderboardSubmitRefused(refusal);
+
     final client = _submitClient;
     final viaWorker = _isReleaseRoot && client != null && proof != null;
     if (viaWorker) {
@@ -579,7 +652,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         user,
         body: leaderboardSubmitBody(
           gameId: gameId,
-          dayId: boardDayId,
+          dayId: dayId,
           timeSeconds: timeSeconds,
           usedHints: usedHints,
           hadMistakes: hadMistakes,
@@ -604,7 +677,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         .collection(root)
         .doc(gameId)
         .collection('daily')
-        .doc(boardDayId)
+        .doc(dayId)
         .collection('entries')
         .doc(user.uid);
 

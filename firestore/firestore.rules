@@ -121,7 +121,7 @@ service cloud.firestore {
     // lib/domain/leaderboard_limits.dart are the same numbers
     // (test/firestore/leaderboard_fair_play_pins_test.dart pins all three).
     function minLeaderboardSeconds(gameId) {
-      return {'zip': 10, 'path_words': 15, 'sudoku': 15}[gameId];
+      return {'zip': 3, 'path_words': 15, 'sudoku': 15}[gameId];
     }
 
     function meetsMinimumTime(gameId) {
@@ -645,6 +645,57 @@ service cloud.firestore {
             || (request.resource.data.locale is string
                 && request.resource.data.locale.size() <= 32))
         && request.resource.data.createdAt == request.time;
+    }
+
+    // A clear the leaderboard refused, so the admin sees who was left off a
+    // board and why (FirestoreLeaderboardSkipLog in the app). One doc per
+    // player, game and day; a later refusal replaces it.
+    match /leaderboard_skips/{skipId} {
+      allow create, update: if validLeaderboardSkip(skipId);
+      allow read: if isAdmin();
+      allow delete: if false;
+    }
+
+    // Keys: leaderboardSkipFirestoreKeys in the app; reasons: the
+    // LeaderboardSubmitRefused codes that can be final
+    // (test/firestore/rules_key_whitelist_test.dart pins both).
+    function validLeaderboardSkip(skipId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'uid', 'gameId', 'dayId', 'timeSeconds', 'reason', 'usedHints',
+          'hadMistakes', 'displayName', 'photoUrl', 'avatarId', 'appVersion',
+          'buildNumber', 'platform', 'createdAt'
+        ])
+        && isOwner(data.uid)
+        && validGame(data.gameId)
+        && data.dayId is string
+        && leaderboardSkipDayIsRecent(data.dayId)
+        && skipId == data.uid + '_' + data.gameId + '_' + data.dayId
+        && data.timeSeconds is int
+        && data.timeSeconds > 0
+        && data.reason in [
+          'too_fast', 'too_slow', 'not_live', 'permission_denied',
+          'bad_request', 'bad_proof', 'unknown_puzzle'
+        ]
+        && data.usedHints is bool
+        && data.hadMistakes is bool
+        && validLeaderboardIdentity()
+        && data.appVersion is string
+        && data.appVersion.size() <= 32
+        && data.buildNumber is string
+        && data.buildNumber.size() <= 16
+        && data.platform is string
+        && data.platform.size() <= 16
+        && data.createdAt == request.time;
+    }
+
+    // From the day's opening (as leaderboardDayIsLive) to a week after its
+    // UTC midnight: a closed day's clear is refused (and logged) on the next
+    // sync, and this keeps one player to a few dozen docs.
+    function leaderboardSkipDayIsRecent(dayId) {
+      return dayId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.time >= utcMidnightOf(dayId) - duration.value(14, 'h')
+        && request.time < utcMidnightOf(dayId) + duration.value(7, 'd');
     }
 
     function validActivityDayId(dayId) {

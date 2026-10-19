@@ -16,7 +16,7 @@ export function isGameId(value: unknown): value is GameId {
 
 /** Fastest accepted clear, in whole seconds (also `minLeaderboardSeconds` in the rules). */
 export const MIN_SECONDS: Record<GameId, number> = {
-  zip: 10,
+  zip: 3,
   path_words: 15,
   sudoku: 15,
 };

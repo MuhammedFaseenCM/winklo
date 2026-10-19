@@ -26,7 +26,7 @@ const projectId = process.env.PROJECT_ID || 'brain-zip-app';
 const apply = process.env.APPLY === '1';
 
 /** MIN_SECONDS in workers/leaderboard/src/limits.ts (pinned by test/firestore). */
-const MIN_SECONDS = { zip: 10, path_words: 15, sudoku: 15 };
+const MIN_SECONDS = { zip: 3, path_words: 15, sudoku: 15 };
 
 const base = `projects/${projectId}/databases/(default)/documents`;
 const api = 'https://firestore.googleapis.com/v1';

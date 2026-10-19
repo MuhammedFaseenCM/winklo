@@ -157,7 +157,7 @@ describe('handleSubmit', () => {
 
   it('refuses a time under the game minimum', async () => {
     fakeFirestore(zipDoc);
-    expect(await handleSubmit(deps, 'u1', body({ timeSeconds: 9 }))).toEqual({
+    expect(await handleSubmit(deps, 'u1', body({ timeSeconds: 2 }))).toEqual({
       status: 422,
       body: { error: 'too_fast' },
     });

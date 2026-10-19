@@ -16,6 +16,7 @@ import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/data/clients/activity/http_guest_activity_client.dart';
 import 'package:winklo/data/clients/avatar/avatar_upload_client.dart';
 import 'package:winklo/data/clients/avatar/r2_avatar_upload_client.dart';
+import 'package:winklo/data/clients/leaderboard/firestore_leaderboard_skip_log.dart';
 import 'package:winklo/data/clients/leaderboard/http_leaderboard_submit_client.dart';
 import 'package:winklo/data/clients/notification/firebase_notification_client.dart';
 import 'package:winklo/data/clients/notification/notification_client.dart';
@@ -245,6 +246,7 @@ List<SingleChildWidget> buildRepositoryProviders({
                 baseUrl: LeaderboardSubmitConfig.baseUrl,
               )
             : null,
+        skipLog: FirestoreLeaderboardSkipLog(),
       ),
     ),
     RepositoryProvider<LeagueRepository>(create: (_) => LeagueRepositoryImpl()),

@@ -60,14 +60,14 @@ const daily = (game: string, dayId: string, uid = 'u1') =>
 
 describe('daily boards (phase 1)', () => {
   it('accept a time at the minimum on a live day', async () => {
-    await assertSucceeds(setDoc(doc(db('u1'), daily('zip', today)), entry(10)));
+    await assertSucceeds(setDoc(doc(db('u1'), daily('zip', today)), entry(3)));
     await assertSucceeds(
       setDoc(doc(db('u1'), daily('sudoku', today)), entry(15)),
     );
   });
 
   it('refuse a time under the game minimum', async () => {
-    await assertFails(setDoc(doc(db('u1'), daily('zip', today)), entry(9)));
+    await assertFails(setDoc(doc(db('u1'), daily('zip', today)), entry(2)));
     await assertFails(setDoc(doc(db('u1'), daily('sudoku', today)), entry(14)));
     await assertFails(
       setDoc(doc(db('u1'), daily('path_words', today)), entry(14)),
@@ -101,15 +101,16 @@ describe('daily boards (phase 1)', () => {
   it('refuse an improvement under the minimum, allow one above it', async () => {
     await seed(daily('zip', today), { ...entry(40), updatedAt: new Date() });
     await assertFails(
-      setDoc(doc(db('u1'), daily('zip', today)), entry(5), { merge: true }),
+      setDoc(doc(db('u1'), daily('zip', today)), entry(2), { merge: true }),
     );
+    // A real 6 s clear of the 6×6 Zip daily on 2026-10-19.
     await assertSucceeds(
-      setDoc(doc(db('u1'), daily('zip', today)), entry(20), { merge: true }),
+      setDoc(doc(db('u1'), daily('zip', today)), entry(6), { merge: true }),
     );
   });
 
   it('still refresh the name on an old entry under the minimum', async () => {
-    await seed(daily('zip', today), { ...entry(4), updatedAt: new Date() });
+    await seed(daily('zip', today), { ...entry(2), updatedAt: new Date() });
     await assertSucceeds(
       updateDoc(doc(db('u1'), daily('zip', today)), {
         displayName: 'Ada L',
@@ -129,8 +130,8 @@ describe('all-time boards (phase 1)', () => {
     `leaderboards/${game}/all_time/${uid}`;
 
   it('need the game minimum', async () => {
-    await assertFails(setDoc(doc(db('u1'), allTime('zip')), entry(9)));
-    await assertSucceeds(setDoc(doc(db('u1'), allTime('zip')), entry(10)));
+    await assertFails(setDoc(doc(db('u1'), allTime('zip')), entry(2)));
+    await assertSucceeds(setDoc(doc(db('u1'), allTime('zip')), entry(3)));
   });
 });
 

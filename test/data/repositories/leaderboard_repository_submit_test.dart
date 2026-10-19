@@ -6,11 +6,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/firebase/firebase_bootstrap.dart';
+import 'package:winklo/data/clients/leaderboard/leaderboard_skip_log.dart';
 import 'package:winklo/data/clients/leaderboard/leaderboard_submit_client.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/leaderboard_proof.dart';
 import 'package:winklo/domain/failures.dart';
+import 'package:winklo/domain/leaderboard_limits.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 
 class _MockFirestore extends Mock implements FirebaseFirestore {}
@@ -30,6 +32,13 @@ class _MockUser extends Mock implements User {}
 
 class _MockSubmitClient extends Mock implements LeaderboardSubmitClient {}
 
+class _FakeSkipLog implements LeaderboardSkipLog {
+  final skips = <LeaderboardSkip>[];
+
+  @override
+  Future<void> record(LeaderboardSkip skip) async => skips.add(skip);
+}
+
 // ignore: prefer_void_to_null
 typedef _TxResult = Null;
 
@@ -44,6 +53,7 @@ void main() {
   late _MockFirebaseAuth auth;
   late _MockUser user;
   late _MockSubmitClient client;
+  late _FakeSkipLog skipLog;
   late List<Object> rejected;
 
   setUpAll(() {
@@ -81,6 +91,7 @@ void main() {
     when(() => auth.currentUser).thenReturn(user);
 
     client = _MockSubmitClient();
+    skipLog = _FakeSkipLog();
     rejected = [];
   });
 
@@ -89,6 +100,7 @@ void main() {
         firestore: firestore,
         auth: auth,
         submitClient: client,
+        skipLog: skipLog,
         isDebugMode: debug,
         now: () => _now,
         reportRejected: (e, _) => rejected.add(e),
@@ -148,6 +160,7 @@ void main() {
       },
     });
     verifyNoDirectWrite();
+    expect(skipLog.skips, isEmpty);
   });
 
   test('falls back to the direct writes when the Worker is down', () async {
@@ -199,6 +212,7 @@ void main() {
     );
     expect(rejected.single, isA<LeaderboardSubmitRejected>());
     verifyNoDirectWrite();
+    expect(skipLog.skips.single.reason, 'bad_proof');
   });
 
   test('a refused token is retried fresh, then written directly', () async {
@@ -282,6 +296,18 @@ void main() {
         ),
       );
       expect(rejected, isEmpty);
+      expect(
+        skipLog.skips.single.reason,
+        LeaderboardSubmitRefused.permissionDenied,
+      );
+    });
+
+    test('is not logged on the debug twin', () async {
+      await expectLater(
+        submit(repo(debug: true), proof: null),
+        throwsA(isA<LeaderboardSubmitRefused>()),
+      );
+      expect(skipLog.skips, isEmpty);
     });
 
     test('retries a proven clear through the Worker later', () async {
@@ -302,6 +328,8 @@ void main() {
         ),
       );
       expect(rejected, isEmpty);
+      // Not final: the next sync sends it through the Worker again.
+      expect(skipLog.skips, isEmpty);
     });
   });
 
@@ -316,17 +344,71 @@ void main() {
     );
   });
 
-  test('a time under the minimum is skipped on release boards', () async {
-    await submit(repo(), time: 9);
+  group('a clear no release board takes', () {
+    Matcher refusedWith(String code) => throwsA(
+      isA<LeaderboardSubmitRefused>().having((e) => e.code, 'code', code),
+    );
 
-    verifyZeroInteractions(client);
-    verifyZeroInteractions(firestore);
+    test('under the minimum is refused and logged, not sent', () async {
+      await expectLater(
+        submit(repo(), time: 2),
+        refusedWith(LeaderboardSubmitRefused.tooFast),
+      );
+
+      verifyZeroInteractions(client);
+      verifyNoDirectWrite();
+      final skip = skipLog.skips.single;
+      expect(skip.uid, 'u1');
+      expect(skip.gameId, 'zip');
+      expect(skip.dayId, _day);
+      expect(skip.timeSeconds, 2);
+      expect(skip.reason, LeaderboardSubmitRefused.tooFast);
+      expect(skip.usedHints, isFalse);
+      expect(skip.hadMistakes, isFalse);
+      expect(skip.identity, (
+        displayName: 'Ada',
+        photoUrl: null,
+        avatarId: 'preset_01',
+      ));
+    });
+
+    test('over a day is refused as too slow', () async {
+      await expectLater(
+        submit(repo(), time: leaderboardMaxSeconds + 1),
+        refusedWith(LeaderboardSubmitRefused.tooSlow),
+      );
+      expect(skipLog.skips.single.reason, LeaderboardSubmitRefused.tooSlow);
+    });
+
+    test('for a day whose board has closed is refused and logged', () async {
+      await expectLater(
+        submit(repo(), day: '2026-10-12'),
+        refusedWith(LeaderboardSubmitRefused.notLive),
+      );
+
+      verifyZeroInteractions(client);
+      verifyNoDirectWrite();
+      expect(skipLog.skips.single.dayId, '2026-10-12');
+      expect(skipLog.skips.single.reason, LeaderboardSubmitRefused.notLive);
+    });
   });
 
-  test('a day whose board has closed is skipped on release boards', () async {
-    await submit(repo(), day: '2026-10-12');
+  test('a 6 s Zip clear is posted (the 6×6 daily of 2026-10-19)', () async {
+    when(
+      () => client.submit(
+        idToken: any(named: 'idToken'),
+        body: any(named: 'body'),
+      ),
+    ).thenAnswer((_) async => const LeaderboardSubmitResult(improved: true));
 
-    verifyZeroInteractions(client);
-    verifyZeroInteractions(firestore);
+    await submit(repo(), time: 6);
+
+    verify(
+      () => client.submit(
+        idToken: 'id-token',
+        body: any(named: 'body'),
+      ),
+    ).called(1);
+    expect(skipLog.skips, isEmpty);
   });
 }
