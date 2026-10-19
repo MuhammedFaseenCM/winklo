@@ -1,0 +1,4 @@
+What's new
+
+• Fast Zip clears now count: times under 10 seconds reach the leaderboard
+• Fixes and improvements
