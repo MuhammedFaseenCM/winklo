@@ -59,29 +59,17 @@ class LeaderboardPodium extends StatelessWidget {
       );
     }
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment.topCenter,
-          radius: 1.1,
-          colors: [
-            leaderboardGold.withValues(alpha: 0.13),
-            leaderboardGold.withValues(alpha: 0),
-          ],
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(4, layout.space(6), 4, 0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            place(1, 10),
-            const SizedBox(width: 8),
-            place(0, 11),
-            const SizedBox(width: 8),
-            place(2, 10),
-          ],
-        ),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(4, layout.space(6), 4, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          place(1, 10),
+          const SizedBox(width: 8),
+          place(0, 11),
+          const SizedBox(width: 8),
+          place(2, 10),
+        ],
       ),
     );
   }
@@ -145,6 +133,8 @@ class _PodiumPlace extends StatelessWidget {
                 color: leaderboardGold,
               ),
             SizedBox(height: layout.space(3)),
+            // Medal ring, a thin ink gap, then the avatar on an opaque
+            // backing (a tinted initials avatar is see-through).
             Container(
               padding: EdgeInsets.all(first ? 2.5 : 2),
               decoration: BoxDecoration(
@@ -153,18 +143,26 @@ class _PodiumPlace extends StatelessWidget {
                 boxShadow: first
                     ? [
                         BoxShadow(
-                          color: leaderboardGold.withValues(alpha: 0.35),
-                          blurRadius: 18,
+                          color: leaderboardGold.withValues(alpha: 0.4),
+                          blurRadius: 24,
+                          spreadRadius: 2,
                         ),
                       ]
                     : null,
               ),
-              child: UserAvatar(
-                displayName: entry.displayName,
-                photoUrl: entry.photoUrl,
-                avatarId: entry.avatarId,
-                radius: layout.space(first ? 26 : 21),
-                tintSeed: entry.uid,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ZipColors.ink,
+                ),
+                child: UserAvatar(
+                  displayName: entry.displayName,
+                  photoUrl: entry.photoUrl,
+                  avatarId: entry.avatarId,
+                  radius: layout.space(first ? 25 : 20),
+                  tintSeed: entry.uid,
+                ),
               ),
             ),
             SizedBox(height: layout.space(6)),
@@ -220,29 +218,41 @@ class _PodiumPlace extends StatelessWidget {
                 style: textTheme.labelSmall?.copyWith(color: ZipColors.inkSoft),
               ),
             SizedBox(height: layout.space(6)),
-            Container(
-              height: layout.space(switch (place) {
-                1 => 60,
-                2 => 44,
-                _ => 32,
-              }),
-              width: double.infinity,
-              alignment: Alignment.topCenter,
-              padding: EdgeInsets.only(top: layout.space(first ? 8 : 6)),
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(10),
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    medal.withValues(alpha: first ? 0.28 : 0.2),
-                    ZipColors.wall.withValues(alpha: 0.92),
-                  ],
-                ),
+            // The step: slate like the table card, with a medal-coloured lip.
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(10),
               ),
-              child: MedalCoin(rank: entry.rank, size: layout.space(22)),
+              child: Container(
+                height: layout.space(switch (place) {
+                  1 => 60,
+                  2 => 44,
+                  _ => 32,
+                }),
+                width: double.infinity,
+                alignment: Alignment.topCenter,
+                padding: EdgeInsets.only(top: layout.space(first ? 9 : 7)),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: medal.withValues(alpha: 0.85),
+                      width: 3,
+                    ),
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color.alphaBlend(
+                        medal.withValues(alpha: 0.1),
+                        ZipColors.paper,
+                      ),
+                      ZipColors.wall.withValues(alpha: 0.92),
+                    ],
+                  ),
+                ),
+                child: MedalCoin(rank: entry.rank, size: layout.space(22)),
+              ),
             ),
           ],
         ),
