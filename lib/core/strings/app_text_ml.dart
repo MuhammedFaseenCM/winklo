@@ -1249,7 +1249,46 @@ final class AppTextMl implements AppText {
   String get profileChoosePhoto => 'ഫോട്ടോകളിൽ നിന്ന് എടുക്കൂ';
 
   @override
-  String get profilePresets => 'റെഡിമെയ്ഡ്';
+  String get profileAvatarHint => 'മാറ്റാൻ ഒന്നിൽ തൊടൂ';
+
+  @override
+  String get profileAvatarPhoto => 'ഫോട്ടോ';
+
+  @override
+  String get avatarCritterFox => 'കുറുക്കൻ';
+
+  @override
+  String get avatarCritterCat => 'പൂച്ച';
+
+  @override
+  String get avatarCritterOwl => 'മൂങ്ങ';
+
+  @override
+  String get avatarCritterFrog => 'തവള';
+
+  @override
+  String get avatarCritterPanda => 'പാണ്ട';
+
+  @override
+  String get avatarCritterBunny => 'മുയൽ';
+
+  @override
+  String get avatarCritterPenguin => 'പെൻഗ്വിൻ';
+
+  @override
+  String get avatarCritterTiger => 'കടുവ';
+
+  @override
+  String get avatarCritterKoala => 'കോവാല';
+
+  @override
+  String get avatarCritterBear => 'കരടി';
+
+  @override
+  String get avatarCritterRaccoon => 'റാക്കൂൺ';
+
+  @override
+  String get avatarCritterChick => 'കോഴിക്കുഞ്ഞ്';
 
   @override
   String get profileSaveFailed =>
