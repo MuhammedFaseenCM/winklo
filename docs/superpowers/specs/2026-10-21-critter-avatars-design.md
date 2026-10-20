@@ -25,18 +25,18 @@ The user flagged all four in the visual companion.
 
 | id | was | critter | body / background |
 |---|---|---|---|
-| `preset_01` | orange face | Fox | ember on `#4A2617` |
+| `preset_01` | orange face | Fox | ember on `#5A2C17` |
 | `preset_02` | sky face | Panda | white on `#1E5276` |
-| `preset_03` | violet face | Cat | violet on `#2E2556` |
-| `preset_04` | teal face with ears | Bear | `#C2763A` on `#163044` |
-| `preset_05` | amber face | Owl | amber on `#4A3510` |
-| `preset_06` | rose face | Bunny | rose on `#4C1D2B` |
-| `preset_07` | — | Frog | lime on `#26330F` |
+| `preset_03` | violet face | Cat | violet on `#3B2F72` |
+| `preset_04` | teal face with ears | Bear | `#C2763A` on `#2F5A3A` |
+| `preset_05` | amber face | Owl | amber on `#574013` |
+| `preset_06` | rose face | Bunny | rose on `#5A2236` |
+| `preset_07` | — | Frog | lime on `#2F4A12` |
 | `preset_08` | — | Penguin | ink and white on `#0369A1` |
-| `preset_09` | — | Tiger | `#FB923C` on `#134E4A` |
-| `preset_10` | — | Koala | `#CBD5E1` on `#1F3B2D` |
-| `preset_11` | — | Raccoon | slate on `#4A3510` |
-| `preset_12` | — | Chick | `#FDE047` on `#2E2556` |
+| `preset_09` | — | Tiger | `#FB923C` on `#155E58` |
+| `preset_10` | — | Koala | `#CBD5E1` on `#4A3B6B` |
+| `preset_11` | — | Raccoon | slate on `#574013` |
+| `preset_12` | — | Chick | `#FDE047` on `#1E4D8C` |
 
 Picker order (gives a varied grid): fox, cat, owl, frog, panda, bunny, penguin, tiger, koala, bear, raccoon, chick.
 
