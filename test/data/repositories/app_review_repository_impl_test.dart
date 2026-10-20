@@ -137,4 +137,17 @@ void main() {
       );
     });
   });
+
+  group('openStoreListing', () {
+    test('opens the store even when in-app review is available', () async {
+      expect(await repo.openStoreListing(), ReviewOutcome.store);
+      expect(reviewCalls, 0);
+      expect(launchCalls, 1);
+    });
+
+    test('failed when store launch fails', () async {
+      launchOk = false;
+      expect(await repo.openStoreListing(), ReviewOutcome.failed);
+    });
+  });
 }

@@ -84,6 +84,11 @@ class AppReviewRepositoryImpl implements AppReviewRepository {
     } catch (_) {
       // Fall through to store.
     }
+    return openStoreListing();
+  }
+
+  @override
+  Future<ReviewOutcome> openStoreListing() async {
     final opened = await _openStoreUrl(_resolvedStoreUrl);
     return opened ? ReviewOutcome.store : ReviewOutcome.failed;
   }
