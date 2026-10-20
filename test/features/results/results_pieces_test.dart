@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
+import 'package:winklo/domain/entities/path_words_clear_summary.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/features/results/logic/result_tiles.dart';
 import 'package:winklo/features/results/view/result_tiles_row.dart';
+import 'package:winklo/features/results/view/results_board_card.dart';
 import 'package:winklo/features/results/view/results_hero.dart';
 import 'package:winklo/features/results/view/results_top_bar.dart';
 
@@ -72,5 +74,51 @@ void main() {
   testWidgets('no tiles, no row', (tester) async {
     await tester.pumpWidget(_app(const ResultTilesRow(tiles: [])));
     expect(find.byType(IntrinsicHeight), findsNothing);
+  });
+
+  testWidgets('Path Words cards switch between the board and the words', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        const SizedBox(
+          height: 400,
+          child: ResultsBoardCard(
+            board: Text('the board'),
+            pathWords: PathWordsClearSummary(
+              theme: 'Kitchen tools',
+              words: ['ladle', 'kettle'],
+              bonusWords: ['tale'],
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('the board'), findsOneWidget);
+    expect(find.text('LADLE'), findsNothing);
+
+    await tester.tap(find.text(AppStrings.resultsWordsTab(2)));
+    await tester.pumpAndSettle();
+    expect(find.text('the board'), findsNothing);
+    expect(find.text('LADLE'), findsOneWidget);
+    expect(find.text(AppStrings.pathWordsBonusCount(1)), findsOneWidget);
+
+    await tester.tap(find.text(AppStrings.resultsBoardTab));
+    await tester.pumpAndSettle();
+    expect(find.text('the board'), findsOneWidget);
+    expect(find.text('LADLE'), findsNothing);
+  });
+
+  testWidgets('other games get no switch', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        const SizedBox(
+          height: 300,
+          child: ResultsBoardCard(board: Text('the board')),
+        ),
+      ),
+    );
+    expect(find.text('the board'), findsOneWidget);
+    expect(find.text(AppStrings.resultsBoardTab), findsNothing);
   });
 }

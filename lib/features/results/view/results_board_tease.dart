@@ -8,10 +8,20 @@ import '../../leaderboard/view/widgets/leaderboard_signed_out_mock.dart';
 
 /// Compact blurred mock board for guest results — tap to claim/save time.
 class ResultsBoardTease extends StatelessWidget {
-  const ResultsBoardTease({super.key, required this.onTap, this.height = 176});
+  const ResultsBoardTease({
+    super.key,
+    required this.onTap,
+    this.height = 176,
+    this.framed = true,
+  });
 
   final VoidCallback onTap;
+
+  /// Ignored when not [framed]: the tease then fills its parent.
   final double height;
+
+  /// False inside a card that draws its own frame (the Results board card).
+  final bool framed;
 
   @override
   Widget build(BuildContext context) {
@@ -19,23 +29,25 @@ class ResultsBoardTease extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(framed ? 20 : 0),
         child: Ink(
-          height: height,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: ZipColors.glassBorder),
-            gradient: ZipColors.cardGradient,
-          ),
+          height: framed ? height : null,
+          decoration: framed
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: ZipColors.glassBorder),
+                  gradient: ZipColors.cardGradient,
+                )
+              : null,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(framed ? 20 : 0),
             child: Stack(
               fit: StackFit.expand,
               children: [
                 IgnorePointer(
                   child: ImageFiltered(
                     imageFilter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
-                    child: const LeaderboardSignedOutMock(rowCount: 3),
+                    child: LeaderboardSignedOutMock(rowCount: framed ? 3 : 5),
                   ),
                 ),
                 ColoredBox(color: ZipColors.ink.withValues(alpha: 0.42)),
