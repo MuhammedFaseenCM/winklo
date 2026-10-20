@@ -8,6 +8,7 @@ import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/features/leaderboard/view/widgets/leaderboard_table.dart';
+import 'package:winklo/features/leaderboard/view/widgets/medal_coin.dart';
 
 LeaderboardEntry _entry({
   int rank = 4,
@@ -293,5 +294,37 @@ void main() {
       tester.getSize(find.byType(LeaderboardTableRow)).height,
       greaterThanOrEqualTo(leaderboardTableRowHeight),
     );
+  });
+
+  testWidgets('showMedals draws a medal for the top three, numbers after', (
+    tester,
+  ) async {
+    Widget row(int rank) => LeaderboardTableRow(
+      entry: _entry(rank: rank),
+      period: LeaderboardPeriod.daily,
+      gameId: GameIds.zip,
+      isYou: false,
+      showMedals: true,
+    );
+    await _pump(tester, row(2));
+    expect(find.byType(MedalCoin), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+
+    await _pump(tester, row(4));
+    expect(find.byType(MedalCoin), findsNothing);
+    expect(find.text('4'), findsOneWidget);
+  });
+
+  testWidgets('rows show numbers without showMedals', (tester) async {
+    await _pump(
+      tester,
+      LeaderboardTableRow(
+        entry: _entry(rank: 1),
+        period: LeaderboardPeriod.daily,
+        gameId: GameIds.zip,
+        isYou: false,
+      ),
+    );
+    expect(find.byType(MedalCoin), findsNothing);
   });
 }
