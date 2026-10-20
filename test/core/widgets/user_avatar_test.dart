@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/core/widgets/user_avatar.dart';
@@ -14,7 +16,9 @@ void main() {
     expect(find.text('A'), findsOneWidget);
   });
 
-  testWidgets('prefers preset image over photoUrl', (tester) async {
+  testWidgets('draws a preset as its bundled critter, over photoUrl', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -27,7 +31,20 @@ void main() {
         ),
       ),
     );
-    // Network image + placeholder; CachedNetworkImage / Image both count.
-    expect(find.byType(Image), findsWidgets);
+    expect(find.byType(SvgPicture), findsOneWidget);
+    expect(find.byType(CachedNetworkImage), findsNothing);
+  });
+
+  testWidgets('an unknown preset id falls back to initials', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: const Scaffold(
+          body: UserAvatar(displayName: 'Ada', avatarId: 'gone', radius: 20),
+        ),
+      ),
+    );
+    expect(find.text('A'), findsOneWidget);
+    expect(find.byType(SvgPicture), findsNothing);
   });
 }

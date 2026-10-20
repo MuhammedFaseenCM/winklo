@@ -124,6 +124,8 @@ flutter:
     - assets/words/en_nouns.txt
     - assets/words/en_practice_words.txt
     - assets/branding/
+    # Preset avatars (critters), drawn by UserAvatar.
+    - assets/avatars/
     - assets/sfx/
     # Noto Sans Malayalam (Regular and Bold) for google_fonts to load offline,
     # and its licence.

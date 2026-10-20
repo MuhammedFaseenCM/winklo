@@ -1195,7 +1195,46 @@ final class AppTextEn implements AppText {
   String get profileChoosePhoto => 'Choose from photos';
 
   @override
-  String get profilePresets => 'Presets';
+  String get profileAvatarHint => 'Tap a critter to switch';
+
+  @override
+  String get profileAvatarPhoto => 'Photo';
+
+  @override
+  String get avatarCritterFox => 'Fox';
+
+  @override
+  String get avatarCritterCat => 'Cat';
+
+  @override
+  String get avatarCritterOwl => 'Owl';
+
+  @override
+  String get avatarCritterFrog => 'Frog';
+
+  @override
+  String get avatarCritterPanda => 'Panda';
+
+  @override
+  String get avatarCritterBunny => 'Bunny';
+
+  @override
+  String get avatarCritterPenguin => 'Penguin';
+
+  @override
+  String get avatarCritterTiger => 'Tiger';
+
+  @override
+  String get avatarCritterKoala => 'Koala';
+
+  @override
+  String get avatarCritterBear => 'Bear';
+
+  @override
+  String get avatarCritterRaccoon => 'Raccoon';
+
+  @override
+  String get avatarCritterChick => 'Chick';
 
   @override
   String get profileSaveFailed => 'Could not save profile. Try again.';

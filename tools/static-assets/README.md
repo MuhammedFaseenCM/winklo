@@ -17,6 +17,18 @@ under `static/`. These are **not** Flutter assets — do not add this folder to
 Public URL: `$PUBLIC_BASE_URL/static/...`  
 (default `https://pub-94fd8286c7fa4508a0e988821039d2a8.r2.dev`).
 
+### Preset avatars
+
+The app draws presets from bundled SVGs (`assets/avatars/<critter>.svg`).
+`avatars/preset_XX.png` exist only for app builds from before critter
+avatars, which still load `static/avatars/<id>.png` (and know only
+`preset_01`–`06`; they show initials for newer ids). Regenerate them after
+changing a critter, then upload with the loop below:
+
+```bash
+tools/static-assets/export_avatar_pngs.sh   # needs Google Chrome
+```
+
 After replacing art, re-upload the changed files (same keys) with `--remote`. Clients cache long-lived; bump the filename in code if you need an immediate bust.
 
 ```bash

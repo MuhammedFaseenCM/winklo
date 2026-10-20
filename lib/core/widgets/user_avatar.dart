@@ -54,25 +54,19 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final presetUrl = AvatarCatalog.imageUrlFor(avatarId);
-    if (presetUrl != null) {
+    final presetAsset = AvatarCatalog.assetFor(avatarId);
+    if (presetAsset != null) {
+      // Bundled, so no spinner; initials only if the asset can't be read.
       return CircleAvatar(
         radius: radius,
         backgroundColor: ZipColors.mistDeep,
         child: ClipOval(
-          child: AppImage.network(
-            presetUrl,
+          child: AppImage.asset(
+            presetAsset,
             width: radius * 2,
             height: radius * 2,
             fit: BoxFit.cover,
             errorWidget: Center(child: _initials),
-            placeholder: Center(
-              child: SizedBox(
-                width: radius,
-                height: radius,
-                child: const CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
           ),
         ),
       );
