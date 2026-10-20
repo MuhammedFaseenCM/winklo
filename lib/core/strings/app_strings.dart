@@ -310,6 +310,15 @@ abstract final class AppStrings {
   static String get youLabel => _t.youLabel;
   static String get leaderboardNoHintChip => _t.leaderboardNoHintChip;
   static String get leaderboardNoMistakesChip => _t.leaderboardNoMistakesChip;
+  static String get leaderboardKeyStreak => _t.leaderboardKeyStreak;
+  static String leaderboardBehind(String gap, int rank) =>
+      _t.leaderboardBehind(gap, rank);
+  static String leaderboardPodiumSemantics(
+    int rank,
+    String name,
+    String time,
+  ) => _t.leaderboardPodiumSemantics(rank, name, time);
+  static String leaderboardDaysShort(int days) => _t.leaderboardDaysShort(days);
 
   // Leaderboard: past days, the weekly board and leagues (roadmap area C)
   static String get leaderboardThisWeek => _t.leaderboardThisWeek;
