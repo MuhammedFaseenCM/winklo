@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
+import 'package:winklo/core/widgets/user_avatar.dart';
 import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/game_ids.dart';
@@ -217,5 +218,48 @@ void main() {
     );
     expect(find.text(AppStrings.youLabel), findsOneWidget);
     expect(find.text('Ada'), findsOneWidget);
+  });
+
+  testWidgets('a daily row shows its gap to the leader under the time', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      LeaderboardTableRow(
+        entry: _entry(),
+        period: LeaderboardPeriod.daily,
+        gameId: GameIds.zip,
+        isYou: false,
+        gapSeconds: 15,
+      ),
+    );
+    expect(find.text('+0:15'), findsOneWidget);
+  });
+
+  testWidgets('the pinned row can carry a sub-line', (tester) async {
+    await _pump(
+      tester,
+      LeaderboardTableRow(
+        entry: _entry(),
+        period: LeaderboardPeriod.daily,
+        gameId: GameIds.zip,
+        isYou: true,
+        subtitle: AppStrings.leaderboardBehind('0:05', 13),
+      ),
+    );
+    expect(find.text(AppStrings.leaderboardBehind('0:05', 13)), findsOneWidget);
+  });
+
+  testWidgets('a row tints an initials avatar by uid', (tester) async {
+    await _pump(
+      tester,
+      LeaderboardTableRow(
+        entry: _entry(),
+        period: LeaderboardPeriod.daily,
+        gameId: GameIds.zip,
+        isYou: false,
+      ),
+    );
+    expect(tester.widget<UserAvatar>(find.byType(UserAvatar)).tintSeed, 'u4');
   });
 }
