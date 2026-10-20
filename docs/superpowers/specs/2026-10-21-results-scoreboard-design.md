@@ -72,7 +72,7 @@ Entrance motion stays light and keeps today's feel:
 - A 76×76 rounded square (radius 20, 68×68 when compact), with an ember 12% fill and an ember 50% 1.5dp border.
 - It shows "#14" in ember, w900, 24sp (22 compact), and "of 18 today" in `inkSoft`, 10sp. The caption is a new string, `resultsRankOfToday(total)`. Both lines sit in a `FittedBox(scaleDown)` for large text.
 - **Data:** the board's `LeaderboardCubit`. The current entry is the one whose `uid == state.currentUid`. Rank is `entry.rank`, and total is `state.entries.length`.
-- **Capped boards:** the daily query is capped at 50 rows (`leaderboard_repository_impl.dart`, `.limit(50)`). The literal moves to a shared constant, `leaderboardDailyLimit` in `domain/entities/leaderboard_period.dart`, which the repository uses too. When `entries.length >= leaderboardDailyLimit`, the caption reads "of 50+ today" (`resultsRankOfToday(total, capped: true)`).
+- **Capped boards:** the daily query is capped at 50 rows (`leaderboard_repository_impl.dart`, `.limit(50)`). The literal moves to a shared constant, `leaderboardDailyLimit` in `domain/leaderboard_limits.dart` next to the other board limits, which the repository uses too. When `entries.length >= leaderboardDailyLimit`, the caption reads "of 50+ today" (`resultsRankOfToday(total, capped: true)`).
 - **States:**
   - Loading: an empty badge outline, no text.
   - Ready with you on the board: the badge.
@@ -112,10 +112,10 @@ Tile style: radius 12, `inkSoft` 8% fill, 16% border, 8dp padding. The icon is a
 ## Mini table
 
 - Rows are the podium branch's `LeaderboardTableRow` at its 52dp height, with `period: daily` and `gapSeconds` to #1 (hidden for #1, and when the gap is ≤ 0).
-- **Medals:** `LeaderboardTableRow._rank` shows a `MedalCoin(rank, size: 22)` for ranks 1–3 instead of the number. The Leaderboard tab never renders ranks 1–3 as rows, so the tab doesn't change.
+- **Medals:** with the new opt-in `showMedals`, `LeaderboardTableRow._rank` shows a `MedalCoin(rank, size: 22)` for ranks 1–3 instead of the number. Only the mini board sets it, so the tab's pinned row is unchanged.
 - **Gap row:** a centred "···" (`leaderboardGapEllipsis`) row, 20dp, with the same divider.
 - **Which rows (fit to height):** `sliceLeaderboardForMini` gains a `maxRows` mode. The card measures its height (`LayoutBuilder`) and passes `maxRows = floor((height − gapRow) / 52)`.
-  - Always: the top 3 (fewer if the board is smaller) and you.
+  - Always: everyone ranked 1–3 (ties included, so possibly more than three rows) and you.
   - Remaining slots go to your neighbours, alternating above and below and starting above (the people you're chasing).
   - If you're in the top 3, the slots go to ranks 4, 5, …
   - With room for everyone there is no gap row.
@@ -123,7 +123,7 @@ Tile style: radius 12, `inkSoft` 8% fill, 16% border, 8dp padding. The icon is a
   - Today's `above`/`below` parameters stay for existing callers.
 - **Tap a row:** `showPlayerCardSheet` (`isYou` for your row), as on the tab.
 - **States:**
-  - Loading: today's spinner becomes the podium branch's row shimmer (6 rows).
+  - Loading: today's centred spinner stays. The podium branch's `LeaderboardShimmer` draws a podium, and its row shimmer is private.
   - Failure: `CenteredMessageBody` with retry, as today.
   - Empty: `leaderboardEmpty`, as today.
 - Results no longer uses the old `LeaderboardRow`. It stays, because `leaderboard_signed_out_mock.dart` still uses it.
