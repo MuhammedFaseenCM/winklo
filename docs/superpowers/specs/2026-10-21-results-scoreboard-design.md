@@ -130,9 +130,9 @@ Tile style: radius 12, `inkSoft` 8% fill, 16% border, 8dp padding. The icon is a
 
 ## Board | Words (Path Words only)
 
-- The switch shows when `args.pathWords != null`. It sits at the top of the board card: two segments with 8dp margins in a 10-radius track, the active segment in `mistDeep`.
-  - Segment 1: `AppIcons.ranking` and "Board" (new string `resultsBoardTab`).
-  - Segment 2: `AppIcons.textAa` and "Words · 5" (new string `resultsWordsTab(count)`).
+- The tabs show when `args.pathWords != null`, **above** the card. They use the Leaderboard tab's game-tab style: a dark track with a sliding ember pill. That style is shared as `core/widgets/pill_tabs.dart` (`PillTabs`), and `LeaderboardGameTabs` is now built on it.
+  - Tab 1: `AppIcons.ranking` and "Board" (new string `resultsBoardTab`).
+  - Tab 2: `AppIcons.textAa` and "Words · 5" (new string `resultsWordsTab(count)`).
 - It opens on **Board**. The selection is view-local `StatefulWidget` state: it is ephemeral UI state, not app state.
 - **Words** shows today's `PathWordsResultsPanel`: theme line, chips, "tap for meaning" and bonus count. It is centred in the card and scrolls if needed. Chip styling is unchanged, since it has room.
 - Signed in: Board holds the mini table. Guest: Board holds the tease, and Words works the same.
