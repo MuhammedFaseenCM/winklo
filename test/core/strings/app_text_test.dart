@@ -188,6 +188,11 @@ final Map<String, String Function(AppText)> _members = {
   'youLabel': (t) => t.youLabel,
   'leaderboardNoHintChip': (t) => t.leaderboardNoHintChip,
   'leaderboardNoMistakesChip': (t) => t.leaderboardNoMistakesChip,
+  'leaderboardKeyStreak': (t) => t.leaderboardKeyStreak,
+  'leaderboardBehind': (t) => t.leaderboardBehind('0:05', 13),
+  'leaderboardPodiumSemantics': (t) =>
+      t.leaderboardPodiumSemantics(1, 'Ada', '0:42'),
+  'leaderboardDaysShort': (t) => t.leaderboardDaysShort(5),
   'leaderboardThisWeek': (t) => t.leaderboardThisWeek,
   'leaderboardToday': (t) => t.leaderboardToday,
   'leaderboardYesterday': (t) => t.leaderboardYesterday,
