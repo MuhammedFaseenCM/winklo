@@ -213,7 +213,12 @@ class LeaderboardTableRow extends StatelessWidget {
         splashColor: ZipColors.ember.withValues(alpha: 0.12),
         highlightColor: Colors.white.withValues(alpha: 0.04),
         child: Container(
-          height: leaderboardTableRowHeight,
+          // The board's rows have a fixed extent; the pinned row's sub-line
+          // may need more at big text sizes.
+          height: subtitle == null ? leaderboardTableRowHeight : null,
+          constraints: subtitle == null
+              ? null
+              : const BoxConstraints(minHeight: leaderboardTableRowHeight),
           padding: EdgeInsets.only(
             left: isYou ? 12 - _youBarWidth : 12,
             right: 12,

@@ -154,6 +154,11 @@ class _LeaderboardView extends StatefulWidget {
   State<_LeaderboardView> createState() => _LeaderboardViewState();
 }
 
+/// Entries on screen without scrolling even on a 360×640 phone at big text
+/// sizes: the podium and the first two rows. Below them your row is pinned
+/// until it's measured on screen.
+const int _alwaysOnScreen = leaderboardPodiumSize + 2;
+
 class _LeaderboardViewState extends State<_LeaderboardView>
     with WidgetsBindingObserver {
   String _previousGameId = GameIds.zip;
@@ -307,12 +312,12 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     }
 
     if (!_scrollController.hasClients) {
-      return userIndex < 6;
+      return userIndex < _alwaysOnScreen;
     }
 
     final position = _scrollController.position;
     final viewportHeight = position.viewportDimension;
-    if (viewportHeight <= 0) return userIndex < 6;
+    if (viewportHeight <= 0) return userIndex < _alwaysOnScreen;
 
     final userItemTop = _userTop(userIndex);
     final currentBottom = position.pixels + viewportHeight;
@@ -640,7 +645,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                   ? state.entries[userIndex]
                                   : null;
                               final inInitialList =
-                                  userIndex != -1 && userIndex < 6;
+                                  userIndex != -1 &&
+                                  userIndex < _alwaysOnScreen;
                               final hasNavDock = !GoRouter.of(context).canPop();
                               // Under the card; the shell's SafeArea already
                               // ends above the nav dock.

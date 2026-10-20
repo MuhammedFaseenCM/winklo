@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_icons.dart';
@@ -98,6 +99,20 @@ void main() {
       ),
       findsOneWidget,
     );
+    handle.dispose();
+  });
+
+  testWidgets('screen readers can open a place', (tester) async {
+    final handle = tester.ensureSemantics();
+    final tapped = await _pump(tester, [_e(1)]);
+    final node = tester.getSemantics(
+      find.bySemanticsLabel(RegExp('^${RegExp.escape('Rank 1')}')),
+    );
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    tester.semantics.tap(
+      find.semantics.byLabel(RegExp('^${RegExp.escape('Rank 1')}')),
+    );
+    expect(tapped.single.uid, 'u1');
     handle.dispose();
   });
 }

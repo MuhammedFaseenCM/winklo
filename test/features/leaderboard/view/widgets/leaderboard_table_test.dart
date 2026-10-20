@@ -262,4 +262,36 @@ void main() {
     );
     expect(tester.widget<UserAvatar>(find.byType(UserAvatar)).tintSeed, 'u4');
   });
+
+  testWidgets('the pinned row with a sub-line grows at big text sizes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.6)),
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 360,
+                child: LeaderboardTableRow(
+                  entry: _entry(),
+                  period: LeaderboardPeriod.daily,
+                  gameId: GameIds.zip,
+                  isYou: true,
+                  subtitle: AppStrings.leaderboardBehind('0:05', 13),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(
+      tester.getSize(find.byType(LeaderboardTableRow)).height,
+      greaterThanOrEqualTo(leaderboardTableRowHeight),
+    );
+  });
 }

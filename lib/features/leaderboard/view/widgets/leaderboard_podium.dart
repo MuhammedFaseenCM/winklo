@@ -87,7 +87,7 @@ class _PodiumPlace extends StatelessWidget {
 
   final LeaderboardEntry entry;
 
-  /// 1, 2 or 3: sets the medal colour and step height.
+  /// 1, 2 or 3: sets the step height (the medal follows the rank).
   final int place;
   final LeaderboardPeriod period;
   final String gameId;
@@ -99,7 +99,8 @@ class _PodiumPlace extends StatelessWidget {
     final layout = AppLayout.of(context);
     final textTheme = Theme.of(context).textTheme;
     final first = place == 1;
-    final medal = podiumColor(place)!;
+    // By rank, so a tie for first is two golds; the step height is by place.
+    final medal = podiumColor(entry.rank) ?? podiumColor(place)!;
     final badges = leaderboardBadgesFor(entry, period: period, gameId: gameId);
     final time = AppStrings.formatPlayTime(entry.timeSeconds);
     final days = period == LeaderboardPeriod.weekly
@@ -119,6 +120,8 @@ class _PodiumPlace extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
+      // The InkWell's own tap is excluded with the rest, so give it here.
+      onTap: onTap,
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
