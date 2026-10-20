@@ -1,0 +1,7 @@
+What's new
+
+• Critter avatars and a bigger avatar picker
+• Daily Results redesigned as a scoreboard
+• Leaderboard podium for the top three
+• Clearer icons throughout the app
+• Profile Rate opens the Play Store listing
