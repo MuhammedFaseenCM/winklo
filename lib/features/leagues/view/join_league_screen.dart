@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/centered_message_body.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/repositories/auth_repository.dart';
@@ -98,7 +100,7 @@ class _Invite extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.group_rounded, color: ZipColors.ember, size: 40),
+              const AppIcon(AppIcons.group, color: ZipColors.ember, size: 40),
               const SizedBox(height: 12),
               Text(
                 league.name,
@@ -126,7 +128,7 @@ class _Invite extends StatelessWidget {
                 const SizedBox(height: 12),
                 ZipPrimaryButton(
                   label: AppStrings.leagueSeeBoard,
-                  icon: Icons.emoji_events_rounded,
+                  icon: AppIcons.trophy,
                   onPressed: () =>
                       context.go('/leaderboard?league=${league.id}'),
                 ),
@@ -134,7 +136,7 @@ class _Invite extends StatelessWidget {
                 ZipPrimaryButton(
                   key: const Key('join_league_button'),
                   label: AppStrings.joinLeagueButton,
-                  icon: Icons.group_add_rounded,
+                  icon: AppIcons.groupAdd,
                   onPressed: context.read<JoinLeagueCubit>().join,
                 ),
             ],

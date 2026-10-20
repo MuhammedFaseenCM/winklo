@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 /// The streak freezes banked for a game tile: a snowflake, with "×2" when
 /// there are two. Nothing when there are none.
@@ -34,8 +36,8 @@ class HomeFreezeBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.ac_unit_rounded,
+            AppIcon(
+              AppIcons.freeze,
               size: layout.space(13),
               color: ZipColors.sky,
             ),

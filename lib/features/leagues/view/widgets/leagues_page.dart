@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/zip_ui.dart';
 
 /// The leagues screens' frame: a back button (to the leaderboard when the
@@ -34,8 +36,8 @@ class LeaguesPage extends StatelessWidget {
                       onPressed: () => context.canPop()
                           ? context.pop()
                           : context.go('/leaderboard'),
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
+                      icon: const AppIcon(
+                        AppIcons.chevronLeft,
                         color: ZipColors.onInk,
                         size: 20,
                       ),

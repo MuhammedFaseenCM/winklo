@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/zip_ui.dart';
@@ -61,13 +62,13 @@ class _SettingsView extends StatelessWidget {
                   title: AppStrings.settingsSoundSection,
                   children: [
                     SettingsSwitchRow(
-                      icon: Icons.volume_up_outlined,
+                      icon: AppIcons.sound,
                       title: AppStrings.profileSoundEffects,
                       value: state.soundEnabled,
                       onChanged: (v) => unawaited(cubit.setSound(v)),
                     ),
                     SettingsSwitchRow(
-                      icon: Icons.vibration_rounded,
+                      icon: AppIcons.vibrate,
                       title: AppStrings.profileVibration,
                       value: state.vibrationEnabled,
                       onChanged: (v) => unawaited(cubit.setVibration(v)),
@@ -79,7 +80,7 @@ class _SettingsView extends StatelessWidget {
                   title: AppStrings.settingsRemindersSection,
                   children: [
                     SettingsSwitchRow(
-                      icon: Icons.wb_sunny_outlined,
+                      icon: AppIcons.sun,
                       title: AppStrings.settingsDailyReady,
                       subtitle: AppStrings.settingsDailyReadyHint,
                       value: reminders.dailyReadyEnabled,
@@ -92,7 +93,7 @@ class _SettingsView extends StatelessWidget {
                       onChanged: (m) => unawaited(cubit.setDailyReadyTime(m)),
                     ),
                     SettingsSwitchRow(
-                      icon: Icons.local_fire_department_outlined,
+                      icon: AppIcons.streak,
                       title: AppStrings.settingsStreakAtRisk,
                       subtitle: AppStrings.settingsStreakAtRiskHint,
                       value: reminders.streakAtRiskEnabled,
@@ -106,7 +107,7 @@ class _SettingsView extends StatelessWidget {
                           unawaited(cubit.setStreakReminderTime(m)),
                     ),
                     SettingsSwitchRow(
-                      icon: Icons.insights_rounded,
+                      icon: AppIcons.insights,
                       title: AppStrings.settingsWeeklyRecap,
                       subtitle: AppStrings.settingsWeeklyRecapHint(
                         SettingsTimeRow.format(
@@ -118,7 +119,7 @@ class _SettingsView extends StatelessWidget {
                       onChanged: (v) => unawaited(cubit.setWeeklyRecap(v)),
                     ),
                     SettingsSwitchRow(
-                      icon: Icons.campaign_outlined,
+                      icon: AppIcons.announce,
                       title: AppStrings.settingsAnnouncements,
                       subtitle: AppStrings.settingsAnnouncementsHint,
                       value: reminders.announcementsEnabled,

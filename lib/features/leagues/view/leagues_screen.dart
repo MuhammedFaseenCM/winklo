@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/centered_message_body.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/league.dart';
@@ -108,13 +110,13 @@ class _LeaguesView extends StatelessWidget {
                     const SizedBox(height: 12),
                     ZipPrimaryButton(
                       label: AppStrings.leaguesCreate,
-                      icon: Icons.add_rounded,
+                      icon: AppIcons.add,
                       onPressed: state.busy ? null : () => _create(context),
                     ),
                     const SizedBox(height: 10),
                     OutlinedButton.icon(
                       onPressed: () => _join(context),
-                      icon: const Icon(Icons.vpn_key_rounded),
+                      icon: const AppIcon(AppIcons.key),
                       label: Text(AppStrings.leaguesJoin),
                     ),
                   ],
@@ -150,7 +152,7 @@ class _LeagueTile extends StatelessWidget {
                   color: ZipColors.emberSoft,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.group_rounded, color: ZipColors.ember),
+                child: const AppIcon(AppIcons.group, color: ZipColors.ember),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -179,7 +181,7 @@ class _LeagueTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: ZipColors.inkSoft),
+              const AppIcon(AppIcons.chevronRight, color: ZipColors.inkSoft),
             ],
           ),
         ),

@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/play_mode_route.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/play_mode.dart';
@@ -40,7 +42,7 @@ class MorePlayScreen extends StatelessWidget {
                   children: [
                     MorePlaySectionTitle(title: AppStrings.archiveTitle),
                     MorePlayCard(
-                      icon: Icons.calendar_month_rounded,
+                      icon: AppIcons.calendar,
                       title: AppStrings.archiveTitle,
                       subtitle: AppStrings.archiveHint,
                       accent: archiveStyle.accent,
@@ -136,7 +138,7 @@ class _PracticeTile extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Icon(style.icon, color: style.accent),
+              AppIcon(style.icon, color: style.accent),
               const SizedBox(height: 6),
               Text(
                 style.title,

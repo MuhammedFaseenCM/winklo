@@ -3,7 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 class FloatingNavDock extends StatelessWidget {
   const FloatingNavDock({
@@ -18,18 +20,18 @@ class FloatingNavDock extends StatelessWidget {
   static List<_DockDestination> get _destinations => <_DockDestination>[
     _DockDestination(
       label: AppStrings.navHome,
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
+      icon: AppIcons.home,
+      selectedIcon: AppIcons.homeSelected,
     ),
     _DockDestination(
       label: AppStrings.navLeaderboard,
-      icon: Icons.emoji_events_outlined,
-      selectedIcon: Icons.emoji_events,
+      icon: AppIcons.trophy,
+      selectedIcon: AppIcons.trophySelected,
     ),
     _DockDestination(
       label: AppStrings.navProfile,
-      icon: Icons.person_outline,
-      selectedIcon: Icons.person,
+      icon: AppIcons.user,
+      selectedIcon: AppIcons.userSelected,
     ),
   ];
 
@@ -226,7 +228,7 @@ class _DockItem extends StatelessWidget {
                           ),
                         );
                       },
-                      child: Icon(
+                      child: AppIcon(
                         selected ? destination.selectedIcon : destination.icon,
                         key: ValueKey<bool>(selected),
                         color: color,

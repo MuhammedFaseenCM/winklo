@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/haptics/haptics_service.dart';
 import '../../../core/router/play_mode_route.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/repositories/analytics_repository.dart';
@@ -93,7 +94,7 @@ class LocalResultsView extends StatelessWidget {
                     if (isArchive)
                       ZipPrimaryButton(
                         label: AppStrings.backToArchive,
-                        icon: Icons.calendar_month_rounded,
+                        icon: AppIcons.calendar,
                         onPressed: () async {
                           await _log(context, 'archive');
                           if (!context.mounted) return;
@@ -106,8 +107,8 @@ class LocalResultsView extends StatelessWidget {
                             ? AppStrings.practiceNewBoard
                             : AppStrings.playAgain,
                         icon: info.kind == LocalResultKind.practice
-                            ? Icons.casino_rounded
-                            : Icons.refresh_rounded,
+                            ? AppIcons.dice
+                            : AppIcons.refresh,
                         onPressed: () async {
                           await _log(context, 'play_again');
                           if (!context.mounted) return;
@@ -265,7 +266,7 @@ class _LocalResultCardState extends State<_LocalResultCard> {
           if (args.improved) ...[
             const SizedBox(height: 12),
             ZipHudPill(
-              icon: Icons.star_rounded,
+              icon: AppIcons.star,
               label: AppStrings.newLocalBest,
               emphasize: true,
             ),

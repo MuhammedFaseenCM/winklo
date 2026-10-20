@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_icons.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/features/dashboard/view/widgets/floating_nav_dock.dart';
 
@@ -93,7 +94,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byIcon(Icons.emoji_events), findsWidgets);
+    expect(find.byIcon(AppIcons.trophySelected), findsWidgets);
   });
 
   testWidgets('selection pill slides when index changes', (tester) async {

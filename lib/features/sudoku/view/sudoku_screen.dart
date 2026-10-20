@@ -9,7 +9,9 @@ import '../../../core/dev_flags.dart';
 import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/play_mode_strip.dart';
 import '../../../core/widgets/weekend_special_badge.dart';
@@ -302,7 +304,7 @@ class _SudokuScreenState extends State<SudokuScreen>
                           children: [
                             IconButton(
                               onPressed: () => popOrGoHome(context),
-                              icon: const Icon(Icons.arrow_back_rounded),
+                              icon: const AppIcon(AppIcons.back),
                             ),
                             Expanded(
                               child: GameScreenTitle(
@@ -329,7 +331,7 @@ class _SudokuScreenState extends State<SudokuScreen>
                                     : () =>
                                           _bloc.add(const SudokuEvent.reset()),
                                 tooltip: AppStrings.sudokuReset,
-                                icon: const Icon(Icons.refresh_rounded),
+                                icon: const AppIcon(AppIcons.refresh),
                               ),
                             const SudokuHowToPlayButton(),
                           ],
@@ -394,8 +396,8 @@ class _SudokuScreenState extends State<SudokuScreen>
                                                     FilledButton.icon(
                                                       onPressed: () =>
                                                           context.go('/'),
-                                                      icon: const Icon(
-                                                        Icons.home_rounded,
+                                                      icon: const AppIcon(
+                                                        AppIcons.home,
                                                       ),
                                                       label: Text(
                                                         AppStrings.backHome,
@@ -409,8 +411,8 @@ class _SudokuScreenState extends State<SudokuScreen>
                                                               date: widget.date,
                                                             ),
                                                           ),
-                                                      icon: const Icon(
-                                                        Icons.refresh_rounded,
+                                                      icon: const AppIcon(
+                                                        AppIcons.refresh,
                                                       ),
                                                       label: Text(
                                                         AppStrings.retry,
@@ -493,8 +495,8 @@ class _SudokuScreenState extends State<SudokuScreen>
                                     onPressed: () => _bloc.add(
                                       const SudokuEvent.dismissHint(),
                                     ),
-                                    icon: const Icon(
-                                      Icons.close,
+                                    icon: const AppIcon(
+                                      AppIcons.close,
                                       color: Colors.white,
                                     ),
                                   ),
@@ -644,7 +646,7 @@ class _NumberPad extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 18),
+                AppIcon(icon, size: 18),
                 const SizedBox(width: 4),
                 Flexible(
                   child: FittedBox(
@@ -679,7 +681,7 @@ class _NumberPad extends StatelessWidget {
               _digitButton(3),
               _actionButton(
                 onPressed: onErase,
-                icon: Icons.backspace_outlined,
+                icon: AppIcons.backspace,
                 label: AppStrings.sudokuErase,
               ),
             ],
@@ -692,7 +694,7 @@ class _NumberPad extends StatelessWidget {
               _digitButton(6),
               _actionButton(
                 onPressed: onHint,
-                icon: Icons.lightbulb_outline,
+                icon: AppIcons.hint,
                 label: hintLabel,
               ),
             ],

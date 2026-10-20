@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/di/app_repositories.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_icons.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
@@ -60,7 +61,8 @@ void main() {
 
     expect(find.text(AppStrings.appTitle), findsOneWidget);
     expect(find.text(AppStrings.homeTagline), findsOneWidget);
-    expect(find.byIcon(Icons.login), findsNothing);
-    expect(find.byIcon(Icons.emoji_events_outlined), findsNothing);
+    // No sign-in button in the header (the app draws no Material icons).
+    expect(find.text(AppStrings.signInWithGoogle), findsNothing);
+    expect(find.byIcon(AppIcons.trophy), findsNothing);
   });
 }

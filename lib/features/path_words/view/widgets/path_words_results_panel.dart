@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/entities/path_words_clear_summary.dart';
 import 'path_words_definition_sheet.dart';
 import 'path_words_theme_line.dart';
@@ -108,11 +110,7 @@ class _WordChip extends StatelessWidget {
       child: ActionChip(
         key: Key('pathWordsResultWord_$word'),
         label: label,
-        avatar: const Icon(
-          Icons.menu_book_rounded,
-          size: 16,
-          color: ZipColors.sky,
-        ),
+        avatar: const AppIcon(AppIcons.book, size: 16, color: ZipColors.sky),
         backgroundColor: ZipColors.skySoft,
         shape: shape,
         onPressed: open,

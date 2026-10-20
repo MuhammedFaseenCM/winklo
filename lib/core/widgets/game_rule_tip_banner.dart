@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import 'app_icon.dart';
 
 /// Short coaching banner shown below the board (never drawn inside Flame).
 class GameRuleTipBanner extends StatelessWidget {
@@ -22,7 +24,7 @@ class GameRuleTipBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            Icon(Icons.lightbulb_outline_rounded, color: accent, size: 20),
+            AppIcon(AppIcons.hint, color: accent, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

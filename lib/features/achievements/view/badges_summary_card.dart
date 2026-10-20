@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../domain/achievements/achievement.dart';
 import '../../../domain/achievements/next_achievement.dart';
 import '../../stats/cubit/stats_state.dart';
@@ -102,7 +104,10 @@ class BadgesSummaryCard extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                      const Icon(Icons.chevron_right, color: ZipColors.inkSoft),
+                      const AppIcon(
+                        AppIcons.chevronRight,
+                        color: ZipColors.inkSoft,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -232,11 +237,7 @@ class _NextRow extends StatelessWidget {
           if (next != null)
             AchievementMedal(achievement: next, unlocked: false, size: 32)
           else
-            const Icon(
-              Icons.verified_rounded,
-              size: 28,
-              color: ZipColors.ember,
-            ),
+            const AppIcon(AppIcons.flawless, size: 28, color: ZipColors.ember),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

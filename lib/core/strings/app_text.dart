@@ -254,6 +254,18 @@ abstract interface class AppText {
   String get leaderboardNoHintChip;
   String get leaderboardNoMistakesChip;
 
+  /// The badge key's name for the streak flame.
+  String get leaderboardKeyStreak;
+
+  /// Under the pinned row: how far you are behind the player at [rank].
+  String leaderboardBehind(String gap, int rank);
+
+  /// A podium place read aloud.
+  String leaderboardPodiumSemantics(int rank, String name, String time);
+
+  /// Days cleared this week, under a weekly podium time.
+  String leaderboardDaysShort(int days);
+
   // Leaderboard: past days, the weekly board and leagues (roadmap area C)
   String get leaderboardThisWeek;
   String get leaderboardToday;

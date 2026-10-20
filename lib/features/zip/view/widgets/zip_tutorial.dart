@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/game_tutorial_overlay.dart';
 import '../../../../core/widgets/tutorial_mini_board.dart';
 import '../../../../domain/entities/cell.dart';
@@ -116,8 +118,8 @@ abstract final class ZipTutorial {
             ),
             if (highlightWall) ...[
               const SizedBox(height: 8),
-              Icon(
-                Icons.block,
+              AppIcon(
+                AppIcons.prohibit,
                 color: Colors.white.withValues(alpha: 0.7 * pulse),
                 size: 18,
               ),

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/router/pop_or_go_home.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../domain/game_ids.dart';
 
 /// Title, icon and accent of a game on the hub and the archive.
@@ -22,31 +24,31 @@ class MorePlayGameStyle {
   static MorePlayGameStyle of(String gameId) => switch (gameId) {
     GameIds.pathWords => MorePlayGameStyle(
       title: AppStrings.pathWordsTitle,
-      icon: Icons.text_fields_rounded,
+      icon: AppIcons.textAa,
       accent: ZipColors.sky,
       accentSoft: ZipColors.skySoft,
     ),
     GameIds.sudoku => MorePlayGameStyle(
       title: AppStrings.sudokuTitle,
-      icon: Icons.grid_on_rounded,
+      icon: AppIcons.grid,
       accent: ZipColors.success,
       accentSoft: ZipColors.successSoft,
     ),
     GameIds.wordMatch => MorePlayGameStyle(
       title: AppStrings.wordMatch,
-      icon: Icons.compare_arrows_rounded,
+      icon: AppIcons.swap,
       accent: ZipColors.number,
       accentSoft: Color(0xFF3B1E2A),
     ),
     GameIds.categoryRace => MorePlayGameStyle(
       title: AppStrings.categoryRace,
-      icon: Icons.bolt_rounded,
+      icon: AppIcons.lightning,
       accent: Color(0xFFFBBF24),
       accentSoft: Color(0xFF3A3018),
     ),
     _ => MorePlayGameStyle(
       title: AppStrings.zipTitle,
-      icon: Icons.route_rounded,
+      icon: AppIcons.path,
       accent: ZipColors.ember,
       accentSoft: ZipColors.emberSoft,
     ),
@@ -68,7 +70,7 @@ class MorePlayHeader extends StatelessWidget {
           IconButton(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             onPressed: () => popOrGoHome(context),
-            icon: const Icon(Icons.arrow_back_rounded),
+            icon: const AppIcon(AppIcons.back),
           ),
           Expanded(
             child: Text(
@@ -166,7 +168,7 @@ class MorePlayCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: accent.withValues(alpha: 0.45)),
                 ),
-                child: Icon(icon, color: accent),
+                child: AppIcon(icon, color: accent),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -193,7 +195,7 @@ class MorePlayCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: ZipColors.inkSoft),
+              const AppIcon(AppIcons.chevronRight, color: ZipColors.inkSoft),
             ],
           ),
         ),

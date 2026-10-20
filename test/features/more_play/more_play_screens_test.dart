@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_icons.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
 import 'package:winklo/domain/entities/app_user.dart';
@@ -190,11 +191,11 @@ void main() {
       await records.recordTime('archive_zip_20261013', 70);
       await pump(tester, initial: '/more/archive', now: fixedNow);
       // Two days and the legend.
-      expect(find.byIcon(Icons.check_rounded), findsNWidgets(3));
+      expect(find.byIcon(AppIcons.check), findsNWidgets(3));
       expect(find.text(AppStrings.archiveMonthCleared(2)), findsOneWidget);
       await tester.tap(find.text(AppStrings.sudokuTitle));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(find.byIcon(AppIcons.check), findsOneWidget);
     });
 
     testWidgets('at 360x640 it fits without overflow', (tester) async {

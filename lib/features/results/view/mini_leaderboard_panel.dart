@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/centered_message_body.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/entities/leaderboard_proof.dart';
@@ -132,8 +134,8 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.emoji_events_rounded,
+              child: const AppIcon(
+                AppIcons.trophy,
                 size: 20,
                 color: ZipColors.onInk,
               ),
@@ -213,7 +215,7 @@ class _MiniLeaderboardPanelBody extends StatelessWidget {
         if (footer == null) ...[
           ZipPrimaryButton(
             label: AppStrings.seeFullLeaderboard,
-            icon: Icons.leaderboard_rounded,
+            icon: AppIcons.ranking,
             onPressed: () => context.go('/leaderboard?game=$gameId'),
           ),
           const SizedBox(height: 6),

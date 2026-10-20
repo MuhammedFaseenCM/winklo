@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 /// Opens Settings (`/profile/settings`).
 Future<void> openSettings(BuildContext context) =>
@@ -17,7 +19,7 @@ class ProfileSettingsEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.tune_rounded, color: ZipColors.teal),
+      leading: const AppIcon(AppIcons.tune, color: ZipColors.teal),
       title: Text(
         AppStrings.profileSettings,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -25,7 +27,7 @@ class ProfileSettingsEntry extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: ZipColors.inkSoft),
+      trailing: const AppIcon(AppIcons.chevronRight, color: ZipColors.inkSoft),
       onTap: () => openSettings(context),
     );
   }

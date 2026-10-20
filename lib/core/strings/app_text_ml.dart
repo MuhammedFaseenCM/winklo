@@ -759,6 +759,20 @@ final class AppTextMl implements AppText {
   @override
   String get leaderboardNoMistakesChip => 'പിഴവില്ലാതെ';
 
+  @override
+  String get leaderboardKeyStreak => 'ദിവസ സ്ട്രീക്ക്';
+
+  @override
+  String leaderboardBehind(String gap, int rank) =>
+      '#$rank-നേക്കാൾ $gap പിന്നിൽ';
+
+  @override
+  String leaderboardPodiumSemantics(int rank, String name, String time) =>
+      'റാങ്ക് $rank, $name, $time';
+
+  @override
+  String leaderboardDaysShort(int days) => '$days ദിവസം';
+
   // Leaderboard: past days, the weekly board and leagues (roadmap area C)
   @override
   String get leaderboardThisWeek => 'ഈ ആഴ്ച';

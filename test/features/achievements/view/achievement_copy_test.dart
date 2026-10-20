@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winklo/core/theme/app_icons.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/achievements/achievement.dart';
 import 'package:winklo/features/achievements/view/achievement_copy.dart';
@@ -17,6 +18,11 @@ void main() {
       expect(achievementTitle(a), isNotEmpty, reason: a.id);
       expect(achievementCondition(a), isNotEmpty, reason: a.id);
     }
+  });
+
+  test('the hint-free badge shows the no-hints brain', () {
+    final hintFree = Achievements.byId('hint_free_week')!;
+    expect(achievementIcon(hintFree), AppIcons.noHints);
   });
 
   testWidgets('a locked medal carries a lock, an earned one does not', (
@@ -37,7 +43,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+    expect(find.byIcon(AppIcons.lock), findsOneWidget);
     expect(find.byIcon(achievementIcon(badge)), findsNWidgets(2));
     expect(
       tester.getSize(find.byType(AchievementMedal).first),

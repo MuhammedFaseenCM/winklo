@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 /// The board and scope sheets' frame: a title over [children], scrolling
 /// when the screen is short.
@@ -127,8 +129,8 @@ class LeaderboardSheetOption extends StatelessWidget {
                     ),
                     if (selected) ...[
                       const SizedBox(width: 8),
-                      const Icon(
-                        Icons.check_rounded,
+                      const AppIcon(
+                        AppIcons.check,
                         size: 20,
                         color: ZipColors.ember,
                       ),

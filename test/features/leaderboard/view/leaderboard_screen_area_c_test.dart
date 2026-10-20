@@ -18,6 +18,7 @@ import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/leaderboard/view/leaderboard_screen.dart';
+import 'package:winklo/features/leaderboard/view/widgets/leaderboard_podium.dart';
 import 'package:winklo/features/leaderboard/view/widgets/player_card_sheet.dart';
 
 class _MockWatchLeaderboard extends Mock implements WatchLeaderboard {}
@@ -188,7 +189,9 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text(AppStrings.leaderboardToday), findsOneWidget);
     expect(find.text(AppStrings.leaderboardScopeEveryone), findsOneWidget);
-    expect(find.text(AppStrings.leaderboardColumnTime), findsOneWidget);
+    // Daily has one time column, so no header: the podium leads.
+    expect(find.byType(LeaderboardPodium), findsOneWidget);
+    expect(find.text(AppStrings.leaderboardColumnTime), findsNothing);
     expect(find.byKey(const Key('leaderboard_manage_leagues')), findsNothing);
     // Screen readers can open both pickers.
     for (final key in ['leaderboard_board_pill', 'leaderboard_scope_pill']) {
@@ -200,7 +203,9 @@ void main() {
     }
   });
 
-  testWidgets('a 390×800 phone shows at least nine rows', (tester) async {
+  testWidgets('a 390×800 phone shows the podium and the first rows', (
+    tester,
+  ) async {
     await pump(tester, size: const Size(390, 800));
     board.add([
       for (var i = 1; i <= 20; i++)
@@ -214,8 +219,9 @@ void main() {
     ]);
     await tester.pumpAndSettle();
 
+    expect(find.byType(LeaderboardPodium), findsOneWidget);
     // Above the 88px nav dock.
-    expect(tester.getRect(find.text('Player 9')).bottom, lessThan(800 - 88));
+    expect(tester.getRect(find.text('Player 7')).bottom, lessThan(800 - 88));
   });
 
   testWidgets('a past day loads that day’s board', (tester) async {
@@ -245,10 +251,19 @@ void main() {
     await settle(tester);
     expect(calls.last.period, LeaderboardPeriod.weekly);
 
-    board.add([_bo]);
+    LeaderboardEntry top(int rank) => LeaderboardEntry(
+      uid: 't$rank',
+      displayName: 'Top $rank',
+      timeSeconds: 100 + rank,
+      updatedAt: DateTime.utc(2026, 10, 15),
+      rank: rank,
+      daysCleared: 7,
+    );
+    board.add([top(1), top(2), top(3), _bo]);
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.leaderboardThisWeek), findsOneWidget);
+    expect(find.text(AppStrings.leaderboardDaysShort(7)), findsNWidgets(3));
     expect(find.text(AppStrings.leaderboardColumnDays), findsOneWidget);
     expect(find.text(AppStrings.leaderboardColumnTotal), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
@@ -264,7 +279,8 @@ void main() {
 
     board.add([_ada]);
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings.leaderboardColumnBest), findsOneWidget);
+    expect(find.text('Ada'), findsOneWidget);
+    expect(find.text('1:15'), findsOneWidget);
   });
 
   testWidgets('tapping a player opens their card', (tester) async {

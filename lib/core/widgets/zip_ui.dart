@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_layout.dart';
 import '../theme/app_theme.dart';
+import 'app_icon.dart';
 
 /// Soft ink gradient + ambient lighting + faint diagonal path motif behind Zip screens.
 class ZipAtmosphere extends StatelessWidget {
@@ -172,6 +173,7 @@ class ZipPrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = AppLayout.of(context);
+    final icon = this.icon;
     final isEnabled = onPressed != null;
     final primaryColor = backgroundColor ?? ZipColors.ember;
     final radius = layout.space(compact ? 12 : 16);
@@ -241,7 +243,7 @@ class ZipPrimaryButton extends StatelessWidget {
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, size: layout.space(compact ? 18 : 20)),
+                    AppIcon(icon, size: layout.space(compact ? 18 : 20)),
                     SizedBox(width: layout.space(compact ? 6 : 8)),
                     Flexible(
                       child: Text(
@@ -311,7 +313,7 @@ class ZipHudPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
+          AppIcon(
             icon,
             size: compact ? 14 : 16,
             color: emphasize ? ZipColors.ember : ZipColors.inkSoft,

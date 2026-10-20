@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 /// Red-accented confirm dialog for account actions (sign out, delete).
 /// Returns `true` when the user confirms.
@@ -67,7 +68,7 @@ Future<bool> showConfirmActionDialog(
                     ),
                   ],
                 ),
-                child: Icon(icon, color: errorColor, size: 26),
+                child: AppIcon(icon, color: errorColor, size: 26),
               ),
               const SizedBox(height: 20),
               Text(
@@ -102,7 +103,7 @@ Future<bool> showConfirmActionDialog(
                 ),
                 child: Row(
                   children: [
-                    Icon(noteIcon, size: 16, color: ZipColors.sky),
+                    AppIcon(noteIcon, size: 16, color: ZipColors.sky),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

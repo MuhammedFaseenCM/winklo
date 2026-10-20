@@ -9,7 +9,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/dev_flags.dart';
 import '../../core/haptics/haptics_service.dart';
 import '../../core/strings/app_strings.dart';
+import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/next_puzzle_countdown.dart';
 import '../../core/widgets/zip_ui.dart';
 import '../../domain/game_ids.dart';
@@ -123,7 +125,7 @@ class ResultsScreen extends StatelessWidget {
                     (replayId != null || args.replayRoute != null))
                   ZipPrimaryButton(
                     label: AppStrings.playAgain,
-                    icon: Icons.refresh_rounded,
+                    icon: AppIcons.refresh,
                     onPressed: () async {
                       await _logAction(context, 'play_again');
                       if (!context.mounted) return;
@@ -138,7 +140,7 @@ class ResultsScreen extends StatelessWidget {
                 else if (replayDaily)
                   ZipPrimaryButton(
                     label: AppStrings.backHome,
-                    icon: Icons.home_rounded,
+                    icon: AppIcons.home,
                     onPressed: () async {
                       await _logAction(context, 'home');
                       if (!context.mounted) return;
@@ -309,7 +311,7 @@ class _CelebrateAndClaimResults extends StatelessWidget {
                                       label: AppStrings.saveTimeToBoard(
                                         timeLabel,
                                       ),
-                                      icon: Icons.emoji_events_rounded,
+                                      icon: AppIcons.trophy,
                                       onPressed: () => _signInAndSync(context),
                                     )
                                     .animate()
@@ -443,7 +445,7 @@ class _NextPuzzleLine extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.schedule_rounded, size: 16, color: style?.color),
+        AppIcon(AppIcons.clock, size: 16, color: style?.color),
         const SizedBox(width: 6),
         Flexible(
           child: NextPuzzleCountdown(
@@ -663,8 +665,8 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.star_rounded,
+                          const AppIcon(
+                            AppIcons.star,
                             size: 18,
                             color: ZipColors.success,
                           ),
@@ -685,7 +687,7 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
                 if (widget.currentStreak != null && widget.currentStreak! > 0)
                   badgeWrap(
                     ZipHudPill(
-                      icon: Icons.local_fire_department_rounded,
+                      icon: AppIcons.streak,
                       label: AppStrings.streakLabel(widget.currentStreak!),
                       emphasize: true,
                     ),

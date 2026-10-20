@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/game_ids.dart';
 import '../../../../domain/repositories/habit_repository.dart';
 import '../../../../domain/usecases/get_weekly_recap.dart';
@@ -86,14 +88,14 @@ class HomeHabitCardsView extends StatelessWidget {
         children: [
           if (notice != null)
             _HabitCard(
-              icon: Icons.ac_unit_rounded,
+              icon: AppIcons.freeze,
               accent: ZipColors.sky,
               body: AppStrings.freezeSavedStreak(notice.gameId, notice.days),
               onDismiss: () => onDismissNotice(notice.gameId),
             ),
           if (recap != null)
             _HabitCard(
-              icon: Icons.insights_rounded,
+              icon: AppIcons.insights,
               accent: ZipColors.ember,
               title: AppStrings.homeRecapTitle,
               body: AppStrings.weeklyRecapLine(
@@ -145,7 +147,7 @@ class _HabitCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, color: accent, size: layout.space(20)),
+              AppIcon(icon, color: accent, size: layout.space(20)),
               SizedBox(width: layout.space(10)),
               Expanded(
                 child: Column(
@@ -175,8 +177,8 @@ class _HabitCard extends StatelessWidget {
                 tooltip: AppStrings.dismiss,
                 visualDensity: VisualDensity.compact,
                 onPressed: onDismiss,
-                icon: Icon(
-                  Icons.close_rounded,
+                icon: AppIcon(
+                  AppIcons.close,
                   size: layout.space(18),
                   color: ZipColors.inkSoft,
                 ),

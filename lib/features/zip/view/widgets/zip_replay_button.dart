@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/entities/zip_level.dart';
 import '../../cubit/zip_replay_cubit.dart';
 import '../../game/zip_game.dart';
@@ -49,7 +51,7 @@ class ZipReplayButton extends StatelessWidget {
                   foregroundColor: ZipColors.ember,
                   disabledForegroundColor: ZipColors.inkSoft,
                 ),
-                icon: const Icon(Icons.replay_rounded),
+                icon: const AppIcon(AppIcons.replay),
                 label: Text(AppStrings.zipReplay),
               ),
             ),

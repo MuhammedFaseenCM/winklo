@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/entities/league.dart';
 import 'leaderboard_sheet_parts.dart';
 
@@ -38,7 +40,7 @@ Future<LeaderboardScopeChoice?> showLeaderboardScopeSheet(
         children: [
           LeaderboardSheetOption(
             key: const Key('leaderboard_scope_everyone'),
-            leading: const Icon(Icons.public_rounded, color: ZipColors.ember),
+            leading: const AppIcon(AppIcons.globe, color: ZipColors.ember),
             label: AppStrings.leaderboardScopeEveryone,
             subtitle: AppStrings.leaderboardTop50,
             selected: selectedLeagueId == null,
@@ -59,9 +61,7 @@ Future<LeaderboardScopeChoice?> showLeaderboardScopeSheet(
           OutlinedButton.icon(
             key: const Key('leaderboard_scope_manage'),
             onPressed: () => pick(const LeaderboardScopeChoice.manageLeagues()),
-            icon: Icon(
-              leagues.isEmpty ? Icons.group_add_rounded : Icons.group_rounded,
-            ),
+            icon: AppIcon(leagues.isEmpty ? AppIcons.groupAdd : AppIcons.group),
             label: Text(
               leagues.isEmpty
                   ? AppStrings.leaderboardCreateOrJoinLeague

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/entities/cell.dart';
 import '../../../../domain/entities/path_words_puzzle.dart';
 import '../../../../domain/path_words/path_words_rules.dart';
@@ -148,9 +150,9 @@ class _WordRow extends StatelessWidget {
             width: 18,
             height: 18,
             child: done
-                ? Icon(
+                ? AppIcon(
                     key: Key('pathWordsCheck_${target.id}'),
-                    Icons.check_circle_rounded,
+                    AppIcons.checkCircle,
                     size: 18,
                     color: ZipColors.success,
                   )
@@ -158,8 +160,8 @@ class _WordRow extends StatelessWidget {
           ),
           if (meaning != null) ...[
             const SizedBox(width: 2),
-            Icon(
-              Icons.menu_book_rounded,
+            AppIcon(
+              AppIcons.book,
               key: Key('pathWordsMeaning_${target.id}'),
               size: 16,
               color: ZipColors.sky,

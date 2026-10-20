@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/stats/clear_calendar.dart';
 
 /// One month of cleared days at a time, newest first, with arrows to page
@@ -55,7 +57,7 @@ class _ClearCalendarViewState extends State<ClearCalendarView> {
               onPressed: index > 0
                   ? () => setState(() => _index = index - 1)
                   : null,
-              icon: const Icon(Icons.chevron_left_rounded),
+              icon: const AppIcon(AppIcons.chevronLeft),
             ),
             Expanded(
               child: Column(
@@ -84,7 +86,7 @@ class _ClearCalendarViewState extends State<ClearCalendarView> {
               onPressed: index < widget.months.length - 1
                   ? () => setState(() => _index = index + 1)
                   : null,
-              icon: const Icon(Icons.chevron_right_rounded),
+              icon: const AppIcon(AppIcons.chevronRight),
             ),
           ],
         ),

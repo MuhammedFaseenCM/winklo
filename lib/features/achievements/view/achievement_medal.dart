@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../domain/achievements/achievement.dart';
 import 'achievement_accent.dart';
 import 'achievement_copy.dart';
@@ -45,7 +47,7 @@ class AchievementMedal extends StatelessWidget {
               ]
             : null,
       ),
-      child: Icon(
+      child: AppIcon(
         achievementIcon(achievement),
         size: size / 2,
         color: unlocked ? accent.icon : accent.fill.withValues(alpha: 0.45),
@@ -68,8 +70,8 @@ class AchievementMedal extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: ZipColors.wall,
               ),
-              child: Icon(
-                Icons.lock_rounded,
+              child: AppIcon(
+                AppIcons.lock,
                 size: lock * 0.6,
                 color: ZipColors.inkSoft,
               ),

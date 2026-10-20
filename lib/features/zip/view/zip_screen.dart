@@ -10,7 +10,9 @@ import '../../../core/dev_flags.dart';
 import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
 import '../../../core/widgets/play_mode_strip.dart';
@@ -227,7 +229,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                           children: [
                             IconButton(
                               onPressed: () => popOrGoHome(context),
-                              icon: const Icon(Icons.arrow_back_rounded),
+                              icon: const AppIcon(AppIcons.back),
                             ),
                             Expanded(
                               child: GameScreenTitle(
@@ -250,7 +252,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                         _bloc.add(const ZipEvent.reset());
                                         setState(() => _ruleTip = null);
                                       },
-                                icon: const Icon(Icons.refresh_rounded),
+                                icon: const AppIcon(AppIcons.refresh),
                               ),
                             const ZipHowToPlayButton(),
                           ],
@@ -298,7 +300,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                     onPressed: () => _bloc.add(
                                       ZipEvent.started(date: widget.date),
                                     ),
-                                    icon: const Icon(Icons.refresh_rounded),
+                                    icon: const AppIcon(AppIcons.refresh),
                                     label: Text(AppStrings.retry),
                                   ),
                                 ],
@@ -373,7 +375,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                             setState(() => _ruleTip = null);
                                           }
                                         : null,
-                                    icon: const Icon(Icons.undo_rounded),
+                                    icon: const AppIcon(AppIcons.undo),
                                     label: Text(AppStrings.zipUndo),
                                   ),
                                 ),
@@ -400,7 +402,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                             setState(() {});
                                           }
                                         : null,
-                                    icon: const Icon(Icons.lightbulb_rounded),
+                                    icon: const AppIcon(AppIcons.hint),
                                     label: Text(
                                       hintLabelFor(
                                         widget.mode,

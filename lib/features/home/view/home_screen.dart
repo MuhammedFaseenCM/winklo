@@ -10,8 +10,10 @@ import '../../../core/config/static_assets_config.dart';
 import '../../../core/dev_flags.dart';
 import '../../../core/lifecycle/progress_sync_lifecycle.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/app_image.dart';
 import '../../../core/widgets/next_puzzle_countdown.dart';
 import '../../../core/widgets/zip_ui.dart';
@@ -685,7 +687,7 @@ class _DailyGameTile extends StatelessWidget {
                         ],
                         if (streak > 0)
                           ZipHudPill(
-                            icon: Icons.local_fire_department_rounded,
+                            icon: AppIcons.streak,
                             label: AppStrings.streakLabel(streak),
                             emphasize: true,
                             compact: true,
@@ -764,14 +766,14 @@ class _DailyGameTile extends StatelessWidget {
                             child: cleared
                                 ? ZipPrimaryButton(
                                     label: AppStrings.result,
-                                    icon: Icons.emoji_events_rounded,
+                                    icon: AppIcons.trophy,
                                     backgroundColor: playBackground,
                                     compact: true,
                                     onPressed: onViewResult,
                                   )
                                 : ZipPrimaryButton(
                                     label: playLabel,
-                                    icon: Icons.play_arrow_rounded,
+                                    icon: AppIcons.play,
                                     backgroundColor: playBackground,
                                     compact: true,
                                     onPressed: onPlay,
@@ -822,8 +824,8 @@ class _TileLeaderboardButton extends StatelessWidget {
               color: accent.withValues(alpha: 0.12),
               border: Border.all(color: accent.withValues(alpha: 0.35)),
             ),
-            child: Icon(
-              Icons.leaderboard_rounded,
+            child: AppIcon(
+              AppIcons.ranking,
               color: accent,
               size: layout.space(22),
             ),

@@ -9,7 +9,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/constants/app_urls.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_icons.dart';
 import 'package:winklo/core/theme/app_theme.dart';
+import 'package:winklo/core/widgets/app_icon.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_review_repository.dart';
@@ -140,7 +142,15 @@ void main() {
 
   testWidgets('signed-in avatar shows edit icon', (tester) async {
     await pumpProfile(tester, signedIn: user);
-    expect(find.byIcon(Icons.edit), findsOneWidget);
+    // The Edit display name button uses the same pencil, so look on the
+    // avatar's badge.
+    expect(
+      find.descendant(
+        of: find.byType(Positioned),
+        matching: find.byIcon(AppIcons.edit),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('signed-in profile shows hero and settings rows', (tester) async {
@@ -159,12 +169,12 @@ void main() {
       find.widgetWithText(ListTile, AppStrings.signOut),
     );
     expect(logout.trailing, isNull);
-    expect((logout.leading! as Icon).icon, Icons.logout);
+    expect((logout.leading! as AppIcon).icon, AppIcons.signOut);
 
     final privacy = tester.widget<ListTile>(
       find.widgetWithText(ListTile, AppStrings.profilePrivacyPolicy),
     );
-    expect((privacy.trailing! as Icon).icon, Icons.chevron_right);
+    expect((privacy.trailing! as AppIcon).icon, AppIcons.chevronRight);
   });
 
   testWidgets('tapping edit display name opens sheet with field', (

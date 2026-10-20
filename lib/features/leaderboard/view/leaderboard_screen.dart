@@ -6,8 +6,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/centered_message_body.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../data/clients/remote_config_client.dart';
@@ -24,7 +26,9 @@ import '../../auth/view/sign_in_sheet.dart';
 import '../cubit/leaderboard_cubit.dart';
 import '../cubit/leaderboard_state.dart';
 import '../logic/board_calendar.dart';
+import '../logic/board_layout.dart';
 import 'widgets/leaderboard_board_sheet.dart';
+import 'widgets/leaderboard_board_view.dart';
 import 'widgets/leaderboard_filter_row.dart';
 import 'widgets/leaderboard_game_tabs.dart';
 import 'widgets/leaderboard_scope_sheet.dart';
@@ -150,6 +154,11 @@ class _LeaderboardView extends StatefulWidget {
   State<_LeaderboardView> createState() => _LeaderboardViewState();
 }
 
+/// Entries on screen without scrolling even on a 360×640 phone at big text
+/// sizes: the podium and the first two rows. Below them your row is pinned
+/// until it's measured on screen.
+const int _alwaysOnScreen = leaderboardPodiumSize + 2;
+
 class _LeaderboardViewState extends State<_LeaderboardView>
     with WidgetsBindingObserver {
   String _previousGameId = GameIds.zip;
@@ -158,6 +167,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
   late final ScrollController _scrollController;
   final GlobalKey _userRowKey = GlobalKey();
   final GlobalKey _listKey = GlobalKey();
+  final GlobalKey _boardHeadKey = GlobalKey();
   bool _userReached = false;
   late bool _showAllTimeLeaderboard;
   GoRouter? _router;
@@ -264,6 +274,22 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     }
   }
 
+  /// Where your row starts in the board's scroll view.
+  double _userTop(int userIndex) {
+    final head = _boardHeadKey.currentContext?.findRenderObject();
+    final headHeight = head is RenderBox && head.hasSize
+        ? head.size.height
+        : 0.0;
+    final weekly =
+        context.read<LeaderboardCubit>().state.period ==
+        LeaderboardPeriod.weekly;
+    return leaderboardEntryTop(
+      index: userIndex,
+      headExtent: headHeight + (weekly ? leaderboardTableHeaderHeight : 0),
+      rowExtent: leaderboardTableRowHeight,
+    );
+  }
+
   bool _isUserReached(AppLayout layout, int userIndex) {
     if (userIndex == -1) return true;
 
@@ -286,14 +312,14 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     }
 
     if (!_scrollController.hasClients) {
-      return userIndex < 6;
+      return userIndex < _alwaysOnScreen;
     }
 
     final position = _scrollController.position;
     final viewportHeight = position.viewportDimension;
-    if (viewportHeight <= 0) return userIndex < 6;
+    if (viewportHeight <= 0) return userIndex < _alwaysOnScreen;
 
-    final userItemTop = userIndex * leaderboardTableRowHeight;
+    final userItemTop = _userTop(userIndex);
     final currentBottom = position.pixels + viewportHeight;
 
     return currentBottom >= (userItemTop + overlayThreshold);
@@ -301,7 +327,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
 
   void _scrollToUser(int userIndex, AppLayout layout) {
     if (!_scrollController.hasClients) return;
-    final targetOffset = (userIndex * leaderboardTableRowHeight - 100.0).clamp(
+    final targetOffset = (_userTop(userIndex) - 100.0).clamp(
       0.0,
       _scrollController.position.maxScrollExtent,
     );
@@ -395,8 +421,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                             padding: const EdgeInsets.only(right: 8),
                             child: IconButton(
                               onPressed: () => Navigator.of(context).maybePop(),
-                              icon: const Icon(
-                                Icons.arrow_back_ios_new_rounded,
+                              icon: const AppIcon(
+                                AppIcons.chevronLeft,
                                 color: ZipColors.onInk,
                                 size: 20,
                               ),
@@ -411,8 +437,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                               color: ZipColors.ember.withValues(alpha: 0.35),
                             ),
                           ),
-                          child: const Icon(
-                            Icons.emoji_events_rounded,
+                          child: const AppIcon(
+                            AppIcons.trophy,
                             color: ZipColors.ember,
                             size: 22,
                           ),
@@ -460,11 +486,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                             context.read<LeagueRepository?>() != null;
                         return LeaderboardFilterRow(
                           boardIcon: switch (state.period) {
-                            LeaderboardPeriod.daily => Icons.today_rounded,
-                            LeaderboardPeriod.weekly =>
-                              Icons.date_range_rounded,
-                            LeaderboardPeriod.allTime =>
-                              Icons.military_tech_rounded,
+                            LeaderboardPeriod.daily => AppIcons.today,
+                            LeaderboardPeriod.weekly => AppIcons.week,
+                            LeaderboardPeriod.allTime => AppIcons.medal,
                           },
                           boardLabel: leaderboardBoardLabel(
                             period: state.period,
@@ -473,8 +497,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                           ),
                           onBoardTap: () => _pickBoard(context),
                           scopeIcon: league == null
-                              ? Icons.public_rounded
-                              : Icons.group_rounded,
+                              ? AppIcons.globe
+                              : AppIcons.group,
                           scopeLabel: canPickScope
                               ? (league?.name ??
                                     AppStrings.leaderboardScopeEveryone)
@@ -569,8 +593,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                         ),
                                       ],
                                     ),
-                                    child: const Icon(
-                                      Icons.emoji_events_outlined,
+                                    child: const AppIcon(
+                                      AppIcons.trophy,
                                       size: 34,
                                       color: ZipColors.ember,
                                     ),
@@ -596,7 +620,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                       label: AppStrings.leaderboardPlayGame(
                                         gameTitle,
                                       ),
-                                      icon: Icons.play_arrow_rounded,
+                                      icon: AppIcons.play,
                                       onPressed: () async {
                                         final ok = await ensureSignedInForPlay(
                                           context,
@@ -621,7 +645,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                   ? state.entries[userIndex]
                                   : null;
                               final inInitialList =
-                                  userIndex != -1 && userIndex < 6;
+                                  userIndex != -1 &&
+                                  userIndex < _alwaysOnScreen;
                               final hasNavDock = !GoRouter.of(context).canPop();
                               // Under the card; the shell's SafeArea already
                               // ends above the nav dock.
@@ -640,6 +665,17 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                 }
                               });
 
+                              final ahead = userIndex > 0
+                                  ? state.entries[userIndex - 1]
+                                  : null;
+                              final behindSeconds = ahead == null
+                                  ? null
+                                  : leaderboardGapSeconds(
+                                      entry: userEntry!,
+                                      ahead: ahead,
+                                      period: state.period,
+                                    );
+
                               return Stack(
                                 children: [
                                   Padding(
@@ -649,68 +685,43 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                       12,
                                       bottomGap,
                                     ),
-                                    child: LeaderboardTableCard(
-                                      period: state.period,
-                                      child:
-                                          NotificationListener<
-                                            ScrollNotification
-                                          >(
-                                            onNotification: (_) {
-                                              _onBoardScrolled(
-                                                layout,
-                                                userIndex,
-                                              );
-                                              return false;
-                                            },
-                                            child: ListView.builder(
-                                              key: _listKey,
-                                              controller: _scrollController,
-                                              padding: EdgeInsets.only(
-                                                bottom:
-                                                    // Kept while the pin can
-                                                    // show, so hiding it
-                                                    // doesn't move the rows.
-                                                    (userEntry != null &&
-                                                            !inInitialList
-                                                        ? 64.0
-                                                        : 0.0) +
-                                                    (showSignInFab
-                                                        ? 80.0
-                                                        : 0.0),
-                                              ),
-                                              itemExtent:
-                                                  leaderboardTableRowHeight,
-                                              itemCount: state.entries.length,
-                                              itemBuilder: (context, index) {
-                                                final entry =
-                                                    state.entries[index];
-                                                final isYou =
-                                                    entry.uid ==
-                                                    state.currentUid;
-                                                return LeaderboardTableRow(
-                                                  key: isYou
-                                                      ? _userRowKey
-                                                      : null,
+                                    child:
+                                        NotificationListener<
+                                          ScrollNotification
+                                        >(
+                                          onNotification: (_) {
+                                            _onBoardScrolled(layout, userIndex);
+                                            return false;
+                                          },
+                                          child: LeaderboardBoardView(
+                                            listKey: _listKey,
+                                            headKey: _boardHeadKey,
+                                            userKey: _userRowKey,
+                                            controller: _scrollController,
+                                            entries: state.entries,
+                                            period: state.period,
+                                            gameId: state.gameId,
+                                            currentUid: state.currentUid,
+                                            // Kept while the pin can show, so
+                                            // hiding it doesn't move the rows.
+                                            bottomPadding:
+                                                (userEntry != null &&
+                                                        !inInitialList
+                                                    ? 64.0
+                                                    : 0.0) +
+                                                (showSignInFab ? 80.0 : 0.0),
+                                            onTapEntry: (entry) =>
+                                                showPlayerCardSheet(
+                                                  context,
                                                   entry: entry,
-                                                  period: state.period,
                                                   gameId: state.gameId,
-                                                  isYou: isYou,
-                                                  showDivider:
-                                                      index <
-                                                      state.entries.length - 1,
-                                                  onTap: () =>
-                                                      showPlayerCardSheet(
-                                                        context,
-                                                        entry: entry,
-                                                        gameId: state.gameId,
-                                                        period: state.period,
-                                                        isYou: isYou,
-                                                      ),
-                                                );
-                                              },
-                                            ),
+                                                  period: state.period,
+                                                  isYou:
+                                                      entry.uid ==
+                                                      state.currentUid,
+                                                ),
                                           ),
-                                    ),
+                                        ),
                                   ),
                                   if (userEntry != null && !inInitialList)
                                     Positioned(
@@ -770,6 +781,15 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                                         ),
                                                     child: _PinnedUserRow(
                                                       entry: userEntry,
+                                                      subtitle:
+                                                          behindSeconds == null
+                                                          ? null
+                                                          : AppStrings.leaderboardBehind(
+                                                              AppStrings.formatPlayTime(
+                                                                behindSeconds,
+                                                              ),
+                                                              ahead!.rank,
+                                                            ),
                                                       period: state.period,
                                                       gameId: state.gameId,
                                                       onTap: () =>
@@ -897,9 +917,13 @@ class _PinnedUserRow extends StatelessWidget {
     required this.period,
     required this.gameId,
     required this.onTap,
+    this.subtitle,
   });
 
   final LeaderboardEntry entry;
+
+  /// "0:05 behind #13" under your name, when there's a gap to show.
+  final String? subtitle;
   final LeaderboardPeriod period;
   final String gameId;
   final VoidCallback onTap;
@@ -939,6 +963,7 @@ class _PinnedUserRow extends StatelessWidget {
                   gameId: gameId,
                   isYou: true,
                   showDivider: false,
+                  subtitle: subtitle,
                   onTap: onTap,
                 ),
               ),
@@ -965,8 +990,8 @@ class _PinnedUserRow extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.my_location_rounded,
+                        const AppIcon(
+                          AppIcons.locate,
                           size: 11,
                           color: Colors.white,
                         ),

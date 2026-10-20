@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../dev_flags.dart';
 import '../../strings/app_strings.dart';
+import '../../theme/app_icons.dart';
 import '../../theme/app_theme.dart';
+import '../app_icon.dart';
 import '../next_puzzle_countdown.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/repositories/auth_repository.dart';
@@ -76,8 +78,8 @@ class _ClearedSummaryBody extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.check_circle_rounded,
+          const AppIcon(
+            AppIcons.checkCircle,
             color: ZipColors.success,
             size: 22,
           ),

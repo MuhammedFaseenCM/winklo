@@ -5,7 +5,9 @@ import '../../domain/repositories/analytics_repository.dart';
 import '../../domain/repositories/tutorial_repository.dart';
 import '../router/pop_or_go_home.dart';
 import '../strings/app_strings.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import 'app_icon.dart';
 
 /// The rules of a bonus game (Word Match, Category Race) in a dialog, like
 /// Sudoku's How to play.
@@ -92,7 +94,7 @@ class BonusGameHeader extends StatelessWidget {
           IconButton(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             onPressed: () => popOrGoHome(context),
-            icon: const Icon(Icons.arrow_back_rounded),
+            icon: const AppIcon(AppIcons.back),
           ),
           Expanded(
             child: Text(
@@ -114,7 +116,7 @@ class BonusGameHeader extends StatelessWidget {
                 body: howToPlayBody,
               );
             },
-            icon: const Icon(Icons.help_outline_rounded),
+            icon: const AppIcon(AppIcons.help),
           ),
         ],
       ),
@@ -145,8 +147,8 @@ class BonusClockPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.timer_outlined,
+          AppIcon(
+            AppIcons.timer,
             size: 14,
             color: hurry ? _hurry : ZipColors.ember,
           ),
@@ -191,7 +193,7 @@ class BonusGameMessage extends StatelessWidget {
               const SizedBox(height: 14),
               FilledButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
+                icon: const AppIcon(AppIcons.refresh),
                 label: Text(AppStrings.retry),
               ),
             ],

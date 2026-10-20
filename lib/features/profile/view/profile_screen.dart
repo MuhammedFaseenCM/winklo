@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_urls.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/blurred_mock_empty_body.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../../core/widgets/zip_ui.dart';
@@ -291,8 +293,8 @@ class _SignedInBodyState extends State<_SignedInBody> {
                                 shadowColor: ZipColors.emberGlow,
                                 child: Padding(
                                   padding: const EdgeInsets.all(7),
-                                  child: Icon(
-                                    Icons.edit,
+                                  child: AppIcon(
+                                    AppIcons.edit,
                                     size: 16,
                                     color: ZipColors.onInk,
                                   ),
@@ -318,8 +320,8 @@ class _SignedInBodyState extends State<_SignedInBody> {
                   Center(
                     child: TextButton.icon(
                       onPressed: () => unawaited(_openNameSheet(context)),
-                      icon: const Icon(
-                        Icons.edit_outlined,
+                      icon: const AppIcon(
+                        AppIcons.edit,
                         size: 15,
                         color: ZipColors.ember,
                       ),

@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/dev_flags.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/failures.dart';
 import '../../../domain/game_ids.dart';
@@ -87,7 +89,7 @@ class ResultsActions extends StatelessWidget {
         if (next != null)
           ZipPrimaryButton(
             label: AppStrings.playNextGame(_titleFor(next)),
-            icon: Icons.play_arrow_rounded,
+            icon: AppIcons.play,
             compact: true,
             onPressed: () async {
               await _log(context, 'play_next');
@@ -111,7 +113,7 @@ class ResultsActions extends StatelessWidget {
               child: _OneAtATimeButton(
                 style: compactStyle,
                 onPressed: () => _share(context),
-                icon: Icons.share_rounded,
+                icon: AppIcons.share,
                 label: AppStrings.shareResult,
               ),
             ),
@@ -124,7 +126,7 @@ class ResultsActions extends StatelessWidget {
                   if (!context.mounted) return;
                   context.go('/leaderboard?game=$_gameId');
                 },
-                icon: const Icon(Icons.leaderboard_rounded),
+                icon: const AppIcon(AppIcons.ranking),
                 label: Text(
                   AppStrings.resultsFullBoard,
                   maxLines: 1,
@@ -140,7 +142,7 @@ class ResultsActions extends StatelessWidget {
                 if (!context.mounted) return;
                 context.go('/');
               },
-              icon: const Icon(Icons.home_rounded),
+              icon: const AppIcon(AppIcons.home),
             ),
           ],
         ),
@@ -185,7 +187,7 @@ class _OneAtATimeButtonState extends State<_OneAtATimeButton> {
     return OutlinedButton.icon(
       style: widget.style,
       onPressed: _busy ? null : _press,
-      icon: Icon(widget.icon),
+      icon: AppIcon(widget.icon),
       label: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
   }

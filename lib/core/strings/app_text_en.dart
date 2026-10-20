@@ -719,6 +719,19 @@ final class AppTextEn implements AppText {
   @override
   String get leaderboardNoMistakesChip => 'Flawless';
 
+  @override
+  String get leaderboardKeyStreak => 'Day streak';
+
+  @override
+  String leaderboardBehind(String gap, int rank) => '$gap behind #$rank';
+
+  @override
+  String leaderboardPodiumSemantics(int rank, String name, String time) =>
+      'Rank $rank, $name, $time';
+
+  @override
+  String leaderboardDaysShort(int days) => days == 1 ? '1 day' : '$days days';
+
   // Leaderboard: past days, the weekly board and leagues (roadmap area C)
   @override
   String get leaderboardThisWeek => 'This week';
