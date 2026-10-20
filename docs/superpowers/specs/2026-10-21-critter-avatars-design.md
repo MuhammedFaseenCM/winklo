@@ -66,7 +66,7 @@ A preset id renders `AppImage.asset(svg)`, clipped to a circle at `radius * 2`. 
 
 ### Critter names
 
-The domain mustn't import strings, so names live in a view helper, `core/widgets/avatar_critter_name.dart`. `avatarCritterName(AvatarCritter)` switches over the enum to return the `AppStrings.avatarCritter*` getters.
+The domain mustn't import strings, so names live in a helper, `core/strings/avatar_critter_name.dart`. `avatarCritterName(AvatarCritter)` switches over the enum to return the `AppStrings.avatarCritter*` getters.
 
 ### `features/profile/view/widgets/avatar_edit_sheet.dart` (L2)
 
