@@ -140,10 +140,16 @@ void main() {
         ),
       );
 
+      // The board shows first; the bonus count is a tile above it.
+      expect(find.text(AppStrings.formatPlayTime(42)), findsOneWidget);
+      expect(find.text('3 bonus words'), findsOneWidget);
+      expect(find.text('Today: Kitchen tools'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('resultsWordsTab')));
+      await tester.pumpAndSettle();
       expect(find.byType(PathWordsResultsPanel), findsOneWidget);
       expect(find.text('Today: Kitchen tools'), findsOneWidget);
-      expect(find.text('3 bonus words'), findsOneWidget);
-      expect(find.text(AppStrings.formatPlayTime(42)), findsOneWidget);
+      expect(find.text('3 bonus words'), findsNWidgets(2));
 
       await tester.ensureVisible(
         find.byKey(const Key('pathWordsResultWord_ladle')),
@@ -168,5 +174,6 @@ void main() {
     );
     expect(find.byType(PathWordsResultsPanel), findsNothing);
     expect(find.textContaining('Today:'), findsNothing);
+    expect(find.byKey(const Key('resultsWordsTab')), findsNothing);
   });
 }
