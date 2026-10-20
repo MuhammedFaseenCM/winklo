@@ -7,7 +7,9 @@ import '../../domain/play_mode_hints.dart';
 import '../../domain/repositories/hint_quota_repository.dart';
 import '../../domain/repositories/play_mode_record_repository.dart';
 import '../strings/app_strings.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import 'app_icon.dart';
 
 /// Reads what a game run of a [PlayMode] spends and keeps.
 extension PlayModeReads on BuildContext {
@@ -64,10 +66,8 @@ class PlayModeStrip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  mode.isArchive
-                      ? Icons.calendar_month_rounded
-                      : Icons.all_inclusive_rounded,
+                AppIcon(
+                  mode.isArchive ? AppIcons.calendar : AppIcons.infinity,
                   size: 14,
                   color: style?.color,
                 ),
@@ -84,7 +84,7 @@ class PlayModeStrip extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
                 foregroundColor: ZipColors.onInk,
               ),
-              icon: const Icon(Icons.casino_rounded, size: 18),
+              icon: const AppIcon(AppIcons.dice, size: 18),
               label: Text(AppStrings.practiceNewBoard),
             ),
         ],

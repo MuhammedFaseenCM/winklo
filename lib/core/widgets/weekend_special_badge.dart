@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../domain/entities/daily_special.dart';
 import '../strings/app_strings.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import 'app_icon.dart';
 
 /// "Weekend special": Saturday's and Sunday's harder dailies.
 class WeekendSpecialBadge extends StatelessWidget {
@@ -25,11 +27,7 @@ class WeekendSpecialBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.local_fire_department_rounded,
-            size: 12,
-            color: style?.color,
-          ),
+          AppIcon(AppIcons.streak, size: 12, color: style?.color),
           const SizedBox(width: 4),
           Flexible(
             child: Text(

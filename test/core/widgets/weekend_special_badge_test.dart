@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_icons.dart';
+import 'package:winklo/core/widgets/app_icon.dart';
 import 'package:winklo/core/widgets/weekend_special_badge.dart';
 
 void main() {
@@ -41,12 +43,15 @@ void main() {
         home: Scaffold(
           body: Row(
             children: [
-              IconButton(onPressed: () {}, icon: const Icon(Icons.arrow_back)),
+              IconButton(onPressed: () {}, icon: const AppIcon(AppIcons.back)),
               const Expanded(
                 child: GameScreenTitle(title: 'Path Words', special: 'weekend'),
               ),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.refresh)),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.help)),
+              IconButton(
+                onPressed: () {},
+                icon: const AppIcon(AppIcons.refresh),
+              ),
+              IconButton(onPressed: () {}, icon: const AppIcon(AppIcons.help)),
             ],
           ),
         ),

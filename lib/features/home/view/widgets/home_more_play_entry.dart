@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/play_mode_route.dart';
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 /// One compact row under the daily tiles that opens "More ways to play"
 /// (archive, practice, bonus games). Home has no room for three entries on
@@ -45,8 +47,8 @@ class HomeMorePlayEntry extends StatelessWidget {
                     color: ZipColors.sky.withValues(alpha: 0.45),
                   ),
                 ),
-                child: Icon(
-                  Icons.explore_rounded,
+                child: AppIcon(
+                  AppIcons.compass,
                   size: layout.space(20),
                   color: ZipColors.sky,
                 ),
@@ -75,7 +77,7 @@ class HomeMorePlayEntry extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: ZipColors.inkSoft),
+              const AppIcon(AppIcons.chevronRight, color: ZipColors.inkSoft),
             ],
           ),
         ),

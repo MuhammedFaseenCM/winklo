@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../domain/repositories/analytics_repository.dart';
 import '../../../../domain/repositories/app_update_repository.dart';
 import '../../../../domain/repositories/in_app_update_repository.dart';
@@ -44,17 +45,14 @@ class HomeSoftUpdateSection extends StatelessWidget {
           // banner comes back once the day is over.
           if (cubit.isHidden) return const SizedBox.shrink();
           final (label, icon) = switch (state.phase) {
-            SoftUpdatePhase.idle => (
-              AppStrings.updateNow,
-              Icons.download_rounded,
-            ),
+            SoftUpdatePhase.idle => (AppStrings.updateNow, AppIcons.download),
             SoftUpdatePhase.downloading => (
               AppStrings.updateDownloading,
-              Icons.downloading_rounded,
+              AppIcons.downloading,
             ),
             SoftUpdatePhase.readyToInstall => (
               AppStrings.updateRestart,
-              Icons.restart_alt_rounded,
+              AppIcons.replay,
             ),
           };
           return Padding(

@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/di/app_repositories.dart';
 import 'package:winklo/core/lifecycle/progress_sync_lifecycle.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_icons.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/game_ids.dart';
@@ -391,7 +392,7 @@ void main() {
 
     await pumpHome(tester, prefs: prefs, router: router);
 
-    final leaderboardButtons = find.byIcon(Icons.leaderboard_rounded);
+    final leaderboardButtons = find.byIcon(AppIcons.ranking);
     expect(leaderboardButtons, findsNWidgets(3));
 
     await tester.tap(leaderboardButtons.at(1));

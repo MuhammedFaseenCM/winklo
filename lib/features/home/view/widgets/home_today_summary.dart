@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/dev_flags.dart';
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../logic/today_summary.dart';
 
 /// Above the Home tiles: "2 of 3 cleared · 3:41 total", with a "Perfect day"
@@ -47,8 +49,8 @@ class HomeTodaySummary extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.check_circle_rounded,
+            AppIcon(
+              AppIcons.checkCircle,
               color: perfect ? ZipColors.ember : ZipColors.success,
               size: 20,
             ),
@@ -96,7 +98,7 @@ class _PerfectDayBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, color: ZipColors.ember, size: 14),
+          const AppIcon(AppIcons.star, color: ZipColors.ember, size: 14),
           const SizedBox(width: 4),
           Text(
             AppStrings.homePerfectDayBadge,

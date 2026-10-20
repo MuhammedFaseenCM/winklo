@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../strings/app_strings.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import 'app_icon.dart';
 
 /// Covers a game board while its run is paused or the app is in the
 /// background, so the clock can't be stopped to study the board (fair play)
@@ -93,11 +95,7 @@ class _PausedLabel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.pause_circle_filled_rounded,
-            size: 56,
-            color: ZipColors.ember,
-          ),
+          const AppIcon(AppIcons.pause, size: 56, color: ZipColors.ember),
           const SizedBox(height: 12),
           Text(
             AppStrings.gamePaused,

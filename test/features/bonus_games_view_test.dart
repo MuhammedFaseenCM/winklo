@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_icons.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/core/widgets/bonus_game_chrome.dart';
 import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
@@ -129,7 +130,7 @@ void main() {
   testWidgets('the help button reopens the rules', (tester) async {
     await prefs.setBool('tutorial_seen_${GameIds.categoryRace}', true);
     await pump(tester, const CategoryRaceScreen());
-    await tester.tap(find.byIcon(Icons.help_outline_rounded));
+    await tester.tap(find.byIcon(AppIcons.help));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.categoryRaceHowToBody), findsOneWidget);
   });

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/zip_ui.dart';
 
 class HomeUpdateBanner extends StatelessWidget {
@@ -11,7 +13,7 @@ class HomeUpdateBanner extends StatelessWidget {
     required this.requiredLabel,
     required this.onUpdate,
     this.updateLabel,
-    this.updateIcon = Icons.download_rounded,
+    this.updateIcon = AppIcons.download,
     this.onSnooze,
   });
 
@@ -73,8 +75,8 @@ class HomeUpdateBanner extends StatelessWidget {
                       color: ZipColors.ember.withValues(alpha: 0.4),
                     ),
                   ),
-                  child: const Icon(
-                    Icons.system_update_rounded,
+                  child: const AppIcon(
+                    AppIcons.update,
                     color: ZipColors.ember,
                     size: 18,
                   ),
@@ -120,7 +122,7 @@ class HomeUpdateBanner extends StatelessWidget {
                     onPressed: snooze,
                     visualDensity: VisualDensity.compact,
                     color: ZipColors.inkSoft,
-                    icon: const Icon(Icons.close_rounded, size: 20),
+                    icon: const AppIcon(AppIcons.close, size: 20),
                   ),
               ],
             ),
