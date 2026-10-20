@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
+import 'package:winklo/core/widgets/zip_ui.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
@@ -158,9 +159,9 @@ void main() {
           theme: buildAppTheme(),
           home: const Scaffold(
             body: Center(
-              // 360 dp less the Results screen's 24 dp side padding.
+              // 360 dp less the Results screen's 16 dp side padding.
               child: SizedBox(
-                width: 312,
+                width: 328,
                 child: ResultsActions(
                   args: ResultsArgs(
                     title: 'Puzzle cleared!',
@@ -180,6 +181,48 @@ void main() {
     // The live board shares this Expanded, so every extra row here costs it
     // a leaderboard row; the old footer (full board + home) was about 108 px.
     expect(tester.getSize(find.byType(ResultsActions)).height, lessThan(112));
+    expect(find.byTooltip(AppStrings.shareResult), findsOneWidget);
+    expect(find.byTooltip(AppStrings.resultsFullBoard), findsOneWidget);
+    expect(find.byTooltip(AppStrings.backHome), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a narrow bar names just the next game', (tester) async {
+    nextIs(GameIds.pathWords);
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<NextUnclearedDaily>.value(value: next),
+          RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+          RepositoryProvider<AppReviewRepository>.value(value: review),
+          RepositoryProvider<ShareRepository>.value(value: share),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: const Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 300,
+                child: ResultsActions(
+                  args: ResultsArgs(
+                    title: 'Puzzle cleared!',
+                    subtitle: '',
+                    timeSeconds: 72,
+                    improved: false,
+                    gameId: GameIds.zip,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final primary = tester.widget<ZipPrimaryButton>(
+      find.byType(ZipPrimaryButton),
+    );
+    expect(primary.label, AppStrings.pathWordsTitle);
     expect(tester.takeException(), isNull);
   });
 
@@ -207,6 +250,26 @@ void main() {
 
     expect(find.text(AppStrings.perfectDay), findsOneWidget);
     expect(find.textContaining('next'), findsNothing);
+    // Nothing left to play: sharing the day is the main action.
+    final primary = tester.widget<ZipPrimaryButton>(
+      find.byType(ZipPrimaryButton),
+    );
+    expect(primary.label, AppStrings.shareResult);
+    expect(find.byTooltip(AppStrings.shareResult), findsNothing);
+  });
+
+  testWidgets('on a perfect day the main button shares', (tester) async {
+    nextIs(null);
+    when(() => share.shareText(any())).thenAnswer((_) async => true);
+    await pumpZipResults(tester);
+
+    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.pumpAndSettle();
+
+    verify(() => share.shareText(any())).called(1);
+    verify(
+      () => analytics.logResultsAction(gameId: GameIds.zip, action: 'share'),
+    ).called(1);
   });
 
   testWidgets('full leaderboard and home log their results_action', (
@@ -215,7 +278,7 @@ void main() {
     nextIs(GameIds.sudoku);
     await pumpZipResults(tester);
 
-    await tester.tap(find.text(AppStrings.resultsFullBoard));
+    await tester.tap(find.byTooltip(AppStrings.resultsFullBoard));
     await tester.pumpAndSettle();
     expect(find.text('board zip'), findsOneWidget);
     verify(
@@ -243,7 +306,7 @@ void main() {
     when(() => share.shareText(any())).thenAnswer((_) async => true);
     await pumpZipResults(tester);
 
-    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.tap(find.byTooltip(AppStrings.shareResult));
     await tester.pumpAndSettle();
 
     verify(
@@ -270,7 +333,7 @@ void main() {
     when(() => share.shareText(any())).thenAnswer((_) async => false);
     await pumpZipResults(tester);
 
-    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.tap(find.byTooltip(AppStrings.shareResult));
     await tester.pumpAndSettle();
 
     verify(
@@ -287,9 +350,9 @@ void main() {
     when(() => share.shareText(any())).thenAnswer((_) => pending.future);
     await pumpZipResults(tester);
 
-    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.tap(find.byTooltip(AppStrings.shareResult));
     await tester.pump();
-    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.tap(find.byTooltip(AppStrings.shareResult));
     await tester.pump();
     pending.complete(true);
     await tester.pumpAndSettle();
@@ -307,7 +370,7 @@ void main() {
     ).thenAnswer((_) async => throw const Failure('share failed'));
     await pumpZipResults(tester);
 
-    await tester.tap(find.text(AppStrings.shareResult));
+    await tester.tap(find.byTooltip(AppStrings.shareResult));
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.shareFailed), findsOneWidget);
