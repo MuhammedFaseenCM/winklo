@@ -87,6 +87,7 @@ class _NextPuzzleLine extends StatelessWidget {
             periodOf: PlayPeriod.isSubDaily(period) ? null : day,
             style: style,
             textAlign: TextAlign.end,
+            maxLines: 2,
           ),
         ),
       ],

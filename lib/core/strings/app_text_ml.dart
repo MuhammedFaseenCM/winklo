@@ -405,7 +405,7 @@ final class AppTextMl implements AppText {
 
   @override
   String resultsRankOfToday(int total, {bool capped = false}) =>
-      'ഇന്ന് $total${capped ? '+' : ''} പേരിൽ';
+      '$total${capped ? '+' : ''} പേരിൽ';
 
   @override
   String resultsRankSemantics(int rank, int total, {bool capped = false}) =>
@@ -415,7 +415,7 @@ final class AppTextMl implements AppText {
   String resultsHintTimeTile(int seconds) => '+${seconds}s';
 
   @override
-  String get resultsFromHints => 'സൂചനകളിൽ നിന്ന്';
+  String get resultsFromHints => 'സൂചനകൾ';
 
   @override
   String get resultsBoardTab => 'ബോർഡ്';

@@ -234,9 +234,17 @@ class _CelebrateAndClaimResults extends StatelessWidget {
       child: Scaffold(
         body: ZipAtmosphere(
           child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: page,
+            child: Center(
+              // Tablets and sideways phones: the table's width, centred.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: leaderboardTableMaxWidth,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: page,
+                ),
+              ),
             ),
           ),
         ),
