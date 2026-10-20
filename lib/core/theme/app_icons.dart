@@ -35,11 +35,13 @@ abstract final class AppIcons {
   /// Phosphor `arrow-left`, duotone.
   static const back = IconData(0xe059, fontFamily: _duotone);
 
-  /// Phosphor `caret-left`, duotone.
-  static const chevronLeft = IconData(0xe139, fontFamily: _duotone);
+  /// Phosphor `caret-left`, regular: a duotone caret's fill reads as a
+  /// play triangle.
+  static const chevronLeft = IconData(0xe138, fontFamily: _regular);
 
-  /// Phosphor `caret-right`, duotone.
-  static const chevronRight = IconData(0xe13b, fontFamily: _duotone);
+  /// Phosphor `caret-right`, regular: a duotone caret's fill reads as a
+  /// play triangle.
+  static const chevronRight = IconData(0xe13a, fontFamily: _regular);
 
   /// Phosphor `caret-down`, regular.
   static const expand = IconData(0xe136, fontFamily: _regular);
@@ -280,8 +282,6 @@ abstract final class AppIcons {
     0xe0e7: IconData(0xe0e6, fontFamily: _duotone), // book-open
     0xe0f9: IconData(0xe0f8, fontFamily: _duotone), // cards
     0xe10b: IconData(0xe10a, fontFamily: _duotone), // calendar-blank
-    0xe139: IconData(0xe138, fontFamily: _duotone), // caret-left
-    0xe13b: IconData(0xe13a, fontFamily: _duotone), // caret-right
     0xe157: IconData(0xe156, fontFamily: _duotone), // chart-line-up
     0xe183: IconData(0xe182, fontFamily: _duotone), // check
     0xe185: IconData(0xe184, fontFamily: _duotone), // check-circle
