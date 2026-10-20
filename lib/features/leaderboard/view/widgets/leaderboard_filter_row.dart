@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 /// The board pill ("Today ▾") and, when signed in, the scope pill
 /// ("Everyone ▾"). Each opens its picker sheet.
@@ -11,7 +13,7 @@ class LeaderboardFilterRow extends StatelessWidget {
     required this.boardIcon,
     required this.boardLabel,
     required this.onBoardTap,
-    this.scopeIcon = Icons.public_rounded,
+    this.scopeIcon = AppIcons.globe,
     this.scopeLabel,
     this.onScopeTap,
   });
@@ -92,7 +94,7 @@ class _FilterPill extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 16, color: ZipColors.ember),
+                  AppIcon(icon, size: 16, color: ZipColors.ember),
                   const SizedBox(width: 6),
                   Flexible(
                     child: ConstrainedBox(
@@ -109,8 +111,8 @@ class _FilterPill extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 2),
-                  const Icon(
-                    Icons.expand_more_rounded,
+                  const AppIcon(
+                    AppIcons.expand,
                     size: 18,
                     color: ZipColors.inkSoft,
                   ),

@@ -17,7 +17,8 @@ class AppIcon extends StatelessWidget {
     this.semanticLabel,
   });
 
-  final IconData icon;
+  /// Like [Icon.icon]: null draws nothing, at the icon's size.
+  final IconData? icon;
   final double? size;
   final Color? color;
   final String? semanticLabel;
@@ -30,7 +31,8 @@ class AppIcon extends StatelessWidget {
       color: color,
       semanticLabel: semanticLabel,
     );
-    final fill = AppIcons.duotoneFill(icon);
+    final glyph = icon;
+    final fill = glyph == null ? null : AppIcons.duotoneFill(glyph);
     if (fill == null) return outline;
 
     final base =

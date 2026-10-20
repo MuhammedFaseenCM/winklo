@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/core/strings/app_strings.dart';
+import 'package:winklo/core/theme/app_icons.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/leaderboard_entry.dart';
@@ -116,7 +117,8 @@ void main() {
     await tester.pump();
 
     expect(games, contains(GameIds.zip));
-    expect(find.byIcon(Icons.arrow_back), findsNothing);
+    expect(find.byIcon(AppIcons.back), findsNothing);
+    expect(find.byIcon(AppIcons.chevronLeft), findsNothing);
 
     router.go('/leaderboard?game=${GameIds.pathWords}');
     await tester.pump();
@@ -276,7 +278,7 @@ void main() {
 
     expect(find.text(AppStrings.leaderboardEmpty), findsOneWidget);
     expect(find.text('Play ${AppStrings.zipTitle}'), findsOneWidget);
-    expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+    expect(find.byIcon(AppIcons.play), findsOneWidget);
 
     // Switch game to Path Words
     await tester.tap(find.text(AppStrings.pathWordsTab));

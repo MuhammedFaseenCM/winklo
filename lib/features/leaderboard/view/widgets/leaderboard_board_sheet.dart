@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/entities/leaderboard_period.dart';
 import '../../logic/board_calendar.dart';
 import 'leaderboard_sheet_parts.dart';
@@ -40,7 +42,7 @@ Future<LeaderboardBoardChoice?> showLeaderboardBoardSheet(
         children: [
           LeaderboardSheetOption(
             key: const Key('leaderboard_board_weekly'),
-            leading: const Icon(Icons.date_range_rounded, color: ZipColors.sky),
+            leading: const AppIcon(AppIcons.week, color: ZipColors.sky),
             label: AppStrings.leaderboardThisWeek,
             subtitle: AppStrings.leaderboardThisWeekHint,
             selected: period == LeaderboardPeriod.weekly,
@@ -50,10 +52,7 @@ Future<LeaderboardBoardChoice?> showLeaderboardBoardSheet(
           if (showAllTime)
             LeaderboardSheetOption(
               key: const Key('leaderboard_board_all_time'),
-              leading: const Icon(
-                Icons.military_tech_rounded,
-                color: Color(0xFFFFD700),
-              ),
+              leading: const AppIcon(AppIcons.medal, color: Color(0xFFFFD700)),
               label: AppStrings.leaderboardAllTime,
               subtitle: AppStrings.leaderboardAllTimeHint,
               selected: period == LeaderboardPeriod.allTime,

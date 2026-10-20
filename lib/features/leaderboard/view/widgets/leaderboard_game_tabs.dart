@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/game_ids.dart';
 
 /// Zip · Path Words · Sudoku, with a sliding ember pill under the pick.
@@ -17,9 +19,9 @@ class LeaderboardGameTabs extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   static const _segments = [
-    (value: GameIds.zip, icon: Icons.bolt_rounded),
-    (value: GameIds.pathWords, icon: Icons.route_rounded),
-    (value: GameIds.sudoku, icon: Icons.grid_on_rounded),
+    (value: GameIds.zip, icon: AppIcons.lightning),
+    (value: GameIds.pathWords, icon: AppIcons.path),
+    (value: GameIds.sudoku, icon: AppIcons.grid),
   ];
 
   static String _label(String gameId) => switch (gameId) {
@@ -125,7 +127,7 @@ class _GameTab extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 17, color: color),
+                  AppIcon(icon, size: 17, color: color),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(

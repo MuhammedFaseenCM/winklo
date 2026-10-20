@@ -6,8 +6,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/centered_message_body.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../data/clients/remote_config_client.dart';
@@ -395,8 +397,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                             padding: const EdgeInsets.only(right: 8),
                             child: IconButton(
                               onPressed: () => Navigator.of(context).maybePop(),
-                              icon: const Icon(
-                                Icons.arrow_back_ios_new_rounded,
+                              icon: const AppIcon(
+                                AppIcons.chevronLeft,
                                 color: ZipColors.onInk,
                                 size: 20,
                               ),
@@ -411,8 +413,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                               color: ZipColors.ember.withValues(alpha: 0.35),
                             ),
                           ),
-                          child: const Icon(
-                            Icons.emoji_events_rounded,
+                          child: const AppIcon(
+                            AppIcons.trophy,
                             color: ZipColors.ember,
                             size: 22,
                           ),
@@ -460,11 +462,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                             context.read<LeagueRepository?>() != null;
                         return LeaderboardFilterRow(
                           boardIcon: switch (state.period) {
-                            LeaderboardPeriod.daily => Icons.today_rounded,
-                            LeaderboardPeriod.weekly =>
-                              Icons.date_range_rounded,
-                            LeaderboardPeriod.allTime =>
-                              Icons.military_tech_rounded,
+                            LeaderboardPeriod.daily => AppIcons.today,
+                            LeaderboardPeriod.weekly => AppIcons.week,
+                            LeaderboardPeriod.allTime => AppIcons.medal,
                           },
                           boardLabel: leaderboardBoardLabel(
                             period: state.period,
@@ -473,8 +473,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                           ),
                           onBoardTap: () => _pickBoard(context),
                           scopeIcon: league == null
-                              ? Icons.public_rounded
-                              : Icons.group_rounded,
+                              ? AppIcons.globe
+                              : AppIcons.group,
                           scopeLabel: canPickScope
                               ? (league?.name ??
                                     AppStrings.leaderboardScopeEveryone)
@@ -569,8 +569,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                         ),
                                       ],
                                     ),
-                                    child: const Icon(
-                                      Icons.emoji_events_outlined,
+                                    child: const AppIcon(
+                                      AppIcons.trophy,
                                       size: 34,
                                       color: ZipColors.ember,
                                     ),
@@ -596,7 +596,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                       label: AppStrings.leaderboardPlayGame(
                                         gameTitle,
                                       ),
-                                      icon: Icons.play_arrow_rounded,
+                                      icon: AppIcons.play,
                                       onPressed: () async {
                                         final ok = await ensureSignedInForPlay(
                                           context,
@@ -965,8 +965,8 @@ class _PinnedUserRow extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.my_location_rounded,
+                        const AppIcon(
+                          AppIcons.locate,
                           size: 11,
                           color: Colors.white,
                         ),

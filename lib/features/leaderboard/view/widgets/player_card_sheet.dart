@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
 import '../../../../core/strings/clean_run_chips.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../domain/entities/leaderboard_entry.dart';
 import '../../../../domain/entities/leaderboard_period.dart';
@@ -121,7 +123,7 @@ class PlayerCard extends StatelessWidget {
                   if (streak != null && streak >= 1)
                     _Chip(
                       label: AppStrings.streakLabel(streak),
-                      icon: Icons.local_fire_department_rounded,
+                      icon: AppIcons.streak,
                     ),
                 ],
               ),
@@ -194,7 +196,7 @@ class _Chip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: ZipColors.ember),
+            AppIcon(icon, size: 14, color: ZipColors.ember),
             const SizedBox(width: 4),
           ],
           Text(
