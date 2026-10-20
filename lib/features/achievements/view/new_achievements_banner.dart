@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../domain/achievements/achievement.dart';
 import '../../../domain/usecases/claim_new_achievements.dart';
 import '../cubit/new_achievements_cubit.dart';
@@ -75,7 +76,7 @@ class _Banner extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: ZipColors.emberGradient,
               ),
-              child: Icon(
+              child: AppIcon(
                 achievementIcon(achievements.first),
                 size: 22,
                 color: ZipColors.onInk,
