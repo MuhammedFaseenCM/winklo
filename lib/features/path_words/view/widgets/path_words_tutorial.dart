@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/game_tutorial_overlay.dart';
 import '../../../../core/widgets/tutorial_mini_board.dart';
 import '../../../../domain/entities/cell.dart';
@@ -228,8 +230,8 @@ class _MiniWordListRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            complete ? Icons.check_circle_rounded : Icons.circle_outlined,
+          AppIcon(
+            complete ? AppIcons.checkCircle : AppIcons.circle,
             color: complete ? ZipColors.sky : ZipColors.inkSoft,
             size: 20,
           ),

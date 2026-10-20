@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/game_ids.dart';
 import '../../../../domain/repositories/analytics_repository.dart';
 import '../../../../domain/repositories/tutorial_repository.dart';
@@ -19,7 +21,7 @@ class SudokuHowToPlayButton extends StatelessWidget {
         if (!context.mounted) return;
         await SudokuHowToPlay.show(context);
       },
-      icon: const Icon(Icons.help_outline_rounded),
+      icon: const AppIcon(AppIcons.help),
     );
   }
 }

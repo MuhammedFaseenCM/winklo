@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/play_mode_route.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/archive_calendar.dart';
 import '../../../domain/game_ids.dart';
@@ -180,7 +182,7 @@ class _MonthCard extends StatelessWidget {
                 color: ZipColors.onInk,
                 disabledColor: ZipColors.outline,
                 onPressed: index > 0 ? () => cubit.showMonth(index - 1) : null,
-                icon: const Icon(Icons.chevron_left_rounded),
+                icon: const AppIcon(AppIcons.chevronLeft),
               ),
               Expanded(
                 child: Column(
@@ -209,7 +211,7 @@ class _MonthCard extends StatelessWidget {
                 onPressed: index < state.months.length - 1
                     ? () => cubit.showMonth(index + 1)
                     : null,
-                icon: const Icon(Icons.chevron_right_rounded),
+                icon: const AppIcon(AppIcons.chevronRight),
               ),
             ],
           ),
@@ -263,7 +265,7 @@ class _MonthGrid extends StatelessWidget {
             ),
           ),
           if (cleared)
-            const Icon(Icons.check_rounded, size: 13, color: ZipColors.ink),
+            const AppIcon(AppIcons.check, size: 13, color: ZipColors.ink),
         ],
       );
       return Padding(
@@ -354,11 +356,7 @@ class _Legend extends StatelessWidget {
             color: accent,
             borderRadius: BorderRadius.circular(5),
           ),
-          child: const Icon(
-            Icons.check_rounded,
-            size: 13,
-            color: ZipColors.ink,
-          ),
+          child: const AppIcon(AppIcons.check, size: 13, color: ZipColors.ink),
         ),
         const SizedBox(width: 6),
         Flexible(

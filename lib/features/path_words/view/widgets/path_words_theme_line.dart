@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 /// "Today: Kitchen tools", shown only once the day is cleared. Nothing when
 /// the day has no theme.
@@ -28,7 +30,7 @@ class PathWordsThemeLine extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.auto_awesome_rounded, size: 16, color: style?.color),
+        AppIcon(AppIcons.sparkle, size: 16, color: style?.color),
         const SizedBox(width: 6),
         Flexible(
           child: Text(label(value), style: style, textAlign: TextAlign.center),

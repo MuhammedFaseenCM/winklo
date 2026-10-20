@@ -10,7 +10,9 @@ import '../../../core/dev_flags.dart';
 import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
 import '../../../core/widgets/play_mode_strip.dart';
@@ -293,7 +295,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                           children: [
                             IconButton(
                               onPressed: () => popOrGoHome(context),
-                              icon: const Icon(Icons.arrow_back_rounded),
+                              icon: const AppIcon(AppIcons.back),
                             ),
                             Expanded(
                               child: GameScreenTitle(
@@ -313,7 +315,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                     : () => _bloc.add(
                                         const PathWordsEvent.reset(),
                                       ),
-                                icon: const Icon(Icons.refresh_rounded),
+                                icon: const AppIcon(AppIcons.refresh),
                               ),
                             const PathWordsHowToPlayButton(),
                           ],
@@ -445,7 +447,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                               const PathWordsEvent.undo(),
                                             )
                                           : null,
-                                      icon: const Icon(Icons.undo_rounded),
+                                      icon: const AppIcon(AppIcons.undo),
                                       label: Text(AppStrings.pathWordsUndo),
                                     ),
                                   ),
@@ -469,7 +471,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                               const PathWordsEvent.hint(),
                                             )
                                           : null,
-                                      icon: const Icon(Icons.lightbulb_rounded),
+                                      icon: const AppIcon(AppIcons.hint),
                                       label: Text(
                                         hintLabelFor(
                                           widget.mode,
@@ -543,7 +545,7 @@ class _BoardPane extends StatelessWidget {
               const SizedBox(height: 14),
               FilledButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
+                icon: const AppIcon(AppIcons.refresh),
                 label: Text(AppStrings.retry),
               ),
             ],

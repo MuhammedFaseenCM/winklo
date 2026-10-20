@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/bonus_game_chrome.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/game_ids.dart';
@@ -198,7 +200,7 @@ class _CategoryRaceScreenState extends State<CategoryRaceScreen> {
           if (!started)
             ZipPrimaryButton(
               label: AppStrings.categoryRaceStart(state.totalSeconds),
-              icon: Icons.play_arrow_rounded,
+              icon: AppIcons.play,
               onPressed: state.status == CategoryRaceStatus.ready
                   ? () => _bloc.add(const CategoryRaceEvent.started())
                   : null,
@@ -215,8 +217,8 @@ class _CategoryRaceScreenState extends State<CategoryRaceScreen> {
               ),
               decoration: InputDecoration(
                 labelText: AppStrings.categoryRaceYourWord,
-                prefixIcon: const Icon(
-                  Icons.edit_note_rounded,
+                prefixIcon: const AppIcon(
+                  AppIcons.editNote,
                   color: ZipColors.inkSoft,
                 ),
                 errorText: state.feedback,
@@ -226,15 +228,15 @@ class _CategoryRaceScreenState extends State<CategoryRaceScreen> {
             const SizedBox(height: 10),
             ZipPrimaryButton(
               label: AppStrings.categoryRaceSubmit,
-              icon: Icons.send_rounded,
+              icon: AppIcons.send,
               compact: true,
               onPressed: _submit,
             ),
             const SizedBox(height: 14),
             Row(
               children: [
-                const Icon(
-                  Icons.check_circle_outline,
+                const AppIcon(
+                  AppIcons.checkCircle,
                   size: 16,
                   color: ZipColors.success,
                 ),

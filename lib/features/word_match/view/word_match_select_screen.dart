@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/bonus_game_chrome.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/game_ids.dart';
@@ -103,8 +105,8 @@ class _DeckList extends StatelessWidget {
                       gradient: ZipColors.emberGradient,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
-                      Icons.style_rounded,
+                    child: const AppIcon(
+                      AppIcons.cards,
                       color: ZipColors.onInk,
                     ),
                   ),
@@ -126,18 +128,18 @@ class _DeckList extends StatelessWidget {
                           runSpacing: 4,
                           children: [
                             _DeckBadge(
-                              icon: Icons.sync_alt_rounded,
+                              icon: AppIcons.swap,
                               label: AppStrings.wordMatchPairs(
                                 deck.pairs.length,
                               ),
                             ),
                             _DeckBadge(
-                              icon: Icons.timer_outlined,
+                              icon: AppIcons.timer,
                               label: AppStrings.bonusSecondsLeft(deck.seconds),
                             ),
                             if (best != null)
                               _DeckBadge(
-                                icon: Icons.emoji_events_rounded,
+                                icon: AppIcons.trophy,
                                 label: AppStrings.localBest(
                                   AppStrings.formatPlayTime(best),
                                 ),
@@ -148,7 +150,7 @@ class _DeckList extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(Icons.play_arrow_rounded, color: ZipColors.ember),
+                  const AppIcon(AppIcons.play, color: ZipColors.ember),
                 ],
               ),
             ),
@@ -187,7 +189,7 @@ class _DeckBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: fg),
+          AppIcon(icon, size: 12, color: fg),
           const SizedBox(width: 4),
           Text(
             label,

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/game_ids.dart';
 import '../../../../domain/repositories/analytics_repository.dart';
 import 'zip_tutorial.dart';
@@ -24,7 +26,7 @@ class ZipHowToPlayButton extends StatelessWidget {
         if (!context.mounted) return;
         await ZipTutorial.show(context);
       },
-      icon: const Icon(Icons.help_outline_rounded),
+      icon: const AppIcon(AppIcons.help),
     );
   }
 }
