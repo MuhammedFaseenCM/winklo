@@ -24,6 +24,8 @@ import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+import 'package:winklo/features/leaderboard/view/widgets/leaderboard_table.dart';
+import 'package:winklo/features/leaderboard/view/widgets/medal_coin.dart';
 import 'package:winklo/features/results/results_args.dart';
 import 'package:winklo/features/results/results_screen.dart';
 import 'package:winklo/features/results/view/mini_leaderboard_panel.dart';
@@ -145,12 +147,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.formatPlayTime(12)), findsOneWidget);
-    expect(find.text(AppStrings.resultsTimeLabel), findsOneWidget);
-    // No hints, so no hint time line.
+    // No hints, so no hint time tile.
     expect(find.textContaining('from hints'), findsNothing);
     expect(find.text(AppStrings.newPersonalBest), findsOneWidget);
     expect(find.byType(MiniLeaderboardPanel), findsOneWidget);
-    expect(find.text(AppStrings.resultsFullBoard), findsOneWidget);
+    expect(find.text(AppStrings.zipTitle), findsOneWidget);
+    // The page's one action bar: no next daily here, so share leads.
+    expect(find.byTooltip(AppStrings.resultsFullBoard), findsOneWidget);
     expect(find.text(AppStrings.shareResult), findsOneWidget);
     expect(find.byTooltip(AppStrings.backHome), findsOneWidget);
     expect(find.textContaining('New puzzle in'), findsOneWidget);
@@ -282,10 +285,11 @@ void main() {
 
       final timeLabel = AppStrings.formatPlayTime(72);
       expect(find.text(timeLabel), findsOneWidget);
-      expect(find.text(AppStrings.resultsTimeLabel), findsOneWidget);
       expect(find.text(AppStrings.streakLabel(2)), findsOneWidget);
       expect(find.text(AppStrings.saveTimeToBoard(timeLabel)), findsOneWidget);
-      expect(find.text(AppStrings.backHome), findsOneWidget);
+      expect(find.byTooltip(AppStrings.backHome), findsOneWidget);
+      // Guests have no place on the board yet.
+      expect(find.textContaining('#'), findsNothing);
       expect(find.byType(ResultsBoardTease), findsOneWidget);
       expect(find.text(AppStrings.resultsBoardTeaseHint), findsOneWidget);
       expect(find.text('points'), findsNothing);
@@ -297,16 +301,8 @@ void main() {
         find.byType(ZipPrimaryButton),
       );
       expect(primary.label, AppStrings.saveTimeToBoard(timeLabel));
-      expect(
-        find.descendant(
-          of: find.byType(ZipPrimaryButton),
-          matching: find.text(AppStrings.backHome),
-        ),
-        findsNothing,
-      );
 
-      await tester.ensureVisible(find.text(AppStrings.backHome));
-      await tester.tap(find.text(AppStrings.backHome));
+      await tester.tap(find.byTooltip(AppStrings.backHome));
       await tester.pumpAndSettle();
       expect(find.text('home'), findsOneWidget);
     },
@@ -496,8 +492,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ada'), findsOneWidget);
-    expect(find.text(AppStrings.seeFullLeaderboard), findsOneWidget);
-    expect(find.text(AppStrings.backHome), findsOneWidget);
+    expect(find.byType(LeaderboardTableRow), findsOneWidget);
+    expect(find.byType(MedalCoin), findsOneWidget);
+    // The page's action bar is the footer now; the panel is the board only.
+    expect(find.text(AppStrings.seeFullLeaderboard), findsNothing);
     expect(find.text('points'), findsNothing);
   });
 
@@ -737,17 +735,83 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final countdown = find.textContaining('New puzzle in');
-    final header = find.ancestor(
-      of: countdown,
-      matching: find.byType(SingleChildScrollView),
-    );
-    expect(
-      tester.getRect(countdown).bottom,
-      lessThanOrEqualTo(tester.getRect(header).bottom),
-    );
+    expect(find.textContaining('New puzzle in').hitTestable(), findsOneWidget);
     expect(find.text(AppStrings.longestStreakLabel(14)), findsOneWidget);
-    expect(find.text(AppStrings.resultsHintPenalty(30)), findsOneWidget);
+    // The hint time is a tile now, not a line under the time.
+    expect(find.text(AppStrings.resultsHintTimeTile(30)), findsOneWidget);
+    expect(find.text(AppStrings.resultsFromHints), findsOneWidget);
+    expect(find.text(AppStrings.resultsHintPenalty(30)), findsNothing);
+    expect(find.text(AppStrings.shareResult).hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the rank badge reads the player\'s place on the board', (
+    tester,
+  ) async {
+    final auth = _MockAuthRepository();
+    const me = AppUser(uid: 'u1', displayName: 'Tester');
+    when(() => auth.currentUser).thenReturn(me);
+    when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(me));
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+    final watch = _MockWatchLeaderboard();
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => boardController.stream);
+
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<WatchLeaderboard>.value(value: watch),
+          RepositoryProvider<AuthRepository>.value(value: auth),
+          ..._actionProviders(),
+        ],
+        child: BlocProvider(
+          create: (_) => AuthCubit(
+            authRepository: auth,
+            signInWithGoogle: _MockSignInWithGoogle(),
+            signOut: _MockSignOut(),
+          ),
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: const ResultsScreen(
+              args: ResultsArgs(
+                title: 'Puzzle cleared!',
+                subtitle: '',
+                timeSeconds: 63,
+                improved: false,
+                replayDaily: true,
+                gameId: GameIds.zip,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    LeaderboardEntry entry(String uid, int rank) => LeaderboardEntry(
+      uid: uid,
+      displayName: 'Player $uid',
+      timeSeconds: 40 + rank * 10,
+      updatedAt: DateTime.utc(2026, 10, 21),
+      rank: rank,
+    );
+    boardController.add([entry('p1', 1), entry('u1', 2)]);
+    await tester.pumpAndSettle();
+    expect(find.text('#2'), findsOneWidget);
+    expect(find.text(AppStrings.resultsRankOfToday(2)), findsOneWidget);
+
+    // Not on the board (a refused submit): no badge, just the time.
+    boardController.add([entry('p1', 1)]);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('#'), findsNothing);
+    expect(find.text(AppStrings.formatPlayTime(63)), findsOneWidget);
   });
 
   testWidgets('a result from a day that has ended says a new puzzle is '

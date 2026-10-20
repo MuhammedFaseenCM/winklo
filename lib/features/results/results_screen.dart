@@ -1,36 +1,37 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/dev_flags.dart';
-import '../../core/haptics/haptics_service.dart';
 import '../../core/strings/app_strings.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/app_icon.dart';
-import '../../core/widgets/next_puzzle_countdown.dart';
 import '../../core/widgets/zip_ui.dart';
 import '../../domain/game_ids.dart';
-import '../../domain/play_period.dart';
+import '../../domain/leaderboard_limits.dart';
 import '../../domain/repositories/analytics_repository.dart';
 import '../../domain/repositories/app_review_repository.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/submit_leaderboard_time.dart';
+import '../../domain/usecases/watch_leaderboard.dart';
 import '../achievements/view/new_achievements_banner.dart';
 import '../auth/cubit/auth_cubit.dart';
 import '../auth/view/sign_in_sheet.dart';
-import '../path_words/view/widgets/path_words_results_panel.dart';
+import '../leaderboard/cubit/leaderboard_cubit.dart';
+import '../leaderboard/cubit/leaderboard_state.dart';
+import '../leaderboard/view/widgets/leaderboard_table.dart';
+import 'logic/result_tiles.dart';
 import 'results_args.dart';
-import 'view/counting_play_time.dart';
-import 'view/ember_burst.dart';
-import 'view/hint_penalty_line.dart';
 import 'view/local_results_view.dart';
 import 'view/mini_leaderboard_panel.dart';
+import 'view/result_tiles_row.dart';
 import 'view/results_actions.dart';
+import 'view/results_board_card.dart';
 import 'view/results_board_tease.dart';
+import 'view/results_hero.dart';
+import 'view/results_top_bar.dart';
 
 class ResultsScreen extends StatelessWidget {
   const ResultsScreen({super.key, required this.args});
@@ -178,15 +179,10 @@ class ResultsScreen extends StatelessWidget {
   }
 }
 
-/// Zip / Path Words: celebrate first; soft claim for guests; mini board when signed in.
+/// Zip / Path Words / Sudoku: the scoreboard. Guests get the same page with
+/// a soft claim in place of the board, and no rank.
 class _CelebrateAndClaimResults extends StatelessWidget {
   const _CelebrateAndClaimResults({required this.args});
-
-  /// The mini board's title, a row or two and the actions footer.
-  static const _minBoardHeight = 300.0;
-
-  /// Enough of the celebration to show the clear time.
-  static const _minHeaderHeight = 200.0;
 
   final ResultsArgs args;
 
@@ -218,163 +214,240 @@ class _CelebrateAndClaimResults extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final signedIn = context.watch<AuthCubit>().isSignedIn;
-    final timeLabel = AppStrings.formatPlayTime(args.timeSeconds);
-    final gameId = args.gameId!;
-
+    final Widget page = signedIn
+        ? BlocProvider(
+            // One board for the page: the rank badge and the table read it.
+            create: (context) => LeaderboardCubit(
+              watchLeaderboard: context.read<WatchLeaderboard>(),
+              authRepository: context.read<AuthRepository>(),
+              initialGameId: args.gameId!,
+            )..selectDay(args.leaderboardDay),
+            child: _Scoreboard(args: args, signedIn: true),
+          )
+        : _Scoreboard(
+            args: args,
+            signedIn: false,
+            onSave: () => _signInAndSync(context),
+          );
     return _ReviewPromptHost(
       args: args,
       child: Scaffold(
         body: ZipAtmosphere(
           child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-              child: signedIn
-                  ? LayoutBuilder(
-                      builder: (context, constraints) {
-                        final height = constraints.maxHeight;
-                        final board = MiniLeaderboardPanel(
-                          gameId: gameId,
-                          timeSeconds: args.timeSeconds,
-                          usedHints: args.usedHints,
-                          hadMistakes: args.hadMistakes,
-                          currentStreak: args.currentStreak,
-                          footer: ResultsActions(args: args),
-                          dayId: args.leaderboardDay,
-                          leaderboardProof: args.leaderboardProof,
-                        );
-                        if (height < _minHeaderHeight + 12 + _minBoardHeight) {
-                          // Sideways or split screen: no room for both, so the
-                          // whole page scrolls, celebration first.
-                          return SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _celebrationHeader(context, compact: true),
-                                const SizedBox(height: 12),
-                                SizedBox(height: _minBoardHeight, child: board),
-                              ],
-                            ),
-                          );
-                        }
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // The celebration takes the height it needs, up to
-                            // just over half the screen and never squeezing the
-                            // board below its minimum (it scrolls past that);
-                            // the board gets the rest.
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxHeight: math.min(
-                                  height * 0.55,
-                                  height - 12 - _minBoardHeight,
-                                ),
-                              ),
-                              child: SingleChildScrollView(
-                                child: _celebrationHeader(
-                                  context,
-                                  compact: true,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Expanded(child: board),
-                          ],
-                        );
-                      },
-                    )
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        return SingleChildScrollView(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight: constraints.maxHeight,
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _celebrationHeader(context, compact: true),
-                                const SizedBox(height: 14),
-                                ResultsBoardTease(
-                                      height: 120,
-                                      onTap: () => _signInAndSync(context),
-                                    )
-                                    .animate()
-                                    .fadeIn(delay: 500.ms, duration: 400.ms)
-                                    .slideY(
-                                      begin: 0.08,
-                                      curve: Curves.easeOutCubic,
-                                    ),
-                                const SizedBox(height: 16),
-                                ZipPrimaryButton(
-                                      label: AppStrings.saveTimeToBoard(
-                                        timeLabel,
-                                      ),
-                                      icon: AppIcons.trophy,
-                                      onPressed: () => _signInAndSync(context),
-                                    )
-                                    .animate()
-                                    .fadeIn(delay: 850.ms, duration: 400.ms)
-                                    .slideY(
-                                      begin: 0.15,
-                                      curve: Curves.easeOutCubic,
-                                    ),
-                                TextButton(
-                                  onPressed: () => context.go('/'),
-                                  child: Text(AppStrings.backHome),
-                                ).animate().fadeIn(delay: 950.ms),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+            child: Center(
+              // Tablets and sideways phones: the table's width, centred.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: leaderboardTableMaxWidth,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: page,
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _celebrationHeader(BuildContext context, {bool compact = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ZipMark(size: compact ? 40 : 56)
-            .animate()
-            .fadeIn(duration: 400.ms)
-            .scale(begin: const Offset(0.7, 0.7), curve: Curves.easeOutBack),
-        SizedBox(height: compact ? 8 : 12),
-        Text(
-          args.title,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineMedium,
-        ).animate().fadeIn(delay: 80.ms).slideY(begin: 0.1),
-        SizedBox(height: compact ? 12 : 20),
-        _ResultsCelebrationCard(
+/// The page: top bar, hero, tiles, any new badges, the board card and the
+/// action bar. The card takes what's left; below [_scrollBelow] the whole
+/// page scrolls and the card keeps room for four rows.
+class _Scoreboard extends StatelessWidget {
+  const _Scoreboard({required this.args, required this.signedIn, this.onSave});
+
+  final ResultsArgs args;
+  final bool signedIn;
+
+  /// Guests: sign in and save the time.
+  final VoidCallback? onSave;
+
+  /// Shorter than this (sideways, split screen), the page scrolls.
+  static const double _scrollBelow = 560;
+
+  /// Shorter than this, the hero, badge and tiles take a smaller step.
+  static const double _compactBelow = 640;
+
+  @override
+  Widget build(BuildContext context) {
+    final gameId = args.gameId!;
+    final tiles = resultTilesFor(
+      gameId: gameId,
+      improved: args.improved,
+      currentStreak: args.currentStreak,
+      longestStreak: args.longestStreak,
+      usedHints: args.usedHints,
+      hadMistakes: args.hadMistakes,
+      hintPenaltySeconds: args.hintPenaltySeconds,
+      bonusWords: args.pathWords?.bonusWords.length ?? 0,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final height = constraints.maxHeight;
+        final compact = height < _compactBelow;
+        final gap = compact ? 8.0 : 12.0;
+
+        final header = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ResultsTopBar(gameId: gameId, day: args.day),
+            SizedBox(height: gap),
+            ResultsHero(
+              title: args.title,
               timeSeconds: args.timeSeconds,
-              improved: args.improved,
-              // Leaderboard ranks by time — points clutter the win card.
-              points: null,
-              hintPenaltySeconds: args.hintPenaltySeconds,
-              currentStreak: args.currentStreak,
-              longestStreak: args.longestStreak,
-              celebrateMotion: true,
               compact: compact,
-            )
-            .animate()
-            .fadeIn(delay: 160.ms, duration: 450.ms)
-            .slideY(begin: 0.12, curve: Curves.easeOutCubic),
-        SizedBox(height: compact ? 10 : 14),
-        _NextPuzzleLine(day: args.day).animate().fadeIn(delay: 700.ms),
-        NewAchievementsBanner(occasion: args),
-        if (args.pathWords != null) ...[
-          SizedBox(height: compact ? 12 : 16),
-          PathWordsResultsPanel(
-            summary: args.pathWords!,
-          ).animate().fadeIn(delay: 800.ms),
-        ],
+              rankBadge: signedIn ? _LiveRankBadge(compact: compact) : null,
+            ).animate().fadeIn(duration: 400.ms),
+            if (tiles.isNotEmpty) ...[
+              SizedBox(height: gap),
+              ResultTilesRow(tiles: tiles, compact: compact),
+            ],
+            NewAchievementsBanner(occasion: args),
+          ],
+        );
+
+        final card =
+            ResultsBoardCard(
+                  pathWords: args.pathWords,
+                  board: signedIn
+                      ? MiniLeaderboardPanel(
+                          gameId: gameId,
+                          cubit: context.read<LeaderboardCubit>(),
+                          timeSeconds: args.timeSeconds,
+                          usedHints: args.usedHints,
+                          hadMistakes: args.hadMistakes,
+                          currentStreak: args.currentStreak,
+                          dayId: args.leaderboardDay,
+                          leaderboardProof: args.leaderboardProof,
+                        )
+                      : ResultsBoardTease(framed: false, onTap: onSave!),
+                )
+                .animate()
+                .fadeIn(delay: 300.ms, duration: 400.ms)
+                .slideY(begin: 0.06, curve: Curves.easeOutCubic);
+
+        final bar = signedIn
+            ? ResultsActions(args: args)
+            : _GuestBar(timeSeconds: args.timeSeconds, onSave: onSave!);
+        final shownBar = bar.animate().fadeIn(delay: 400.ms, duration: 350.ms);
+
+        if (height < _scrollBelow) {
+          final cardHeight =
+              4 * leaderboardTableRowHeight +
+              miniLeaderboardGapRowHeight +
+              (args.pathWords != null ? resultsBoardSwitchHeight : 0);
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                header,
+                SizedBox(height: gap),
+                SizedBox(height: cardHeight, child: card),
+                SizedBox(height: gap),
+                shownBar,
+              ],
+            ),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            header,
+            SizedBox(height: gap),
+            Expanded(child: card),
+            SizedBox(height: gap),
+            shownBar,
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The rank badge, fed by the board: an outline while it loads, nothing
+/// when the player isn't on it.
+class _LiveRankBadge extends StatelessWidget {
+  const _LiveRankBadge({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<LeaderboardCubit, LeaderboardState>(
+      builder: (context, state) {
+        Widget child = const SizedBox.shrink(key: ValueKey('none'));
+        if (state.status == LeaderboardStatus.loading) {
+          child = Padding(
+            key: const ValueKey('loading'),
+            padding: const EdgeInsets.only(left: 12),
+            child: ResultsRankBadge(compact: compact),
+          );
+        } else if (state.status == LeaderboardStatus.ready) {
+          final me = state.entries
+              .where((e) => e.uid == state.currentUid)
+              .firstOrNull;
+          if (me != null) {
+            child = Padding(
+              key: const ValueKey('rank'),
+              padding: const EdgeInsets.only(left: 12),
+              child: ResultsRankBadge(
+                rank: me.rank,
+                total: state.entries.length,
+                capped: state.entries.length >= leaderboardDailyLimit,
+                compact: compact,
+              ),
+            );
+          }
+        }
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween(begin: 0.85, end: 1.0).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+              ),
+              child: child,
+            ),
+          ),
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+/// A guest's bar: home, and save the time to today's board.
+class _GuestBar extends StatelessWidget {
+  const _GuestBar({required this.timeSeconds, required this.onSave});
+
+  final int timeSeconds;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        ResultsIconAction(
+          tooltip: AppStrings.backHome,
+          icon: AppIcons.home,
+          onPressed: () => context.go('/'),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ZipPrimaryButton(
+            label: AppStrings.saveTimeToBoard(
+              AppStrings.formatPlayTime(timeSeconds),
+            ),
+            icon: AppIcons.trophy,
+            compact: true,
+            onPressed: onSave,
+          ),
+        ),
       ],
     );
   }
@@ -429,84 +502,31 @@ class _ReviewPromptHostState extends State<_ReviewPromptHost> {
   Widget build(BuildContext context) => widget.child;
 }
 
-/// "New puzzle in 6h 12m" under the daily result.
-class _NextPuzzleLine extends StatelessWidget {
-  const _NextPuzzleLine({this.day});
-
-  final DateTime? day;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelLarge?.copyWith(
-      color: ZipColors.inkSoft,
-      fontWeight: FontWeight.w600,
-    );
-    final period = DevFlags.playPeriod;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        AppIcon(AppIcons.clock, size: 16, color: style?.color),
-        const SizedBox(width: 6),
-        Flexible(
-          child: NextPuzzleCountdown(
-            period: period,
-            // The run's day is a date, which can't place a minute-long
-            // debug period.
-            periodOf: PlayPeriod.isSubDaily(period) ? null : day,
-            style: style,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ResultsCelebrationCard extends StatefulWidget {
+/// The time, points and badges of a result off the daily boards (the
+/// legacy path; dailies show the scoreboard).
+class _ResultsCelebrationCard extends StatelessWidget {
   const _ResultsCelebrationCard({
     required this.timeSeconds,
     required this.improved,
     this.points,
-    this.hintPenaltySeconds = 0,
     this.currentStreak,
     this.longestStreak,
-    this.celebrateMotion = false,
-    this.compact = false,
   });
 
   final int timeSeconds;
   final bool improved;
   final int? points;
-
-  /// Seconds hints added to [timeSeconds]; shown under the time when any.
-  final int hintPenaltySeconds;
   final int? currentStreak;
   final int? longestStreak;
-  final bool celebrateMotion;
-  final bool compact;
-
-  @override
-  State<_ResultsCelebrationCard> createState() =>
-      _ResultsCelebrationCardState();
-}
-
-class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
-  var _showBurst = false;
-
-  void _onTimeLanded() {
-    if (!mounted || _showBurst) return;
-    context.read<HapticsService?>()?.play(HapticKind.light);
-    setState(() => _showBurst = true);
-  }
 
   @override
   Widget build(BuildContext context) {
-    final compact = widget.compact;
     final timeStyle = Theme.of(context).textTheme.displayLarge?.copyWith(
       color: ZipColors.ember,
       fontWeight: FontWeight.w900,
       letterSpacing: -2,
       height: 1,
-      fontSize: compact ? 64 : 72,
+      fontSize: 72,
       shadows: [
         Shadow(
           color: ZipColors.emberGlow.withValues(alpha: 0.75),
@@ -515,62 +535,16 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
         Shadow(color: ZipColors.ember.withValues(alpha: 0.35), blurRadius: 18),
       ],
     );
-
-    Widget timeWidget;
-    if (widget.celebrateMotion) {
-      timeWidget = SizedBox(
-        height: compact ? 88 : 108,
-        width: double.infinity,
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            if (_showBurst) const Positioned.fill(child: EmberBurst()),
-            CountingPlayTime(
-              timeSeconds: widget.timeSeconds,
-              style: timeStyle,
-              textAlign: TextAlign.center,
-              onCompleted: _onTimeLanded,
-            ),
-          ],
-        ),
-      );
-    } else {
-      timeWidget = Text(
-        AppStrings.formatPlayTime(widget.timeSeconds),
-        textAlign: TextAlign.center,
-        style: timeStyle,
-      );
-    }
-
-    Widget badgeWrap(Widget child, {required int delayMs}) {
-      if (!widget.celebrateMotion) return child;
-      return child
-          .animate()
-          .fadeIn(delay: delayMs.ms, duration: 350.ms)
-          .scale(
-            begin: const Offset(0.86, 0.86),
-            curve: Curves.easeOutBack,
-            duration: 420.ms,
-            delay: delayMs.ms,
-          );
-    }
-
-    final pbDelay = 520;
-    final streakDelay = widget.improved ? 600 : 520;
-    final hasBadges =
-        widget.improved ||
-        (widget.currentStreak != null && widget.currentStreak! > 0);
+    final streak = currentStreak;
+    final longest = longestStreak;
+    final hasBadges = improved || (streak != null && streak > 0);
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        vertical: compact ? 20 : 28,
-        horizontal: compact ? 16 : 24,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
       decoration: BoxDecoration(
         gradient: ZipColors.cardGradient,
-        borderRadius: BorderRadius.circular(compact ? 22 : 28),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: ZipColors.glassBorder),
         boxShadow: [
           BoxShadow(
@@ -583,8 +557,12 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          timeWidget,
-          SizedBox(height: compact ? 4 : 8),
+          Text(
+            AppStrings.formatPlayTime(timeSeconds),
+            textAlign: TextAlign.center,
+            style: timeStyle,
+          ),
+          const SizedBox(height: 8),
           Text(
             AppStrings.resultsTimeLabel,
             textAlign: TextAlign.center,
@@ -594,118 +572,65 @@ class _ResultsCelebrationCardState extends State<_ResultsCelebrationCard> {
               letterSpacing: latinTracking(2.5),
             ),
           ),
-          if (widget.hintPenaltySeconds > 0) ...[
-            SizedBox(height: compact ? 4 : 6),
-            HintPenaltyLine(seconds: widget.hintPenaltySeconds),
-          ],
-          if (widget.points != null) ...[
+          if (points != null) ...[
             const SizedBox(height: 18),
-            badgeWrap(
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0x14FFFFFF),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0x1AFFFFFF)),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      '${widget.points}',
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: ZipColors.onInk,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    Text(
-                      AppStrings.resultsPointsLabel,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: ZipColors.inkSoft,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0x14FFFFFF),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0x1AFFFFFF)),
               ),
-              delayMs: 520,
+              child: Column(
+                children: [
+                  Text(
+                    '$points',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: ZipColors.onInk,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    AppStrings.resultsPointsLabel,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: ZipColors.inkSoft,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
           if (hasBadges) ...[
-            SizedBox(height: compact ? 14 : 16),
+            const SizedBox(height: 16),
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (widget.improved)
-                  badgeWrap(
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 10 : 14,
-                        vertical: compact ? 6 : 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: ZipColors.successSoft,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: ZipColors.success.withValues(alpha: 0.4),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ZipColors.success.withValues(alpha: 0.25),
-                            blurRadius: 12,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const AppIcon(
-                            AppIcons.star,
-                            size: 18,
-                            color: ZipColors.success,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            AppStrings.newPersonalBest,
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  color: ZipColors.success,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    delayMs: pbDelay,
+                if (improved)
+                  ZipHudPill(
+                    icon: AppIcons.star,
+                    label: AppStrings.newPersonalBest,
+                    emphasize: true,
                   ),
-                if (widget.currentStreak != null && widget.currentStreak! > 0)
-                  badgeWrap(
-                    ZipHudPill(
-                      icon: AppIcons.streak,
-                      label: AppStrings.streakLabel(widget.currentStreak!),
-                      emphasize: true,
-                    ),
-                    delayMs: streakDelay,
+                if (streak != null && streak > 0)
+                  ZipHudPill(
+                    icon: AppIcons.streak,
+                    label: AppStrings.streakLabel(streak),
+                    emphasize: true,
                   ),
               ],
             ),
-            if (widget.longestStreak != null && widget.longestStreak! > 0) ...[
-              SizedBox(height: compact ? 6 : 8),
-              badgeWrap(
-                Text(
-                  AppStrings.longestStreakLabel(widget.longestStreak!),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelMedium?.copyWith(color: ZipColors.inkSoft),
-                ),
-                delayMs: streakDelay + 60,
+            if (longest != null && longest > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                AppStrings.longestStreakLabel(longest),
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(color: ZipColors.inkSoft),
               ),
             ],
           ],

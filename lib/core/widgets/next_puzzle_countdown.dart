@@ -15,6 +15,7 @@ class NextPuzzleCountdown extends StatefulWidget {
     this.clock = DateTime.now,
     this.style,
     this.textAlign,
+    this.maxLines = 1,
   });
 
   final Duration period;
@@ -26,6 +27,9 @@ class NextPuzzleCountdown extends StatefulWidget {
   final DateTime Function() clock;
   final TextStyle? style;
   final TextAlign? textAlign;
+
+  /// Lines before the text ellipsizes; long languages may want two.
+  final int maxLines;
 
   @override
   State<NextPuzzleCountdown> createState() => _NextPuzzleCountdownState();
@@ -75,7 +79,7 @@ class _NextPuzzleCountdownState extends State<NextPuzzleCountdown> {
       AppStrings.newPuzzleIn(_remaining),
       style: widget.style,
       textAlign: widget.textAlign,
-      maxLines: 1,
+      maxLines: widget.maxLines,
       overflow: TextOverflow.ellipsis,
     );
   }

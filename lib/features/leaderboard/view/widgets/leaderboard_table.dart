@@ -7,6 +7,7 @@ import '../../../../domain/entities/leaderboard_entry.dart';
 import '../../../../domain/entities/leaderboard_period.dart';
 import '../../logic/board_layout.dart';
 import 'leaderboard_badges.dart';
+import 'medal_coin.dart';
 
 /// A board row's height; the board's list uses it as its item extent.
 const double leaderboardTableRowHeight = 52;
@@ -115,6 +116,7 @@ class LeaderboardTableRow extends StatelessWidget {
     this.showDivider = true,
     this.gapSeconds,
     this.subtitle,
+    this.showMedals = false,
   });
 
   final LeaderboardEntry entry;
@@ -131,6 +133,10 @@ class LeaderboardTableRow extends StatelessWidget {
 
   /// A line under the name (the pinned row's "behind #N").
   final String? subtitle;
+
+  /// A medal instead of the number for ranks 1 to 3: the Results mini
+  /// board, which has no podium above its rows.
+  final bool showMedals;
 
   @override
   Widget build(BuildContext context) {
@@ -244,14 +250,20 @@ class LeaderboardTableRow extends StatelessWidget {
     );
   }
 
-  Widget _rank(BuildContext context) => Text(
-    '${entry.rank}',
-    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-      color: isYou ? ZipColors.ember : ZipColors.inkSoft,
-      fontWeight: FontWeight.w700,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    ),
-  );
+  Widget _rank(BuildContext context) {
+    final rank = entry.rank;
+    if (showMedals && rank >= 1 && rank <= leaderboardPodiumSize) {
+      return MedalCoin(rank: rank, size: 22);
+    }
+    return Text(
+      '$rank',
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: isYou ? ZipColors.ember : ZipColors.inkSoft,
+        fontWeight: FontWeight.w700,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
+  }
 
   Widget _name(BuildContext context) {
     final theme = Theme.of(context);

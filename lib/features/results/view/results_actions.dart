@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/dev_flags.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/zip_ui.dart';
@@ -57,13 +58,13 @@ class ResultsActions extends StatelessWidget {
     if (shared) await analytics.logShare(gameId: _gameId);
   }
 
-  static String _routeFor(String gameId) => switch (gameId) {
+  static String routeFor(String gameId) => switch (gameId) {
     GameIds.pathWords => '/path-words',
     GameIds.sudoku => '/sudoku',
     _ => '/zip',
   };
 
-  static String _titleFor(String gameId) => switch (gameId) {
+  static String titleFor(String gameId) => switch (gameId) {
     GameIds.pathWords => AppStrings.pathWordsTitle,
     GameIds.sudoku => AppStrings.sudokuTitle,
     _ => AppStrings.zipTitle,
@@ -78,26 +79,88 @@ class ResultsActions extends StatelessWidget {
       playId: PlayPeriod.id(DateTime.now(), DevFlags.playPeriod),
     );
 
-    // Compact, with home as an icon, so the live board above (which shares
-    // this Expanded) keeps room for its rows on small phones.
-    const compactPadding = EdgeInsets.symmetric(horizontal: 12, vertical: 10);
-    final compactStyle = OutlinedButton.styleFrom(padding: compactPadding);
+    Future<void> openBoard() async {
+      await _log(context, 'leaderboard');
+      if (!context.mounted) return;
+      context.go('/leaderboard?game=$_gameId');
+    }
+
+    Future<void> goHome() async {
+      await _log(context, 'home');
+      if (!context.mounted) return;
+      context.go('/');
+    }
+
+    final board = ResultsIconAction(
+      tooltip: AppStrings.resultsFullBoard,
+      icon: AppIcons.ranking,
+      onPressed: openBoard,
+    );
+    final home = ResultsIconAction(
+      tooltip: AppStrings.backHome,
+      icon: AppIcons.home,
+      onPressed: goHome,
+    );
+
+    // One row: icon buttons, then the main action. With nothing left to
+    // play, sharing the day is the main action.
+    final Widget bar;
+    if (next != null) {
+      bar = Row(
+        children: [
+          _OneAtATime(
+            onPressed: () => _share(context),
+            builder: (onPressed) => ResultsIconAction(
+              tooltip: AppStrings.shareResult,
+              icon: AppIcons.share,
+              onPressed: onPressed,
+            ),
+          ),
+          const SizedBox(width: 8),
+          board,
+          const SizedBox(width: 8),
+          home,
+          const SizedBox(width: 8),
+          Expanded(
+            child: _FittedPrimary(
+              label: AppStrings.playNextGame(titleFor(next)),
+              shortLabel: titleFor(next),
+              icon: AppIcons.play,
+              onPressed: () async {
+                await _log(context, 'play_next');
+                if (!context.mounted) return;
+                context.pushReplacement(routeFor(next));
+              },
+            ),
+          ),
+        ],
+      );
+    } else {
+      bar = Row(
+        children: [
+          board,
+          const SizedBox(width: 8),
+          home,
+          const SizedBox(width: 8),
+          Expanded(
+            child: _OneAtATime(
+              onPressed: () => _share(context),
+              builder: (onPressed) => ZipPrimaryButton(
+                label: AppStrings.shareResult,
+                icon: AppIcons.share,
+                compact: true,
+                onPressed: onPressed,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (next != null)
-          ZipPrimaryButton(
-            label: AppStrings.playNextGame(_titleFor(next)),
-            icon: AppIcons.play,
-            compact: true,
-            onPressed: () async {
-              await _log(context, 'play_next');
-              if (!context.mounted) return;
-              context.pushReplacement(_routeFor(next));
-            },
-          )
-        else
+        if (next == null) ...[
           Text(
             AppStrings.perfectDay,
             textAlign: TextAlign.center,
@@ -106,71 +169,58 @@ class ResultsActions extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _OneAtATimeButton(
-                style: compactStyle,
-                onPressed: () => _share(context),
-                icon: AppIcons.share,
-                label: AppStrings.shareResult,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                style: compactStyle,
-                onPressed: () async {
-                  await _log(context, 'leaderboard');
-                  if (!context.mounted) return;
-                  context.go('/leaderboard?game=$_gameId');
-                },
-                icon: const AppIcon(AppIcons.ranking),
-                label: Text(
-                  AppStrings.resultsFullBoard,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.outlined(
-              tooltip: AppStrings.backHome,
-              onPressed: () async {
-                await _log(context, 'home');
-                if (!context.mounted) return;
-                context.go('/');
-              },
-              icon: const AppIcon(AppIcons.home),
-            ),
-          ],
-        ),
+          const SizedBox(height: 8),
+        ],
+        bar,
       ],
     );
   }
 }
 
-/// An outlined button that ignores taps until its last press finishes, so a
-/// double tap can't open the share sheet twice.
-class _OneAtATimeButton extends StatefulWidget {
-  const _OneAtATimeButton({
-    required this.style,
-    required this.onPressed,
+/// A 46 dp outlined icon button of the Results action bar.
+class ResultsIconAction extends StatelessWidget {
+  const ResultsIconAction({
+    super.key,
+    required this.tooltip,
     required this.icon,
-    required this.label,
+    required this.onPressed,
   });
 
-  final ButtonStyle style;
-  final Future<void> Function() onPressed;
+  final String tooltip;
   final IconData icon;
-  final String label;
+  final VoidCallback? onPressed;
+
+  /// Each icon button's side, and so the bar's height.
+  static const double size = 46;
 
   @override
-  State<_OneAtATimeButton> createState() => _OneAtATimeButtonState();
+  Widget build(BuildContext context) {
+    return IconButton.outlined(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        fixedSize: const Size.square(size),
+        minimumSize: const Size.square(size),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      icon: AppIcon(icon, size: 20),
+    );
+  }
 }
 
-class _OneAtATimeButtonState extends State<_OneAtATimeButton> {
+/// Builds a button that ignores taps until its last press finishes, so a
+/// double tap can't open the share sheet twice.
+class _OneAtATime extends StatefulWidget {
+  const _OneAtATime({required this.onPressed, required this.builder});
+
+  final Future<void> Function() onPressed;
+  final Widget Function(VoidCallback? onPressed) builder;
+
+  @override
+  State<_OneAtATime> createState() => _OneAtATimeState();
+}
+
+class _OneAtATimeState extends State<_OneAtATime> {
   var _busy = false;
 
   Future<void> _press() async {
@@ -183,12 +233,60 @@ class _OneAtATimeButtonState extends State<_OneAtATimeButton> {
   }
 
   @override
+  Widget build(BuildContext context) => widget.builder(_busy ? null : _press);
+}
+
+/// The main button, with [shortLabel] when [label] won't fit on one line
+/// beside the icon buttons ("Play Path Words next" on a 360 dp phone).
+class _FittedPrimary extends StatelessWidget {
+  const _FittedPrimary({
+    required this.label,
+    required this.shortLabel,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final String shortLabel;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      style: widget.style,
-      onPressed: _busy ? null : _press,
-      icon: AppIcon(widget.icon),
-      label: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = AppLayout.of(context);
+        // ZipPrimaryButton's compact label.
+        final style =
+            (Theme.of(context).textTheme.labelLarge ?? const TextStyle())
+                .copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 0.2,
+                );
+        final painter = TextPainter(
+          text: TextSpan(text: label, style: style),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: 1,
+        )..layout();
+        // Less the compact button's padding, icon and gap, and a little for
+        // its border.
+        final room =
+            constraints.maxWidth -
+            layout.compactButtonPadding.horizontal -
+            layout.space(18) -
+            layout.space(6) -
+            4;
+        final fits = painter.width <= room;
+        painter.dispose();
+        return ZipPrimaryButton(
+          label: fits ? label : shortLabel,
+          icon: icon,
+          compact: true,
+          onPressed: onPressed,
+        );
+      },
     );
   }
 }

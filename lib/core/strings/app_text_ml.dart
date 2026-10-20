@@ -403,6 +403,26 @@ final class AppTextMl implements AppText {
   String get resultsBoardTeaseHint =>
       'ഇന്നത്തെ ബോർഡ് ലൈവാണ് — സമയം സേവ് ചെയ്ത് ചേരാൻ തൊടൂ.';
 
+  @override
+  String resultsRankOfToday(int total, {bool capped = false}) =>
+      '$total${capped ? '+' : ''} പേരിൽ';
+
+  @override
+  String resultsRankSemantics(int rank, int total, {bool capped = false}) =>
+      'ഇന്ന് $total${capped ? '+' : ''} പേരിൽ $rank-ാം സ്ഥാനം';
+
+  @override
+  String resultsHintTimeTile(int seconds) => '+${seconds}s';
+
+  @override
+  String get resultsFromHints => 'സൂചനകൾ';
+
+  @override
+  String get resultsBoardTab => 'ബോർഡ്';
+
+  @override
+  String resultsWordsTab(int count) => 'വാക്കുകൾ · $count';
+
   // Zip game branding (feature, not app title)
   @override
   String get zipBrand => 'ZIP';

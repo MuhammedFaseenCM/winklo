@@ -121,4 +121,124 @@ void main() {
     expect(uids, ['a', 'b', 'c', 'd', 'g', 'h', 'i']);
     expect(ranks, [1, 2, 2, 3, 'gap', 10, 11, 12]);
   });
+
+  List<int?> ranksOf(List<MiniLeaderboardItem> items) => [
+    for (final item in items)
+      switch (item) {
+        MiniLeaderboardEntryItem(:final entry) => entry.rank,
+        MiniLeaderboardGap() => null,
+      },
+  ];
+
+  group('fitLeaderboardForMini', () {
+    test('room for everyone shows everyone, no gap', () {
+      final items = fitLeaderboardForMini(
+        entries: board(6),
+        currentUid: 'uid5',
+        maxRows: 8,
+      );
+      expect(ranksOf(items), [1, 2, 3, 4, 5, 6]);
+    });
+
+    test('mid-board: podium, gap, then neighbours above first', () {
+      final items = fitLeaderboardForMini(
+        entries: board(18),
+        currentUid: 'uid14',
+        maxRows: 8,
+      );
+      // 3 podium + you + 4 neighbours: 12, 13 above; 15, 16 below.
+      expect(ranksOf(items), [1, 2, 3, null, 12, 13, 14, 15, 16]);
+    });
+
+    test('an odd slot goes above', () {
+      final items = fitLeaderboardForMini(
+        entries: board(18),
+        currentUid: 'uid14',
+        maxRows: 7,
+      );
+      expect(ranksOf(items), [1, 2, 3, null, 12, 13, 14, 15]);
+    });
+
+    test('last place takes every slot above', () {
+      final items = fitLeaderboardForMini(
+        entries: board(18),
+        currentUid: 'uid18',
+        maxRows: 6,
+      );
+      expect(ranksOf(items), [1, 2, 3, null, 16, 17, 18]);
+    });
+
+    test('next to the podium there is no gap', () {
+      final items = fitLeaderboardForMini(
+        entries: board(18),
+        currentUid: 'uid5',
+        maxRows: 7,
+      );
+      expect(ranksOf(items), [1, 2, 3, 4, 5, 6, 7]);
+    });
+
+    test('on the podium, or off the board: the top rows', () {
+      expect(
+        ranksOf(
+          fitLeaderboardForMini(
+            entries: board(18),
+            currentUid: 'uid2',
+            maxRows: 5,
+          ),
+        ),
+        [1, 2, 3, 4, 5],
+      );
+      expect(
+        ranksOf(
+          fitLeaderboardForMini(
+            entries: board(18),
+            currentUid: 'missing',
+            maxRows: 5,
+          ),
+        ),
+        [1, 2, 3, 4, 5],
+      );
+    });
+
+    test('too little room still keeps the podium and you', () {
+      final items = fitLeaderboardForMini(
+        entries: board(18),
+        currentUid: 'uid14',
+        maxRows: 2,
+      );
+      expect(ranksOf(items), [1, 2, 3, null, 14]);
+    });
+
+    test('a short board keeps its own size', () {
+      final items = fitLeaderboardForMini(
+        entries: board(2),
+        currentUid: 'uid2',
+        maxRows: 8,
+      );
+      expect(ranksOf(items), [1, 2]);
+    });
+
+    test('a tie on the podium keeps every medal', () {
+      final entries = [
+        e(rank: 1, uid: 'a'),
+        e(rank: 2, uid: 'b'),
+        e(rank: 2, uid: 'c'),
+        e(rank: 3, uid: 'd'),
+        for (var r = 4; r <= 12; r++) e(rank: r, uid: 'u$r'),
+      ];
+      final items = fitLeaderboardForMini(
+        entries: entries,
+        currentUid: 'u10',
+        maxRows: 7,
+      );
+      expect(ranksOf(items), [1, 2, 2, 3, null, 9, 10, 11]);
+    });
+
+    test('an empty board has no rows', () {
+      expect(
+        fitLeaderboardForMini(entries: const [], currentUid: 'x', maxRows: 5),
+        isEmpty,
+      );
+    });
+  });
 }

@@ -169,6 +169,18 @@ abstract final class AppStrings {
   static String get saveTimeSignInTitle => _t.saveTimeSignInTitle;
   static String get saveTimeSignInBody => _t.saveTimeSignInBody;
   static String get resultsBoardTeaseHint => _t.resultsBoardTeaseHint;
+  static String resultsRankOfToday(int total, {bool capped = false}) =>
+      _t.resultsRankOfToday(total, capped: capped);
+  static String resultsRankSemantics(
+    int rank,
+    int total, {
+    bool capped = false,
+  }) => _t.resultsRankSemantics(rank, total, capped: capped);
+  static String resultsHintTimeTile(int seconds) =>
+      _t.resultsHintTimeTile(seconds);
+  static String get resultsFromHints => _t.resultsFromHints;
+  static String get resultsBoardTab => _t.resultsBoardTab;
+  static String resultsWordsTab(int count) => _t.resultsWordsTab(count);
 
   // Zip game branding (feature, not app title)
   static String get zipBrand => _t.zipBrand;

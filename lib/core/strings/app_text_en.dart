@@ -371,6 +371,26 @@ final class AppTextEn implements AppText {
   String get resultsBoardTeaseHint =>
       'Today’s board is live — tap to save your time and join.';
 
+  @override
+  String resultsRankOfToday(int total, {bool capped = false}) =>
+      'of $total${capped ? '+' : ''} today';
+
+  @override
+  String resultsRankSemantics(int rank, int total, {bool capped = false}) =>
+      'Rank $rank of $total${capped ? '+' : ''} today';
+
+  @override
+  String resultsHintTimeTile(int seconds) => '+${seconds}s';
+
+  @override
+  String get resultsFromHints => 'from hints';
+
+  @override
+  String get resultsBoardTab => 'Board';
+
+  @override
+  String resultsWordsTab(int count) => 'Words · $count';
+
   // Zip game branding (feature, not app title)
   @override
   String get zipBrand => 'ZIP';
