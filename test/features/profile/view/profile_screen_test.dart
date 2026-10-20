@@ -12,6 +12,7 @@ import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
+import 'package:winklo/domain/repositories/app_review_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/external_link_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
@@ -30,6 +31,7 @@ import 'package:winklo/features/profile/view/widgets/profile_settings_entry.dart
 import 'package:winklo/features/profile/view/widgets/profile_signed_out_mock.dart';
 import 'package:winklo/features/profile/view/widgets/profile_shimmer.dart';
 import '../../../helpers/mock_analytics_repository.dart';
+import '../../../helpers/mock_app_review_repository.dart';
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -65,6 +67,7 @@ void main() {
   late _MockSfxSettingsRepository sfxSettings;
   late SfxService sfx;
   late _MockExternalLinkRepository links;
+  late MockAppReviewRepository review;
   final deletionPage = Uri.parse(AppUrls.accountDeletion);
 
   setUpAll(() => registerFallbackValue(Uri()));
@@ -84,6 +87,10 @@ void main() {
     when(() => sfxSettings.isEnabled).thenReturn(true);
     when(() => sfxSettings.setEnabled(any())).thenAnswer((_) async {});
     sfx = SfxService(settings: sfxSettings);
+    review = MockAppReviewRepository();
+    when(
+      () => review.openStoreListing(),
+    ).thenAnswer((_) async => ReviewOutcome.store);
   });
 
   List<RepositoryProvider<dynamic>> profileProviders() => [
@@ -97,6 +104,7 @@ void main() {
     RepositoryProvider<SignOut>.value(value: signOut),
     RepositoryProvider<SfxService>.value(value: sfx),
     RepositoryProvider<ExternalLinkRepository>.value(value: links),
+    RepositoryProvider<AppReviewRepository>.value(value: review),
   ];
 
   Future<void> pumpProfile(WidgetTester tester, {AppUser? signedIn}) async {
@@ -291,6 +299,35 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.deleteAccountOpenFailed), findsOneWidget);
+  });
+
+  // Play's in-app card is quota-limited and reports success even when it
+  // shows nothing, so a button must go straight to the store listing.
+  testWidgets('rate row opens the store listing, not the in-app card', (
+    tester,
+  ) async {
+    await pumpProfile(tester, signedIn: user);
+
+    await tester.tap(find.text(AppStrings.profileRateOnPlayStore));
+    await tester.pumpAndSettle();
+
+    verify(() => review.openStoreListing()).called(1);
+    verifyNever(() => review.requestReviewOrOpenStore());
+    verify(
+      () => analytics.logReviewPrompt(source: 'profile', outcome: 'store'),
+    ).called(1);
+  });
+
+  testWidgets('rate row says so when the store cannot open', (tester) async {
+    when(
+      () => review.openStoreListing(),
+    ).thenAnswer((_) async => ReviewOutcome.failed);
+    await pumpProfile(tester, signedIn: user);
+
+    await tester.tap(find.text(AppStrings.profileRateOnPlayStore));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.reviewOpenStoreFailed), findsOneWidget);
   });
 
   testWidgets('auth unknown shows ProfileShimmer not sign-in CTA', (

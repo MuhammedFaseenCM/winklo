@@ -151,7 +151,7 @@ class _SignedInBodyState extends State<_SignedInBody> {
   Future<void> _rateOnPlayStore(BuildContext context) async {
     final review = context.read<AppReviewRepository>();
     final analytics = context.read<AnalyticsRepository>();
-    final outcome = await review.requestReviewOrOpenStore();
+    final outcome = await review.openStoreListing();
     await analytics.logReviewPrompt(
       source: 'profile',
       outcome: switch (outcome) {
