@@ -137,6 +137,23 @@ abstract interface class AppText {
   String get saveTimeSignInBody;
   String get resultsBoardTeaseHint;
 
+  /// "of 18 today" under the rank on Results; "of 50+ today" when the board
+  /// filled its row limit.
+  String resultsRankOfToday(int total, {bool capped = false});
+
+  /// "Rank 14 of 18 today", read for the rank badge.
+  String resultsRankSemantics(int rank, int total, {bool capped = false});
+
+  /// "+20s", the time hints added, on a Results tile.
+  String resultsHintTimeTile(int seconds);
+
+  /// "from hints", under [resultsHintTimeTile].
+  String get resultsFromHints;
+
+  /// The two sides of the Board | Words switch on a Path Words result.
+  String get resultsBoardTab;
+  String resultsWordsTab(int count);
+
   // Zip game branding (feature, not app title)
   String get zipBrand;
   String streakLabel(int days);

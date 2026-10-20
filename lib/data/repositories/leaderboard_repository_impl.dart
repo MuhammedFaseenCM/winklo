@@ -439,7 +439,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     return collection
         .orderBy('timeSeconds')
         .orderBy('updatedAt')
-        .limit(50)
+        .limit(leaderboardDailyLimit)
         .snapshots()
         .map((snap) => _mapRows(period, snap));
   }

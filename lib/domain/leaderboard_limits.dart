@@ -14,6 +14,10 @@ const leaderboardMinSeconds = <String, int>{
 /// Slowest clear the Worker accepts: one day.
 const leaderboardMaxSeconds = 86400;
 
+/// The most rows a daily board query returns; a board this long may have
+/// more players than it shows.
+const leaderboardDailyLimit = 50;
+
 /// Whether a [timeSeconds] clear of [gameId] can go on a board at all.
 bool leaderboardAcceptsTime(String gameId, int timeSeconds) {
   final min = leaderboardMinSeconds[gameId];

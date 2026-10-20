@@ -106,6 +106,12 @@ final Map<String, String Function(AppText)> _members = {
   'saveTimeSignInTitle': (t) => t.saveTimeSignInTitle,
   'saveTimeSignInBody': (t) => t.saveTimeSignInBody,
   'resultsBoardTeaseHint': (t) => t.resultsBoardTeaseHint,
+  'resultsRankOfToday': (t) => t.resultsRankOfToday(18),
+  'resultsRankSemantics': (t) => t.resultsRankSemantics(14, 18),
+  'resultsHintTimeTile': (t) => t.resultsHintTimeTile(20),
+  'resultsFromHints': (t) => t.resultsFromHints,
+  'resultsBoardTab': (t) => t.resultsBoardTab,
+  'resultsWordsTab': (t) => t.resultsWordsTab(5),
   'zipBrand': (t) => t.zipBrand,
   'statsTitle': (t) => t.statsTitle,
   'statsProfileRow': (t) => t.statsProfileRow,
@@ -505,6 +511,8 @@ const _sameInEveryLanguage = {
   'bonusSecondsLeft',
   'languageEnglish',
   'languageMalayalam',
+  // "+20s": the number and unit read the same in both.
+  'resultsHintTimeTile',
 };
 
 final _malayalamScript = RegExp('[\u0D00-\u0D7F]');
@@ -527,6 +535,12 @@ void main() {
       expect(value(en).trim(), isNotEmpty, reason: 'en $key');
       expect(value(ml).trim(), isNotEmpty, reason: 'ml $key');
     }
+  });
+
+  test('a capped board reads "+" after the total', () {
+    expect(en.resultsRankOfToday(50, capped: true), 'of 50+ today');
+    expect(ml.resultsRankOfToday(50, capped: true), contains('50+'));
+    expect(en.resultsRankSemantics(3, 50, capped: true), contains('50+'));
   });
 
   test('Malayalam differs from English, except the allowlist', () {
