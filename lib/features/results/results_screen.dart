@@ -232,15 +232,23 @@ class _CelebrateAndClaimResults extends StatelessWidget {
                   ? LayoutBuilder(
                       builder: (context, constraints) {
                         final height = constraints.maxHeight;
-                        final board = MiniLeaderboardPanel(
-                          gameId: gameId,
-                          timeSeconds: args.timeSeconds,
-                          usedHints: args.usedHints,
-                          hadMistakes: args.hadMistakes,
-                          currentStreak: args.currentStreak,
-                          footer: ResultsActions(args: args),
-                          dayId: args.leaderboardDay,
-                          leaderboardProof: args.leaderboardProof,
+                        final board = Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: MiniLeaderboardPanel(
+                                gameId: gameId,
+                                timeSeconds: args.timeSeconds,
+                                usedHints: args.usedHints,
+                                hadMistakes: args.hadMistakes,
+                                currentStreak: args.currentStreak,
+                                dayId: args.leaderboardDay,
+                                leaderboardProof: args.leaderboardProof,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ResultsActions(args: args),
+                          ],
                         );
                         if (height < _minHeaderHeight + 12 + _minBoardHeight) {
                           // Sideways or split screen: no room for both, so the

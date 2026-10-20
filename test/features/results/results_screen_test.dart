@@ -24,6 +24,8 @@ import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/watch_leaderboard.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+import 'package:winklo/features/leaderboard/view/widgets/leaderboard_table.dart';
+import 'package:winklo/features/leaderboard/view/widgets/medal_coin.dart';
 import 'package:winklo/features/results/results_args.dart';
 import 'package:winklo/features/results/results_screen.dart';
 import 'package:winklo/features/results/view/mini_leaderboard_panel.dart';
@@ -496,8 +498,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ada'), findsOneWidget);
-    expect(find.text(AppStrings.seeFullLeaderboard), findsOneWidget);
-    expect(find.text(AppStrings.backHome), findsOneWidget);
+    expect(find.byType(LeaderboardTableRow), findsOneWidget);
+    expect(find.byType(MedalCoin), findsOneWidget);
+    // The page's action bar is the footer now; the panel is the board only.
+    expect(find.text(AppStrings.seeFullLeaderboard), findsNothing);
     expect(find.text('points'), findsNothing);
   });
 
