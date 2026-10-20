@@ -129,6 +129,19 @@ flutter:
     # and its licence.
     - assets/google_fonts/
 
+  # Phosphor icons (MIT, v2.1, licence beside them): drawn through AppIcons.
+  # Vendored because phosphor_flutter subclasses IconData, which is final.
+  fonts:
+    - family: PhosphorDuotone
+      fonts:
+        - asset: assets/fonts/phosphor/Phosphor-Duotone.ttf
+    - family: PhosphorFill
+      fonts:
+        - asset: assets/fonts/phosphor/Phosphor-Fill.ttf
+    - family: PhosphorRegular
+      fonts:
+        - asset: assets/fonts/phosphor/Phosphor.ttf
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

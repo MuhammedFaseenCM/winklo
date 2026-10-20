@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// without overflow. With `WINKLO_SCREENSHOTS=1` in the environment they also
 /// write a PNG to `build/screenshots/` (readable text: Roboto stands in for
 /// Lexend, the bundled Noto Sans Malayalam is loaded, and so are the
-/// Material icons).
+/// Material and Phosphor icons).
 bool get writeScreenshots => Platform.environment['WINKLO_SCREENSHOTS'] == '1';
 
 /// Loads Roboto under the Lexend family names google_fonts uses, and the
@@ -33,6 +33,15 @@ Future<void> loadScreenshotFonts() async {
   await loadFiles('NotoSansMalayalam_700', [
     'assets/google_fonts/NotoSansMalayalam-Bold.ttf',
   ]);
+
+  // The vendored Phosphor icon fonts (pubspec.yaml's `fonts:`).
+  for (final (family, file) in [
+    ('PhosphorDuotone', 'Phosphor-Duotone.ttf'),
+    ('PhosphorFill', 'Phosphor-Fill.ttf'),
+    ('PhosphorRegular', 'Phosphor.ttf'),
+  ]) {
+    await loadFiles(family, ['assets/fonts/phosphor/$file']);
+  }
 
   final fonts = _materialFontsDir();
   if (fonts == null) return;

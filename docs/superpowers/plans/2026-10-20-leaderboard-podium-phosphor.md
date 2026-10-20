@@ -12,6 +12,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-20-leaderboard-podium-phosphor-design.md`
 
+> **Execution note (2026-10-20):** `phosphor_flutter` 2.1.0 doesn't compile on Flutter 3.44, because `IconData` is now `final`. Task 1 instead vendors the Phosphor 2.1 TTFs into `assets/fonts/phosphor/` and generates `AppIcons` as `const IconData(codepoint, fontFamily: 'PhosphorDuotone')` entries. It adds a const outline→fill table read through `AppIcons.duotoneFill(icon)`; `AppIcon` uses that instead of `PhosphorDuotoneIconData`. The screenshot helper loads the fonts from `assets/fonts/phosphor/`. Later tasks are unchanged.
+
 **House rules for every task:**
 - Run `dart format` on the files you touched only, never `lib`/`test` wholesale.
 - Never run a filtered `build_runner`.

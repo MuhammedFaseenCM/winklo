@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../strings/app_strings.dart';
+import '../widgets/app_icon.dart';
+import 'app_icons.dart';
 
 /// Dark Ink & Ember — canvas matches app icon ink; ember path accent.
 abstract final class ZipColors {
@@ -130,6 +132,11 @@ ThemeData buildAppTheme() {
     useMaterial3: true,
     brightness: Brightness.dark,
     scaffoldBackgroundColor: ZipColors.ink,
+    // BackButton / CloseButton draw Phosphor like the rest of the app.
+    actionIconTheme: ActionIconThemeData(
+      backButtonIconBuilder: (context) => const AppIcon(AppIcons.back),
+      closeButtonIconBuilder: (context) => const AppIcon(AppIcons.close),
+    ),
   );
 
   final textTheme = GoogleFonts.lexendTextTheme(

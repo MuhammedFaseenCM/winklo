@@ -24,19 +24,18 @@ Mockups: `.superpowers/brainstorm/37245-1792507142/content/final-design.html` (g
 
 ### Package and icon map
 
-- Add `phosphor_flutter: ^2.1.0`. It ships Phosphor 2.1, including duotone, and its `IconData` consts can be tree-shaken.
-- New `lib/core/theme/app_icons.dart` holds `abstract final class AppIcons`. It is the only file that imports Phosphor's icon classes. It has one `static const IconData` per meaning, for example `AppIcons.trophy`, `AppIcons.streak`, `AppIcons.noHints`, `AppIcons.back` and `AppIcons.chevronRight`. Every other file uses `AppIcons.*` and never uses `Icons.*` or `PhosphorIcons*` directly.
+- **The Phosphor 2.1 fonts are vendored** (duotone, fill and regular, MIT licence) in `assets/fonts/phosphor/` and declared in `pubspec.yaml`'s `fonts:`. We don't depend on `phosphor_flutter`: 2.1.0 is its latest release, and it no longer compiles, because its icon classes extend `IconData`, which became `final` in our Flutter (3.44). Every glyph is a plain `const IconData(codepoint, fontFamily: 'PhosphorDuotone')`, so release builds still tree-shake the fonts.
+- New `lib/core/theme/app_icons.dart` holds `abstract final class AppIcons`. It has one `static const IconData` per meaning, for example `AppIcons.trophy`, `AppIcons.streak`, `AppIcons.noHints`, `AppIcons.back` and `AppIcons.chevronRight`. It also has a const table from each duotone outline to its fill layer (`AppIcons.duotoneFill(icon)`). The fill isn't at a fixed codepoint offset, so the table is explicit. Every other file uses `AppIcons.*` and never uses `Icons.*`.
 - **Style.** Duotone by default. A few `*Fill` entries cover selected states: the nav dock's active tab, and filled versus empty stars. Phosphor's regular style is used only where a thin outline reads better at 12–14px, such as the caret in the picker pills.
 
 ### `AppIcon` widget
 
 New `lib/core/widgets/app_icon.dart` holds `AppIcon(IconData icon, {size, color, semanticLabel})`.
 
-- For a `PhosphorDuotoneIconData`, it stacks the secondary layer, then the primary glyph:
+- For a duotone glyph (`AppIcons.duotoneFill(icon) != null`), it stacks the fill layer, then the outline:
   - The secondary layer is the resolved color (explicit, or else `IconTheme`) at 22% opacity, applied as color alpha. It uses no `Opacity` widget, so no `saveLayer` is needed. It sits inside `ExcludeSemantics`, so screen readers announce the icon once.
   - The primary glyph is a plain `Icon(icon, …)`.
 - Any other `IconData` (fill or regular) renders as a plain `Icon`.
-- We don't use Phosphor's own `PhosphorIcon`. It wraps the second layer in `Opacity` and passes `semanticLabel` and `key` to both layers.
 - Tests can still use `find.byIcon(AppIcons.x)`, because the primary layer is an `Icon` whose `icon` is the duotone `IconData`.
 
 ### Migration
@@ -70,7 +69,7 @@ New `lib/core/widgets/app_icon.dart` holds `AppIcon(IconData icon, {size, color,
 
 ### Test harness
 
-- `test/helpers/screenshot.dart` loads the Phosphor duotone, fill and regular TTFs from the package, as it already does for Material Icons. Screenshots then show real glyphs.
+- `test/helpers/screenshot.dart` loads the three vendored Phosphor TTFs, as it already does for Material Icons. Screenshots then show real glyphs.
 
 ## Part 2: Leaderboard redesign
 
