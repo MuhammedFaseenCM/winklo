@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_layout.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/centered_message_body.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/achievements/achievement.dart';
@@ -347,7 +349,7 @@ class _SpecialRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         if (unlocked)
-          const Icon(Icons.check_circle_rounded, color: ZipColors.ember)
+          const AppIcon(AppIcons.checkCircle, color: ZipColors.ember)
         else
           const SizedBox(width: 24),
       ],

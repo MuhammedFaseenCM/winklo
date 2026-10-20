@@ -7,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/lifecycle/progress_change_signal.dart';
 import '../../../../core/lifecycle/progress_sync_lifecycle.dart';
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/usecases/load_game_history.dart';
 import '../../../achievements/view/badges_summary_card.dart';
 import '../../../stats/cubit/stats_cubit.dart';
@@ -51,10 +53,7 @@ class _ProfileStatsBody extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: ListTile(
-              leading: const Icon(
-                Icons.insights_rounded,
-                color: ZipColors.ember,
-              ),
+              leading: const AppIcon(AppIcons.insights, color: ZipColors.ember),
               title: Text(
                 AppStrings.statsProfileRow,
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -68,8 +67,8 @@ class _ProfileStatsBody extends StatelessWidget {
                   color: ZipColors.inkSoft,
                 ),
               ),
-              trailing: const Icon(
-                Icons.chevron_right,
+              trailing: const AppIcon(
+                AppIcons.chevronRight,
                 color: ZipColors.inkSoft,
               ),
               onTap: () => context.push('/profile/stats'),

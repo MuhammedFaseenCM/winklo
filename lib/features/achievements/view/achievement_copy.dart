@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../domain/achievements/achievement.dart';
 import '../../../domain/game_ids.dart';
 
@@ -45,13 +46,13 @@ String achievementCondition(Achievement a) => switch (a.kind) {
 
 IconData achievementIcon(Achievement a) => switch (a.kind) {
   AchievementKind.firstClear => switch (a.gameId) {
-    GameIds.pathWords => Icons.route_rounded,
-    GameIds.sudoku => Icons.grid_on_rounded,
-    _ => Icons.bolt_rounded,
+    GameIds.pathWords => AppIcons.path,
+    GameIds.sudoku => AppIcons.grid,
+    _ => AppIcons.lightning,
   },
-  AchievementKind.streak => Icons.local_fire_department_rounded,
-  AchievementKind.zipUnderMinute => Icons.timer_rounded,
-  AchievementKind.hintFreeWeek => Icons.lightbulb_outline_rounded,
-  AchievementKind.flawlessSudokus => Icons.auto_awesome_rounded,
-  AchievementKind.perfectDay => Icons.wb_sunny_rounded,
+  AchievementKind.streak => AppIcons.streak,
+  AchievementKind.zipUnderMinute => AppIcons.timer,
+  AchievementKind.hintFreeWeek => AppIcons.noHints,
+  AchievementKind.flawlessSudokus => AppIcons.sparkle,
+  AchievementKind.perfectDay => AppIcons.sun,
 };

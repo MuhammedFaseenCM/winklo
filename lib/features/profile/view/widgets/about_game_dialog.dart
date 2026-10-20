@@ -5,7 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/zip_ui.dart';
 import '../../../../domain/repositories/analytics_repository.dart';
 
@@ -95,7 +97,7 @@ class _AboutGameSheet extends StatelessWidget {
               _AboutGameCard(
                 title: AppStrings.zipTitle,
                 description: AppStrings.zipTagline,
-                icon: Icons.bolt_rounded,
+                icon: AppIcons.lightning,
                 accent: ZipColors.ember,
                 accentSoft: ZipColors.emberSoft,
                 gradient: ZipColors.emberGradient,
@@ -104,7 +106,7 @@ class _AboutGameSheet extends StatelessWidget {
               _AboutGameCard(
                 title: AppStrings.pathWordsTitle,
                 description: AppStrings.pathWordsTagline,
-                icon: Icons.route_rounded,
+                icon: AppIcons.path,
                 accent: ZipColors.sky,
                 accentSoft: ZipColors.skySoft,
                 gradient: ZipColors.skyGradient,
@@ -113,7 +115,7 @@ class _AboutGameSheet extends StatelessWidget {
               _AboutGameCard(
                 title: AppStrings.sudokuTitle,
                 description: AppStrings.sudokuTagline,
-                icon: Icons.grid_on_rounded,
+                icon: AppIcons.grid,
                 accent: ZipColors.success,
                 accentSoft: ZipColors.successSoft,
                 gradient: ZipColors.successGradient,
@@ -226,7 +228,7 @@ class _AboutGameCard extends StatelessWidget {
                             color: accent.withValues(alpha: 0.35),
                           ),
                         ),
-                        child: Icon(icon, color: accent, size: 22),
+                        child: AppIcon(icon, color: accent, size: 22),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/strings/app_strings.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 /// A titled card of setting rows, in the style of Profile's list.
 class SettingsSection extends StatelessWidget {
@@ -100,7 +101,7 @@ class SettingsSwitchRow extends StatelessWidget {
     return SwitchListTile.adaptive(
       value: value,
       onChanged: onChanged,
-      secondary: Icon(icon, color: ZipColors.teal),
+      secondary: AppIcon(icon, color: ZipColors.teal),
       title: Text(
         title,
         style: textTheme.titleSmall?.copyWith(

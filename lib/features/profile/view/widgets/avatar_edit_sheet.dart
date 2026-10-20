@@ -6,7 +6,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/user_avatar.dart';
 import '../../../../domain/avatars/avatar_catalog.dart';
 import '../../cubit/profile_cubit.dart';
@@ -110,7 +112,7 @@ class AvatarEditSheet extends StatelessWidget {
                   onPressed: isSaving
                       ? null
                       : () => unawaited(_pickPhoto(context)),
-                  icon: const Icon(Icons.photo_library_outlined, size: 18),
+                  icon: const AppIcon(AppIcons.photos, size: 18),
                   label: Text(AppStrings.profileChoosePhoto),
                 ),
               ],
@@ -217,8 +219,8 @@ class _PresetTile extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     padding: const EdgeInsets.all(3),
-                    child: const Icon(
-                      Icons.check,
+                    child: const AppIcon(
+                      AppIcons.check,
                       size: 11,
                       color: ZipColors.onInk,
                     ),

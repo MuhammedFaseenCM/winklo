@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/centered_message_body.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../../core/widgets/zip_ui.dart';
@@ -122,7 +124,7 @@ class _LeagueDetailView extends StatelessWidget {
               ? IconButton(
                   tooltip: AppStrings.leagueRename,
                   onPressed: state.busy ? null : () => _rename(context, league),
-                  icon: const Icon(Icons.edit_rounded, color: ZipColors.onInk),
+                  icon: const AppIcon(AppIcons.edit, color: ZipColors.onInk),
                 )
               : null,
           child: switch (state.status) {
@@ -179,12 +181,12 @@ class _LeagueDetailView extends StatelessWidget {
                 children: [
                   FilledButton.icon(
                     onPressed: () => _share(context, league),
-                    icon: const Icon(Icons.share_rounded),
+                    icon: const AppIcon(AppIcons.share),
                     label: Text(AppStrings.leagueShareInvite),
                   ),
                   OutlinedButton.icon(
                     onPressed: () => _copyCode(context, league),
-                    icon: const Icon(Icons.copy_rounded),
+                    icon: const AppIcon(AppIcons.copy),
                     label: Text(AppStrings.leagueCopyCode),
                   ),
                 ],
@@ -195,7 +197,7 @@ class _LeagueDetailView extends StatelessWidget {
         const SizedBox(height: 12),
         ZipPrimaryButton(
           label: AppStrings.leagueSeeBoard,
-          icon: Icons.emoji_events_rounded,
+          icon: AppIcons.trophy,
           onPressed: () => context.go('/leaderboard?league=${league.id}'),
         ),
         const SizedBox(height: 20),
@@ -229,9 +231,7 @@ class _LeagueDetailView extends StatelessWidget {
         TextButton.icon(
           onPressed: state.busy ? null : () => _leaveOrDelete(context, owner),
           style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF5252)),
-          icon: Icon(
-            owner ? Icons.delete_outline_rounded : Icons.logout_rounded,
-          ),
+          icon: AppIcon(owner ? AppIcons.delete : AppIcons.signOut),
           label: Text(owner ? AppStrings.leagueDelete : AppStrings.leagueLeave),
         ),
       ],
@@ -283,8 +283,8 @@ class _MemberRow extends StatelessWidget {
             IconButton(
               tooltip: AppStrings.leagueRemove,
               onPressed: onRemove,
-              icon: const Icon(
-                Icons.person_remove_rounded,
+              icon: const AppIcon(
+                AppIcons.userRemove,
                 color: ZipColors.inkSoft,
               ),
             ),

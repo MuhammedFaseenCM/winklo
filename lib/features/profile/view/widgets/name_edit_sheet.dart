@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../cubit/profile_cubit.dart';
 import '../../cubit/profile_state.dart';
 
@@ -110,8 +112,8 @@ class _NameEditSheetState extends State<NameEditSheet> {
                       decoration: InputDecoration(
                         labelText: AppStrings.profileEditName,
                         hintText: AppStrings.profileNameHint,
-                        prefixIcon: const Icon(
-                          Icons.badge_outlined,
+                        prefixIcon: const AppIcon(
+                          AppIcons.nameBadge,
                           color: ZipColors.inkSoft,
                         ),
                         errorText: nameError,

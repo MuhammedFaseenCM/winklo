@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 
 class ProfileSettingsList extends StatelessWidget {
   const ProfileSettingsList({
@@ -55,7 +57,7 @@ class ProfileSettingsList extends StatelessWidget {
           children: [
             if (onSettings case final openSettings?) ...[
               _SettingsRow(
-                icon: Icons.tune_rounded,
+                icon: AppIcons.tune,
                 label: AppStrings.profileSettings,
                 iconColor: ZipColors.teal,
                 onTap: enabled ? openSettings : null,
@@ -63,35 +65,35 @@ class ProfileSettingsList extends StatelessWidget {
               const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
             ],
             _SettingsRow(
-              icon: Icons.privacy_tip_outlined,
+              icon: AppIcons.privacy,
               label: AppStrings.profilePrivacyPolicy,
               iconColor: ZipColors.sky,
               onTap: enabled ? onPrivacy : null,
             ),
             const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
             _SettingsRow(
-              icon: Icons.info_outline,
+              icon: AppIcons.info,
               label: AppStrings.profileAboutGame,
               iconColor: ZipColors.ember,
               onTap: enabled ? onAbout : null,
             ),
             const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
             _SettingsRow(
-              icon: Icons.star_outline_rounded,
+              icon: AppIcons.starOutline,
               label: AppStrings.profileRateOnPlayStore,
               iconColor: const Color(0xFFFBBF24),
               onTap: enabled ? onRate : null,
             ),
             const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
             _SettingsRow(
-              icon: Icons.flag_outlined,
+              icon: AppIcons.flag,
               label: AppStrings.profileReportIssue,
               iconColor: const Color(0xFFFBBF24),
               onTap: enabled ? onReport : null,
             ),
             const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
             _SettingsRow(
-              icon: Icons.logout,
+              icon: AppIcons.signOut,
               label: AppStrings.signOut,
               foreground: error,
               showChevron: false,
@@ -99,7 +101,7 @@ class ProfileSettingsList extends StatelessWidget {
             ),
             const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
             _SettingsRow(
-              icon: Icons.person_remove_outlined,
+              icon: AppIcons.userRemove,
               label: AppStrings.deleteAccount,
               foreground: error,
               onTap: enabled ? onDeleteAccount : null,
@@ -134,7 +136,7 @@ class _SettingsRow extends StatelessWidget {
     final leadingColor = iconColor ?? foreground ?? ZipColors.onInk;
     return ListTile(
       enabled: onTap != null,
-      leading: Icon(icon, color: leadingColor),
+      leading: AppIcon(icon, color: leadingColor),
       title: Text(
         label,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -143,7 +145,7 @@ class _SettingsRow extends StatelessWidget {
         ),
       ),
       trailing: showChevron
-          ? const Icon(Icons.chevron_right, color: ZipColors.inkSoft)
+          ? const AppIcon(AppIcons.chevronRight, color: ZipColors.inkSoft)
           : null,
       onTap: onTap,
     );

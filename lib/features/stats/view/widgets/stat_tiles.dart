@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/strings/app_strings.dart';
+import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/stats/game_stats.dart';
 
 /// The six headline numbers of one game, three to a row.
@@ -17,29 +19,25 @@ class StatTiles extends StatelessWidget {
         : AppStrings.formatPlayTime(seconds);
     final share = stats.hintFreeShare;
     final tiles = [
-      (AppStrings.statsClears, '${stats.clears}', Icons.check_circle_rounded),
+      (AppStrings.statsClears, '${stats.clears}', AppIcons.checkCircle),
       (
         AppStrings.statsCurrentStreak,
         '${stats.currentStreak}',
-        Icons.local_fire_department_rounded,
+        AppIcons.streak,
       ),
       (
         AppStrings.statsLongestStreak,
         '${stats.longestStreak}',
-        Icons.emoji_events_rounded,
+        AppIcons.trophy,
       ),
-      (AppStrings.statsBestTime, time(stats.bestSeconds), Icons.bolt_rounded),
-      (
-        AppStrings.statsAverageTime,
-        time(stats.averageSeconds),
-        Icons.timer_outlined,
-      ),
+      (AppStrings.statsBestTime, time(stats.bestSeconds), AppIcons.lightning),
+      (AppStrings.statsAverageTime, time(stats.averageSeconds), AppIcons.timer),
       (
         AppStrings.statsHintFree,
         share == null
             ? AppStrings.statsNoValue
             : AppStrings.statsPercent(share),
-        Icons.lightbulb_outline_rounded,
+        AppIcons.noHints,
       ),
     ];
     return Column(
@@ -94,7 +92,7 @@ class _StatTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 16, color: ZipColors.inkSoft),
+            AppIcon(icon, size: 16, color: ZipColors.inkSoft),
             const SizedBox(height: 6),
             FittedBox(
               fit: BoxFit.scaleDown,
