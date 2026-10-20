@@ -57,13 +57,13 @@ class ResultsActions extends StatelessWidget {
     if (shared) await analytics.logShare(gameId: _gameId);
   }
 
-  static String _routeFor(String gameId) => switch (gameId) {
+  static String routeFor(String gameId) => switch (gameId) {
     GameIds.pathWords => '/path-words',
     GameIds.sudoku => '/sudoku',
     _ => '/zip',
   };
 
-  static String _titleFor(String gameId) => switch (gameId) {
+  static String titleFor(String gameId) => switch (gameId) {
     GameIds.pathWords => AppStrings.pathWordsTitle,
     GameIds.sudoku => AppStrings.sudokuTitle,
     _ => AppStrings.zipTitle,
@@ -88,13 +88,13 @@ class ResultsActions extends StatelessWidget {
       children: [
         if (next != null)
           ZipPrimaryButton(
-            label: AppStrings.playNextGame(_titleFor(next)),
+            label: AppStrings.playNextGame(titleFor(next)),
             icon: AppIcons.play,
             compact: true,
             onPressed: () async {
               await _log(context, 'play_next');
               if (!context.mounted) return;
-              context.pushReplacement(_routeFor(next));
+              context.pushReplacement(routeFor(next));
             },
           )
         else
