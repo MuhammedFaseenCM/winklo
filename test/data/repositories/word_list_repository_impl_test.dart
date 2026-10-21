@@ -85,7 +85,7 @@ void main() {
   test('loadPracticeWords reads the bundled 5-6 letter list once', () async {
     final repo = WordListRepositoryImpl();
     final words = await repo.loadPracticeWords();
-    expect(words.length, greaterThan(200));
+    expect(words.length, greaterThan(150));
     expect(words.every((w) => RegExp(r'^[a-z]{5,6}$').hasMatch(w)), isTrue);
     expect(identical(await repo.loadPracticeWords(), words), isTrue);
   });

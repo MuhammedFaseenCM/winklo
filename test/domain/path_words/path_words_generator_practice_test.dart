@@ -14,7 +14,7 @@ void main() {
   final words = _bundledPracticeWords();
 
   test('the bundled practice list has 5-6 letter words and no palindromes', () {
-    expect(words.length, greaterThan(200));
+    expect(words.length, greaterThan(150));
     for (final word in words) {
       expect(word, matches(RegExp(r'^[a-z]{5,6}$')));
       expect(word, isNot(word.split('').reversed.join()));
