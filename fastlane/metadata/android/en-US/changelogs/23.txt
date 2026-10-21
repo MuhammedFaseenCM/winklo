@@ -1,0 +1,4 @@
+What's new
+
+• Quieter offline sync — no more error tickets when the network is slow
+• Progress sync retries cleanly when Firestore is temporarily unavailable
