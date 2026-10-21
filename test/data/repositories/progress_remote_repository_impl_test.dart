@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/firebase/firebase_bootstrap.dart';
@@ -447,6 +449,57 @@ void main() {
               )
               .having((f) => f.reportable, 'reportable', false),
         ),
+      );
+    });
+  });
+
+  group('progressOpFailure', () {
+    test('marks timeouts as non-reportable (offline ack wait)', () {
+      final failure = progressOpFailure(
+        'Could not load progress.',
+        TimeoutException('timed out'),
+      );
+      expect(failure.reportable, isFalse);
+      expect(failure.message, 'Could not load progress.');
+      expect(failure.cause, isA<TimeoutException>());
+    });
+
+    test('marks Firestore unavailable / deadline as non-reportable', () {
+      for (final code in ['unavailable', 'deadline-exceeded', 'cancelled']) {
+        final failure = progressOpFailure(
+          'Could not save progress.',
+          FirebaseException(plugin: 'cloud_firestore', code: code),
+        );
+        expect(failure.reportable, isFalse, reason: code);
+      }
+    });
+
+    test('keeps unexpected errors reportable and preserves the cause', () {
+      final failure = progressOpFailure(
+        'Could not load progress.',
+        StateError('rules denied'),
+      );
+      expect(failure.reportable, isTrue);
+      expect(failure.cause, isA<StateError>());
+    });
+
+    test('rethrows an existing Failure unchanged', () {
+      const original = Failure('already wrapped', reportable: false);
+      expect(
+        identical(progressOpFailure('ignored', original), original),
+        isTrue,
+      );
+    });
+  });
+
+  group('Failure.toString', () {
+    test('includes the nested cause so client_errors stay diagnosable', () {
+      expect(
+        Failure(
+          'Could not load progress.',
+          cause: TimeoutException('x'),
+        ).toString(),
+        contains('TimeoutException'),
       );
     });
   });

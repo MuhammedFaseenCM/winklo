@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -191,6 +193,39 @@ Map<String, dynamic>? confirmedSnapshotData(
   return data;
 }
 
+/// Codes that mean "retry later", not a product bug. Offline merge writes
+/// only complete on server ack, so the per-call [timeout] often surfaces as
+/// [TimeoutException] / `unavailable` — sync already retries those.
+const _transientFirestoreCodes = {
+  'unavailable',
+  'deadline-exceeded',
+  'cancelled',
+  'aborted',
+  'network-request-failed',
+};
+
+/// Whether [error] is an expected transient progress I/O failure.
+bool isTransientProgressCause(Object error) {
+  if (error is TimeoutException) return true;
+  if (error is FirebaseException) {
+    return _transientFirestoreCodes.contains(error.code);
+  }
+  return false;
+}
+
+/// Wraps a caught progress I/O error as a [Failure]. Existing [Failure]s are
+/// returned unchanged (so `reportable: false` from [confirmedSnapshotData]
+/// survives). Transient timeouts / Firestore offline codes stay quiet in
+/// `client_errors`.
+Failure progressOpFailure(String message, Object cause) {
+  if (cause is Failure) return cause;
+  return Failure(
+    message,
+    cause: cause,
+    reportable: !isTransientProgressCause(cause),
+  );
+}
+
 int? _nonNegativeInt(Object? value) {
   if (value is int) return value >= 0 ? value : null;
   if (value is num && value.isFinite && value == value.truncate()) {
@@ -243,7 +278,10 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
     return _firestore ?? FirebaseFirestore.instance;
   }
 
-  static const _unavailable = Failure('Firebase is unavailable.');
+  static const _unavailable = Failure(
+    'Firebase is unavailable.',
+    reportable: false,
+  );
 
   void _assertIds({required String uid, required String gameId}) {
     if (uid.isEmpty) throw const Failure('Sign in required to sync progress.');
@@ -308,8 +346,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
     } catch (e, st) {
       debugPrint('Progress fetchDay failed: $e');
       debugPrint('$st');
-      if (e is Failure) rethrow;
-      throw Failure('Could not load progress.', cause: e);
+      throw progressOpFailure('Could not load progress.', e);
     }
   }
 
@@ -330,7 +367,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
     } catch (e, st) {
       debugPrint('Progress saveDay failed: $e');
       debugPrint('$st');
-      throw Failure('Could not save progress.', cause: e);
+      throw progressOpFailure('Could not save progress.', e);
     }
   }
 
@@ -355,8 +392,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
     } catch (e, st) {
       debugPrint('Progress fetchStreak failed: $e');
       debugPrint('$st');
-      if (e is Failure) rethrow;
-      throw Failure('Could not load progress.', cause: e);
+      throw progressOpFailure('Could not load progress.', e);
     }
   }
 
@@ -376,7 +412,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
     } catch (e, st) {
       debugPrint('Progress saveStreak failed: $e');
       debugPrint('$st');
-      throw Failure('Could not save progress.', cause: e);
+      throw progressOpFailure('Could not save progress.', e);
     }
   }
 
@@ -403,8 +439,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
     } catch (e, st) {
       debugPrint('Progress fetchAllDays failed: $e');
       debugPrint('$st');
-      if (e is Failure) rethrow;
-      throw Failure('Could not load progress history.', cause: e);
+      throw progressOpFailure('Could not load progress history.', e);
     }
   }
 
@@ -444,7 +479,7 @@ class ProgressRemoteRepositoryImpl implements ProgressRemoteRepository {
     } catch (e, st) {
       debugPrint('Progress saveDayBatch failed: $e');
       debugPrint('$st');
-      throw Failure('Could not save progress history.', cause: e);
+      throw progressOpFailure('Could not save progress history.', e);
     }
   }
 }

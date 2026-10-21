@@ -305,8 +305,11 @@ class _Run {
     }
   }
 
-  static bool _isReportable(Object error) =>
-      error is! Failure || error.reportable;
+  /// Timeouts are intentional (offline / slow ack): the item retries next run.
+  static bool _isReportable(Object error) {
+    if (error is TimeoutException) return false;
+    return error is! Failure || error.reportable;
+  }
 
   /// Legacy data (no owner yet) is claimed; another account's data is purged
   /// and this account's remote progress is pulled in its place. Progress the

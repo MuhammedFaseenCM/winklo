@@ -1339,6 +1339,35 @@ void main() {
       },
     );
 
+    test('a leaderboard TimeoutException is not reported', () async {
+      when(
+        () => leaderboard.submitBestTime(
+          gameId: any(named: 'gameId'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          currentStreak: any(named: 'currentStreak'),
+          dayId: any(named: 'dayId'),
+          expectedUid: any(named: 'expectedUid'),
+          proof: any(named: 'proof'),
+        ),
+      ).thenAnswer((_) async {
+        await Future<void>.delayed(const Duration(days: 1));
+      });
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 30,
+        },
+        leaderboardTimeout: const Duration(milliseconds: 10),
+      );
+
+      final result = await sync();
+
+      expect(result.failures, greaterThan(0));
+      verifyNever(() => clientErrors.report(any()));
+    });
+
     test(
       'reportable failure is still reported when mixed with transient ones',
       () async {

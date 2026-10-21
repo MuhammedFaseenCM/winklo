@@ -8,7 +8,8 @@ class Failure {
   final bool reportable;
 
   @override
-  String toString() => 'Failure($message)';
+  String toString() =>
+      cause == null ? 'Failure($message)' : 'Failure($message, cause: $cause)';
 }
 
 /// Thrown when a daily puzzle cannot be loaded from the backend.
