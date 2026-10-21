@@ -139,6 +139,12 @@ Started from `master` at `1deaba5`; not merged and not uploaded, with no version
 
 - [ ] Optional, for players on older builds: upload `tools/static-assets/avatars/preset_*.png` with the loop in `tools/static-assets/README.md`. Older builds then show critters for `preset_01`–`06` once their image cache expires, and initials for the new ids.
 
+### Ready to merge: `feat/path-words-common-words`
+
+Started from `master` at `9105767` (1.1.4+23); not merged and not uploaded, with no version bump. Path Words used words many players couldn't find because they didn't know them (quiver, dingo, waltz, and a misspelt "pensil" on the 10-22 daily). Most work is in winklo-admin's branch of the same name: the AI is asked for everyday words any English learner knows, and every word must pass a frequency filter (wordfreq, Zipf ≥ 3.5) or a short extras list, and not be a plural. Here only Practice changes: `assets/words/en_practice_words.txt` mirrors the new built-in list (175 words, was 282). Nothing to deploy from this repo. Spec: winklo-admin `docs/2026-10-21-path-words-common-words-design.md` (pointer in `docs/superpowers/specs/`).
+
+- [ ] Merge winklo-admin `feat/path-words-common-words` to `main` (its GitHub Action deploys the Worker), then regenerate the unlocked future dailies in the admin console; the cron only fills missing days.
+
 ### Ready to merge: `feat/landing-live-data`
 
 Started from `feat/roadmap-batch` at `9545081`, because its copy describes 1.1.0 (leagues, archive and practice, badges, the widget, Malayalam); merge it with or after that branch. The spec is `docs/superpowers/specs/2026-10-16-landing-live-data-design.md`.
