@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../../core/haptics/haptics_service.dart';
 import '../../../core/sfx/sfx_id.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/board_text.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../logic/path_validator.dart';
 import '../logic/zip_hints.dart';
@@ -616,6 +617,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
           text: TextSpan(
             text: '$n',
             style: TextStyle(
+              fontFamily: BoardText.family,
               fontSize: fontSize,
               fontWeight: FontWeight.w800,
               foreground: Paint()
@@ -637,6 +639,7 @@ class ZipGame extends FlameGame with DragCallbacks, TapCallbacks {
         text: TextSpan(
           text: '$n',
           style: TextStyle(
+            fontFamily: BoardText.family,
             color: fillColor,
             fontSize: fontSize,
             fontWeight: FontWeight.w800,

@@ -5,6 +5,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/board_text.dart';
 import '../../../domain/entities/cell.dart';
 import '../../../domain/entities/path_words_puzzle.dart';
 import '../../../domain/path_words/path_words_rules.dart';
@@ -584,6 +585,7 @@ class PathWordsGame extends FlameGame with DragCallbacks, TapCallbacks {
           text: TextSpan(
             text: letter.toUpperCase(),
             style: TextStyle(
+              fontFamily: BoardText.family,
               color: color,
               fontSize: _cellSize * 0.4,
               fontWeight: FontWeight.w800,

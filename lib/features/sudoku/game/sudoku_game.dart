@@ -5,6 +5,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/board_text.dart';
 import '../../../domain/entities/cell.dart';
 import 'sudoku_board_view.dart';
 
@@ -224,6 +225,7 @@ class SudokuGame extends FlameGame with TapCallbacks {
         text: TextSpan(
           text: '$value',
           style: TextStyle(
+            fontFamily: BoardText.family,
             color: isGiven ? ZipColors.onInk : ZipColors.sky,
             fontSize: _cellSize * 0.48,
             fontWeight: isGiven ? FontWeight.w700 : FontWeight.w600,
@@ -251,6 +253,7 @@ class SudokuGame extends FlameGame with TapCallbacks {
         text: TextSpan(
           text: '$digit',
           style: TextStyle(
+            fontFamily: BoardText.family,
             color: ZipColors.inkSoft,
             fontSize: noteSize,
             fontWeight: FontWeight.w500,

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/cell.dart';
 import '../../domain/entities/wall.dart';
 import '../theme/app_theme.dart';
+import '../theme/board_text.dart';
 
 /// One fully-drawn completed path on a tutorial mini board.
 typedef TutorialCompletedPath = ({List<Cell> cells, Color color});
@@ -198,6 +199,7 @@ class _TutorialMiniBoardPainter extends CustomPainter {
             text: TextSpan(
               text: label,
               style: TextStyle(
+                fontFamily: BoardText.family,
                 color: ZipColors.onInk.withValues(alpha: locked ? 0.45 : 1),
                 fontWeight: FontWeight.w800,
                 fontSize: cellMin * 0.38,
