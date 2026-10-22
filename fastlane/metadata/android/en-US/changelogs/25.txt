@@ -1,4 +1,5 @@
 What's new
 
-• Leaderboard accepts every clear from 1 second up (no speed floor)
+• Fast Zip clears now count on the leaderboard (no under-10s cutoff)
+• Leaderboard accepts every clear from 1 second up
 • Fixes and improvements
