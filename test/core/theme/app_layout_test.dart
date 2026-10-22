@@ -49,11 +49,14 @@ void main() {
   ) async {
     late EdgeInsets padding;
     late AppLayout layout;
+    // scrollPadding reads viewPadding (home indicator), not padding.
+    const homeIndicator = 34.0;
     await tester.pumpWidget(
       MediaQuery(
         data: const MediaQueryData(
           size: AppLayout.designSize,
-          padding: EdgeInsets.only(bottom: 88),
+          viewPadding: EdgeInsets.only(bottom: homeIndicator),
+          padding: EdgeInsets.only(bottom: homeIndicator),
         ),
         child: Builder(
           builder: (context) {
@@ -65,7 +68,12 @@ void main() {
       ),
     );
 
-    expect(padding.bottom, closeTo(layout.pagePadding.bottom + 88, 0.01));
+    // Dock chrome: outer 12 + inner pads 16 + tab row 48 + breathing 8.
+    const dockChrome = 12.0 + 16.0 + 48.0 + 8.0;
+    expect(
+      padding.bottom,
+      closeTo(layout.pagePadding.bottom + dockChrome + homeIndicator, 0.01),
+    );
     expect(padding.top, layout.pagePadding.top);
     expect(padding.left, layout.pagePadding.left);
   });

@@ -152,8 +152,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'nope');
     await tester.tap(find.text(AppStrings.leagueJoinAction));
-    await tester.pump();
-    expect(find.text(AppStrings.leagueCodeInvalid), findsOneWidget);
+    await tester.pumpAndSettle();
+    // The same copy is the helper while empty and the error after submit;
+    // Material may keep both Text nodes briefly. Presence + no create is enough.
+    expect(find.text(AppStrings.leagueCodeInvalid), findsWidgets);
+    expect(find.byType(TextField), findsOneWidget);
+    verifyNever(() => leagues.join(any()));
   });
 
   testWidgets('the owner sees the code, players, remove and delete', (

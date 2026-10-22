@@ -226,7 +226,9 @@ void main() {
     (tester) async {
       await pumpProfile(tester, signedIn: user);
 
-      await tester.tap(find.text(AppStrings.signOut));
+      final signOutRow = find.text(AppStrings.signOut);
+      await tester.ensureVisible(signOutRow);
+      await tester.tap(signOutRow);
       await tester.pumpAndSettle();
 
       expect(find.text(AppStrings.signOutConfirmTitle), findsOneWidget);
@@ -244,7 +246,9 @@ void main() {
   testWidgets('canceling sign out confirm does not sign out', (tester) async {
     await pumpProfile(tester, signedIn: user);
 
-    await tester.tap(find.text(AppStrings.signOut));
+    final signOutRow = find.text(AppStrings.signOut);
+    await tester.ensureVisible(signOutRow);
+    await tester.tap(signOutRow);
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppStrings.signOutConfirmCancel));
     await tester.pumpAndSettle();
