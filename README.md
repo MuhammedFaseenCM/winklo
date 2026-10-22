@@ -154,7 +154,7 @@ Rebased onto `master` (1.1.4+23) on 22 October 2026 as **1.1.5+24**, then the sp
 
 - [x] Deploy the Firestore rules and the leaderboard Worker with the 1 s floor.
 - [x] winklo-admin: merge `feat/leaderboard-skips` into `main`.
-- [ ] Build and upload **1.1.6+25**. Older builds may still drop fast clears until players update.
+- [x] Build and upload **1.1.6+25** to Play production (`fastlane android production`, 22 October 2026). Older builds may still drop fast clears until players update.
 
 ### Pending
 
