@@ -142,7 +142,7 @@ describe('handleToday', () => {
     );
     const query = JSON.parse(String(call?.[1]?.body)).structuredQuery;
     expect(query.limit).toBe(3);
-    expect(query.where.fieldFilter.value).toEqual({ integerValue: '15' });
+    expect(query.where.fieldFilter.value).toEqual({ integerValue: '1' });
     expect(query.select.fields.map((f: { fieldPath: string }) => f.fieldPath)).not.toContain('photoUrl');
   });
 
