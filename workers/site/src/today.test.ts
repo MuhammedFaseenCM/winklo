@@ -142,10 +142,10 @@ describe('topEntry', () => {
     expect(topEntry('zip', { ...entry, usedHints: undefined })?.hintFree).toBe(false);
   });
 
-  it('drops times under the game’s minimum', () => {
-    expect(topEntry('zip', { ...entry, timeSeconds: 9 })).toBeNull();
-    expect(topEntry('zip', { ...entry, timeSeconds: 10 })).not.toBeNull();
-    expect(topEntry('path_words', { ...entry, timeSeconds: 14 })).toBeNull();
+  it('drops times under one second (no per-game speed floor)', () => {
+    expect(topEntry('zip', { ...entry, timeSeconds: 0 })).toBeNull();
+    expect(topEntry('zip', { ...entry, timeSeconds: 1 })).not.toBeNull();
+    expect(topEntry('path_words', { ...entry, timeSeconds: 1 })).not.toBeNull();
   });
 
   it('drops a missing or fractional time', () => {
