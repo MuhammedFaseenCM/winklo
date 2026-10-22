@@ -156,10 +156,20 @@ Rebased onto `master` (1.1.4+23) on 22 October 2026 as **1.1.5+24**, then the sp
 - [x] winklo-admin: merge `feat/leaderboard-skips` into `main`.
 - [x] Build and upload **1.1.6+25** to Play production (`fastlane android production`, 22 October 2026). Older builds may still drop fast clears until players update.
 
+### Play Store review (22 October 2026)
+
+First production review (quoted): *"It's fun to play but my suggestion would be if they can remove the daily limit or they can make a separate mode for ranking or leaderboard and the in word game the hidden words should be familiar and easy as long as we didn't increase our level. UI is good no Ads."*
+
+Takeaways to keep in mind:
+
+- Keep the no-ads promise and the UI bar.
+- Daily limit / ranking: players want either unlimited play or a clear split between casual and ranked. Practice and archive already exist off the leaderboard; surface them more clearly, or add an explicit casual-vs-ranked mode if that still isn't enough.
+- Path Words: favour familiar, easy target words until difficulty or level rises (generator / word-pool work in winklo-admin).
+
 ### Pending
 
 - **winklo-admin `fix/daily-puzzle-follow-ups`** is merged into its `main` (`9fa3cd7`), which deploys the SPA and the Worker. Confirm that Deploy run succeeded in GitHub Actions, then check the next Path Words day the cron creates: `boardSource` should say `ai`, and `generatorMeta.aiWords` says why if it doesn't.
-- **The rest of the [feature roadmap](#feature-roadmap)**; [Suggested order](#suggested-order) says where to start.
+- **The rest of the [feature roadmap](#feature-roadmap)**; [Suggested order](#suggested-order) says where to start. Act on the [Play Store review](#play-store-review-22-october-2026) notes above when picking what to build next.
 
 ## Feature roadmap
 
