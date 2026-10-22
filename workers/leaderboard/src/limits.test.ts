@@ -19,7 +19,7 @@ describe('limits', () => {
   });
 
   it('uses the spec minimums and a one-day ceiling', () => {
-    expect(MIN_SECONDS).toEqual({ zip: 3, path_words: 15, sudoku: 15 });
+    expect(MIN_SECONDS).toEqual({ zip: 1, path_words: 1, sudoku: 1 });
     expect(MAX_SECONDS).toBe(86_400);
   });
 

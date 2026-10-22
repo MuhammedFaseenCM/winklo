@@ -98,19 +98,18 @@ describe('daily boards (phase 1)', () => {
     }
   });
 
-  it('refuse an improvement under the minimum, allow one above it', async () => {
+  it('refuse a non-positive time, allow a one-second clear', async () => {
     await seed(daily('zip', today), { ...entry(40), updatedAt: new Date() });
     await assertFails(
-      setDoc(doc(db('u1'), daily('zip', today)), entry(2), { merge: true }),
+      setDoc(doc(db('u1'), daily('zip', today)), entry(0), { merge: true }),
     );
-    // A real 6 s clear of the 6×6 Zip daily on 2026-10-19.
     await assertSucceeds(
-      setDoc(doc(db('u1'), daily('zip', today)), entry(6), { merge: true }),
+      setDoc(doc(db('u1'), daily('zip', today)), entry(1), { merge: true }),
     );
   });
 
-  it('still refresh the name on an old entry under the minimum', async () => {
-    await seed(daily('zip', today), { ...entry(2), updatedAt: new Date() });
+  it('still refresh the name on an existing entry', async () => {
+    await seed(daily('zip', today), { ...entry(1), updatedAt: new Date() });
     await assertSucceeds(
       updateDoc(doc(db('u1'), daily('zip', today)), {
         displayName: 'Ada L',
@@ -129,9 +128,9 @@ describe('all-time boards (phase 1)', () => {
   const allTime = (game: string, uid = 'u1') =>
     `leaderboards/${game}/all_time/${uid}`;
 
-  it('need the game minimum', async () => {
-    await assertFails(setDoc(doc(db('u1'), allTime('zip')), entry(2)));
-    await assertSucceeds(setDoc(doc(db('u1'), allTime('zip')), entry(3)));
+  it('need a positive time of at least one second', async () => {
+    await assertFails(setDoc(doc(db('u1'), allTime('zip')), entry(0)));
+    await assertSucceeds(setDoc(doc(db('u1'), allTime('zip')), entry(1)));
   });
 });
 

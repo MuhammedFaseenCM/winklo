@@ -2,17 +2,17 @@ import 'game_ids.dart';
 
 /// Fastest clear each board accepts, in whole seconds.
 ///
-/// Zip's floor is set by its smallest board: a 6×6 daily with few numbers is
-/// traced honestly in about 6 s (2026-10-19), so 10 s turned real clears
-/// away; the Worker's proof check is what stops a forged path.
+/// There is no per-game speed floor: any whole-second clear can post. The
+/// Worker's proof check is what stops a forged path. Values stay at 1 so the
+/// pin test, rules and Worker share one map (zero is still refused).
 ///
 /// The same numbers are `MIN_SECONDS` in workers/leaderboard/src/limits.ts
 /// and `minLeaderboardSeconds` in firestore/firestore.rules;
 /// test/firestore/leaderboard_fair_play_pins_test.dart pins all three.
 const leaderboardMinSeconds = <String, int>{
-  GameIds.zip: 3,
-  GameIds.pathWords: 15,
-  GameIds.sudoku: 15,
+  GameIds.zip: 1,
+  GameIds.pathWords: 1,
+  GameIds.sudoku: 1,
 };
 
 /// Slowest clear the Worker accepts: one day.

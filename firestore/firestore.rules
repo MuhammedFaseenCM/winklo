@@ -116,12 +116,12 @@ service cloud.firestore {
       return true;
     }
 
-    // Fastest accepted clear per game, in seconds. MIN_SECONDS in
+    // Fastest accepted clear per game, in seconds (1 for every game: no speed floor). MIN_SECONDS in
     // workers/leaderboard/src/limits.ts and leaderboardMinSeconds in
     // lib/domain/leaderboard_limits.dart are the same numbers
     // (test/firestore/leaderboard_fair_play_pins_test.dart pins all three).
     function minLeaderboardSeconds(gameId) {
-      return {'zip': 3, 'path_words': 15, 'sudoku': 15}[gameId];
+      return {'zip': 1, 'path_words': 1, 'sudoku': 1}[gameId];
     }
 
     function meetsMinimumTime(gameId) {

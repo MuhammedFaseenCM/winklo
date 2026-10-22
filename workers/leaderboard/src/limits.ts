@@ -14,11 +14,15 @@ export function isGameId(value: unknown): value is GameId {
   return typeof value === 'string' && (GAMES as readonly string[]).includes(value);
 }
 
-/** Fastest accepted clear, in whole seconds (also `minLeaderboardSeconds` in the rules). */
+/**
+ * Fastest accepted clear, in whole seconds (also `minLeaderboardSeconds` in
+ * the rules). Held at 1 for every game: there is no speed floor beyond a
+ * positive whole second; the proof check stops forged clears.
+ */
 export const MIN_SECONDS: Record<GameId, number> = {
-  zip: 3,
-  path_words: 15,
-  sudoku: 15,
+  zip: 1,
+  path_words: 1,
+  sudoku: 1,
 };
 
 /** Slowest accepted clear: one day. */

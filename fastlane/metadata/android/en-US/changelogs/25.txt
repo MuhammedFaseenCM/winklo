@@ -1,0 +1,4 @@
+What's new
+
+• Leaderboard accepts every clear from 1 second up (no speed floor)
+• Fixes and improvements

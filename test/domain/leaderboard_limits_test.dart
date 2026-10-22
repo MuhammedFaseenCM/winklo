@@ -3,13 +3,13 @@ import 'package:winklo/domain/game_ids.dart';
 import 'package:winklo/domain/leaderboard_limits.dart';
 
 void main() {
-  test('accepts times from the game minimum to a day', () {
-    expect(leaderboardAcceptsTime(GameIds.zip, 2), isFalse);
-    expect(leaderboardAcceptsTime(GameIds.zip, 3), isTrue);
-    // A real 6 s clear of the 6×6 Zip daily on 2026-10-19.
-    expect(leaderboardAcceptsTime(GameIds.zip, 6), isTrue);
-    expect(leaderboardAcceptsTime(GameIds.sudoku, 14), isFalse);
-    expect(leaderboardAcceptsTime(GameIds.pathWords, 15), isTrue);
+  test('accepts times from one second to a day', () {
+    // No per-game speed floor: any whole second clear can post (proof still
+    // required). Zero and over a day are refused.
+    expect(leaderboardAcceptsTime(GameIds.zip, 0), isFalse);
+    expect(leaderboardAcceptsTime(GameIds.zip, 1), isTrue);
+    expect(leaderboardAcceptsTime(GameIds.sudoku, 1), isTrue);
+    expect(leaderboardAcceptsTime(GameIds.pathWords, 1), isTrue);
     expect(leaderboardAcceptsTime(GameIds.zip, leaderboardMaxSeconds), isTrue);
     expect(
       leaderboardAcceptsTime(GameIds.zip, leaderboardMaxSeconds + 1),

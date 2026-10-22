@@ -349,29 +349,6 @@ void main() {
       isA<LeaderboardSubmitRefused>().having((e) => e.code, 'code', code),
     );
 
-    test('under the minimum is refused and logged, not sent', () async {
-      await expectLater(
-        submit(repo(), time: 2),
-        refusedWith(LeaderboardSubmitRefused.tooFast),
-      );
-
-      verifyZeroInteractions(client);
-      verifyNoDirectWrite();
-      final skip = skipLog.skips.single;
-      expect(skip.uid, 'u1');
-      expect(skip.gameId, 'zip');
-      expect(skip.dayId, _day);
-      expect(skip.timeSeconds, 2);
-      expect(skip.reason, LeaderboardSubmitRefused.tooFast);
-      expect(skip.usedHints, isFalse);
-      expect(skip.hadMistakes, isFalse);
-      expect(skip.identity, (
-        displayName: 'Ada',
-        photoUrl: null,
-        avatarId: 'preset_01',
-      ));
-    });
-
     test('over a day is refused as too slow', () async {
       await expectLater(
         submit(repo(), time: leaderboardMaxSeconds + 1),
@@ -393,7 +370,7 @@ void main() {
     });
   });
 
-  test('a 6 s Zip clear is posted (the 6×6 daily of 2026-10-19)', () async {
+  test('a one-second Zip clear is posted (no speed floor)', () async {
     when(
       () => client.submit(
         idToken: any(named: 'idToken'),
@@ -401,7 +378,7 @@ void main() {
       ),
     ).thenAnswer((_) async => const LeaderboardSubmitResult(improved: true));
 
-    await submit(repo(), time: 6);
+    await submit(repo(), time: 1);
 
     verify(
       () => client.submit(

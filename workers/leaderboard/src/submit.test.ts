@@ -155,15 +155,13 @@ describe('handleSubmit', () => {
     expect(res).toEqual({ status: 422, body: { error: 'not_live' } });
   });
 
-  it('refuses a time under the game minimum', async () => {
+  it('refuses a non-positive time as a bad body (no speed floor)', async () => {
     fakeFirestore(zipDoc);
-    expect(await handleSubmit(deps, 'u1', body({ timeSeconds: 2 }))).toEqual({
-      status: 422,
-      body: { error: 'too_fast' },
+    // parseSubmitBody requires timeSeconds >= 1; there is no per-game minimum.
+    expect(await handleSubmit(deps, 'u1', body({ timeSeconds: 0 }))).toEqual({
+      status: 400,
+      body: { error: 'bad_request' },
     });
-    expect(
-      await handleSubmit(deps, 'u1', body({ gameId: 'sudoku', timeSeconds: 14 })),
-    ).toEqual({ status: 422, body: { error: 'too_fast' } });
   });
 
   it('refuses a malformed body or uid', async () => {
