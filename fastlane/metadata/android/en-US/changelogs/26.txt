@@ -1,0 +1,4 @@
+What's new
+
+• Reminders now arrive: the morning puzzles reminder, the streak-at-risk warning and the Sunday recap
+• Fixes and improvements

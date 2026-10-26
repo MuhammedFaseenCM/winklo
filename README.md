@@ -148,6 +148,13 @@ Started from `feat/roadmap-batch` at `9545081`, because its copy describes 1.1.0
 - The privacy policy says the website shows shortened names and times.
 - [ ] After the merge, the Deploy site workflow publishes `docs/` with the function (it now runs from `workers/site/`). Check `curl -sI "https://winklo.pages.dev/api/today?day=$(date +%F)"`: a second call within 5 minutes should say `x-winklo-cache: hit`.
 
+### Ready to ship: `fix/scheduled-reminders`
+
+Started from `master` at `34954de` and takes **1.1.7+26** (`changelogs/26.txt`). No reminder the app schedules has ever been shown on Android: the 08:00 daily, the streak-at-risk warning and the Sunday recap all go through `zonedSchedule`, whose alarm broadcasts to the plugin's `ScheduledNotificationReceiver`, and flutter_local_notifications 16+ leaves declaring that receiver (and the boot receiver that re-arms alarms) to the app. The manifest now declares both; `android_notification_display_test.dart` fails if either goes missing. FCM pushes were never affected (they post at once, with no alarm). Nothing to deploy.
+
+- [ ] On a phone with this build: set the streak reminder a couple of minutes ahead in Settings and check it arrives; `adb shell dumpsys alarm | grep -A3 com.winklo.faseencm` lists the pending alarms.
+- [ ] Build and upload **1.1.7+26**, or ship it inside `feat/fresh-reminders`, which is built on this branch.
+
 ### Merged: `fix/leaderboard-skips`
 
 Rebased onto `master` (1.1.4+23) on 22 October 2026 as **1.1.5+24**, then the speed floor was removed (every game accepts from **1 s**; still capped at one day) in **1.1.6+25**. Logs refused clears to `leaderboard_skips/{uid}_{gameId}_{dayId}`. Admin half: winklo-admin `feat/leaderboard-skips` ("Not on this board").

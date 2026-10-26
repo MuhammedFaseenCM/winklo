@@ -74,6 +74,23 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="winklo_announcements" />
+        <!-- Show the reminders scheduled with zonedSchedule (daily, streak at
+             risk, weekly recap). flutter_local_notifications 16+ no longer
+             declares these: without them the alarms fire into nothing.
+             The boot receiver re-arms them after a reboot or an app update. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
         <!-- Home-screen widget (today's games and streaks). -->
         <receiver
             android:name=".WinkloWidgetProvider"
