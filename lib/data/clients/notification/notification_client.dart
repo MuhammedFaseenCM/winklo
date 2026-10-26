@@ -19,7 +19,9 @@ abstract class NotificationClient {
     String type = 'local',
   });
 
-  /// Schedule a one-shot or repeating local notification at [when] (local).
+  /// Schedule a one-off local notification at [when] (local). There are
+  /// no repeats: Android keeps a repeat's words fixed, and reminders should
+  /// read differently each time.
   Future<void> scheduleNotification({
     required int id,
     required String title,
@@ -27,7 +29,6 @@ abstract class NotificationClient {
     required DateTime when,
     Map<String, dynamic>? data,
     required String type,
-    bool repeatsDaily = false,
   });
 
   Future<void> cancelNotification(int id);

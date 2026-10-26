@@ -58,12 +58,18 @@ class AndroidNotificationDisplay {
     announcementsChannel,
   ];
 
-  static NotificationDetails reminderDetails() => _details(remindersChannel);
+  /// [bigText] (the body) lets a long line expand instead of being cut off
+  /// at one line.
+  static NotificationDetails reminderDetails({String? bigText}) =>
+      _details(remindersChannel, bigText: bigText);
 
   static NotificationDetails announcementDetails() =>
       _details(announcementsChannel);
 
-  static NotificationDetails _details(AndroidNotificationChannel channel) {
+  static NotificationDetails _details(
+    AndroidNotificationChannel channel, {
+    String? bigText,
+  }) {
     return NotificationDetails(
       android: AndroidNotificationDetails(
         channel.id,
@@ -76,6 +82,9 @@ class AndroidNotificationDisplay {
         color: accentColor,
         playSound: true,
         enableVibration: true,
+        styleInformation: bigText == null
+            ? null
+            : BigTextStyleInformation(bigText),
       ),
       iOS: const DarwinNotificationDetails(
         presentAlert: true,

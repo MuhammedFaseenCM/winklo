@@ -82,12 +82,12 @@ Turns and keys:
 
 | Pool | key | turn |
 |------|-----|------|
-| Morning | `morning` | the morning's local epoch day |
+| Morning (active) | `active` | the morning's local epoch day |
 | Morning streak | `morningStreak` | epoch day ~/ 2 (used on even days) |
 | Lapsed | `lapsed` | epoch day |
 | Miss you | `missYou` | epoch day |
 | Last call | `lastCall` | epoch day |
-| Streak at risk | `streak<tier>` | epoch day of the evening |
+| Streak at risk | `streakRisk` (each tier is its own pool size, so its own passes) | epoch day of the evening |
 | Recap title | `recap` | epoch day ~/ 7 |
 
 The local epoch day is `DateTime.utc(y, m, d).millisecondsSinceEpoch ~/ 86400000` of the reminder's local date. Everyone gets the same line on a given day; that's fine for local reminders.
@@ -97,7 +97,7 @@ The local epoch day is `DateTime.utc(y, m, d).millisecondsSinceEpoch ~/ 86400000
 - `AppText` gains pools as lists of `NotifCopy` (`typedef NotifCopy = ({String title, String body})`, in `app_text.dart`): `notifMorningLines`, `notifMorningStreakLines(gameId, days)`, `notifLapsedLines`, `notifMissYouLines`, `notifLastCallLines`, `notifStreakRiskLines(gameId, days, {others})` (the tier picks the list), `notifWeeklyRecapTitles`. `AppStrings` forwards them. The old single strings (`notifDailyReady*`, `notifStreakAtRiskTitle`, `notifStreakEndsTonight`, `notifWeeklyRecapTitle`) go once nothing reads them.
 - `NotificationRepositoryImpl.engagementCopy` maps each reminder to its pool and `ShuffleBag.pick`.
 - Reminder notifications get `BigTextStyleInformation(body)` so a long line (Malayalam especially) expands instead of cutting off.
-- Pool sizes (English): morning ≥ 28, morning streak ≥ 10, lapsed ≥ 8, miss you ≥ 5, last call ≥ 4, each streak tier ≥ 5, recap titles ≥ 6. Malayalam may be a little smaller but never empty. English titles ≤ 40 characters, bodies ≤ 90.
+- Pool sizes (English): morning ≥ 28 (30 written), morning streak ≥ 10, lapsed ≥ 8, miss you ≥ 5, last call ≥ 4, each streak tier ≥ 5, recap titles ≥ 6. Malayalam is a little smaller (20 morning lines, 4 per streak tier) but never empty. English titles ≤ 40 characters, bodies ≤ 90.
 - Rules for lines: name real things only (Zip, Path Words, Sudoku, streaks, times); no board sizes or counts that can change; no "you lost your streak" (a freeze may have saved it); the last-call lines say reminders are pausing and that today's puzzles will be waiting.
 
 ## Testing

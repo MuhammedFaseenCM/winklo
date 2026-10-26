@@ -266,11 +266,7 @@ final Map<String, String Function(AppText)> _members = {
   'joinLeagueButton': (t) => t.joinLeagueButton,
   'joinLeagueAlreadyIn': (t) => t.joinLeagueAlreadyIn,
   'pathWordsTab': (t) => t.pathWordsTab,
-  'notifDailyReadyTitle': (t) => t.notifDailyReadyTitle,
-  'notifDailyReadyBody': (t) => t.notifDailyReadyBody,
-  'notifStreakAtRiskTitle': (t) => t.notifStreakAtRiskTitle,
   'dismiss': (t) => t.dismiss,
-  'notifWeeklyRecapTitle': (t) => t.notifWeeklyRecapTitle,
   'homeRecapTitle': (t) => t.homeRecapTitle,
   'channelRemindersName': (t) => t.channelRemindersName,
   'channelRemindersDescription': (t) => t.channelRemindersDescription,
@@ -475,8 +471,6 @@ final Map<String, String Function(AppText)> _members = {
   'streakFreezesReady': (t) => t.streakFreezesReady(2),
   'freezeCountLabel': (t) => t.freezeCountLabel(2),
   'freezeSavedStreak': (t) => t.freezeSavedStreak(GameIds.zip, 12),
-  'notifStreakEndsTonight': (t) =>
-      t.notifStreakEndsTonight(GameIds.zip, 12, others: 2),
   'weeklyRecapLine': (t) => t.weeklyRecapLine(_recap),
   'widgetStreak': (t) => t.widgetStreak(5),
   'settingsWeeklyRecapHint': (t) => t.settingsWeeklyRecapHint('7:00 PM'),
@@ -528,6 +522,37 @@ const _sameInEveryLanguage = {
   'resultsHintTimeTile',
 };
 
+/// Every pool of notification lines, with sample arguments; streak pools
+/// once per length tier. Long game names and numbers test the lengths.
+final Map<String, List<NotifCopy> Function(AppText)> _pools = {
+  'notifMorningLines': (t) => t.notifMorningLines,
+  'notifMorningStreakLines': (t) =>
+      t.notifMorningStreakLines(GameIds.pathWords, 128),
+  'notifLapsedLines': (t) => t.notifLapsedLines,
+  'notifMissYouLines': (t) => t.notifMissYouLines,
+  'notifLastCallLines': (t) => t.notifLastCallLines,
+  'notifStreakRiskLines': (t) => t.notifStreakRiskLines(GameIds.pathWords, 2),
+  'notifStreakRiskLines (3-6)': (t) =>
+      t.notifStreakRiskLines(GameIds.pathWords, 6),
+  'notifStreakRiskLines (7-29)': (t) =>
+      t.notifStreakRiskLines(GameIds.pathWords, 29),
+  'notifStreakRiskLines (30+)': (t) =>
+      t.notifStreakRiskLines(GameIds.pathWords, 128),
+};
+
+/// The fewest English lines each pool may have (the spec's minimums).
+const _minLines = {
+  'notifMorningLines': 28,
+  'notifMorningStreakLines': 10,
+  'notifLapsedLines': 8,
+  'notifMissYouLines': 5,
+  'notifLastCallLines': 4,
+  'notifStreakRiskLines': 5,
+  'notifStreakRiskLines (3-6)': 5,
+  'notifStreakRiskLines (7-29)': 5,
+  'notifStreakRiskLines (30+)': 5,
+};
+
 final _malayalamScript = RegExp('[\u0D00-\u0D7F]');
 
 void main() {
@@ -541,6 +566,85 @@ void main() {
       multiLine: true,
     ).allMatches(source).map((m) => m.group(1)).toSet();
     expect(_members.keys.toSet(), declared);
+  });
+
+  group('notification pools', () {
+    test('the pool table covers every pool member', () {
+      final source = File('lib/core/strings/app_text.dart').readAsStringSync();
+      final declared = RegExp(
+        r'^  List<NotifCopy> (?:get )?(\w+)',
+        multiLine: true,
+      ).allMatches(source).map((m) => m.group(1)).toSet();
+      expect(_pools.keys.map((key) => key.split(' ').first).toSet(), declared);
+    });
+
+    test('English pools are full and Malayalam ones never empty', () {
+      for (final MapEntry(:key, :value) in _pools.entries) {
+        expect(
+          value(en).length,
+          greaterThanOrEqualTo(_minLines[key]!),
+          reason: key,
+        );
+        expect(value(ml), isNotEmpty, reason: key);
+      }
+      expect(en.notifWeeklyRecapTitles.length, greaterThanOrEqualTo(6));
+      expect(ml.notifWeeklyRecapTitles, isNotEmpty);
+    });
+
+    test('no line repeats within a pool', () {
+      for (final MapEntry(:key, :value) in _pools.entries) {
+        for (final table in [en, ml]) {
+          final lines = value(table);
+          expect(lines.toSet(), hasLength(lines.length), reason: key);
+        }
+      }
+      for (final table in [en, ml]) {
+        final titles = table.notifWeeklyRecapTitles;
+        expect(titles.toSet(), hasLength(titles.length));
+      }
+    });
+
+    test('English lines fit a notification', () {
+      for (final MapEntry(:key, :value) in _pools.entries) {
+        for (final line in value(en)) {
+          expect(line.title.runes.length, lessThanOrEqualTo(40), reason: key);
+          expect(line.body.runes.length, lessThanOrEqualTo(90), reason: key);
+        }
+      }
+      for (final title in en.notifWeeklyRecapTitles) {
+        expect(title.runes.length, lessThanOrEqualTo(40));
+      }
+    });
+
+    test('Malayalam lines are in Malayalam', () {
+      for (final MapEntry(:key, :value) in _pools.entries) {
+        final english = value(en).toSet();
+        for (final line in value(ml)) {
+          expect(
+            '${line.title} ${line.body}',
+            contains(_malayalamScript),
+            reason: key,
+          );
+          expect(english, isNot(contains(line)), reason: key);
+        }
+      }
+      expect(
+        ml.notifWeeklyRecapTitles,
+        everyElement(contains(_malayalamScript)),
+      );
+    });
+
+    test('no placeholder or interpolation leaks into a line', () {
+      final leak = RegExp(r'[{}$]');
+      for (final MapEntry(:key, :value) in _pools.entries) {
+        for (final table in [en, ml]) {
+          for (final line in value(table)) {
+            expect(line.title, isNot(contains(leak)), reason: key);
+            expect(line.body, isNot(contains(leak)), reason: key);
+          }
+        }
+      }
+    });
   });
 
   test('every member is non-empty in both tables', () {

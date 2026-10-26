@@ -1002,16 +1002,383 @@ final class AppTextEn implements AppText {
   @override
   String get pathWordsTab => 'Path';
 
-  // Notifications
+  // Notifications. Mixed voice, simple English for learners worldwide, an
+  // emoji in about one line in four, never guilt. Lines don't say "morning":
+  // players pick their own reminder time.
   @override
-  String get notifDailyReadyTitle => 'Today’s puzzles are ready';
+  List<NotifCopy> get notifMorningLines => const [
+    (
+      title: 'Today’s puzzles are ready',
+      body: 'Fresh Zip, Path Words and Sudoku boards. Which one first?',
+    ),
+    (
+      title: 'New day, new puzzles ✨',
+      body: 'Three fresh boards are waiting for you.',
+    ),
+    (
+      title: 'Zip is ready. One line, every cell.',
+      body: 'Can you find the path today?',
+    ),
+    (
+      title: 'Got five minutes?',
+      body: 'Today’s Sudoku fits nicely in a short break.',
+    ),
+    (
+      title: 'Fresh words to find 🔤',
+      body: 'Today’s Path Words board is live.',
+    ),
+    (
+      title: 'Your brain worked out yesterday',
+      body: 'Ready for another round? Today’s puzzles are up 💪',
+    ),
+    (
+      title: 'Today’s Zip is waiting',
+      body: 'Connect the numbers in order and fill every cell.',
+    ),
+    (
+      title: 'Three puzzles, one day',
+      body: 'Clear all three for a perfect day 🌟',
+    ),
+    (
+      title: 'Sudoku time?',
+      body: 'A new grid is ready. Take it one number at a time.',
+    ),
+    (
+      title: 'Path Words is live',
+      body: 'New letters, new words. Can you trace them all?',
+    ),
+    (
+      title: 'Start with an easy win',
+      body: 'Play the game you like most first, then try the others.',
+    ),
+    (
+      title: 'Fresh boards for everyone',
+      body: 'Everyone starts from zero today. See how you compare.',
+    ),
+    (
+      title: 'Can you beat yesterday’s time?',
+      body: 'Today’s Zip is ready to find out.',
+    ),
+    (
+      title: 'Quiet puzzle, busy day',
+      body: 'Even a few minutes with Sudoku is a nice break.',
+    ),
+    (title: 'Words are hiding 🔍', body: 'Find them in today’s Path Words.'),
+    (
+      title: 'Today’s Zip has one answer',
+      body: 'Find the path that fills every cell.',
+    ),
+    (
+      title: 'Ready when you are',
+      body: 'Zip, Path Words and Sudoku are all new today.',
+    ),
+    (
+      title: 'Time for your daily three',
+      body: 'A few minutes, three puzzles and a clear head.',
+    ),
+    (
+      title: 'Think you’re fast? ⏱️',
+      body: 'The timer is waiting in today’s Zip.',
+    ),
+    (
+      title: 'New Sudoku, new numbers',
+      body: 'Every row, every column, every box. You’ve got this.',
+    ),
+    (
+      title: 'A fresh start 🌱',
+      body: 'Yesterday is done. Today’s puzzles are brand new.',
+    ),
+    (
+      title: 'Path Words: new letters today',
+      body: 'Trace every word across a brand new grid.',
+    ),
+    (title: 'Puzzle break? ☕', body: 'Today’s boards are ready when you are.'),
+    (
+      title: 'How about a Zip?',
+      body: 'Draw one line through the numbers. It’s harder than it looks.',
+    ),
+    (
+      title: 'Small puzzle, big smile',
+      body: 'Clear one board today and feel good about it.',
+    ),
+    (
+      title: 'Sharp mind, new day',
+      body: 'Today’s Sudoku is here to keep it that way.',
+    ),
+    (
+      title: 'Today’s top times are open',
+      body: 'Post a quick time on any game and see where you land.',
+    ),
+    (
+      title: 'One puzzle a day',
+      body: 'That’s all a habit needs. Start with any game.',
+    ),
+    (
+      title: 'A fresh Path Words board',
+      body: 'Some words are easy to spot. Some are not. Find them all.',
+    ),
+    (
+      title: 'Let’s play',
+      body: 'Today’s Zip, Path Words and Sudoku are ready.',
+    ),
+  ];
 
   @override
-  String get notifDailyReadyBody =>
-      'Play Zip, Path Words and Sudoku to keep your streaks going.';
+  List<NotifCopy> notifMorningStreakLines(String gameId, int days) {
+    final game = gameTitle(gameId);
+    final next = days + 1;
+    return [
+      (
+        title: 'Day $next of your $game streak 🔥',
+        body: '$days days in a row so far. Keep it going today.',
+      ),
+      (
+        title: '$days days of $game and counting',
+        body: 'Today’s board is ready to make it $next.',
+      ),
+      (
+        title: 'Your $game streak is at $days days',
+        body: 'One more clear today keeps it alive.',
+      ),
+      (
+        title: 'Keep the $game streak rolling',
+        body: '$days days strong. Today’s puzzle is waiting.',
+      ),
+      (title: '$days-day $game streak 🔥', body: 'Nice habit. Don’t stop now.'),
+      (
+        title: 'Your streak says hi 👋',
+        body: '$days days of $game. Make it $next today.',
+      ),
+      (
+        title: 'Look at that $game streak',
+        body: '$days days in a row. Today could be day $next.',
+      ),
+      (
+        title: 'Streak check: $days days',
+        body: 'Your $game run continues today. Ready?',
+      ),
+      (
+        title: '$game, day $next?',
+        body: 'Your streak is $days days long. Keep it going.',
+      ),
+      (
+        title: 'Still going strong 💪',
+        body: '$days days of $game. Today’s board is up.',
+      ),
+    ];
+  }
 
   @override
-  String get notifStreakAtRiskTitle => 'Streak at risk';
+  List<NotifCopy> get notifLapsedLines => const [
+    (
+      title: 'Missed a day? No problem',
+      body: 'Today’s puzzles are new. Jump back in.',
+    ),
+    (
+      title: 'Today is a clean board',
+      body: 'Whatever happened yesterday, today starts fresh.',
+    ),
+    (
+      title: 'Your puzzles are still here 🧩',
+      body: 'Zip, Path Words and Sudoku are ready when you are.',
+    ),
+    (
+      title: 'Come back for a quick one',
+      body: 'One puzzle takes only a few minutes.',
+    ),
+    (
+      title: 'Fresh boards, same fun',
+      body: 'New Zip, Path Words and Sudoku today.',
+    ),
+    (
+      title: 'Pick up where you left off',
+      body: 'Today’s puzzles are waiting for you.',
+    ),
+    (
+      title: 'An easy way back in',
+      body: 'Start with your favourite game. Just one.',
+    ),
+    (
+      title: 'Your spot is still here',
+      body: 'Today’s leaderboard has room for your time.',
+    ),
+    (
+      title: 'Today could be day one',
+      body: 'Every streak starts with a single clear 🌱',
+    ),
+    (
+      title: 'A puzzle a day, any day',
+      body: 'It’s never too late to start again. Today’s boards are up.',
+    ),
+  ];
+
+  @override
+  List<NotifCopy> get notifMissYouLines => const [
+    (
+      title: 'It’s been a while 👋',
+      body: 'Your daily puzzles are still here. Come take a look.',
+    ),
+    (
+      title: 'We miss you at Winklo',
+      body: 'There’s a new Zip, Path Words and Sudoku every day.',
+    ),
+    (
+      title: 'Still up for a puzzle?',
+      body: 'Today’s boards are fresh. One is all it takes.',
+    ),
+    (
+      title: 'The puzzles kept coming',
+      body: 'There’s a new set today. Want to try one?',
+    ),
+    (
+      title: 'Your brain might enjoy this',
+      body: 'A short puzzle break is waiting in Winklo.',
+    ),
+  ];
+
+  @override
+  List<NotifCopy> get notifLastCallLines => const [
+    (
+      title: 'We’ll stop reminding you for now',
+      body: 'Your puzzles will be here whenever you want them.',
+    ),
+    (
+      title: 'Our last reminder',
+      body: 'We’ll go quiet now. Open Winklo any time for today’s puzzles.',
+    ),
+    (
+      title: 'Taking a break from reminders',
+      body: 'No more nudges for now. Come back whenever you like 👋',
+    ),
+    (
+      title: 'This is our last nudge',
+      body: 'We’re pausing reminders. Today’s puzzles are still waiting.',
+    ),
+  ];
+
+  @override
+  List<NotifCopy> notifStreakRiskLines(
+    String gameId,
+    int days, {
+    int others = 0,
+  }) {
+    final game = gameTitle(gameId);
+    final next = days + 1;
+    final daysWord = days == 1 ? '1 day' : '$days days';
+    final more = switch (others) {
+      <= 0 => '',
+      1 => ' 1 more streak ends tonight too.',
+      _ => ' $others more streaks end tonight too.',
+    };
+    final List<NotifCopy> lines = switch (days) {
+      <= 2 => [
+        (
+          title: 'Your new $game streak needs you',
+          body: '$daysWord so far. Clear today’s board before midnight.',
+        ),
+        (
+          title: 'Don’t let $game slip 🌱',
+          body: 'Your streak is just getting started. Play before midnight.',
+        ),
+        (
+          title: 'Keep the $game streak alive',
+          body: 'A quick clear today makes it $next days.',
+        ),
+        (
+          title: 'Small streak, big start',
+          body: 'Your $days-day $game streak ends at midnight unless you play.',
+        ),
+        (
+          title: '$game is still waiting today',
+          body: 'Clear it to keep your $days-day streak going.',
+        ),
+      ],
+      <= 6 => [
+        (
+          title: '$days days of $game at risk',
+          body: 'Today’s board is still open. Play before midnight.',
+        ),
+        (
+          title: 'Your $game streak ends tonight ⏳',
+          body: '$days days in a row. Don’t stop now.',
+        ),
+        (
+          title: 'Save your $days-day $game streak',
+          body: 'One quick clear before midnight is all it takes.',
+        ),
+        (
+          title: 'Keep the $game run going',
+          body: 'Your $days-day streak needs today’s clear.',
+        ),
+        (
+          title: '$game streak check ⏰',
+          body: '$days days so far, and today isn’t cleared yet.',
+        ),
+      ],
+      <= 29 => [
+        (
+          title: 'Your $days-day $game streak 🔥',
+          body: 'It ends at midnight unless you clear today’s board.',
+        ),
+        (
+          title: '$days days of $game. Keep going?',
+          body: 'Today’s board is still open. A few minutes will do.',
+        ),
+        (
+          title: 'Protect your $game streak',
+          body: '$days days is a great run. Play before midnight to keep it.',
+        ),
+        (
+          title: '$game is waiting for day $next',
+          body: 'Your streak ends tonight if today stays empty.',
+        ),
+        (
+          title: 'Tonight: $game, day $next',
+          body: 'Clear today’s board to keep your $days-day streak.',
+        ),
+        (
+          title: 'Still time for $game ⏳',
+          body: 'Your $days-day streak is safe once you clear today.',
+        ),
+      ],
+      _ => [
+        (
+          title: '$days days of $game! 🏆',
+          body: 'A streak like this deserves one more day. Play by midnight.',
+        ),
+        (
+          title: 'Your $days-day $game streak',
+          body: 'That’s amazing. Clear today’s board to keep it alive.',
+        ),
+        (
+          title: 'Day $next of $game is waiting',
+          body: 'You’ve come so far. A quick clear keeps the streak going.',
+        ),
+        (
+          title: 'Big streak alert 🔥',
+          body: '$days days of $game end at midnight unless you play today.',
+        ),
+        (
+          title: 'Keep your $days-day $game run',
+          body: 'Today’s board is still open. A few minutes keeps it safe.',
+        ),
+      ],
+    };
+    return [
+      for (final line in lines) (title: line.title, body: '${line.body}$more'),
+    ];
+  }
+
+  @override
+  List<String> get notifWeeklyRecapTitles => const [
+    'Your week in Winklo',
+    'Your week in puzzles 📊',
+    'How did your week go?',
+    'Your weekly recap',
+    'This week, in numbers',
+    'A week of puzzles, done ✅',
+    'Your Sunday puzzle report',
+  ];
 
   // Habit: freezes, reminders, weekly recap, home-screen widget, Settings
   @override
@@ -1037,16 +1404,6 @@ final class AppTextEn implements AppText {
 
   @override
   String get dismiss => 'Dismiss';
-
-  @override
-  String notifStreakEndsTonight(String gameId, int days, {int others = 0}) {
-    final streak = '$days-day ${gameTitle(gameId)} streak';
-    if (others <= 0) return 'Your $streak ends at midnight';
-    return 'Your $streak and $others more end at midnight';
-  }
-
-  @override
-  String get notifWeeklyRecapTitle => 'Your week in Winklo';
 
   @override
   String weeklyRecapLine(WeeklyRecap recap, {bool lastWeek = false}) {

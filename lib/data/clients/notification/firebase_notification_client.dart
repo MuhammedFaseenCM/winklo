@@ -305,7 +305,9 @@ class FirebaseNotificationClient implements NotificationClient {
       id: id,
       title: title,
       body: body,
-      notificationDetails: AndroidNotificationDisplay.reminderDetails(),
+      notificationDetails: AndroidNotificationDisplay.reminderDetails(
+        bigText: body,
+      ),
       payload: _encodePayload(title: title, body: body, type: type, data: data),
     );
   }
@@ -318,7 +320,6 @@ class FirebaseNotificationClient implements NotificationClient {
     required DateTime when,
     Map<String, dynamic>? data,
     required String type,
-    bool repeatsDaily = false,
   }) async {
     await _ensureLocalReady();
     final scheduled = tz.TZDateTime.from(when, tz.local);
@@ -327,9 +328,10 @@ class FirebaseNotificationClient implements NotificationClient {
       title: title,
       body: body,
       scheduledDate: scheduled,
-      notificationDetails: AndroidNotificationDisplay.reminderDetails(),
+      notificationDetails: AndroidNotificationDisplay.reminderDetails(
+        bigText: body,
+      ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: repeatsDaily ? DateTimeComponents.time : null,
       payload: _encodePayload(title: title, body: body, type: type, data: data),
     );
   }

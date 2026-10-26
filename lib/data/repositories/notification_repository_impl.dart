@@ -7,7 +7,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
 import '../../core/strings/app_strings.dart';
+import '../../core/strings/app_text.dart';
 import '../../domain/habit/engagement_reminder.dart';
+import '../../domain/habit/shuffle_bag.dart';
 import '../../domain/notification_types.dart';
 import '../../domain/repositories/notification_repository.dart';
 import '../clients/notification/notification_client.dart';
@@ -201,10 +203,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
       return;
     }
     for (final reminder in reminders) {
-      // The plan was made a moment ago; a one-off whose time has passed
-      // since would be refused by the plugin. A daily repeat moves on to
-      // its next time by itself.
-      if (!reminder.repeatsDaily && !reminder.when.isAfter(_now())) continue;
+      // The plan was made a moment ago; a reminder whose time has passed
+      // since would be refused by the plugin.
+      if (!reminder.when.isAfter(_now())) continue;
       final copy = engagementCopy(reminder);
       try {
         await _client.scheduleNotification(
@@ -214,7 +215,6 @@ class NotificationRepositoryImpl implements NotificationRepository {
           when: reminder.when,
           type: reminder.type,
           data: {'route': '/'},
-          repeatsDaily: reminder.repeatsDaily,
         );
       } catch (e) {
         // One refused reminder must not drop the rest.
@@ -223,23 +223,50 @@ class NotificationRepositoryImpl implements NotificationRepository {
     }
   }
 
-  /// The words of [reminder].
-  static ({String title, String body}) engagementCopy(
-    EngagementReminder reminder,
-  ) => switch (reminder) {
-    DailyReadyReminder() => (
-      title: AppStrings.notifDailyReadyTitle,
-      body: AppStrings.notifDailyReadyBody,
-    ),
-    StreakAtRiskReminder(:final gameId, :final days, :final others) => (
-      title: AppStrings.notifStreakAtRiskTitle,
-      body: AppStrings.notifStreakEndsTonight(gameId, days, others: others),
-    ),
-    WeeklyRecapReminder(:final recap) => (
-      title: AppStrings.notifWeeklyRecapTitle,
-      body: AppStrings.weeklyRecapLine(recap),
-    ),
-  };
+  /// The words of [reminder]: a line from its pool, picked by
+  /// [ShuffleBag] from the day it fires, so consecutive reminders differ.
+  static NotifCopy engagementCopy(EngagementReminder reminder) {
+    final day = ShuffleBag.epochDay(reminder.when);
+    return switch (reminder) {
+      DailyReadyReminder(
+        phase: MorningPhase.active,
+        :final streakGameId?,
+        :final streakDays,
+      )
+          when day.isEven =>
+        _pick(
+          AppStrings.notifMorningStreakLines(streakGameId, streakDays),
+          'morningStreak',
+          day ~/ 2,
+        ),
+      DailyReadyReminder(:final phase) => _pick(
+        switch (phase) {
+          MorningPhase.active => AppStrings.notifMorningLines,
+          MorningPhase.lapsed => AppStrings.notifLapsedLines,
+          MorningPhase.missYou => AppStrings.notifMissYouLines,
+          MorningPhase.lastCall => AppStrings.notifLastCallLines,
+        },
+        phase.name,
+        day,
+      ),
+      StreakAtRiskReminder(:final gameId, :final days, :final others) => _pick(
+        AppStrings.notifStreakRiskLines(gameId, days, others: others),
+        'streakRisk',
+        day,
+      ),
+      WeeklyRecapReminder(:final recap) => (
+        title: _pick(
+          AppStrings.notifWeeklyRecapTitles,
+          'recap',
+          day ~/ DateTime.daysPerWeek,
+        ),
+        body: AppStrings.weeklyRecapLine(recap),
+      ),
+    };
+  }
+
+  static T _pick<T>(List<T> pool, String key, int turn) =>
+      pool[ShuffleBag.pick(key, turn, pool.length)];
 
   @override
   Stream<NotificationTap> watchTaps() {

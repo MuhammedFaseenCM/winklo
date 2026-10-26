@@ -1,5 +1,8 @@
 import '../../domain/habit/weekly_recap.dart';
 
+/// One notification's words.
+typedef NotifCopy = ({String title, String body});
+
 /// Every user-facing string, one member per string. `AppStrings` delegates
 /// to the table for the current language (`AppTextEn`, `AppTextMl`); a new
 /// language is a new implementation of this interface.
@@ -369,10 +372,31 @@ abstract interface class AppText {
   /// Compact game-tab label (full title stays [pathWordsTitle]).
   String get pathWordsTab;
 
-  // Notifications
-  String get notifDailyReadyTitle;
-  String get notifDailyReadyBody;
-  String get notifStreakAtRiskTitle;
+  // Notifications. Each kind is a pool of lines; the reminders draw from it
+  // with `ShuffleBag`, so one reminder never reads like the last.
+
+  /// The next morning's reminder.
+  List<NotifCopy> get notifMorningLines;
+
+  /// The next morning's reminder when [gameId]'s [days]-day streak (3 or
+  /// more) is alive that morning.
+  List<NotifCopy> notifMorningStreakLines(String gameId, int days);
+
+  /// Mornings 2–7 without the app being opened.
+  List<NotifCopy> get notifLapsedLines;
+
+  /// Day 10 without the app being opened.
+  List<NotifCopy> get notifMissYouLines;
+
+  /// Day 14, the last reminder: says the reminders are pausing.
+  List<NotifCopy> get notifLastCallLines;
+
+  /// The evening a [days]-day streak on [gameId] ends at midnight, with
+  /// [others] more streaks at stake. The lines suit how long it is.
+  List<NotifCopy> notifStreakRiskLines(String gameId, int days, {int others});
+
+  /// The weekly recap's titles; its body is [weeklyRecapLine].
+  List<String> get notifWeeklyRecapTitles;
 
   // Habit: freezes, reminders, weekly recap, home-screen widget, Settings
   String gameTitle(String gameId);
@@ -380,10 +404,6 @@ abstract interface class AppText {
   String freezeCountLabel(int count);
   String freezeSavedStreak(String gameId, int days);
   String get dismiss;
-
-  /// "Your 12-day Zip streak ends at midnight", or "… and 2 more end …".
-  String notifStreakEndsTonight(String gameId, int days, {int others});
-  String get notifWeeklyRecapTitle;
 
   /// "This week: 18 of 21 cleared, best Zip 0:58, 5-day Sudoku streak".
   String weeklyRecapLine(WeeklyRecap recap, {bool lastWeek});

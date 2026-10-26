@@ -55,28 +55,133 @@ void main() {
   List<StreakAtRiskReminder> streakReminders(List<EngagementReminder> all) =>
       all.whereType<StreakAtRiskReminder>().toList();
 
-  group('daily ready', () {
-    test('repeats daily at the chosen time', () {
-      final reminders = plan(
-        settings: const ReminderSettings(dailyReadyMinutes: 7 * 60 + 15),
-        now: DateTime(2026, 10, 15, 6),
+  List<DailyReadyReminder> mornings(List<EngagementReminder> all) =>
+      all.whereType<DailyReadyReminder>().toList();
+
+  group('morning reminders', () {
+    test('a week of mornings, then day 10 and day 14', () {
+      final all = mornings(plan());
+      expect(all.map((r) => r.when), [
+        for (final day in [16, 17, 18, 19, 20, 21, 22, 25, 29])
+          DateTime(2026, 10, day, 8),
+      ]);
+      expect(all.map((r) => r.slot), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+      expect(all.map((r) => r.id), [
+        for (var slot = 0; slot < 9; slot++)
+          NotificationTypes.scheduleIdMorningBase + slot,
+      ]);
+      expect(all.map((r) => r.phase), [
+        MorningPhase.active,
+        for (var i = 0; i < 6; i++) MorningPhase.lapsed,
+        MorningPhase.missYou,
+        MorningPhase.lastCall,
+      ]);
+    });
+
+    test('starts today while today’s time is ahead', () {
+      final all = mornings(
+        plan(
+          settings: const ReminderSettings(dailyReadyMinutes: 7 * 60 + 15),
+          now: DateTime(2026, 10, 15, 6),
+        ),
       );
-      final daily = reminders.whereType<DailyReadyReminder>().single;
-      expect(daily.when, DateTime(2026, 10, 15, 7, 15));
-      expect(daily.repeatsDaily, isTrue);
-      expect(daily.id, NotificationTypes.scheduleIdDailyReady);
+      expect(all.first.when, DateTime(2026, 10, 15, 7, 15));
+      expect(all.last.when, DateTime(2026, 10, 28, 7, 15));
     });
 
-    test('moves to tomorrow once today’s time has passed', () {
-      final daily = plan().whereType<DailyReadyReminder>().single;
-      expect(daily.when, DateTime(2026, 10, 16, 8));
+    test('with every game cleared today, starts tomorrow', () {
+      final all = mornings(
+        plan(
+          now: DateTime(2026, 10, 15, 6),
+          games: [
+            game(GameIds.zip, cleared: true),
+            game(GameIds.pathWords, current: 2, last: today),
+            game(GameIds.sudoku, cleared: true),
+          ],
+        ),
+      );
+      expect(all.first.when, DateTime(2026, 10, 16, 8));
     });
 
-    test('off schedules nothing', () {
+    test('with a game left to play today, still starts today', () {
+      final all = mornings(
+        plan(
+          now: DateTime(2026, 10, 15, 6),
+          games: [
+            game(GameIds.zip, cleared: true),
+            game(GameIds.pathWords),
+            game(GameIds.sudoku, cleared: true),
+          ],
+        ),
+      );
+      expect(all.first.when, DateTime(2026, 10, 15, 8));
+    });
+
+    test('this morning names the longest uncleared streak', () {
+      final all = mornings(
+        plan(
+          now: DateTime(2026, 10, 15, 6),
+          games: [
+            game(GameIds.zip, current: 20, last: today, cleared: true),
+            game(GameIds.pathWords, current: 5, last: yesterday),
+            game(GameIds.sudoku, current: 4, last: yesterday),
+          ],
+        ),
+      );
+      expect(all.first.streakGameId, GameIds.pathWords);
+      expect(all.first.streakDays, 5);
+      expect(all.skip(1).map((r) => r.streakGameId), everyElement(isNull));
+      expect(all.skip(1).map((r) => r.streakDays), everyElement(0));
+    });
+
+    test('tomorrow morning names what survives today', () {
+      final all = mornings(
+        plan(
+          games: [
+            game(GameIds.zip, current: 12, last: today, cleared: true),
+            // Missed yesterday with no freeze left: gone by tomorrow.
+            game(GameIds.pathWords, current: 30, last: yesterday, freezes: 0),
+            game(GameIds.sudoku),
+          ],
+        ),
+      );
+      expect(all.first.when, DateTime(2026, 10, 16, 8));
+      expect(all.first.streakGameId, GameIds.zip);
+      expect(all.first.streakDays, 12);
+    });
+
+    test('a streak under three days is not named', () {
+      final all = mornings(
+        plan(
+          games: [
+            game(GameIds.zip, current: 2, last: today),
+            ...idle().skip(1),
+          ],
+        ),
+      );
+      expect(all.first.streakGameId, isNull);
+      expect(all.first.streakDays, 0);
+    });
+
+    test('ties go to Zip, Path Words, then Sudoku', () {
+      final all = mornings(
+        plan(
+          now: DateTime(2026, 10, 15, 6),
+          games: [
+            game(GameIds.zip),
+            game(GameIds.pathWords, current: 6, last: yesterday),
+            game(GameIds.sudoku, current: 6, last: yesterday),
+          ],
+        ),
+      );
+      expect(all.first.streakGameId, GameIds.pathWords);
+    });
+
+    test('off schedules none', () {
       final reminders = plan(
         settings: const ReminderSettings(dailyReadyEnabled: false),
       );
-      expect(reminders.whereType<DailyReadyReminder>(), isEmpty);
+      expect(mornings(reminders), isEmpty);
     });
   });
 
@@ -271,7 +376,6 @@ void main() {
       expect(weekly.when, DateTime(2026, 10, 18, 19));
       expect(weekly.recap, recap);
       expect(weekly.id, NotificationTypes.scheduleIdWeeklyRecap);
-      expect(weekly.repeatsDaily, isFalse);
     });
 
     test('nextWeeklyRecapAt on a Sunday after the time is next week', () {
@@ -326,11 +430,13 @@ void main() {
         possible: 21,
       ),
     );
-    expect(reminders, hasLength(4));
-    expect(reminders.map((r) => r.id).toSet(), hasLength(4));
+    expect(reminders, hasLength(12));
+    expect(reminders.map((r) => r.id).toSet(), hasLength(12));
+    // Every id a replan cancels, except the old daily repeat's.
     expect(
       reminders.map((r) => r.id).toSet(),
-      NotificationTypes.engagementScheduleIds.toSet(),
+      {...NotificationTypes.engagementScheduleIds}
+        ..remove(NotificationTypes.scheduleIdDailyReadyLegacy),
     );
   });
 }

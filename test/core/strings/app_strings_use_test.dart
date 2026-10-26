@@ -65,15 +65,18 @@ void main() {
       expect(AppStrings.newPuzzleIn(Duration.zero), AppStrings.newPuzzleReady);
     });
 
-    test('the streak reminder joins "and 2 more" to the streak', () {
+    test('the streak lines add the other streaks to every line', () {
+      final lines = AppStrings.notifStreakRiskLines(GameIds.zip, 12, others: 2);
+      expect(lines, isNotEmpty);
       expect(
-        AppStrings.notifStreakEndsTonight(GameIds.zip, 12),
-        'നിങ്ങളുടെ 12 ദിവസത്തെ Zip സ്ട്രീക്ക് അർധരാത്രി അവസാനിക്കും',
+        lines.map((line) => line.body),
+        everyElement(
+          endsWith(' മറ്റ് 2 സ്ട്രീക്കുകളും ഇന്ന് രാത്രി അവസാനിക്കും.'),
+        ),
       );
       expect(
-        AppStrings.notifStreakEndsTonight(GameIds.zip, 12, others: 2),
-        'നിങ്ങളുടെ 12 ദിവസത്തെ Zip സ്ട്രീക്കും മറ്റ് 2 എണ്ണവും അർധരാത്രി '
-        'അവസാനിക്കും',
+        lines.map((line) => '${line.title} ${line.body}'),
+        everyElement(contains('Zip')),
       );
     });
 

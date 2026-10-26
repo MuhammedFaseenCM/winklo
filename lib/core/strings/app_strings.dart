@@ -424,10 +424,19 @@ abstract final class AppStrings {
   static String get joinLeagueAlreadyIn => _t.joinLeagueAlreadyIn;
   static String get pathWordsTab => _t.pathWordsTab;
 
-  // Notifications
-  static String get notifDailyReadyTitle => _t.notifDailyReadyTitle;
-  static String get notifDailyReadyBody => _t.notifDailyReadyBody;
-  static String get notifStreakAtRiskTitle => _t.notifStreakAtRiskTitle;
+  // Notifications: pools of lines (see AppText)
+  static List<NotifCopy> get notifMorningLines => _t.notifMorningLines;
+  static List<NotifCopy> notifMorningStreakLines(String gameId, int days) =>
+      _t.notifMorningStreakLines(gameId, days);
+  static List<NotifCopy> get notifLapsedLines => _t.notifLapsedLines;
+  static List<NotifCopy> get notifMissYouLines => _t.notifMissYouLines;
+  static List<NotifCopy> get notifLastCallLines => _t.notifLastCallLines;
+  static List<NotifCopy> notifStreakRiskLines(
+    String gameId,
+    int days, {
+    int others = 0,
+  }) => _t.notifStreakRiskLines(gameId, days, others: others);
+  static List<String> get notifWeeklyRecapTitles => _t.notifWeeklyRecapTitles;
 
   // Habit: freezes, reminders, weekly recap, home-screen widget, Settings
   static String gameTitle(String gameId) => _t.gameTitle(gameId);
@@ -436,12 +445,6 @@ abstract final class AppStrings {
   static String freezeSavedStreak(String gameId, int days) =>
       _t.freezeSavedStreak(gameId, days);
   static String get dismiss => _t.dismiss;
-  static String notifStreakEndsTonight(
-    String gameId,
-    int days, {
-    int others = 0,
-  }) => _t.notifStreakEndsTonight(gameId, days, others: others);
-  static String get notifWeeklyRecapTitle => _t.notifWeeklyRecapTitle;
   static String weeklyRecapLine(WeeklyRecap recap, {bool lastWeek = false}) =>
       _t.weeklyRecapLine(recap, lastWeek: lastWeek);
   static String get homeRecapTitle => _t.homeRecapTitle;

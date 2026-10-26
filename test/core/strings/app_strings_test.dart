@@ -50,22 +50,62 @@ void main() {
   });
 
   group('habit copy', () {
-    test('streak reminder names one streak', () {
+    test('every streak-at-risk line names its game', () {
+      for (final (gameId, days) in [
+        (GameIds.zip, 1),
+        (GameIds.pathWords, 4),
+        (GameIds.sudoku, 12),
+        (GameIds.zip, 45),
+      ]) {
+        for (final line in AppStrings.notifStreakRiskLines(gameId, days)) {
+          expect(
+            '${line.title} ${line.body}',
+            contains(AppStrings.gameTitle(gameId)),
+            reason: '$gameId $days: $line',
+          );
+        }
+      }
+    });
+
+    test('streak-at-risk lines suit how long the streak is', () {
+      final young = AppStrings.notifStreakRiskLines(GameIds.zip, 1).toSet();
+      final long = AppStrings.notifStreakRiskLines(GameIds.zip, 45).toSet();
+      expect(young.intersection(long), isEmpty);
+    });
+
+    test('streak-at-risk lines count the other streaks at stake', () {
       expect(
-        AppStrings.notifStreakEndsTonight(GameIds.zip, 12),
-        'Your 12-day Zip streak ends at midnight',
+        AppStrings.notifStreakRiskLines(
+          GameIds.sudoku,
+          1,
+          others: 1,
+        ).map((line) => line.body),
+        everyElement(endsWith(' 1 more streak ends tonight too.')),
+      );
+      expect(
+        AppStrings.notifStreakRiskLines(
+          GameIds.pathWords,
+          5,
+          others: 2,
+        ).map((line) => line.body),
+        everyElement(endsWith(' 2 more streaks end tonight too.')),
+      );
+      expect(
+        AppStrings.notifStreakRiskLines(
+          GameIds.zip,
+          12,
+        ).map((line) => line.body),
+        everyElement(isNot(contains('more streak'))),
       );
     });
 
-    test('streak reminder counts the others at risk', () {
+    test('morning streak lines count on from the streak', () {
+      final lines = AppStrings.notifMorningStreakLines(GameIds.zip, 12);
       expect(
-        AppStrings.notifStreakEndsTonight(GameIds.pathWords, 5, others: 2),
-        'Your 5-day Path Words streak and 2 more end at midnight',
+        lines.map((line) => '${line.title} ${line.body}'),
+        everyElement(allOf(contains('12'), contains('Zip'))),
       );
-      expect(
-        AppStrings.notifStreakEndsTonight(GameIds.sudoku, 1, others: 1),
-        'Your 1-day Sudoku streak and 1 more end at midnight',
-      );
+      expect(lines.first.title, 'Day 13 of your Zip streak 🔥');
     });
 
     test('freeze saved', () {
