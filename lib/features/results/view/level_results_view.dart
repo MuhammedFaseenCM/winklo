@@ -162,7 +162,7 @@ class _Goal extends StatelessWidget {
     final theme = Theme.of(context);
     final spoken = earned
         ? AppStrings.levelGoalEarned(label)
-        : [AppStrings.levelGoalMissed(label), if (how != null) how!].join('. ');
+        : [AppStrings.levelGoalMissed(label), ?how].join('. ');
     return Semantics(
       label: spoken,
       excludeSemantics: true,
