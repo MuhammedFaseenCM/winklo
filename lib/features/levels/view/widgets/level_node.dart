@@ -62,12 +62,22 @@ class LevelNode extends StatelessWidget {
                   child: Center(
                     child: locked
                         ? AppIcon(AppIcons.lock, size: 15, color: numberColor)
-                        : Text(
-                            '${node.slot.number}',
-                            style: TextStyle(
-                              color: numberColor,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
+                        // Large text sizes shrink the number into the
+                        // circle rather than spilling out of it.
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                              ),
+                              child: Text(
+                                '${node.slot.number}',
+                                style: TextStyle(
+                                  color: numberColor,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                ),
+                              ),
                             ),
                           ),
                   ),

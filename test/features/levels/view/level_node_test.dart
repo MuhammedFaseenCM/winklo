@@ -62,4 +62,26 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('a long number at a large text size stays inside', (
+    tester,
+  ) async {
+    final big = LevelMap.build(
+      LevelCatalog([levelWorld(1, 100)]),
+      const LevelProgress({}),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: Scaffold(
+            body: Center(
+              child: LevelNode(node: big.node('zip_1_100')!, onTap: () {}),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
