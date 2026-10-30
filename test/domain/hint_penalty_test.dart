@@ -149,4 +149,24 @@ void main() {
     expect(HintPenalty.nextSeconds(mode, hintsUsed: 2), 0);
     expect(HintPenalty.chargedSeconds(mode, hintsUsed: 3), 0);
   });
+
+  test('a level run starts its clock with no hint time carried over', () {
+    final clock = HintPenalty.startClock(
+      at: DateTime(2026, 10, 15, 9),
+      mode: const PlayMode.level('zip_1_01'),
+      hintsUsed: 3,
+    );
+    expect(clock.elapsedMs, 0);
+  });
+
+  test('a level spend counts the hint but adds no seconds', () async {
+    final spent = await spendHint(
+      quota: _CountingQuota(),
+      mode: const PlayMode.level('zip_1_01'),
+      gameId: 'zip',
+      playId: 'zip_1_01',
+    );
+    expect(spent.hintsUsed, 1);
+    expect(spent.penaltySeconds, 0);
+  });
 }

@@ -407,6 +407,8 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                       hintLabelFor(
                                         widget.mode,
                                         hintsUsed: state.hintsUsed,
+                                        usedHintsThisRun:
+                                            state.usedHintsThisRun,
                                       ),
                                     ),
                                   ),

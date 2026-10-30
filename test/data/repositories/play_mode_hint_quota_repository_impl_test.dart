@@ -62,4 +62,15 @@ void main() {
     );
     verifyZeroInteractions(daily);
   });
+
+  test(
+    'level mode uses its own in-memory quota, apart from practice',
+    () async {
+      const mode = PlayMode.level('zip_1_01');
+      expect(identical(forMode(mode), forMode(mode)), isTrue);
+      expect(identical(forMode(mode), forMode(PlayMode.practice)), isFalse);
+      expect(await forMode(mode).consume(GameIds.zip, 'zip_1_01'), 1);
+      expect(forMode(PlayMode.practice).usedFor(GameIds.zip, 'zip_1_01'), 0);
+    },
+  );
 }

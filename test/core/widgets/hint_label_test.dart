@@ -21,4 +21,14 @@ void main() {
       AppStrings.hintUnlimited,
     );
   });
+
+  test(
+    'a level hint follows the run, not the count left from earlier runs',
+    () {
+      const mode = PlayMode.level('zip_1_01');
+      expect(hintLabelFor(mode, hintsUsed: 0), 'Hint · costs a star');
+      expect(hintLabelFor(mode, hintsUsed: 3), 'Hint · costs a star');
+      expect(hintLabelFor(mode, hintsUsed: 3, usedHintsThisRun: true), 'Hint');
+    },
+  );
 }

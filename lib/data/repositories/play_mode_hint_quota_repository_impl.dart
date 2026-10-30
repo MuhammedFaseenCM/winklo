@@ -26,7 +26,8 @@ class ArchiveHintQuotaRepositoryImpl implements HintQuotaRepository {
       false;
 }
 
-/// Practice hints: free ([HintPenalty.appliesTo]) and counted in memory only.
+/// Practice and level hints: free of time ([HintPenalty.appliesTo]) and
+/// counted in memory only.
 class UnlimitedHintQuotaRepositoryImpl implements HintQuotaRepository {
   final Map<String, int> _used = {};
 

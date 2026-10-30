@@ -14,24 +14,31 @@ import 'app_icon.dart';
 /// Reads what a game run of a [PlayMode] spends and keeps.
 extension PlayModeReads on BuildContext {
   /// The daily quota for a daily; the mode's own quota otherwise, so a past
-  /// day or a practice board never spends today's hints.
+  /// day, a practice board or a level never spends today's hints.
   HintQuotaRepository hintQuotaFor(PlayMode mode) => mode.isDaily
       ? read<HintQuotaRepository>()
       : read<HintQuotaForMode>()(mode);
 
   /// Where archive and practice runs keep their bests; null for a daily.
+  /// Level runs don't use it: their bests live in the level progress
+  /// repository.
   PlayModeRecordRepository? modeRecordsFor(PlayMode mode) =>
       mode.isDaily ? null : read<PlayModeRecordRepository>();
 }
 
 /// The hint button's label: what the next hint costs ("Hint +20s"), plain
-/// "Hint" in practice, where hints are free, and in a level "Hint · costs a
-/// star" until the first hint of the run.
-String hintLabelFor(PlayMode mode, {required int hintsUsed}) {
+/// "Hint" in practice, where hints are free. A level reads the run's own
+/// [usedHintsThisRun] flag (its [hintsUsed] count spans runs): "Hint · costs
+/// a star" until the run's first hint, then plain "Hint".
+String hintLabelFor(
+  PlayMode mode, {
+  required int hintsUsed,
+  bool usedHintsThisRun = false,
+}) {
   if (mode.isLevel) {
-    return hintsUsed == 0
-        ? AppStrings.levelHintCostsStar
-        : AppStrings.hintUnlimited;
+    return usedHintsThisRun
+        ? AppStrings.hintUnlimited
+        : AppStrings.levelHintCostsStar;
   }
   final cost = HintPenalty.nextSeconds(mode, hintsUsed: hintsUsed);
   return cost > 0 ? AppStrings.hintWithCost(cost) : AppStrings.hintUnlimited;
