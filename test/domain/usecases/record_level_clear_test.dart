@@ -57,4 +57,49 @@ void main() {
     );
     expect(result.runStars, 1);
   });
+
+  test(
+    'a better replay is logged as an improvement, not a first clear',
+    () async {
+      final slot = catalog.slot('zip_1_01')!;
+      final first = await record(
+        game: 'zip',
+        slot: slot,
+        usedHints: true,
+        seconds: 40,
+      );
+      expect(first.runStars, 1);
+      final second = await record(
+        game: 'zip',
+        slot: slot,
+        usedHints: false,
+        seconds: 20,
+      );
+      expect(second.firstClear, isFalse);
+      expect(second.improved, isTrue);
+      expect(second.runStars, 3);
+      verify(
+        () => analytics.logLevelCleared(
+          gameId: 'zip',
+          levelId: 'zip_1_01',
+          world: 1,
+          number: 1,
+          stars: 1,
+          firstClear: true,
+          improved: false,
+        ),
+      ).called(1);
+      verify(
+        () => analytics.logLevelCleared(
+          gameId: 'zip',
+          levelId: 'zip_1_01',
+          world: 1,
+          number: 1,
+          stars: 3,
+          firstClear: false,
+          improved: true,
+        ),
+      ).called(1);
+    },
+  );
 }
