@@ -101,4 +101,15 @@ void main() {
     final world = levelWorld(1, 2, targetSeconds: null);
     expect(world.levels.map((l) => l.targetSeconds), [null, null]);
   });
+
+  test('refuses a world that repeats a level id', () {
+    expect(
+      () => LevelWorld.fromJson('zip_1', {
+        'game': 'zip',
+        'order': 1,
+        'levels': [levelBoardJson('zip_1_01'), levelBoardJson('zip_1_01')],
+      }),
+      throwsFormatException,
+    );
+  });
 }

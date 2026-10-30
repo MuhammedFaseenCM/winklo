@@ -30,12 +30,19 @@ class LevelWorld {
     if (order is! num || !order.isFinite || rawLevels is! List) {
       throw FormatException('World $id needs an order and a levels list');
     }
+    final levels = [for (final raw in rawLevels) LevelEntry.fromJson(raw)];
+    final seen = <String>{};
+    for (final level in levels) {
+      if (!seen.add(level.id)) {
+        throw FormatException('World $id repeats level ${level.id}');
+      }
+    }
     return LevelWorld(
       id: id,
       game: _string(json['game']),
       order: order.toInt(),
       theme: _string(json['theme']),
-      levels: [for (final raw in rawLevels) LevelEntry.fromJson(raw)],
+      levels: levels,
     );
   }
 
