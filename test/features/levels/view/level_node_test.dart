@@ -33,6 +33,21 @@ void main() {
     expect(taps, 1);
   });
 
+  testWidgets("a done level's marks sit on a patch of its world's paper", (
+    tester,
+  ) async {
+    await pump(tester, LevelNode(node: map.node('zip_1_01')!, onTap: () {}));
+    final backing = tester.widget<DecoratedBox>(
+      find.descendant(
+        of: find.byType(LevelNode),
+        matching: find.byType(DecoratedBox),
+      ),
+    );
+    final decoration = backing.decoration as BoxDecoration;
+    expect(decoration.color, const Color(0xFFEFE8D8));
+    expect(decoration.borderRadius, BorderRadius.circular(4));
+  });
+
   testWidgets('the current and a locked level', (tester) async {
     await pump(
       tester,

@@ -92,4 +92,27 @@ void main() {
     expect(one.centers['zip_1_01']!.dy, 900 - LevelMapLayout.bottomPad);
     expect(one.bands.single.rect, const Rect.fromLTRB(0, 0, width, 900));
   });
+
+  test("a world's label sits on the side away from the line", () {
+    // The line enters World 2 from Level 4 (left) to Level 5 (middle):
+    // it crosses the gate left of centre, so the label goes right.
+    final leftCross = LevelMapLayout.of(
+      LevelMap.build(
+        LevelCatalog([levelWorld(1, 4), levelWorld(2, 3, theme: 'metro')]),
+        LevelProgress.empty,
+      ),
+      width,
+    );
+    expect(leftCross.labelOnRight(0), isFalse);
+    expect(leftCross.labelOnRight(1), isTrue);
+    // From Level 2 (right) to Level 3 (middle): crosses right, label left.
+    final rightCross = LevelMapLayout.of(
+      LevelMap.build(
+        LevelCatalog([levelWorld(1, 2), levelWorld(2, 1, theme: 'metro')]),
+        LevelProgress.empty,
+      ),
+      width,
+    );
+    expect(rightCross.labelOnRight(1), isFalse);
+  });
 }

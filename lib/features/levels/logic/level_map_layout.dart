@@ -102,4 +102,17 @@ class LevelMapLayout {
 
   /// The worlds that have levels, bottom world first.
   final List<LevelMapBand> bands;
+
+  /// Whether the label of world [worldIndex] (in [bands]) goes on the
+  /// right, away from where the line crosses its gate: between the world
+  /// below's last level and this world's first. The bottom world's label
+  /// goes right only when Level 1 is left of centre.
+  bool labelOnRight(int worldIndex) {
+    double x(LevelMapNode node) => centers[node.slot.entry.id]!.dx;
+    final first = bands[worldIndex].world.nodes.first;
+    final crossX = worldIndex == 0
+        ? x(first)
+        : (x(bands[worldIndex - 1].world.nodes.last) + x(first)) / 2;
+    return crossX < size.width / 2;
+  }
 }

@@ -181,7 +181,9 @@ class _LevelsViewState extends State<_LevelsView> {
                 ),
                 for (var i = 0; i < layout.bands.length; i++)
                   Positioned(
-                    left: 14,
+                    // Away from where the line crosses the gate.
+                    left: layout.labelOnRight(i) ? null : 14,
+                    right: layout.labelOnRight(i) ? 14 : null,
                     // Centred on its gate; the bottom world's "gate" is
                     // the map's bottom edge, so its label sits just above.
                     top: i == 0

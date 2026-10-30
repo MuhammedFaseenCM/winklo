@@ -7,6 +7,7 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/logic/level_map.dart';
+import 'world_backdrop_painter.dart';
 
 /// One level on the map, drawn in its world's material: a brushed ensō on
 /// Ink, a station on Metro. Cleared levels show their stars as marks
@@ -83,18 +84,32 @@ class LevelNode extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               if (node.state == LevelNodeState.done)
-                CustomPaint(
-                  size: Size(node.maxStars * 10.0, 8),
-                  painter: _StarMarksPainter(
-                    theme: theme,
-                    earned: node.stars,
-                    total: node.maxStars,
+                // A patch of the world's paper, so the marks sit on top of
+                // a line running past them.
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: _paper(theme),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 3,
+                      vertical: 2,
+                    ),
+                    child: CustomPaint(
+                      size: Size(node.maxStars * 10.0, 8),
+                      painter: _StarMarksPainter(
+                        theme: theme,
+                        earned: node.stars,
+                        total: node.maxStars,
+                      ),
+                    ),
                   ),
                 )
               else
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
             ],
           ),
         ),
@@ -102,6 +117,13 @@ class LevelNode extends StatelessWidget {
     );
   }
 }
+
+/// The ground of a world's backdrop (see [WorldBackdropPainter]).
+Color _paper(String theme) => switch (theme) {
+  'ink' => WorldBackdropPainter.paper,
+  'metro' => WorldBackdropPainter.metroNight,
+  _ => ZipColors.ink,
+};
 
 class _NodePainter extends CustomPainter {
   _NodePainter({required this.theme, required this.state});
