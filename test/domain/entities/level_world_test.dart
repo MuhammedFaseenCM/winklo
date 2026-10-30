@@ -14,6 +14,11 @@ void main() {
     expect(world.levels.first.targetSeconds, 30);
   });
 
+  test('a parsed world\'s levels cannot be changed', () {
+    final world = LevelWorld.fromJson('zip_1', levelWorldJson(1, 1));
+    expect(() => world.levels.add(world.levels.first), throwsUnsupportedError);
+  });
+
   test('a level builds its Zip board under its own id', () {
     final entry = LevelEntry.fromJson(levelBoardJson('zip_1_01'));
     final board = entry.zipLevel;

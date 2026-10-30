@@ -16,6 +16,8 @@ class LevelSlot {
 
   /// "Level 27": counted across every world before this one, from 1.
   final int number;
+
+  /// 0-based position in [world]'s levels; [number] is 1-based across worlds.
   final int indexInWorld;
 
   /// The level after this one; null on the last published level.
@@ -32,7 +34,10 @@ class LevelSlot {
 class LevelCatalog {
   LevelCatalog(List<LevelWorld> worlds)
     : worlds = List.unmodifiable(
-        [...worlds]..sort((a, b) => a.order.compareTo(b.order)),
+        [...worlds]..sort((a, b) {
+          final byOrder = a.order.compareTo(b.order);
+          return byOrder != 0 ? byOrder : a.id.compareTo(b.id);
+        }),
       ) {
     final flat = <(LevelWorld, LevelEntry, int)>[
       for (final world in this.worlds)
@@ -42,6 +47,7 @@ class LevelCatalog {
     for (var n = 0; n < flat.length; n++) {
       final (world, entry, index) = flat[n];
       final next = n + 1 < flat.length ? flat[n + 1] : null;
+      assert(!_slots.containsKey(entry.id), 'Duplicate level id ${entry.id}');
       _slots[entry.id] = LevelSlot(
         world: world,
         entry: entry,
@@ -56,6 +62,7 @@ class LevelCatalog {
   final List<LevelWorld> worlds;
   final Map<String, LevelSlot> _slots = {};
 
+  /// True when no world has a level (worlds may still be listed).
   bool get isEmpty => _slots.isEmpty;
   int get levelCount => _slots.length;
 

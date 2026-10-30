@@ -42,7 +42,7 @@ class LevelWorld {
       game: _string(json['game']),
       order: order.toInt(),
       theme: _string(json['theme']),
-      levels: levels,
+      levels: List.unmodifiable(levels),
     );
   }
 
