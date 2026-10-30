@@ -108,6 +108,14 @@ void main() {
     expect(find.text('Play'), findsOneWidget);
   });
 
+  testWidgets('open= for a locked level says what to clear first', (
+    tester,
+  ) async {
+    await pump(tester, LevelCatalog([levelWorld(1, 3)]), open: 'zip_1_03');
+    expect(find.text('Clear Level 1 first'), findsOneWidget);
+    expect(find.text('Play'), findsNothing);
+  });
+
   testWidgets('offline first time: message and Retry', (tester) async {
     await pump(tester, null);
     expect(

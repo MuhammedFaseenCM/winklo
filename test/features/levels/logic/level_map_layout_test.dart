@@ -81,4 +81,15 @@ void main() {
     expect(one.centers['zip_1_01']!.dy, LevelMapLayout.topPad);
     expect(one.bands.single.rect, Rect.fromLTRB(0, 0, width, one.size.height));
   });
+
+  test('a short map stretches to minHeight, the extra going to the top', () {
+    final one = LevelMapLayout.of(
+      LevelMap.build(LevelCatalog([levelWorld(1, 1)]), LevelProgress.empty),
+      width,
+      minHeight: 900,
+    );
+    expect(one.size.height, 900);
+    expect(one.centers['zip_1_01']!.dy, 900 - LevelMapLayout.bottomPad);
+    expect(one.bands.single.rect, const Rect.fromLTRB(0, 0, width, 900));
+  });
 }

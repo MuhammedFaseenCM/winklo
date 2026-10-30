@@ -58,7 +58,11 @@ class _LevelsViewState extends State<_LevelsView> {
   }
 
   /// Once, after the map first lays out: scroll to the level to show
-  /// ([openLevelId] or the current one) and open its sheet if asked.
+  /// ([openLevelId] or the current one) and open its sheet if asked (or,
+  /// for a locked level, say what to clear first).
+  ///
+  /// [_placed] is set when the callback is scheduled, so rebuilds before
+  /// that frame don't schedule it twice.
   void _place(LevelMap map, LevelMapLayout layout, double viewport) {
     if (_placed) return;
     _placed = true;
@@ -73,15 +77,25 @@ class _LevelsViewState extends State<_LevelsView> {
       final open = widget.openLevelId == null
           ? null
           : map.node(widget.openLevelId!);
-      if (open != null && open.playable) showLevelSheet(context, open);
+      if (open == null) return;
+      if (open.playable) {
+        showLevelSheet(context, open);
+      } else {
+        _showLocked(map);
+      }
     });
   }
 
   void _onTap(LevelMap map, LevelMapNode node) {
     if (node.playable) {
       showLevelSheet(context, node);
-      return;
+    } else {
+      _showLocked(map);
     }
+  }
+
+  /// Says which level to clear first (the current one).
+  void _showLocked(LevelMap map) {
     final current = map.currentId == null ? null : map.node(map.currentId!);
     if (current == null) return;
     ScaffoldMessenger.of(context)
@@ -131,7 +145,11 @@ class _LevelsViewState extends State<_LevelsView> {
     final user = context.read<AuthRepository>().currentUser;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final layout = LevelMapLayout.of(map, constraints.maxWidth);
+        final layout = LevelMapLayout.of(
+          map,
+          constraints.maxWidth,
+          minHeight: constraints.maxHeight,
+        );
         _place(map, layout, constraints.maxHeight);
         final current = map.currentId == null
             ? null
@@ -164,7 +182,11 @@ class _LevelsViewState extends State<_LevelsView> {
                 for (var i = 0; i < layout.bands.length; i++)
                   Positioned(
                     left: 14,
-                    top: layout.bands[i].gateY - 40,
+                    // Centred on its gate; the bottom world's "gate" is
+                    // the map's bottom edge, so its label sits just above.
+                    top: i == 0
+                        ? layout.bands[i].gateY - 52
+                        : layout.bands[i].gateY - 20,
                     child: _WorldLabel(
                       band: layout.bands[i],
                       previousLast: i == 0

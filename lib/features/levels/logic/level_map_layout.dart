@@ -26,22 +26,31 @@ class LevelMapLayout {
   });
 
   static const step = 76.0;
-  static const gateGap = 92.0;
+  static const gateGap = 180.0;
   static const topPad = 96.0;
   static const bottomPad = 120.0;
   static const amplitudeFraction = 0.24;
 
-  factory LevelMapLayout.of(LevelMap map, double width) {
+  factory LevelMapLayout.of(
+    LevelMap map,
+    double width, {
+    double minHeight = 0,
+  }) {
     final worlds = [
       for (final w in map.worlds)
         if (w.nodes.isNotEmpty) w,
     ];
     final count = worlds.fold<int>(0, (sum, w) => sum + w.nodes.length);
-    final height =
-        topPad +
-        bottomPad +
-        math.max(0, count - 1) * step +
-        math.max(0, worlds.length - 1) * (gateGap - step);
+    // At least [minHeight] (the viewport), so a short map fills the
+    // screen; positions are measured from the bottom, so the extra goes
+    // to the top world.
+    final height = math.max(
+      minHeight,
+      topPad +
+          bottomPad +
+          math.max(0, count - 1) * step +
+          math.max(0, worlds.length - 1) * (gateGap - step),
+    );
     final cx = width / 2;
     final amp = width * amplitudeFraction;
     final nodes = <LevelMapNode>[];
