@@ -372,9 +372,9 @@ void main() {
     expect(AppStrings.levelClearedTitle(7), 'Level 7 cleared');
     expect(AppStrings.levelHintCostsStar, 'Hint · costs a star');
     expect(AppStrings.levelTarget('0:30'), 'Target 0:30');
-    expect(AppStrings.levelGoalUnder('0:30'), 'Under 0:30');
+    expect(AppStrings.levelGoalUnder('0:30'), '0:30 or less');
     expect(AppStrings.levelNewBestStars(2, 3), 'New best · 2 → 3 stars');
-    expect(AppStrings.levelOpenWorld('Metro'), 'Open Metro');
+    expect(AppStrings.levelOpenWorld('metro'), 'Open Metro');
   });
 }
 ```
@@ -443,7 +443,7 @@ Expected: compile errors (`levelsTitle` not defined).
   @override
   String get levelGoalNoHints => 'No hints';
   @override
-  String levelGoalUnder(String time) => 'Under $time';
+  String levelGoalUnder(String time) => '$time or less';
   @override
   String get levelGoalNoHintsHow => 'Replay without hints for this star';
   @override
@@ -491,7 +491,7 @@ Expected: compile errors (`levelsTitle` not defined).
   @override
   String get levelGoalClear => 'ബോർഡ് പൂർത്തിയാക്കുക';
   @override
-  String get levelGoalNoHints => 'സൂചനകളില്ലാതെ';
+  String get levelGoalNoHints => 'സൂചനയില്ലാതെ';
   @override
   String levelGoalUnder(String time) => '$time-നുള്ളിൽ';
   @override
@@ -537,8 +537,9 @@ Expected: compile errors (`levelsTitle` not defined).
       _t.levelNewBestStars(from, to);
   static String get levelNewBestTime => _t.levelNewBestTime;
   static String get levelNext => _t.levelNext;
-  static String levelOpenWorld(String worldName) =>
-      _t.levelOpenWorld(worldName);
+  /// "Open Metro", from the next world's [theme].
+  static String levelOpenWorld(String theme) =>
+      _t.levelOpenWorld(_t.levelWorldName(theme));
   static String get levelReplay => _t.levelReplay;
   static String get levelAllDone => _t.levelAllDone;
 ```
@@ -3331,7 +3332,7 @@ void main() {
     expect(find.text('0:24 · Target 0:30'), findsOneWidget);
     expect(find.text('Clear the board'), findsOneWidget);
     expect(find.text('No hints'), findsOneWidget);
-    expect(find.text('Under 0:30'), findsOneWidget);
+    expect(find.text('0:30 or less'), findsOneWidget);
     expect(find.text('Next level'), findsOneWidget);
     expect(find.text('Replay'), findsOneWidget);
   });
@@ -3478,9 +3479,7 @@ class LevelResultsView extends StatelessWidget {
               if (next != null)
                 ZipPrimaryButton(
                   label: level.opensNewWorld
-                      ? AppStrings.levelOpenWorld(
-                          AppStrings.levelWorldName(level.nextWorldTheme!),
-                        )
+                      ? AppStrings.levelOpenWorld(level.nextWorldTheme!)
                       : AppStrings.levelNext,
                   icon: AppIcons.play,
                   onPressed: () => context.pushReplacement(next),
