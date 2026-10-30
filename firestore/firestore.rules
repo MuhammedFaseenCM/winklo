@@ -167,7 +167,7 @@ service cloud.firestore {
     // leaderboard, so a hand-edited doc only changes its owner's map.
     function validLevelProgress(gameId) {
       let data = request.resource.data;
-      return gameId in ['zip', 'path_words', 'sudoku']
+      return validGame(gameId)
         && data.keys().hasOnly(['levels', 'updatedAt'])
         && data.levels is map
         && data.updatedAt == request.time;
