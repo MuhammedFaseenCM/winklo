@@ -3337,6 +3337,11 @@ In `app_repositories.dart`, append these providers **at the end** of the provide
         local: context.read<LevelProgressRepository>(),
         remote: LevelProgressRemoteRepositoryImpl(FirebaseFirestore.instance),
         isRemoteAvailable: () => FirebaseBootstrap.isReady,
+        // Same reporter as SyncProgress: a rules or permission failure must
+        // not go unnoticed (Task 13 review).
+        reportClientError: clientErrorRepository == null
+            ? null
+            : ReportClientError(clientErrorRepository),
       ),
     ),
 ```
