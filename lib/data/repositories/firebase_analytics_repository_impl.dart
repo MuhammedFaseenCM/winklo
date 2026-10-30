@@ -87,6 +87,32 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
   }
 
   @override
+  Future<void> logLevelCleared({
+    required String gameId,
+    required String levelId,
+    required int world,
+    required int number,
+    required int stars,
+    required bool firstClear,
+    required bool improved,
+  }) {
+    return _safe(
+      (a) => a.logEvent(
+        name: 'level_cleared',
+        parameters: <String, Object>{
+          'game_id': gameId,
+          'level_id': levelId,
+          'world': world,
+          'level_number': number,
+          'stars': stars,
+          'first_clear': _flag(firstClear),
+          'improved': _flag(improved),
+        },
+      ),
+    );
+  }
+
+  @override
   Future<void> logHintUsed({
     required String gameId,
     required int hintsUsed,

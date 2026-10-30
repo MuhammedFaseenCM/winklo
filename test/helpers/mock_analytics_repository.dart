@@ -28,6 +28,17 @@ void stubAnalytics(MockAnalyticsRepository analytics) {
     ),
   ).thenAnswer((_) async {});
   when(
+    () => analytics.logLevelCleared(
+      gameId: any(named: 'gameId'),
+      levelId: any(named: 'levelId'),
+      world: any(named: 'world'),
+      number: any(named: 'number'),
+      stars: any(named: 'stars'),
+      firstClear: any(named: 'firstClear'),
+      improved: any(named: 'improved'),
+    ),
+  ).thenAnswer((_) async {});
+  when(
     () => analytics.logHintUsed(
       gameId: any(named: 'gameId'),
       hintsUsed: any(named: 'hintsUsed'),

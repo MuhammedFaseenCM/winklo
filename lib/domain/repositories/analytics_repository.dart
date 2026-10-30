@@ -20,6 +20,19 @@ abstract class AnalyticsRepository {
     bool? usedHints,
   });
 
+  /// A level of the Levels map cleared: which one, the stars this run
+  /// earned, whether it was the level's first clear, and whether a replay
+  /// improved the level's record.
+  Future<void> logLevelCleared({
+    required String gameId,
+    required String levelId,
+    required int world,
+    required int number,
+    required int stars,
+    required bool firstClear,
+    required bool improved,
+  });
+
   /// [hintsUsed] counts this hint; [penaltySeconds] is the time it added
   /// (0 in practice).
   Future<void> logHintUsed({
