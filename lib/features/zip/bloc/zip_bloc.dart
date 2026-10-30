@@ -135,7 +135,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   final RecordLevelClear? recordLevelClear;
 
   /// The level on screen and where it sits on the map; null outside level
-  /// runs and until the board has loaded.
+  /// runs and until the board has loaded. Read by the screen on rebuild; it
+  /// is set before the ready state is emitted.
   LevelSlot? get levelSlot => _levelSlot;
   LevelSlot? _levelSlot;
 
@@ -474,7 +475,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     await _startOffDaily(emit, freshPractice: true);
   }
 
-  /// Starts (or resumes) an archive or practice run. It never reads the
+  /// Starts (or resumes) an archive, practice or level run. It never reads the
   /// daily lock or today's draft: the run has its own id ([PlayMode.runId]).
   Future<void> _startOffDaily(
     Emitter<ZipState> emit, {
@@ -483,6 +484,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     final runId = mode.runId(dailyPlayId: '');
     _playId = runId;
     _clock = null;
+    _levelSlot = null;
     final today = _now();
     final day = mode.day ?? DateTime(today.year, today.month, today.day);
     emit(
@@ -588,8 +590,9 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     );
   }
 
-  /// Finishes an archive or practice run: a local best, no score, streak,
-  /// leaderboard or daily best.
+  /// Finishes an archive, practice or level run: a local best (stars in the
+  /// level progress for a level), no score, streak, leaderboard or daily
+  /// best.
   Future<void> _completeOffDaily(Emitter<ZipState> emit) async {
     final now = _now();
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);

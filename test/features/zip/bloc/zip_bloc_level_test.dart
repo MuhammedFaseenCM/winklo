@@ -6,6 +6,7 @@ import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.da
 import 'package:winklo/domain/entities/in_progress_run.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/play_mode.dart';
+import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
@@ -76,6 +77,8 @@ void main() {
   late MockAnalyticsRepository analytics;
   late _MockRecordDailyClear recordDailyClear;
   late _MockSubmitScore submitScore;
+  late _MockSubmitLeaderboardTime submitLeaderboardTime;
+  late _MockGetBestPoints getBestPoints;
   late LevelProgressRepositoryImpl progress;
   late _MemoryInProgressRuns drafts;
   late DateTime now;
@@ -87,20 +90,22 @@ void main() {
     stubAnalytics(analytics);
     recordDailyClear = _MockRecordDailyClear();
     submitScore = _MockSubmitScore();
+    submitLeaderboardTime = _MockSubmitLeaderboardTime();
+    getBestPoints = _MockGetBestPoints();
     progress = LevelProgressRepositoryImpl(prefs, currentUid: () => 'u1');
     drafts = _MemoryInProgressRuns();
     now = DateTime(2026, 10, 31, 9);
   });
 
-  ZipBloc build(String levelId) => ZipBloc(
+  ZipBloc build(String levelId, {LevelCatalog? from}) => ZipBloc(
     mode: PlayMode.level(levelId),
-    levelWorlds: _Worlds(catalog),
+    levelWorlds: _Worlds(from ?? catalog),
     recordLevelClear: RecordLevelClear(progress, analytics),
     inProgressRuns: drafts,
     submitScore: submitScore,
-    submitLeaderboardTime: _MockSubmitLeaderboardTime(),
+    submitLeaderboardTime: submitLeaderboardTime,
     recordDailyClear: recordDailyClear,
-    getBestPoints: _MockGetBestPoints(),
+    getBestPoints: getBestPoints,
     getBestTimeSeconds: _MockGetBestTimeSeconds(),
     isNewPersonalBest: _MockIsNewPersonalBest(),
     getClearBoard: _MockGetClearBoard(),
@@ -243,6 +248,8 @@ void main() {
     bloc.add(const ZipEvent.started());
     final state = await ready(bloc);
     expect(state.status, ZipStatus.failed);
+    expect(state.errorMessage, 'Could not load this level.');
+    expect(bloc.levelSlot, isNull);
     expect(drafts.runs['zip_level_zip_1_01'], isNotNull);
     await bloc.close();
   });
@@ -261,5 +268,101 @@ void main() {
     final resumed = await ready(again);
     expect(resumed.path.length, 3);
     await again.close();
+  });
+  test('a replay with more stars improves the record', () async {
+    await progress.record('zip', 'zip_1_01', stars: 2, seconds: 40);
+    final bloc = build('zip_1_01');
+    bloc.add(const ZipEvent.started());
+    await ready(bloc);
+    now = now.add(const Duration(seconds: 12));
+    final done = await finish(bloc);
+    final level = done.resultsExtra!.local!.level!;
+    expect(level.previousStars, 2);
+    expect(level.bestStars, 3);
+    expect(level.moreStars, isTrue);
+    expect(done.resultsExtra!.improved, isTrue);
+    await bloc.close();
+  });
+
+  test('a worse replay keeps the record', () async {
+    await progress.record('zip', 'zip_1_01', stars: 3, seconds: 10);
+    final bloc = build('zip_1_01');
+    bloc.add(const ZipEvent.started());
+    await ready(bloc);
+    bloc.add(const ZipEvent.hint());
+    await bloc.stream.firstWhere((s) => s.hintsUsed == 1);
+    now = now.add(const Duration(seconds: 20));
+    final done = await finish(bloc);
+    final level = done.resultsExtra!.local!.level!;
+    expect(level.runStars, 2);
+    expect(level.bestStars, 3);
+    expect(done.resultsExtra!.improved, isFalse);
+    await bloc.close();
+  });
+
+  test('a level with no time goal tops out at two stars', () async {
+    final bloc = build(
+      'zip_1_01',
+      from: LevelCatalog([levelWorld(1, 1, targetSeconds: null)]),
+    );
+    bloc.add(const ZipEvent.started());
+    await ready(bloc);
+    now = now.add(const Duration(seconds: 12));
+    final done = await finish(bloc);
+    final level = done.resultsExtra!.local!.level!;
+    expect(level.runStars, 2);
+    expect(level.targetSeconds, isNull);
+    await bloc.close();
+  });
+
+  test('a clear logs level_cleared and the completed run', () async {
+    final bloc = build('zip_1_01');
+    bloc.add(const ZipEvent.started());
+    await ready(bloc);
+    now = now.add(const Duration(seconds: 12));
+    await finish(bloc);
+    verify(
+      () => analytics.logLevelCleared(
+        gameId: 'zip',
+        levelId: 'zip_1_01',
+        world: 1,
+        number: 1,
+        stars: 3,
+        firstClear: true,
+        improved: false,
+      ),
+    ).called(1);
+    verify(
+      () => analytics.logGameCompleted(
+        gameId: 'zip',
+        points: any(named: 'points'),
+        timeSeconds: any(named: 'timeSeconds'),
+        streak: any(named: 'streak'),
+        dayId: 'level_zip_1_01',
+        usedHints: false,
+      ),
+    ).called(1);
+    await bloc.close();
+  });
+
+  test("a clear touches nothing of the day's puzzle", () async {
+    final dailyKey = 'zip_${PlayPeriod.id(now, PlayPeriod.daily)}';
+    final todayDraft = InProgressRun(
+      gameId: 'zip',
+      playId: PlayPeriod.id(now, PlayPeriod.daily),
+      elapsedMs: 5000,
+      board: const {'path': []},
+    );
+    drafts.runs[dailyKey] = todayDraft;
+    final bloc = build('zip_1_01');
+    bloc.add(const ZipEvent.started());
+    await ready(bloc);
+    now = now.add(const Duration(seconds: 12));
+    await finish(bloc);
+    expect(drafts.runs[dailyKey], same(todayDraft));
+    expect(drafts.runs['zip_level_zip_1_01'], isNull);
+    verifyZeroInteractions(submitLeaderboardTime);
+    verifyZeroInteractions(getBestPoints);
+    await bloc.close();
   });
 }
