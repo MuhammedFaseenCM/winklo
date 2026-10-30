@@ -53,4 +53,52 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('accepts a double target and rejects non-finite numbers', () {
+    final board = levelBoardJson('a_1_01')..['targetSeconds'] = 20.0;
+    expect(LevelEntry.fromJson(board).targetSeconds, 20);
+    board['targetSeconds'] = double.nan;
+    expect(LevelEntry.fromJson(board).targetSeconds, isNull);
+    expect(
+      () => LevelWorld.fromJson('zip_1', {
+        'game': 'zip',
+        'order': double.nan,
+        'levels': [],
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('refuses bad level entries and a non-numeric order', () {
+    expect(
+      () => LevelWorld.fromJson('zip_1', {
+        'game': 'zip',
+        'order': 1,
+        'levels': [null],
+      }),
+      throwsFormatException,
+    );
+    expect(
+      () => LevelWorld.fromJson('zip_1', {
+        'game': 'zip',
+        'order': '1',
+        'levels': [],
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('an empty levels list is a world with no levels', () {
+    final world = LevelWorld.fromJson('zip_1', {
+      'game': 'zip',
+      'order': 1,
+      'levels': [],
+    });
+    expect(world.levels, isEmpty);
+  });
+
+  test('fixture worlds can have levels without a time goal', () {
+    final world = levelWorld(1, 2, targetSeconds: null);
+    expect(world.levels.map((l) => l.targetSeconds), [null, null]);
+  });
 }

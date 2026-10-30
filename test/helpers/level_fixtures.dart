@@ -27,7 +27,7 @@ Map<String, dynamic> levelWorldJson(
   int order,
   int count, {
   String theme = 'ink',
-  int targetSeconds = 30,
+  int? targetSeconds = 30,
 }) => {
   'game': 'zip',
   'order': order,
@@ -43,7 +43,7 @@ LevelWorld levelWorld(
   int order,
   int count, {
   String theme = 'ink',
-  int targetSeconds = 30,
+  int? targetSeconds = 30,
 }) => LevelWorld.fromJson(
   'zip_$order',
   levelWorldJson(order, count, theme: theme, targetSeconds: targetSeconds),

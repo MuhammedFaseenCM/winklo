@@ -27,7 +27,7 @@ class LevelWorld {
   factory LevelWorld.fromJson(String id, Map<String, dynamic> json) {
     final order = json['order'];
     final rawLevels = json['levels'];
-    if (order is! num || rawLevels is! List) {
+    if (order is! num || !order.isFinite || rawLevels is! List) {
       throw FormatException('World $id needs an order and a levels list');
     }
     return LevelWorld(
@@ -55,6 +55,8 @@ class LevelEntry {
   /// has no time goal.
   final int? targetSeconds;
 
+  /// Throws (TypeError or FormatException) on a malformed board; callers
+  /// catch broadly.
   ZipLevel get zipLevel => ZipLevel.fromJson(board, id: id);
 
   /// Throws [FormatException] when [raw] isn't a level with an id.
@@ -66,10 +68,10 @@ class LevelEntry {
       throw const FormatException('A level needs an id');
     }
     final target = board['targetSeconds'];
-    final seconds = target is num ? target.toInt() : null;
+    final seconds = target is num && target.isFinite ? target.toInt() : null;
     return LevelEntry(
       id: id,
-      board: board,
+      board: Map.unmodifiable(board),
       targetSeconds: seconds != null && seconds > 0 ? seconds : null,
     );
   }
