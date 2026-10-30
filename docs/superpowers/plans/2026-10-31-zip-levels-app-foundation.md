@@ -31,7 +31,8 @@
 | `lib/domain/logic/level_stars.dart` | `starsFor` (**written by the user**) |
 | `lib/domain/logic/level_catalog.dart` | `LevelCatalog`, `LevelSlot` (numbering, next level, world boundaries) |
 | `lib/domain/repositories/level_world_repository.dart` | `LevelWorldRepository`, `LevelsUnavailable` |
-| `lib/domain/repositories/level_progress_repository.dart` | `LevelProgressRepository`, `LevelProgressRemoteRepository`, `LevelClearResult` |
+| `lib/domain/repositories/level_progress_repository.dart` | `LevelProgressRepository`, `LevelClearResult` |
+| `lib/domain/repositories/level_progress_remote_repository.dart` | `LevelProgressRemoteRepository` (split out after the Task 8 review) |
 | `lib/domain/usecases/record_level_clear.dart` | stars for a run → record → analytics |
 | `lib/domain/usecases/sync_level_progress.dart` | pull/merge/push of level progress |
 | `lib/data/clients/level_worlds_source.dart` | `LevelWorldsSource` + Firestore query |
