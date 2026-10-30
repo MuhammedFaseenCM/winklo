@@ -99,7 +99,6 @@ import 'package:winklo/domain/usecases/generate_daily_path_words.dart';
 import 'package:winklo/domain/usecases/generate_daily_sudoku.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_deck_by_id.dart';
 import 'package:winklo/domain/usecases/fetch_word_match_decks.dart';
-import 'package:winklo/domain/usecases/fetch_zip_levels.dart';
 import 'package:winklo/domain/usecases/forget_account_progress.dart';
 import 'package:winklo/domain/usecases/get_best_daily_time_seconds.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
@@ -464,9 +463,6 @@ List<SingleChildWidget> buildRepositoryProviders({
         analytics: context.read<AnalyticsRepository>(),
         habit: context.read<HabitRepository>(),
       ),
-    ),
-    RepositoryProvider<FetchZipLevels>(
-      create: (context) => FetchZipLevels(context.read<ZipLevelRepository>()),
     ),
     RepositoryProvider<FetchWordMatchDecks>(
       create: (context) =>

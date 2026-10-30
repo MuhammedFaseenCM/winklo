@@ -69,9 +69,6 @@ class _FakeZipLevels implements ZipLevelRepository {
     numbers: {const Cell(0, 0): 1, const Cell(7, 7): 2},
     walls: const [],
   );
-
-  @override
-  Future<List<ZipLevel>> fetchLevels() async => const [];
 }
 
 /// The busiest Home there is: a soft update, three streaks a freeze saved,

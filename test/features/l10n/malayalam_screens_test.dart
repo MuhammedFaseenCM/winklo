@@ -61,9 +61,6 @@ class _MockLoadHistory extends Mock implements LoadGameHistory {}
 /// Today's Zip from the Dart generator (the real one comes from Firestore).
 class _ZipLevels implements ZipLevelRepository {
   @override
-  Future<List<ZipLevel>> fetchLevels() async => const [];
-
-  @override
   Future<ZipLevel> fetchDailyLevel(
     DateTime date, {
     Duration period = PlayPeriod.daily,

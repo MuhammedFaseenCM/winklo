@@ -40,9 +40,6 @@ class _FakeZipLevels implements ZipLevelRepository {
     walls: const [],
     special: special,
   );
-
-  @override
-  Future<List<ZipLevel>> fetchLevels() async => const [];
 }
 
 void main() {

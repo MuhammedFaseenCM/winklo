@@ -117,7 +117,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/zip/levels/
     - assets/word_match/decks/
     - assets/words/categories/
     - assets/words/en_bonus_words.txt
