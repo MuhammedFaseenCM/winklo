@@ -59,4 +59,53 @@ void main() {
     final again = LevelProgress.parse(a.toJson()).progress;
     expect(again.sameAs(a), isTrue);
   });
+
+  test('parse drops non-finite numbers', () {
+    final parsed = LevelProgress.parse({
+      'x': {'stars': double.nan, 'bestSeconds': 10},
+      'y': {'stars': 3, 'bestSeconds': double.infinity},
+    });
+    expect(parsed.dropped, 2);
+    expect(parsed.progress.records, isEmpty);
+  });
+
+  test('parse accepts whole doubles and truncates fractions', () {
+    expect(
+      LevelRecord.tryParse({'stars': 3.0, 'bestSeconds': 14.0}),
+      const LevelRecord(stars: 3, bestSeconds: 14),
+    );
+    expect(
+      LevelRecord.tryParse({'stars': 3, 'bestSeconds': 14.7}),
+      const LevelRecord(stars: 3, bestSeconds: 14),
+    );
+  });
+
+  test('parse drops non-String keys', () {
+    final parsed = LevelProgress.parse({
+      1: {'stars': 2, 'bestSeconds': 5},
+    });
+    expect(parsed.dropped, 1);
+  });
+
+  test('merge is associative', () {
+    const c = LevelProgress({
+      'zip_1_02': LevelRecord(stars: 3, bestSeconds: 30),
+      'zip_1_05': LevelRecord(stars: 1, bestSeconds: 9),
+    });
+    expect(a.merge(b).merge(c).sameAs(a.merge(b.merge(c))), isTrue);
+  });
+
+  test('built progress is read-only', () {
+    const rec = LevelRecord(stars: 1, bestSeconds: 1);
+    final built = [
+      a.merge(b),
+      a.withRun('zip_1_09', stars: 1, seconds: 5),
+      LevelProgress.parse({
+        'k': {'stars': 1, 'bestSeconds': 2},
+      }).progress,
+    ];
+    for (final p in built) {
+      expect(() => p.records['zz'] = rec, throwsUnsupportedError);
+    }
+  });
 }

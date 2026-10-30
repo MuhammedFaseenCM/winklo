@@ -17,12 +17,18 @@ class LevelRecord {
 
   Map<String, Object> toJson() => {'stars': stars, 'bestSeconds': bestSeconds};
 
-  /// Null for anything that isn't a valid record.
+  /// Null for anything that isn't a valid record. Whole-number doubles (as
+  /// Firestore may return) are accepted; fractions truncate.
   static LevelRecord? tryParse(Object? json) {
     if (json is! Map) return null;
     final stars = json['stars'];
     final seconds = json['bestSeconds'];
-    if (stars is! num || seconds is! num) return null;
+    if (stars is! num ||
+        seconds is! num ||
+        !stars.isFinite ||
+        !seconds.isFinite) {
+      return null;
+    }
     final record = LevelRecord(
       stars: stars.toInt(),
       bestSeconds: seconds.toInt(),
@@ -47,6 +53,9 @@ class LevelRecord {
 ///
 /// Records only ever improve, so [merge] is commutative: a phone and the
 /// server can be merged in either order and agree.
+///
+/// Callers must not change the map they pass in; the maps built by [withRun],
+/// [merge] and [parse] are read-only.
 class LevelProgress {
   const LevelProgress(this.records);
 
@@ -67,12 +76,15 @@ class LevelProgress {
     required int stars,
     required int seconds,
   }) {
+    assert(stars >= 1 && stars <= 3, 'A cleared run earns 1 to 3 stars');
     final run = LevelRecord(stars: stars, bestSeconds: max(1, seconds));
     final old = records[levelId];
-    return LevelProgress({
-      ...records,
-      levelId: old == null ? run : old.merge(run),
-    });
+    return LevelProgress(
+      Map.unmodifiable({
+        ...records,
+        levelId: old == null ? run : old.merge(run),
+      }),
+    );
   }
 
   LevelProgress merge(LevelProgress other) {
@@ -81,7 +93,7 @@ class LevelProgress {
       final mine = merged[id];
       merged[id] = mine == null ? record : mine.merge(record);
     });
-    return LevelProgress(merged);
+    return LevelProgress(Map.unmodifiable(merged));
   }
 
   bool sameAs(LevelProgress other) {
@@ -110,6 +122,9 @@ class LevelProgress {
         dropped++;
       }
     });
-    return (progress: LevelProgress(records), dropped: dropped);
+    return (
+      progress: LevelProgress(Map.unmodifiable(records)),
+      dropped: dropped,
+    );
   }
 }
