@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+
+import '../../core/firebase/firestore_read.dart';
 import '../../domain/entities/level_world.dart';
 import '../../domain/logic/level_catalog.dart';
 import '../../domain/repositories/level_world_repository.dart';
@@ -5,34 +8,58 @@ import '../clients/level_worlds_source.dart';
 
 class LevelWorldRepositoryImpl implements LevelWorldRepository {
   /// [source] is null while Firebase isn't ready.
-  LevelWorldRepositoryImpl(this._source);
+  LevelWorldRepositoryImpl(
+    this._source, {
+    this.serverTimeout = dailyPuzzleServerTimeout,
+  });
 
   final LevelWorldsSource? _source;
+  final Duration serverTimeout;
   final Map<String, Future<LevelCatalog>> _loaded = {};
 
+  /// Kept for the session once read from the server; a cached fallback is not
+  /// kept, so the next call tries the server again.
   @override
   Future<LevelCatalog> catalog(String game, {bool refresh = false}) {
     if (refresh) _loaded.remove(game);
     final kept = _loaded[game];
     if (kept != null) return kept;
-    final future = _load(game);
+    late final Future<LevelCatalog> future;
+    Future<LevelCatalog> run() async {
+      try {
+        final loaded = await _load(game);
+        if (!loaded.fromServer) _forget(game, future);
+        return loaded.catalog;
+      } catch (_) {
+        // Forget failures so the next call retries.
+        _forget(game, future);
+        rethrow;
+      }
+    }
+
+    future = run();
     _loaded[game] = future;
-    future.then<void>(
-      (_) {},
-      onError: (Object _) {
-        if (identical(_loaded[game], future)) _loaded.remove(game);
-      },
-    );
     return future;
   }
 
-  Future<LevelCatalog> _load(String game) async {
+  void _forget(String game, Future<LevelCatalog> future) {
+    if (identical(_loaded[game], future)) _loaded.remove(game);
+  }
+
+  Future<({LevelCatalog catalog, bool fromServer})> _load(String game) async {
     final source = _source;
     if (source == null) throw const LevelsUnavailable('Firebase is not ready');
     List<LevelWorldDoc> docs;
+    var fromServer = true;
     try {
-      docs = await source.published(game, fromCache: false);
-    } catch (_) {
+      // The SDK only gives up on the server once it decides it's offline,
+      // which can take longer than a player will wait.
+      docs = await source
+          .published(game, fromCache: false)
+          .timeout(serverTimeout);
+    } catch (e) {
+      debugPrint('Level worlds: server read failed, using the cache: $e');
+      fromServer = false;
       try {
         docs = await source.published(game, fromCache: true);
       } catch (e) {
@@ -40,7 +67,7 @@ class LevelWorldRepositoryImpl implements LevelWorldRepository {
       }
       if (docs.isEmpty) throw const LevelsUnavailable('Nothing cached yet');
     }
-    return LevelCatalog(_parse(docs));
+    return (catalog: LevelCatalog(_parse(docs)), fromServer: fromServer);
   }
 
   /// Worlds in order, stopping at the first one that doesn't parse or that
