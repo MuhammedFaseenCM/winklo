@@ -23,15 +23,15 @@ class LevelMapState {
 /// map whenever the player's level progress changes (a clear, a sync).
 class LevelMapCubit extends Cubit<LevelMapState> {
   LevelMapCubit({
-    required this.worlds,
-    required this.progress,
+    required this._worlds,
+    required this._progress,
     this.game = GameIds.zip,
   }) : super(const LevelMapState()) {
-    _changes = progress.changes.listen((_) => _rebuild());
+    _changes = _progress.changes.listen((_) => _rebuild());
   }
 
-  final LevelWorldRepository worlds;
-  final LevelProgressRepository progress;
+  final LevelWorldRepository _worlds;
+  final LevelProgressRepository _progress;
   final String game;
   StreamSubscription<void>? _changes;
   LevelCatalog? _catalog;
@@ -42,7 +42,7 @@ class LevelMapCubit extends Cubit<LevelMapState> {
       emit(const LevelMapState());
     }
     try {
-      final catalog = await worlds.catalog(game);
+      final catalog = await _worlds.catalog(game);
       if (isClosed) return;
       _catalog = catalog;
       _rebuild();
@@ -62,7 +62,7 @@ class LevelMapCubit extends Cubit<LevelMapState> {
     emit(
       LevelMapState(
         status: LevelMapStatus.ready,
-        map: LevelMap.build(catalog, progress.progress(game)),
+        map: LevelMap.build(catalog, _progress.progress(game)),
       ),
     );
   }
