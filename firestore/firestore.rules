@@ -162,6 +162,17 @@ service cloud.firestore {
         || request.resource.data.avatarId is string;
     }
 
+    // users/{uid}/level_progress/{gameId}: {levels: map, updatedAt}. Each
+    // entry is checked by the app's merge; level progress never reaches a
+    // leaderboard, so a hand-edited doc only changes its owner's map.
+    function validLevelProgress(gameId) {
+      let data = request.resource.data;
+      return gameId in ['zip', 'path_words', 'sudoku']
+        && data.keys().hasOnly(['levels', 'updatedAt'])
+        && data.levels is map
+        && data.updatedAt == request.time;
+    }
+
     match /zip_levels/{id} {
       allow get: if puzzleDocReadable(id);
       // A query could return a daily before it's live; only admins list.
@@ -303,6 +314,19 @@ service cloud.firestore {
     match /users/{uid}/game_streaks/{gameId} {
       allow read: if isOwner(uid);
       allow create, update: if isOwner(uid) && validGameStreak(gameId);
+      allow delete: if false;
+    }
+
+    // Levels content, edited in winklo-admin through admin-api. Players read
+    // published worlds only; their queries must filter on published == true.
+    match /level_worlds/{id} {
+      allow get, list: if resource.data.published == true || isAdmin();
+      allow write: if false;
+    }
+
+    match /users/{uid}/level_progress/{gameId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validLevelProgress(gameId);
       allow delete: if false;
     }
 
