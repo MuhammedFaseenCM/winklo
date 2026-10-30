@@ -68,7 +68,7 @@ class ResultsArgs {
 }
 
 /// Which kind of run off the dailies a [LocalResultInfo] describes.
-enum LocalResultKind { archive, practice, bonus }
+enum LocalResultKind { archive, practice, bonus, level }
 
 /// What Results shows for a run off the dailies.
 class LocalResultInfo {
@@ -80,6 +80,7 @@ class LocalResultInfo {
     this.bestScore,
     this.scoreLabel,
     this.againLocation,
+    this.level,
   });
 
   final LocalResultKind kind;
@@ -102,4 +103,49 @@ class LocalResultInfo {
   /// Where "New board" or "Play again" goes; null for none (the archive
   /// goes back to its calendar).
   final String? againLocation;
+
+  /// Set for a level run: its stars and what comes next.
+  final LevelResultInfo? level;
+}
+
+/// What Results shows for a cleared level.
+class LevelResultInfo {
+  const LevelResultInfo({
+    required this.runStars,
+    required this.bestStars,
+    required this.usedHints,
+    this.previousStars,
+    this.targetSeconds,
+    this.nextLocation,
+    this.nextWorldTheme,
+  });
+
+  /// Stars this run earned.
+  final int runStars;
+
+  /// The level's stars after this run.
+  final int bestStars;
+
+  /// The level's stars before this run; null on a first clear.
+  final int? previousStars;
+  final bool usedHints;
+
+  /// Null when the level has no time goal.
+  final int? targetSeconds;
+
+  /// The next level's route; null on the last published level.
+  final String? nextLocation;
+
+  /// The next world's theme when the next level starts a new world.
+  final String? nextWorldTheme;
+
+  bool get noHintsEarned => !usedHints;
+
+  /// The run's stars are 1 + no hints + time, so the time star is whatever
+  /// the hints don't explain.
+  bool get timeEarned =>
+      targetSeconds != null && runStars == (usedHints ? 2 : 3);
+
+  bool get moreStars => previousStars != null && bestStars > previousStars!;
+  bool get opensNewWorld => nextWorldTheme != null;
 }
