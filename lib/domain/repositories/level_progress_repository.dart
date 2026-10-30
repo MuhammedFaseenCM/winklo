@@ -31,12 +31,14 @@ class LevelClearResult {
 /// Read synchronously by the UI. Kept per account, so signing into another
 /// account shows that account's map.
 abstract class LevelProgressRepository {
-  /// Fires after any write, including [restore].
+  /// Fires after [record] and [restore].
   Stream<void> get changes;
 
+  /// The progress of the signed-in account in [game]; empty when none.
   LevelProgress progress(String game);
 
   /// Keeps a cleared run of [levelId]; the record only ever improves.
+  /// [stars] is 1 to 3.
   Future<LevelClearResult> record(
     String game,
     String levelId, {
@@ -51,13 +53,6 @@ abstract class LevelProgressRepository {
   /// Whether the progress differs from what was last pushed.
   bool needsPush(String game);
 
+  /// Remembers [pushed] as the copy the account now holds.
   Future<void> markPushed(String game, LevelProgress pushed);
-}
-
-/// The account's copy, `users/{uid}/level_progress/{game}`.
-abstract class LevelProgressRemoteRepository {
-  /// The doc's raw `levels` map, or null when there is no doc.
-  Future<Object?> fetch(String uid, String game);
-
-  Future<void> save(String uid, String game, LevelProgress progress);
 }

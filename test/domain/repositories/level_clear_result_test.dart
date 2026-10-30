@@ -9,6 +9,8 @@ void main() {
       current: LevelRecord(stars: 2, bestSeconds: 30),
     );
     expect(result.firstClear, isTrue);
+    expect(result.moreStars, isFalse);
+    expect(result.fasterTime, isFalse);
     expect(result.improved, isFalse);
   });
 
@@ -33,5 +35,16 @@ void main() {
       current: LevelRecord(stars: 2, bestSeconds: 30),
     );
     expect(same.improved, isFalse);
+  });
+
+  test('a run both faster and with more stars is all three', () {
+    const both = LevelClearResult(
+      runStars: 3,
+      previous: LevelRecord(stars: 2, bestSeconds: 30),
+      current: LevelRecord(stars: 3, bestSeconds: 20),
+    );
+    expect(both.moreStars, isTrue);
+    expect(both.fasterTime, isTrue);
+    expect(both.improved, isTrue);
   });
 }
