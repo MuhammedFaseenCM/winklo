@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/domain/entities/level_progress.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
@@ -62,5 +64,21 @@ void main() {
       LevelProgress.empty,
     );
     expect(LevelMapLayout.of(withEmpty, width).bands.length, 2);
+  });
+
+  test('an empty map and a one-level map', () {
+    final empty = LevelMapLayout.of(
+      LevelMap.build(LevelCatalog(const []), LevelProgress.empty),
+      width,
+    );
+    expect(empty.size.height, LevelMapLayout.topPad + LevelMapLayout.bottomPad);
+    expect(empty.nodes, isEmpty);
+    expect(empty.bands, isEmpty);
+    final one = LevelMapLayout.of(
+      LevelMap.build(LevelCatalog([levelWorld(1, 1)]), LevelProgress.empty),
+      width,
+    );
+    expect(one.centers['zip_1_01']!.dy, LevelMapLayout.topPad);
+    expect(one.bands.single.rect, Rect.fromLTRB(0, 0, width, one.size.height));
   });
 }

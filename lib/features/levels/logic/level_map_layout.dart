@@ -10,7 +10,8 @@ class LevelMapBand {
   final LevelMapWorld world;
   final Rect rect;
 
-  /// Where this world meets the one below it (the gate).
+  /// Where this world meets the one below it (the gate); for the bottom
+  /// world, the map's bottom edge.
   double get gateY => rect.bottom;
 }
 
