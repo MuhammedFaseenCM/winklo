@@ -55,4 +55,7 @@ abstract class LevelProgressRepository {
 
   /// Remembers [pushed] as the copy the account now holds.
   Future<void> markPushed(String game, LevelProgress pushed);
+
+  /// Drops this device's copy of [uid]'s level progress (all games), after the account is deleted.
+  Future<void> forget(String uid);
 }

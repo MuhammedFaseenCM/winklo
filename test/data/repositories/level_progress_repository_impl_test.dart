@@ -78,4 +78,62 @@ void main() {
     await prefs.setString('level_progress_u1_zip', '{not json');
     expect(repo.progress('zip').records, isEmpty);
   });
+
+  test('stored non-map JSON reads as empty', () async {
+    await prefs.setString('level_progress_u1_zip', '[]');
+    expect(repo.progress('zip').records, isEmpty);
+    await prefs.setString('level_progress_u1_zip', '42');
+    expect(repo.progress('zip').records, isEmpty);
+  });
+
+  test('signed out uses a bucket separate from u1', () async {
+    await repo.record('zip', 'zip_1_01', stars: 3, seconds: 10);
+    uid = null;
+    expect(repo.progress('zip').records, isEmpty);
+    await repo.record('zip', 'zip_1_02', stars: 1, seconds: 10);
+    uid = 'u1';
+    expect(repo.progress('zip').isCleared('zip_1_02'), isFalse);
+    expect(prefs.containsKey('level_progress_signed_out_zip'), isTrue);
+  });
+
+  test('needsPush and markPushed are per account', () async {
+    await repo.record('zip', 'zip_1_01', stars: 2, seconds: 30);
+    await repo.markPushed('zip', repo.progress('zip'));
+    expect(repo.needsPush('zip'), isFalse);
+    uid = 'u2';
+    await repo.record('zip', 'zip_1_01', stars: 2, seconds: 30);
+    expect(repo.needsPush('zip'), isTrue);
+  });
+
+  test('record fires changes', () async {
+    final changes = <void>[];
+    final sub = repo.changes.listen(changes.add);
+    await repo.record('zip', 'zip_1_01', stars: 2, seconds: 30);
+    await pumpEventQueue();
+    expect(changes, hasLength(1));
+    await sub.cancel();
+  });
+
+  test('forget drops that account only, and fires changes', () async {
+    await repo.record('zip', 'zip_1_01', stars: 2, seconds: 30);
+    await repo.record('arrow', 'a_1', stars: 2, seconds: 30);
+    await repo.markPushed('zip', repo.progress('zip'));
+    uid = 'u2';
+    await repo.record('zip', 'zip_1_01', stars: 1, seconds: 50);
+    await repo.markPushed('zip', repo.progress('zip'));
+    final changes = <void>[];
+    final sub = repo.changes.listen(changes.add);
+    final asks = syncAsks;
+    await repo.forget('u1');
+    await pumpEventQueue();
+    expect(changes, hasLength(1));
+    expect(syncAsks, asks);
+    expect(prefs.getKeys().where((k) => k.contains('_u1_')), isEmpty);
+    expect(repo.progress('zip').totalStars, 1);
+    expect(repo.needsPush('zip'), isFalse);
+    uid = 'u1';
+    expect(repo.progress('zip').records, isEmpty);
+    expect(repo.progress('arrow').records, isEmpty);
+    await sub.cancel();
+  });
 }

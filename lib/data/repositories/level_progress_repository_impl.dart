@@ -9,13 +9,17 @@ import '../../domain/repositories/level_progress_repository.dart';
 /// SharedPreferences store for [LevelProgressRepository], one JSON value per
 /// account and game (`level_progress_<uid>_<game>`), plus what was last
 /// pushed (`level_progress_pushed_<uid>_<game>`).
+///
+/// `<uid>` is `signed_out` when nobody is signed in (sign-in is required to
+/// play, so that bucket normally stays empty). Level maps are kept per
+/// account and are not part of the sign-out purge, so another account never
+/// sees them.
 class LevelProgressRepositoryImpl implements LevelProgressRepository {
   LevelProgressRepositoryImpl(
     this._prefs, {
-    required String? Function() currentUid,
-    void Function()? onChanged,
-  }) : _currentUid = currentUid,
-       _onChanged = onChanged;
+    required this._currentUid,
+    this._onChanged,
+  });
 
   final SharedPreferences _prefs;
   final String? Function() _currentUid;
@@ -80,6 +84,18 @@ class LevelProgressRepositoryImpl implements LevelProgressRepository {
   @override
   Future<void> markPushed(String game, LevelProgress pushed) =>
       _write(_pushedKey(game), pushed);
+
+  @override
+  Future<void> forget(String uid) async {
+    final prefixes = [
+      'level_progress_${uid}_',
+      'level_progress_pushed_${uid}_',
+    ];
+    for (final key in _prefs.getKeys().toList()) {
+      if (prefixes.any(key.startsWith)) await _prefs.remove(key);
+    }
+    _fire(askSync: false);
+  }
 
   void _fire({required bool askSync}) {
     if (!_changes.isClosed) _changes.add(null);
