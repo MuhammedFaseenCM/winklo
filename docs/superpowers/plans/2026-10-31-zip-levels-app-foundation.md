@@ -2737,6 +2737,12 @@ class _Worlds implements LevelWorldRepository {
       value;
 }
 
+class _OfflineWorlds implements LevelWorldRepository {
+  @override
+  Future<LevelCatalog> catalog(String game, {bool refresh = false}) async =>
+      throw const LevelsUnavailable('offline');
+}
+
 class _MemoryInProgressRuns implements InProgressRunRepository {
   final Map<String, InProgressRun> runs = {};
   @override
@@ -2892,6 +2898,39 @@ void main() {
     await bloc.close();
   });
 
+  test('levels being unavailable keeps the draft', () async {
+    drafts.runs['zip_level_zip_1_01'] = InProgressRun(
+      gameId: 'zip',
+      playId: 'level_zip_1_01',
+      elapsedMs: 1000,
+      board: const {'path': []},
+    );
+    final bloc = ZipBloc(
+      mode: const PlayMode.level('zip_1_01'),
+      levelWorlds: _OfflineWorlds(),
+      recordLevelClear: RecordLevelClear(progress, analytics),
+      inProgressRuns: drafts,
+      submitScore: submitScore,
+      submitLeaderboardTime: _MockSubmitLeaderboardTime(),
+      recordDailyClear: recordDailyClear,
+      getBestPoints: _MockGetBestPoints(),
+      getBestTimeSeconds: _MockGetBestTimeSeconds(),
+      isNewPersonalBest: _MockIsNewPersonalBest(),
+      getClearBoard: _MockGetClearBoard(),
+      analytics: analytics,
+      hintQuota: UnlimitedHintQuotaRepositoryImpl(),
+      clockNow: () => now,
+      wait: (_) async {},
+      fetchDailyLevel: (date, {period = const Duration(days: 1)}) =>
+          throw StateError('a level run never reads a daily'),
+    );
+    bloc.add(const ZipEvent.started());
+    final state = await ready(bloc);
+    expect(state.status, ZipStatus.failed);
+    expect(drafts.runs['zip_level_zip_1_01'], isNotNull);
+    await bloc.close();
+  });
+
   test('a run left halfway resumes from its draft', () async {
     final bloc = build('zip_1_01');
     bloc.add(const ZipEvent.started());
@@ -3022,7 +3061,12 @@ with:
       } else if (mode.isLevel) {
         final catalog = await levelWorlds!.catalog(GameIds.zip);
         final slot = catalog.slot(mode.levelId!);
-        if (slot == null) throw StateError('No level ${mode.levelId}');
+        if (slot == null) {
+          // A level that no longer exists can't be resumed either. Being
+          // offline (LevelsUnavailable) keeps the draft for later.
+          await inProgressRuns.clear(gameId: GameIds.zip, playId: runId);
+          throw StateError('No level ${mode.levelId}');
+        }
         level = slot.entry.zipLevel;
         _levelSlot = slot;
       } else {
@@ -3032,10 +3076,6 @@ with:
         level = practiceLevel(seed);
       }
     } catch (_) {
-      // A level that no longer exists can't be resumed either.
-      if (mode.isLevel) {
-        await inProgressRuns.clear(gameId: GameIds.zip, playId: runId);
-      }
       if (emit.isDone) return;
       emit(
         state.copyWith(
@@ -3139,7 +3179,7 @@ with
 - [ ] **Step 4: Run the new and existing ZipBloc tests**
 
 Run: `flutter test test/features/zip/bloc/`
-Expected: all PASS (the new 7 and the existing daily, archive and practice tests).
+Expected: all PASS (the new 8 and the existing daily, archive and practice tests).
 
 - [ ] **Step 5: Commit**
 
