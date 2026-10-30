@@ -16,6 +16,9 @@ typedef ProgressSyncTimerFactory =
 /// - sign-in (null -> uid, or a different uid) -> full sync, unthrottled
 /// - local progress change -> push-only sync, debounced by [pushDebounce]
 ///
+/// An optional level sync runs after each [SyncProgress] run with the same
+/// `pull`; its failures are logged and retried on the next run.
+///
 /// [restored] fires after any run that changed local progress (Home reloads).
 class ProgressSyncLifecycle with WidgetsBindingObserver {
   ProgressSyncLifecycle({

@@ -337,12 +337,33 @@ void main() {
     });
 
     test('a failing level sync never breaks the lifecycle', () async {
-      final lifecycle = withLevels(
-        ({required bool pull}) async => throw StateError('offline'),
-      );
+      var levelCalls = 0;
+      final lifecycle = withLevels(({required bool pull}) async {
+        levelCalls++;
+        throw StateError('offline');
+      });
       lifecycle.start();
       await pumpEventQueue();
       expect(pulls, [true]);
+      expect(levelCalls, 1);
+      signal.notify();
+      await pumpEventQueue();
+      timers.last.fire();
+      await pumpEventQueue();
+      expect(pulls, [true, false]);
+      expect(levelCalls, 2);
+      lifecycle.dispose();
+    });
+
+    test('level sync still runs when the progress sync throws', () async {
+      when(() => sync(pull: any(named: 'pull'))).thenThrow(StateError('boom'));
+      final levelPulls = <bool>[];
+      final lifecycle = withLevels(
+        ({required bool pull}) async => levelPulls.add(pull),
+      );
+      lifecycle.start();
+      await pumpEventQueue();
+      expect(levelPulls, [true]);
       lifecycle.dispose();
     });
   });
