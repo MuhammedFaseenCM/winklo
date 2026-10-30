@@ -1577,6 +1577,50 @@ final class AppTextEn implements AppText {
   String levelGoalMissed(String goal) => '$goal, missed';
 
   @override
+  String get levelsSoon => 'Soon';
+
+  @override
+  String get levelsNeedConnection => 'Levels need a connection the first time.';
+
+  @override
+  String get levelsComingSoon => 'Levels are coming soon.';
+
+  @override
+  String levelWorldTitle(int order, String worldName) =>
+      'World $order · $worldName';
+
+  @override
+  String levelWorldLocked(int lastLevel) => 'Clear Level $lastLevel to open';
+
+  @override
+  String levelLocked(int number) => 'Clear Level $number first';
+
+  @override
+  String get levelLockedMessage => 'This level is still locked.';
+
+  @override
+  String get levelPlay => 'Play';
+
+  @override
+  String levelBestTime(String time) => 'Best $time';
+
+  @override
+  String get levelBackToMap => 'Map';
+
+  @override
+  String levelNodeDone(int number, int stars, int maxStars) =>
+      'Level $number, $stars of $maxStars stars';
+
+  @override
+  String levelNodeCurrent(int number) => 'Level $number, next to play';
+
+  @override
+  String levelNodeLocked(int number) => 'Level $number, locked';
+
+  @override
+  String levelNumber(int number) => 'Level $number';
+
+  @override
   String get levelReplay => 'Replay';
 
   @override

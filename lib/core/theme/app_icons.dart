@@ -32,6 +32,12 @@ abstract final class AppIcons {
   /// Phosphor `user`, fill.
   static const userSelected = IconData(0xe4c2, fontFamily: _fill);
 
+  /// Phosphor `map-trifold`, duotone: the Levels tab.
+  static const levels = IconData(0xe31b, fontFamily: _duotone);
+
+  /// Phosphor `map-trifold`, fill.
+  static const levelsSelected = IconData(0xe31a, fontFamily: _fill);
+
   /// Phosphor `arrow-left`, duotone.
   static const back = IconData(0xe059, fontFamily: _duotone);
 
@@ -299,6 +305,7 @@ abstract final class AppIcons {
     0xe28d: IconData(0xe28c, fontFamily: _duotone), // globe-hemisphere-west
     0xe297: IconData(0xe296, fontFamily: _duotone), // grid-four
     0xe2c3: IconData(0xe2c2, fontFamily: _duotone), // house
+    0xe31b: IconData(0xe31a, fontFamily: _duotone), // map-trifold
     0xe2cf: IconData(0xe2ce, fontFamily: _duotone), // info
     0xe2d7: IconData(0xe2d6, fontFamily: _duotone), // key
     0xe2dd: IconData(0xe2dc, fontFamily: _duotone), // lightbulb

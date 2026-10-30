@@ -568,6 +568,20 @@ abstract interface class AppText {
   String levelOpenWorld(String worldName);
   String levelGoalEarned(String goal);
   String levelGoalMissed(String goal);
+  String get levelsSoon;
+  String get levelsNeedConnection;
+  String get levelsComingSoon;
+  String levelWorldTitle(int order, String worldName);
+  String levelWorldLocked(int lastLevel);
+  String levelLocked(int number);
+  String get levelLockedMessage;
+  String get levelPlay;
+  String levelBestTime(String time);
+  String get levelBackToMap;
+  String levelNodeDone(int number, int stars, int maxStars);
+  String levelNodeCurrent(int number);
+  String levelNodeLocked(int number);
+  String levelNumber(int number);
   String get levelReplay;
   String get levelAllDone;
 

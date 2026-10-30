@@ -638,6 +638,25 @@ abstract final class AppStrings {
       _t.levelOpenWorld(_t.levelWorldName(theme));
   static String levelGoalEarned(String goal) => _t.levelGoalEarned(goal);
   static String levelGoalMissed(String goal) => _t.levelGoalMissed(goal);
+  static String get levelsSoon => _t.levelsSoon;
+  static String get levelsNeedConnection => _t.levelsNeedConnection;
+  static String get levelsComingSoon => _t.levelsComingSoon;
+
+  /// "World 2 · Metro", from the world's [theme].
+  static String levelWorldTitle(int order, String theme) =>
+      _t.levelWorldTitle(order, _t.levelWorldName(theme));
+  static String levelWorldLocked(int lastLevel) =>
+      _t.levelWorldLocked(lastLevel);
+  static String levelLocked(int number) => _t.levelLocked(number);
+  static String get levelLockedMessage => _t.levelLockedMessage;
+  static String get levelPlay => _t.levelPlay;
+  static String levelBestTime(String time) => _t.levelBestTime(time);
+  static String get levelBackToMap => _t.levelBackToMap;
+  static String levelNodeDone(int number, int stars, int maxStars) =>
+      _t.levelNodeDone(number, stars, maxStars);
+  static String levelNodeCurrent(int number) => _t.levelNodeCurrent(number);
+  static String levelNodeLocked(int number) => _t.levelNodeLocked(number);
+  static String levelNumber(int number) => _t.levelNumber(number);
   static String get levelReplay => _t.levelReplay;
   static String get levelAllDone => _t.levelAllDone;
 

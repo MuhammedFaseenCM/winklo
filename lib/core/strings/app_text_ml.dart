@@ -1644,6 +1644,52 @@ final class AppTextMl implements AppText {
   String levelGoalMissed(String goal) => '$goal, നേടിയില്ല';
 
   @override
+  String get levelsSoon => 'ഉടൻ';
+
+  @override
+  String get levelsNeedConnection =>
+      'ആദ്യമായി ലെവലുകൾ തുറക്കാൻ ഇന്റർനെറ്റ് വേണം.';
+
+  @override
+  String get levelsComingSoon => 'ലെവലുകൾ ഉടൻ വരുന്നു.';
+
+  @override
+  String levelWorldTitle(int order, String worldName) =>
+      'ലോകം $order · $worldName';
+
+  @override
+  String levelWorldLocked(int lastLevel) =>
+      'തുറക്കാൻ ലെവൽ $lastLevel പൂർത്തിയാക്കുക';
+
+  @override
+  String levelLocked(int number) => 'ആദ്യം ലെവൽ $number പൂർത്തിയാക്കുക';
+
+  @override
+  String get levelLockedMessage => 'ഈ ലെവൽ ഇനിയും തുറന്നിട്ടില്ല.';
+
+  @override
+  String get levelPlay => 'കളിക്കുക';
+
+  @override
+  String levelBestTime(String time) => 'മികച്ചത് $time';
+
+  @override
+  String get levelBackToMap => 'മാപ്പ്';
+
+  @override
+  String levelNodeDone(int number, int stars, int maxStars) =>
+      'ലെവൽ $number, $maxStars-ൽ $stars നക്ഷത്രം';
+
+  @override
+  String levelNodeCurrent(int number) => 'ലെവൽ $number, അടുത്തത്';
+
+  @override
+  String levelNodeLocked(int number) => 'ലെവൽ $number, പൂട്ടിയത്';
+
+  @override
+  String levelNumber(int number) => 'ലെവൽ $number';
+
+  @override
   String get levelReplay => 'വീണ്ടും കളിക്കുക';
 
   @override
