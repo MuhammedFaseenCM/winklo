@@ -108,6 +108,27 @@ void main() {
       });
     });
 
+    test('level_cleared carries the level and its clear flags', () async {
+      await repo.logLevelCleared(
+        gameId: 'zip',
+        levelId: 'zip_1_03',
+        world: 1,
+        number: 3,
+        stars: 2,
+        firstClear: true,
+        improved: false,
+      );
+      verifyEvent('level_cleared', {
+        'game_id': 'zip',
+        'level_id': 'zip_1_03',
+        'world': 1,
+        'level_number': 3,
+        'stars': 2,
+        'first_clear': 1,
+        'improved': 0,
+      });
+    });
+
     test('sign-in logs the standard login event', () async {
       await repo.logLogin();
       verify(() => firebase.logLogin(loginMethod: 'google')).called(1);
