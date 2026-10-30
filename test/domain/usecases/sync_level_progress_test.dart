@@ -223,17 +223,20 @@ void main() {
   test('overlapping calls run one after the other', () async {
     final gate = Completer<void>();
     remote.onFetchAsync = () => gate.future;
+    // A clear that lands during the first run's save stays pending, so the
+    // queued push-only run has something to do.
+    remote.onSave = () =>
+        unawaited(local.record('zip', 'zip_1_02', stars: 1, seconds: 30));
+    await local.record('zip', 'zip_1_01', stars: 2, seconds: 20);
     final first = sync(pull: true);
     await pumpEventQueue();
-    expect(remote.fetches, 1);
     final second = sync(pull: false);
     await pumpEventQueue();
     expect(remote.fetches, 1);
     gate.complete();
     await first;
     await second;
-    // The queued rerun was push-only with nothing new to push.
-    expect(remote.fetches, 1);
+    expect(remote.fetches, 2);
   });
 
   test('a queued pull reruns after a push-only run', () async {

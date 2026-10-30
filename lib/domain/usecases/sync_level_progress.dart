@@ -81,25 +81,28 @@ class SyncLevelProgress {
   Future<void> _drive(Completer<void> first, bool pull) async {
     var completer = first;
     var runPull = pull;
-    while (true) {
-      _current = completer;
-      _runningPull = runPull;
-      _runningUid = _auth.currentUser?.uid;
-      try {
-        await _run(pull: runPull);
-        completer.complete();
-      } catch (e, s) {
-        completer.completeError(e, s);
+    try {
+      while (true) {
+        _current = completer;
+        _runningPull = runPull;
+        try {
+          _runningUid = _auth.currentUser?.uid;
+          await _run(pull: runPull);
+          completer.complete();
+        } catch (e, s) {
+          completer.completeError(e, s);
+        }
+        final next = _rerun;
+        if (next == null) break;
+        _rerun = null;
+        runPull = _rerunPull;
+        _rerunPull = false;
+        completer = next;
       }
-      final next = _rerun;
-      if (next == null) break;
-      _rerun = null;
-      runPull = _rerunPull;
-      _rerunPull = false;
-      completer = next;
+    } finally {
+      _current = null;
+      _running = false;
     }
-    _current = null;
-    _running = false;
   }
 
   Future<void> _run({required bool pull}) async {
