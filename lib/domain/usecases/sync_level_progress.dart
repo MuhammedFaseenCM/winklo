@@ -12,14 +12,11 @@ import '../repositories/level_progress_repository.dart';
 /// merge can't conflict, so the order of devices never matters.
 class SyncLevelProgress {
   SyncLevelProgress({
-    required AuthRepository auth,
-    required LevelProgressRepository local,
-    required LevelProgressRemoteRepository remote,
+    required this._auth,
+    required this._local,
+    required this._remote,
     bool Function()? isRemoteAvailable,
-  }) : _auth = auth,
-       _local = local,
-       _remote = remote,
-       _isRemoteAvailable = isRemoteAvailable ?? _always;
+  }) : _isRemoteAvailable = isRemoteAvailable ?? _always;
 
   /// Games with Levels.
   static const gameIds = [GameIds.zip];
