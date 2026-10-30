@@ -56,6 +56,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the line crosses from a cleared ink world into metro', (
+    tester,
+  ) async {
+    final layout = layoutWith(const {
+      'zip_1_01': LevelRecord(stars: 3, bestSeconds: 9),
+      'zip_1_02': LevelRecord(stars: 3, bestSeconds: 9),
+      'zip_1_03': LevelRecord(stars: 3, bestSeconds: 9),
+      'zip_2_01': LevelRecord(stars: 1, bestSeconds: 20),
+    });
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SingleChildScrollView(
+          child: SizedBox.fromSize(
+            size: layout.size,
+            child: CustomPaint(painter: LevelPathPainter(layout)),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   test('painters repaint only for a new layout', () {
     final a = layoutWith(const {});
     final b = layoutWith(const {});

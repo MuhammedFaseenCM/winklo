@@ -72,14 +72,16 @@ class WorldBackdropPainter extends CustomPainter {
       ..color = ZipColors.outlineQuiet
       ..strokeWidth = 1;
     for (final (path, _) in _metroLines(r)) {
+      final dashes = Path();
       for (final metric in path.computeMetrics()) {
         for (var d = 0.0; d < metric.length; d += 7) {
-          canvas.drawPath(
+          dashes.addPath(
             metric.extractPath(d, math.min(d + 3, metric.length)),
-            dash,
+            Offset.zero,
           );
         }
       }
+      canvas.drawPath(dashes, dash);
     }
   }
 
