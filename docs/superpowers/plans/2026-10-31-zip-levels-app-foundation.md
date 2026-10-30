@@ -2507,13 +2507,7 @@ Replace `_run` with:
   }
 ```
 
-In `lib/app.dart`, `_ensureProgressSyncLifecycle`, add to the constructor call:
-
-```dart
-      syncLevels: context.read<SyncLevelProgress>().call,
-```
-
-and import `domain/usecases/sync_level_progress.dart` (relative to `lib/app.dart`: `'domain/usecases/sync_level_progress.dart'`). The provider is added in Task 16.
+Wiring it into `lib/app.dart` waits for Task 16, where the `SyncLevelProgress` provider is registered (reading it earlier would break every test that builds the app).
 
 - [ ] **Step 7: Run the lifecycle tests**
 
@@ -2523,7 +2517,7 @@ Expected: PASS, including the existing tests.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add lib/domain/usecases/sync_level_progress.dart lib/core/lifecycle/progress_sync_lifecycle.dart lib/app.dart test/domain/usecases/sync_level_progress_test.dart test/core/lifecycle/progress_sync_lifecycle_test.dart
+git add lib/domain/usecases/sync_level_progress.dart lib/core/lifecycle/progress_sync_lifecycle.dart test/domain/usecases/sync_level_progress_test.dart test/core/lifecycle/progress_sync_lifecycle_test.dart
 git commit -m "feat(levels): sync level progress after each progress sync"
 ```
 
@@ -3347,6 +3341,14 @@ In `app_repositories.dart`, append these providers **at the end** of the provide
     ),
 ```
 
+**Run the level sync with the progress sync.** In `lib/app.dart`, `_ensureProgressSyncLifecycle`, add to the `ProgressSyncLifecycle(` call:
+
+```dart
+      syncLevels: context.read<SyncLevelProgress>().call,
+```
+
+and import `'domain/usecases/sync_level_progress.dart'` (relative to `lib/app.dart`).
+
 **Account deletion must also drop level progress.** `ForgetAccountProgress` (provided earlier in the same list, ~line 320) takes an optional second argument since Task 10. Because a provider can only read providers above it, move the `RepositoryProvider<LevelProgressRepository>` block from the appended group to just **before** the `RepositoryProvider<ForgetAccountProgress>` provider (check that `AuthRepository`, `ProgressChangeSignal` and `SharedPreferences` are provided above that point; if `AuthRepository` is not, report it instead of guessing), and change that provider to:
 
 ```dart
@@ -3370,7 +3372,7 @@ Expected: no warnings or errors; all tests PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add lib/core/di/app_repositories.dart lib/features/zip/view/zip_screen.dart lib/core/widgets/play_mode_strip.dart test/core/widgets/play_mode_strip_level_test.dart
+git add lib/app.dart lib/core/di/app_repositories.dart lib/features/zip/view/zip_screen.dart lib/core/widgets/play_mode_strip.dart test/core/widgets/play_mode_strip_level_test.dart
 git commit -m "feat(levels): wire level runs into ZipScreen and DI"
 ```
 
