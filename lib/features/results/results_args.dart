@@ -128,9 +128,11 @@ class LevelResultInfo {
 
   /// The level's stars before this run; null on a first clear.
   final int? previousStars;
+
+  /// Whether this run used a hint.
   final bool usedHints;
 
-  /// Null when the level has no time goal.
+  /// Null (or 0 or less) when the level has no time goal.
   final int? targetSeconds;
 
   /// The next level's route; null on the last published level.
@@ -139,13 +141,19 @@ class LevelResultInfo {
   /// The next world's theme when the next level starts a new world.
   final String? nextWorldTheme;
 
+  /// The run used no hints.
   bool get noHintsEarned => !usedHints;
 
   /// The run's stars are 1 + no hints + time, so the time star is whatever
   /// the hints don't explain.
-  bool get timeEarned =>
-      targetSeconds != null && runStars == (usedHints ? 2 : 3);
+  bool get timeEarned {
+    final target = targetSeconds;
+    return target != null && target > 0 && runStars == (usedHints ? 2 : 3);
+  }
 
+  /// The level has more stars than before this run.
   bool get moreStars => previousStars != null && bestStars > previousStars!;
+
+  /// The next level starts a new world.
   bool get opensNewWorld => nextWorldTheme != null;
 }

@@ -16,7 +16,7 @@ void main() {
             runStars: stars,
             bestStars: stars,
             usedHints: hints,
-            targetSeconds: target != null && target > 0 ? target : null,
+            targetSeconds: target,
           );
           final expected =
               target != null && target > 0 && seconds >= 1 && seconds <= target;
@@ -74,5 +74,18 @@ void main() {
     );
     expect(info.moreStars, isTrue);
     expect(info.opensNewWorld, isTrue);
+  });
+
+  test('no extra stars or new world when there are none', () {
+    const first = LevelResultInfo(runStars: 3, bestStars: 3, usedHints: false);
+    expect(first.moreStars, isFalse);
+    const same = LevelResultInfo(
+      runStars: 2,
+      bestStars: 2,
+      previousStars: 2,
+      usedHints: false,
+    );
+    expect(same.moreStars, isFalse);
+    expect(first.opensNewWorld, isFalse);
   });
 }
