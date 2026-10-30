@@ -1593,6 +1593,14 @@ void main() {
     expect(catalog.worlds.map((w) => w.id), ['zip_1']);
   });
 
+  test('stops at a world that repeats an earlier level id', () async {
+    final repeat = levelWorldJson(2, 1)
+      ..['levels'] = [levelBoardJson('zip_1_02')];
+    source.server = [doc(1, 2), (id: 'zip_2', data: repeat), doc(3, 2)];
+    final catalog = await LevelWorldRepositoryImpl(source).catalog('zip');
+    expect(catalog.worlds.map((w) => w.id), ['zip_1']);
+  });
+
   test('keeps the catalog for the session; refresh reads again', () async {
     source.server = [doc(1, 2)];
     final repo = LevelWorldRepositoryImpl(source);
@@ -1704,16 +1712,21 @@ class LevelWorldRepositoryImpl implements LevelWorldRepository {
     return LevelCatalog(_parse(docs));
   }
 
-  /// Worlds in order, stopping at the first one that doesn't parse, so a
-  /// bad world can't shift the numbers of the levels after it.
+  /// Worlds in order, stopping at the first one that doesn't parse or that
+  /// repeats a level id of an earlier world, so a bad world can't shift the
+  /// numbers of the levels after it or share progress with another board.
   static List<LevelWorld> _parse(List<LevelWorldDoc> docs) {
     final worlds = <LevelWorld>[];
+    final seen = <String>{};
     for (final doc in docs) {
+      final LevelWorld world;
       try {
-        worlds.add(LevelWorld.fromJson(doc.id, doc.data));
+        world = LevelWorld.fromJson(doc.id, doc.data);
       } on FormatException {
         break;
       }
+      if (!world.levels.every((level) => seen.add(level.id))) break;
+      worlds.add(world);
     }
     return worlds;
   }
@@ -1723,7 +1736,7 @@ class LevelWorldRepositoryImpl implements LevelWorldRepository {
 - [ ] **Step 4: Run the test**
 
 Run: `flutter test test/data/repositories/level_world_repository_impl_test.dart`
-Expected: PASS (7 tests).
+Expected: PASS (8 tests).
 
 - [ ] **Step 5: Commit**
 
