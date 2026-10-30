@@ -269,6 +269,7 @@ void main() {
     expect(resumed.path.length, 3);
     await again.close();
   });
+
   test('a replay with more stars improves the record', () async {
     await progress.record('zip', 'zip_1_01', stars: 2, seconds: 40);
     final bloc = build('zip_1_01');
