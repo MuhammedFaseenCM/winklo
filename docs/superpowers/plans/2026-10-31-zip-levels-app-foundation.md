@@ -1943,7 +1943,7 @@ class LevelProgressRepositoryImpl implements LevelProgressRepository {
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/entities/level_progress.dart';
-import '../../domain/repositories/level_progress_repository.dart';
+import '../../domain/repositories/level_progress_remote_repository.dart';
 
 /// `users/{uid}/level_progress/{game}`: `{levels, updatedAt}`. The rules
 /// accept only those two fields, with `updatedAt` the server's time.
@@ -2004,13 +2004,15 @@ After the `logGameCompleted` declaration:
 
 ```dart
   /// A level of the Levels map cleared: which one, the stars this run
-  /// earned, and whether the level's record improved.
+  /// earned, whether it was the level's first clear, and whether a replay
+  /// improved the level's record.
   Future<void> logLevelCleared({
     required String gameId,
     required String levelId,
     required int world,
     required int number,
     required int stars,
+    required bool firstClear,
     required bool improved,
   });
 ```
@@ -2027,6 +2029,7 @@ In `FirebaseAnalyticsRepositoryImpl`, after `logGameCompleted`:
     required int world,
     required int number,
     required int stars,
+    required bool firstClear,
     required bool improved,
   }) {
     return _safe(
@@ -2038,6 +2041,7 @@ In `FirebaseAnalyticsRepositoryImpl`, after `logGameCompleted`:
           'world': world,
           'level_number': number,
           'stars': stars,
+          'first_clear': _flag(firstClear),
           'improved': _flag(improved),
         },
       ),
@@ -2057,6 +2061,7 @@ In `stubAnalytics`, after the `logGameCompleted` stub:
       world: any(named: 'world'),
       number: any(named: 'number'),
       stars: any(named: 'stars'),
+      firstClear: any(named: 'firstClear'),
       improved: any(named: 'improved'),
     ),
   ).thenAnswer((_) async {});
@@ -2129,6 +2134,7 @@ void main() {
         world: 2,
         number: 4,
         stars: 3,
+        firstClear: true,
         improved: false,
       ),
     ).called(1);
@@ -2192,6 +2198,7 @@ class RecordLevelClear {
       world: slot.world.order,
       number: slot.number,
       stars: stars,
+      firstClear: result.firstClear,
       improved: result.improved,
     );
     return result;
@@ -2233,7 +2240,7 @@ import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/level_progress.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
-import 'package:winklo/domain/repositories/level_progress_repository.dart';
+import 'package:winklo/domain/repositories/level_progress_remote_repository.dart';
 import 'package:winklo/domain/usecases/sync_level_progress.dart';
 
 class _MockAuth extends Mock implements AuthRepository {}
@@ -2355,6 +2362,7 @@ Expected: compile error.
 import '../entities/level_progress.dart';
 import '../game_ids.dart';
 import '../repositories/auth_repository.dart';
+import '../repositories/level_progress_remote_repository.dart';
 import '../repositories/level_progress_repository.dart';
 
 /// Reconciles this device's level progress with the account's copy.
@@ -2399,6 +2407,8 @@ class SyncLevelProgress {
       if (!merged.sameAs(remote.progress) || remote.dropped > 0) {
         await _remote.save(uid, game, merged);
       }
+      // The local store is keyed by whoever is signed in now.
+      if (_auth.currentUser?.uid != uid) return;
       await _local.markPushed(game, merged);
     }
   }
