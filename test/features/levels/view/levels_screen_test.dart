@@ -4,12 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
 import 'package:winklo/features/levels/view/levels_screen.dart';
+import 'package:winklo/features/levels/view/widgets/level_avatar_pin.dart';
+import 'package:winklo/features/levels/view/widgets/level_node.dart';
 
 import '../../../helpers/level_fixtures.dart';
 
@@ -129,4 +132,118 @@ void main() {
     await pump(tester, LevelCatalog(const []));
     expect(find.text('Levels are coming soon.'), findsOneWidget);
   });
+
+  Future<void> clear(Iterable<int> numbers, {int stars = 3}) async {
+    for (final n in numbers) {
+      await progress.record('zip', levelId(1, n), stars: stars, seconds: 10);
+    }
+  }
+
+  Future<void> phone(WidgetTester tester, {double width = 390}) async {
+    await tester.binding.setSurfaceSize(Size(width, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  }
+
+  /// The centre of Level [number]'s circle.
+  Offset circleOf(WidgetTester tester, int number) {
+    final node = find.byWidgetPredicate(
+      (w) => w is LevelNode && w.node.slot.number == number,
+    );
+    return tester.getTopLeft(node) +
+        const Offset(LevelNode.width / 2, LevelNode.diameter / 2);
+  }
+
+  Rect viewport(WidgetTester tester) =>
+      tester.getRect(find.byType(SingleChildScrollView));
+
+  testWidgets('scrolls so the current level sits mid-view', (tester) async {
+    await phone(tester);
+    await clear([for (var n = 1; n <= 20; n++) n]);
+    await pump(tester, LevelCatalog([levelWorld(1, 30)]));
+    expect(circleOf(tester, 21).dy, closeTo(viewport(tester).center.dy, 40));
+  });
+
+  testWidgets('with every level cleared, shows the last one', (tester) async {
+    await phone(tester);
+    await clear([for (var n = 1; n <= 30; n++) n]);
+    await pump(tester, LevelCatalog([levelWorld(1, 30)]));
+    expect(viewport(tester).contains(circleOf(tester, 30)), isTrue);
+  });
+
+  testWidgets(
+    'open= for a level not on the map shows the current one, no sheet',
+    (tester) async {
+      await phone(tester);
+      await clear([for (var n = 1; n <= 20; n++) n]);
+      await pump(tester, LevelCatalog([levelWorld(1, 30)]), open: 'zip_9_99');
+      expect(circleOf(tester, 21).dy, closeTo(viewport(tester).center.dy, 1));
+      expect(find.text('Play'), findsNothing);
+    },
+  );
+
+  testWidgets('moves to the new current level when it changes', (tester) async {
+    await phone(tester);
+    await clear([for (var n = 1; n <= 9; n++) n]);
+    await pump(tester, LevelCatalog([levelWorld(1, 30)]));
+    expect(circleOf(tester, 10).dy, closeTo(viewport(tester).center.dy, 1));
+    await clear([10]);
+    await tester.pumpAndSettle();
+    expect(circleOf(tester, 11).dy, closeTo(viewport(tester).center.dy, 1));
+  });
+
+  testWidgets('a re-emit with the same current level leaves the view', (
+    tester,
+  ) async {
+    await phone(tester);
+    await clear([for (var n = 1; n <= 9; n++) n], stars: 2);
+    await pump(tester, LevelCatalog([levelWorld(1, 30)]));
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 150));
+    await tester.pumpAndSettle();
+    final before = circleOf(tester, 10);
+    await clear([1]);
+    await tester.pumpAndSettle();
+    expect(find.text('19 / 90'), findsOneWidget);
+    expect(circleOf(tester, 10), before);
+  });
+
+  for (final below in [3, 4]) {
+    testWidgets(
+      'a long Malayalam world label at 1.3x on a 320 px phone keeps clear '
+      'of the pin and stays in its half ($below levels below)',
+      (tester) async {
+        AppStrings.use('ml');
+        addTearDown(() => AppStrings.use('en'));
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await phone(tester, width: 320);
+        await clear([for (var n = 1; n < below; n++) n]);
+        await pump(
+          tester,
+          LevelCatalog([
+            levelWorld(1, below),
+            levelWorld(2, 3, theme: 'metro'),
+          ]),
+        );
+        expect(tester.takeException(), isNull);
+        final label = tester.getRect(
+          find
+              .ancestor(
+                of: find.text(AppStrings.levelWorldTitle(2, 'metro')),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final pin = tester.getRect(find.byType(LevelAvatarPin));
+        expect(label.overlaps(pin), isFalse, reason: '$label vs pin $pin');
+        const half = 320 / 2;
+        expect(
+          label.right <= half + 4 || label.left >= half,
+          isTrue,
+          reason: '$label',
+        );
+        expect(label.left, greaterThanOrEqualTo(0));
+        expect(label.right, lessThanOrEqualTo(320));
+      },
+    );
+  }
 }

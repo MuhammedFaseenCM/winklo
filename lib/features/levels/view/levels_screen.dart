@@ -49,7 +49,11 @@ class _LevelsView extends StatefulWidget {
 
 class _LevelsViewState extends State<_LevelsView> {
   final _scroll = ScrollController();
-  bool _placed = false;
+
+  /// The level the view was last placed for (the current one, or the last
+  /// when all are cleared); '' when placed with nothing to focus, null
+  /// before the first placement.
+  String? _placedFor;
 
   @override
   void dispose() {
@@ -57,16 +61,25 @@ class _LevelsViewState extends State<_LevelsView> {
     super.dispose();
   }
 
-  /// Once, after the map first lays out: scroll to the level to show
-  /// ([openLevelId] or the current one) and open its sheet if asked (or,
-  /// for a locked level, say what to clear first).
-  ///
-  /// [_placed] is set when the callback is scheduled, so rebuilds before
-  /// that frame don't schedule it twice.
+  /// Places the view: on the first ready build, and again whenever the
+  /// current level changes (a clear moves it on), never for a re-emit
+  /// that leaves it where it was. The first placement focuses
+  /// [openLevelId] when it's on the map and opens its sheet (or, for a
+  /// locked level, says what to clear first); later ones follow the
+  /// current level. The scroll waits for the frame, when the scroll view
+  /// has its new extent.
   void _place(LevelMap map, LevelMapLayout layout, double viewport) {
-    if (_placed) return;
-    _placed = true;
-    final focusId = widget.openLevelId ?? map.currentId;
+    final currentId =
+        map.currentId ??
+        (layout.nodes.isEmpty ? null : layout.nodes.last.slot.entry.id);
+    final key = currentId ?? '';
+    if (key == _placedFor) return;
+    final first = _placedFor == null;
+    _placedFor = key;
+    final open = first && widget.openLevelId != null
+        ? map.node(widget.openLevelId!)
+        : null;
+    final focusId = open != null ? widget.openLevelId! : currentId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final center = focusId == null ? null : layout.centers[focusId];
@@ -74,9 +87,6 @@ class _LevelsViewState extends State<_LevelsView> {
         final offset = layout.size.height - center.dy - viewport / 2;
         _scroll.jumpTo(offset.clamp(0.0, _scroll.position.maxScrollExtent));
       }
-      final open = widget.openLevelId == null
-          ? null
-          : map.node(widget.openLevelId!);
       if (open == null) return;
       if (open.playable) {
         showLevelSheet(context, open);
@@ -180,35 +190,9 @@ class _LevelsViewState extends State<_LevelsView> {
                   ),
                 ),
                 for (var i = 0; i < layout.bands.length; i++)
-                  Positioned(
-                    // Away from where the line crosses the gate.
-                    left: layout.labelOnRight(i) ? null : 14,
-                    right: layout.labelOnRight(i) ? 14 : null,
-                    // Centred on its gate; the bottom world's "gate" is
-                    // the map's bottom edge, so its label sits just above.
-                    top: i == 0
-                        ? layout.bands[i].gateY - 52
-                        : layout.bands[i].gateY - 20,
-                    child: _WorldLabel(
-                      band: layout.bands[i],
-                      previousLast: i == 0
-                          ? null
-                          : layout.bands[i - 1].world.lastNumber,
-                    ),
-                  ),
+                  _worldLabel(layout, i),
                 for (final node in layout.nodes)
-                  Positioned(
-                    left:
-                        layout.centers[node.slot.entry.id]!.dx -
-                        LevelNode.width / 2,
-                    top:
-                        layout.centers[node.slot.entry.id]!.dy -
-                        LevelNode.diameter / 2,
-                    child: LevelNode(
-                      node: node,
-                      onTap: () => _onTap(map, node),
-                    ),
-                  ),
+                  _node(map, node, layout.centers[node.slot.entry.id]!),
                 if (current != null)
                   Positioned(
                     left: current.dx - LevelAvatarPin.width / 2,
@@ -232,6 +216,43 @@ class _LevelsViewState extends State<_LevelsView> {
       },
     );
   }
+
+  /// World [i]'s label, on the side of its gate away from the line and
+  /// within that half, short of the middle by the pin's half-width (a
+  /// level at the middle carries the pin there). It's centred on the gate,
+  /// so a taller label grows both ways. The bottom world's "gate" is the
+  /// map's bottom edge: its label sits just above it.
+  Widget _worldLabel(LevelMapLayout layout, int i) {
+    final band = layout.bands[i];
+    final onRight = layout.labelOnRight(i);
+    final label = Align(
+      alignment: onRight ? Alignment.centerRight : Alignment.centerLeft,
+      heightFactor: 1,
+      child: _WorldLabel(
+        band: band,
+        previousLast: i == 0 ? null : layout.bands[i - 1].world.lastNumber,
+      ),
+    );
+    return Positioned(
+      left: onRight ? null : 14,
+      right: onRight ? 14 : null,
+      width: layout.size.width / 2 - 14 - LevelAvatarPin.width / 2 - 4,
+      top: i == 0 ? null : band.gateY,
+      bottom: i == 0 ? layout.size.height - band.gateY + 12 : null,
+      child: i == 0
+          ? label
+          : FractionalTranslation(
+              translation: const Offset(0, -0.5),
+              child: label,
+            ),
+    );
+  }
+
+  Widget _node(LevelMap map, LevelMapNode node, Offset center) => Positioned(
+    left: center.dx - LevelNode.width / 2,
+    top: center.dy - LevelNode.diameter / 2,
+    child: LevelNode(node: node, onTap: () => _onTap(map, node)),
+  );
 }
 
 class _Header extends StatelessWidget {
@@ -345,39 +366,64 @@ class _WorldLabel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          // The stars drop under the title when both don't fit, so the
+          // title keeps the label's whole width.
+          Wrap(
+            spacing: 8,
+            runSpacing: 2,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              if (!world.open) ...[
-                const AppIcon(
-                  AppIcons.lock,
-                  size: 13,
-                  color: ZipColors.inkSoft,
-                ),
-                const SizedBox(width: 5),
-              ],
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: ZipColors.onInk,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!world.open) ...[
+                    const AppIcon(
+                      AppIcons.lock,
+                      size: 13,
+                      color: ZipColors.inkSoft,
+                    ),
+                    const SizedBox(width: 5),
+                  ],
+                  Flexible(
+                    child: Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: ZipColors.onInk,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              if (world.open) ...[
-                const SizedBox(width: 8),
-                const AppIcon(AppIcons.star, size: 11, color: ZipColors.star),
-                const SizedBox(width: 3),
-                Text(
-                  '${world.stars}/${world.maxStars}',
-                  style: const TextStyle(fontSize: 11, color: ZipColors.star),
+              if (world.open)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const AppIcon(
+                      AppIcons.star,
+                      size: 11,
+                      color: ZipColors.star,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${world.stars}/${world.maxStars}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: ZipColors.star,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
             ],
           ),
           if (!world.open && previousLast != null)
             Text(
               AppStrings.levelWorldLocked(previousLast!),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 10, color: ZipColors.inkSoft),
             ),
         ],
