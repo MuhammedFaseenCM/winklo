@@ -31,7 +31,8 @@ class LevelClearResult {
 /// Read synchronously by the UI. Kept per account, so signing into another
 /// account shows that account's map.
 abstract class LevelProgressRepository {
-  /// Fires after [record] and [restore].
+  /// Fires after [record], [restore] and [forget], and when the signed-in
+  /// account changes.
   Stream<void> get changes;
 
   /// The progress of the signed-in account in [game]; empty when none.

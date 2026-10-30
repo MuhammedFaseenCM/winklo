@@ -27,7 +27,11 @@ class LevelProgressRepositoryImpl implements LevelProgressRepository {
     /// change so screens show that account's progress.
     Stream<Object?>? ownerChanges,
   }) {
-    _ownerSub = ownerChanges?.listen((_) => _fire(askSync: false));
+    _ownerSub = ownerChanges?.listen(
+      (_) => _fire(askSync: false),
+      // An auth stream error changes no account; nothing to report.
+      onError: (Object _) {},
+    );
   }
 
   final SharedPreferences _prefs;
