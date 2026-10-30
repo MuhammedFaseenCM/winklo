@@ -2040,8 +2040,22 @@ class _LevelsViewState extends State<_LevelsView> {
             size: layout.size,
             child: Stack(
               children: [
-                Positioned.fill(child: CustomPaint(painter: WorldBackdropPainter(layout.bands))),
-                Positioned.fill(child: CustomPaint(painter: LevelPathPainter(layout))),
+                // Its own layer, so scrolling doesn't repaint the whole map.
+                Positioned.fill(
+                  child: RepaintBoundary(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: CustomPaint(
+                            isComplex: true,
+                            painter: WorldBackdropPainter(layout.bands),
+                          ),
+                        ),
+                        Positioned.fill(child: CustomPaint(painter: LevelPathPainter(layout))),
+                      ],
+                    ),
+                  ),
+                ),
                 for (var i = 0; i < layout.bands.length; i++)
                   Positioned(
                     left: 14,
