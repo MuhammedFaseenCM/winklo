@@ -3347,6 +3347,17 @@ In `app_repositories.dart`, append these providers **at the end** of the provide
     ),
 ```
 
+**Account deletion must also drop level progress.** `ForgetAccountProgress` (provided earlier in the same list, ~line 320) takes an optional second argument since Task 10. Because a provider can only read providers above it, move the `RepositoryProvider<LevelProgressRepository>` block from the appended group to just **before** the `RepositoryProvider<ForgetAccountProgress>` provider (check that `AuthRepository`, `ProgressChangeSignal` and `SharedPreferences` are provided above that point; if `AuthRepository` is not, report it instead of guessing), and change that provider to:
+
+```dart
+    RepositoryProvider<ForgetAccountProgress>(
+      create: (context) => ForgetAccountProgress(
+        context.read<ProgressLocalRepository>(),
+        context.read<LevelProgressRepository>(),
+      ),
+    ),
+```
+
 `LevelProgressRemoteRepositoryImpl(FirebaseFirestore.instance)` is created lazily (on the first sync), and `isRemoteAvailable` stops a sync before it touches Firestore while Firebase isn't ready. If `FirebaseFirestore.instance` throws when Firebase isn't initialised in your setup, change `remote:` to read `FirebaseFirestore.instance` inside the repository's methods instead.
 
 Add imports for `cloud_firestore`, `FirebaseBootstrap` (`../firebase/firebase_bootstrap.dart`), the four new data classes and the domain types, if the file lacks them.
