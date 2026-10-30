@@ -22,12 +22,14 @@ import '../../../domain/game_ids.dart';
 import '../../../domain/play_mode.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/level_world_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/get_clear_board.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
+import '../../../domain/usecases/record_level_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
@@ -143,10 +145,26 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
       playPeriod: DevFlags.playPeriod,
       mode: widget.mode,
       modeRecords: context.modeRecordsFor(widget.mode),
+      levelWorlds: widget.mode.isLevel
+          ? context.read<LevelWorldRepository>()
+          : null,
+      recordLevelClear: widget.mode.isLevel
+          ? context.read<RecordLevelClear>()
+          : null,
     );
     _bloc.add(ZipEvent.started(date: widget.date));
     _ensureGame(_bloc.state);
     _maybeShowTutorial(_bloc.state);
+  }
+
+  /// "Level 7 · Ink · Target 0:30" once a level's board has loaded.
+  String? _levelLabel() {
+    final slot = _bloc.levelSlot;
+    if (slot == null) return null;
+    final base = AppStrings.levelRunLabel(slot.number, slot.world.theme);
+    final target = slot.entry.targetSeconds;
+    if (target == null) return base;
+    return '$base · ${AppStrings.levelTarget(AppStrings.formatPlayTime(target))}';
   }
 
   @override
@@ -260,6 +278,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                       ).animate().fadeIn(duration: 350.ms),
                       PlayModeStrip(
                         mode: widget.mode,
+                        levelLabel: _levelLabel(),
                         onNewBoard:
                             state.status == ZipStatus.ready ||
                                 state.status == ZipStatus.failed

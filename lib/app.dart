@@ -19,6 +19,7 @@ import 'domain/repositories/notification_repository.dart';
 import 'domain/usecases/handle_notification_tap.dart';
 import 'domain/usecases/record_app_open.dart';
 import 'domain/usecases/refresh_habit_surfaces.dart';
+import 'domain/usecases/sync_level_progress.dart';
 import 'domain/usecases/sync_progress.dart';
 import 'features/auth/cubit/auth_cubit.dart';
 import 'features/settings/view/app_language_scope.dart';
@@ -64,6 +65,7 @@ class _WinkloAppState extends State<WinkloApp> {
       syncProgress: context.read<SyncProgress>(),
       authRepository: context.read<AuthRepository>(),
       localChanges: context.read<ProgressChangeSignal>().changes,
+      syncLevels: context.read<SyncLevelProgress>().call,
     );
     _progressSyncLifecycle = lifecycle;
     lifecycle.start();

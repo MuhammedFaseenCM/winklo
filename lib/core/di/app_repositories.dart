@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,7 @@ import 'package:winklo/data/clients/avatar/avatar_upload_client.dart';
 import 'package:winklo/data/clients/avatar/r2_avatar_upload_client.dart';
 import 'package:winklo/data/clients/leaderboard/firestore_leaderboard_skip_log.dart';
 import 'package:winklo/data/clients/leaderboard/http_leaderboard_submit_client.dart';
+import 'package:winklo/data/clients/level_worlds_source.dart';
 import 'package:winklo/data/clients/notification/firebase_notification_client.dart';
 import 'package:winklo/data/clients/notification/notification_client.dart';
 import 'package:winklo/data/clients/path_words/http_path_words_nouns_client.dart';
@@ -37,6 +39,9 @@ import 'package:winklo/data/repositories/in_progress_run_repository_impl.dart';
 import 'package:winklo/data/repositories/issue_report_repository_impl.dart';
 import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/league_repository_impl.dart';
+import 'package:winklo/data/repositories/level_progress_remote_repository_impl.dart';
+import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
+import 'package:winklo/data/repositories/level_world_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
@@ -68,6 +73,8 @@ import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/repositories/issue_report_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/league_repository.dart';
+import 'package:winklo/domain/repositories/level_progress_repository.dart';
+import 'package:winklo/domain/repositories/level_world_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
 import 'package:winklo/domain/repositories/play_mode_record_repository.dart';
 import 'package:winklo/domain/play_mode_hints.dart';
@@ -107,6 +114,7 @@ import 'package:winklo/domain/usecases/initialize_notifications.dart';
 import 'package:winklo/domain/usecases/load_game_history.dart';
 import 'package:winklo/domain/usecases/record_app_open.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
+import 'package:winklo/domain/usecases/record_level_clear.dart';
 import 'package:winklo/domain/usecases/report_client_error.dart';
 import 'package:winklo/domain/usecases/schedule_engagement_notifications.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
@@ -115,6 +123,7 @@ import 'package:winklo/domain/usecases/submit_issue_report.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/domain/usecases/sync_fcm_token.dart';
+import 'package:winklo/domain/usecases/sync_level_progress.dart';
 import 'package:winklo/domain/usecases/sync_progress.dart';
 import 'package:winklo/domain/usecases/update_avatar.dart';
 import 'package:winklo/domain/usecases/update_display_name.dart';
@@ -317,9 +326,22 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) =>
           ProgressLocalRepositoryImpl(context.read<SharedPreferences>()),
     ),
+    // Before ForgetAccountProgress, which drops it on account deletion.
+    RepositoryProvider<LevelProgressRepository>(
+      create: (context) => LevelProgressRepositoryImpl(
+        context.read<SharedPreferences>(),
+        currentUid: () => context.read<AuthRepository>().currentUser?.uid,
+        onChanged: context.read<ProgressChangeSignal>().notify,
+      ),
+      dispose: (repo) {
+        if (repo is LevelProgressRepositoryImpl) repo.dispose();
+      },
+    ),
     RepositoryProvider<ForgetAccountProgress>(
-      create: (context) =>
-          ForgetAccountProgress(context.read<ProgressLocalRepository>()),
+      create: (context) => ForgetAccountProgress(
+        context.read<ProgressLocalRepository>(),
+        context.read<LevelProgressRepository>(),
+      ),
     ),
     RepositoryProvider<ProgressRemoteRepository>(
       create: (_) => ProgressRemoteRepositoryImpl(),
@@ -462,6 +484,33 @@ List<SingleChildWidget> buildRepositoryProviders({
     ),
     RepositoryProvider<GenerateDailySudoku>(
       create: (_) => GenerateDailySudoku(period: DevFlags.playPeriod),
+    ),
+    // Levels: worlds from Firestore, progress per account (synced).
+    RepositoryProvider<LevelWorldRepository>(
+      create: (_) => LevelWorldRepositoryImpl(
+        FirebaseBootstrap.isReady
+            ? FirestoreLevelWorldsSource(FirebaseFirestore.instance)
+            : null,
+      ),
+    ),
+    RepositoryProvider<RecordLevelClear>(
+      create: (context) => RecordLevelClear(
+        context.read<LevelProgressRepository>(),
+        context.read<AnalyticsRepository>(),
+      ),
+    ),
+    RepositoryProvider<SyncLevelProgress>(
+      create: (context) => SyncLevelProgress(
+        auth: context.read<AuthRepository>(),
+        local: context.read<LevelProgressRepository>(),
+        remote: LevelProgressRemoteRepositoryImpl(),
+        isRemoteAvailable: () => FirebaseBootstrap.isReady,
+        // Same reporter as SyncProgress: a rules or permission failure must
+        // not go unnoticed (Task 13 review).
+        reportClientError: clientErrorRepository == null
+            ? null
+            : ReportClientError(clientErrorRepository),
+      ),
     ),
     ...buildHabitProviders(),
     ...buildLanguageProviders(),

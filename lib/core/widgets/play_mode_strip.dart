@@ -47,18 +47,28 @@ String hintLabelFor(
 /// "Archive · 9 Oct" or "Practice" under a game's header, so a run off the
 /// dailies never looks like today's puzzle. Practice adds New board.
 class PlayModeStrip extends StatelessWidget {
-  const PlayModeStrip({super.key, required this.mode, this.onNewBoard});
+  const PlayModeStrip({
+    super.key,
+    required this.mode,
+    this.onNewBoard,
+    this.levelLabel,
+  });
 
   final PlayMode mode;
 
   /// Practice only; null hides the button (or disables it mid-celebration).
   final VoidCallback? onNewBoard;
 
+  /// A level run's "Level 7 · Ink · Target 0:30"; "Levels" until it loads.
+  final String? levelLabel;
+
   @override
   Widget build(BuildContext context) {
     if (mode.isDaily) return const SizedBox.shrink();
     final label = mode.isArchive
         ? AppStrings.archiveRunLabel(mode.day!)
+        : mode.isLevel
+        ? (levelLabel ?? AppStrings.levelsTitle)
         : AppStrings.practiceRunLabel;
     final style = Theme.of(context).textTheme.labelMedium?.copyWith(
       color: ZipColors.sky,
