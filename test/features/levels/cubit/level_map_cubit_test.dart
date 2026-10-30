@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
@@ -71,5 +73,49 @@ void main() {
     expect(cubit.state.map!.stars, 3);
     expect(worlds.calls, 1);
     await cubit.close();
+  });
+
+  test('an account switch shows the new account\'s progress', () async {
+    var uid = 'u1';
+    final owner = StreamController<String?>();
+    final repo = LevelProgressRepositoryImpl(
+      await SharedPreferences.getInstance(),
+      currentUid: () => uid,
+      ownerChanges: owner.stream,
+    );
+    worlds.value = LevelCatalog([levelWorld(1, 2)]);
+    final cubit = LevelMapCubit(worlds: worlds, progress: repo);
+    await cubit.load();
+    await repo.record('zip', 'zip_1_01', stars: 3, seconds: 10);
+    await pumpEventQueue();
+    expect(cubit.state.map!.currentId, 'zip_1_02');
+    uid = 'u2';
+    owner.add('u2');
+    await pumpEventQueue();
+    expect(cubit.state.map!.currentId, 'zip_1_01');
+    expect(cubit.state.map!.stars, 0);
+    await cubit.close();
+    await repo.dispose();
+    await owner.close();
+  });
+
+  test('keeps a loaded map when a later load fails', () async {
+    worlds.value = LevelCatalog([levelWorld(1, 2)]);
+    final cubit = build();
+    await cubit.load();
+    worlds.value = null;
+    await cubit.load();
+    expect(cubit.state.status, LevelMapStatus.ready);
+    expect(worlds.calls, 2);
+    await cubit.close();
+  });
+
+  test('a progress change after close does not throw', () async {
+    worlds.value = LevelCatalog([levelWorld(1, 2)]);
+    final cubit = build();
+    await cubit.load();
+    await cubit.close();
+    await progress.record('zip', 'zip_1_01', stars: 3, seconds: 10);
+    await pumpEventQueue();
   });
 }

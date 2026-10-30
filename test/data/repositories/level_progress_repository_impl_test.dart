@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
@@ -135,5 +137,28 @@ void main() {
     expect(repo.progress('zip').records, isEmpty);
     expect(repo.progress('arrow').records, isEmpty);
     await sub.cancel();
+  });
+
+  test('an account switch reports one change and asks for no sync', () async {
+    final owner = StreamController<String?>();
+    final own = LevelProgressRepositoryImpl(
+      prefs,
+      currentUid: () => uid,
+      onChanged: () => syncAsks++,
+      ownerChanges: owner.stream,
+    );
+    await own.record('zip', 'zip_1_01', stars: 3, seconds: 10);
+    expect(syncAsks, 1);
+    var fired = 0;
+    final sub = own.changes.listen((_) => fired++);
+    uid = 'u2';
+    owner.add('u2');
+    await pumpEventQueue();
+    expect(fired, 1);
+    expect(own.progress('zip').records, isEmpty);
+    expect(syncAsks, 1);
+    await sub.cancel();
+    await own.dispose();
+    await owner.close();
   });
 }

@@ -333,6 +333,10 @@ List<SingleChildWidget> buildRepositoryProviders({
           context.read<SharedPreferences>(),
           currentUid: () => auth.currentUser?.uid,
           onChanged: context.read<ProgressChangeSignal>().notify,
+          ownerChanges: auth
+              .authStateChanges()
+              .map((user) => user?.uid)
+              .distinct(),
         );
       },
       dispose: (repo) {

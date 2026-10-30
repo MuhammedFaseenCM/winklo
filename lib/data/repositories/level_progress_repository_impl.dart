@@ -14,12 +14,21 @@ import '../../domain/repositories/level_progress_repository.dart';
 /// play, so that bucket normally stays empty). Level maps are kept per
 /// account and are not part of the sign-out purge, so another account never
 /// sees them.
+///
+/// [ownerChanges] reports an account switch as a change, so open screens
+/// re-read the new account's progress.
 class LevelProgressRepositoryImpl implements LevelProgressRepository {
   LevelProgressRepositoryImpl(
     this._prefs, {
     required this._currentUid,
     this._onChanged,
-  });
+
+    /// Fires when the signed-in account changes; the store then reports a
+    /// change so screens show that account's progress.
+    Stream<Object?>? ownerChanges,
+  }) {
+    _ownerSub = ownerChanges?.listen((_) => _fire(askSync: false));
+  }
 
   final SharedPreferences _prefs;
   final String? Function() _currentUid;
@@ -27,11 +36,15 @@ class LevelProgressRepositoryImpl implements LevelProgressRepository {
   /// Asks for a push-only progress sync (`ProgressChangeSignal.notify`).
   final void Function()? _onChanged;
   final _changes = StreamController<void>.broadcast();
+  StreamSubscription<Object?>? _ownerSub;
 
   @override
   Stream<void> get changes => _changes.stream;
 
-  Future<void> dispose() => _changes.close();
+  Future<void> dispose() async {
+    await _ownerSub?.cancel();
+    await _changes.close();
+  }
 
   String get _owner => _currentUid() ?? 'signed_out';
   String _key(String game) => 'level_progress_${_owner}_$game';
