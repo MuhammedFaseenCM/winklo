@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import '../entities/level_progress.dart';
 import '../entities/level_world.dart';
 import 'level_catalog.dart';
 
+/// Where a level stands for this player: cleared, next to play, or not yet open.
 enum LevelNodeState { done, current, locked }
 
 /// One level on the map.
@@ -15,7 +18,7 @@ class LevelMapNode {
   final LevelRecord? record;
 
   bool get playable => state != LevelNodeState.locked;
-  int get stars => record?.stars ?? 0;
+  int get stars => math.min(record?.stars ?? 0, maxStars);
 
   /// Stars the level can give: 3, or 2 without a time goal.
   int get maxStars => slot.entry.targetSeconds == null ? 2 : 3;
@@ -41,6 +44,7 @@ class LevelMapWorld {
 ///
 /// Levels open one by one: the current level is the first one, in map
 /// order, that isn't cleared; a cleared level stays playable for replays.
+/// A world with no levels is left out.
 class LevelMap {
   LevelMap._(this.worlds, this.currentId, this._nodes);
 
@@ -49,6 +53,7 @@ class LevelMap {
     final byId = <String, LevelMapNode>{};
     String? currentId;
     for (final world in catalog.worlds) {
+      if (world.levels.isEmpty) continue;
       final nodes = <LevelMapNode>[];
       for (final entry in world.levels) {
         final slot = catalog.slot(entry.id)!;

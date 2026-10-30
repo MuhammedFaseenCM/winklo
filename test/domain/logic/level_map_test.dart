@@ -81,4 +81,43 @@ void main() {
     expect(empty.isEmpty, isTrue);
     expect(empty.allCleared, isFalse);
   });
+
+  test('stars are clamped to what the level can give', () {
+    final m = LevelMap.build(
+      LevelCatalog([levelWorld(1, 1, targetSeconds: null)]),
+      const LevelProgress({'zip_1_01': LevelRecord(stars: 3, bestSeconds: 5)}),
+    );
+    expect(m.node('zip_1_01')!.stars, 2);
+    expect(m.stars, 2);
+  });
+
+  test('out-of-order progress keeps the first uncleared level current', () {
+    final m = map(const {'zip_2_01': LevelRecord(stars: 1, bestSeconds: 9)});
+    expect(m.currentId, 'zip_1_01');
+    expect(m.node('zip_2_01')!.state, LevelNodeState.done);
+    expect(m.isPlayable('zip_2_01'), isTrue);
+    expect(m.node('zip_2_02')!.state, LevelNodeState.locked);
+    expect(m.worlds[1].open, isTrue);
+  });
+
+  test('progress for an id not in the catalog is ignored', () {
+    final m = map(const {'zip_9_01': LevelRecord(stars: 3, bestSeconds: 5)});
+    expect(m.stars, 0);
+    expect(m.currentId, 'zip_1_01');
+  });
+
+  test('a world with no levels is left out', () {
+    final c = LevelCatalog([
+      levelWorld(1, 1),
+      levelWorld(2, 0),
+      levelWorld(3, 1),
+    ]);
+    final m = LevelMap.build(
+      c,
+      const LevelProgress({'zip_1_01': LevelRecord(stars: 1, bestSeconds: 9)}),
+    );
+    expect(m.worlds.length, 2);
+    expect(m.currentId, 'zip_3_01');
+    expect(m.worlds[1].open, isTrue);
+  });
 }
