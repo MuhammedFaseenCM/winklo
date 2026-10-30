@@ -66,6 +66,9 @@ class LevelEntry {
   /// catch broadly.
   ZipLevel get zipLevel => ZipLevel.fromJson(board, id: id);
 
+  /// The board's size from its JSON, without parsing the whole board.
+  int get zipLevelSize => (board['size'] as num?)?.toInt() ?? 0;
+
   /// Throws [FormatException] when [raw] isn't a level with an id.
   factory LevelEntry.fromJson(Object? raw) {
     if (raw is! Map) throw const FormatException('A level must be a map');
