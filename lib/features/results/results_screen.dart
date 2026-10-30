@@ -24,6 +24,7 @@ import '../leaderboard/cubit/leaderboard_state.dart';
 import '../leaderboard/view/widgets/leaderboard_table.dart';
 import 'logic/result_tiles.dart';
 import 'results_args.dart';
+import 'view/level_results_view.dart';
 import 'view/local_results_view.dart';
 import 'view/mini_leaderboard_panel.dart';
 import 'view/result_tiles_row.dart';
@@ -50,6 +51,9 @@ class ResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Archive, practice and bonus runs: a local best, nothing of the dailies.
+    if (args.local?.kind == LocalResultKind.level) {
+      return LevelResultsView(args: args);
+    }
     if (args.local != null) return LocalResultsView(args: args);
     switch (args.gameId) {
       case GameIds.zip:
