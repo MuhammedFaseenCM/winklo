@@ -6,7 +6,7 @@ import 'repositories/hint_quota_repository.dart';
 /// hint of a run adds `n × [stepSeconds]` seconds, up to [maxSeconds] each
 /// (+10s, +20s, … +60s), so a hinted clear can't outrank a clean one.
 ///
-/// Dailies and the archive pay it; practice hints are free.
+/// Dailies and the archive pay it; practice and level hints are free.
 abstract final class HintPenalty {
   static const stepSeconds = 10;
   static const maxSeconds = 60;
@@ -28,8 +28,9 @@ abstract final class HintPenalty {
     return total;
   }
 
-  /// Whether hints in [mode] cost time.
-  static bool appliesTo(PlayMode mode) => !mode.isPractice;
+  /// Whether hints in [mode] cost time. Practice hints are free; a level
+  /// hint costs that level's no-hints star instead.
+  static bool appliesTo(PlayMode mode) => !mode.isPractice && !mode.isLevel;
 
   /// What the next hint costs in [mode] after [hintsUsed]: the hint
   /// button's "+20s".

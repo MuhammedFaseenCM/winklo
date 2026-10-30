@@ -24,6 +24,7 @@ void main() {
       daily: daily,
       archive: ArchiveHintQuotaRepositoryImpl(records),
       practice: UnlimitedHintQuotaRepositoryImpl(),
+      level: UnlimitedHintQuotaRepositoryImpl(),
     );
   });
 

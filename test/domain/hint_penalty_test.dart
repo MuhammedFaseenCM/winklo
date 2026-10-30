@@ -142,4 +142,11 @@ void main() {
       expect(spent.penaltySeconds, 0);
     });
   });
+
+  test('level hints cost no time; they cost a star instead', () {
+    const mode = PlayMode.level('zip_1_01');
+    expect(HintPenalty.appliesTo(mode), isFalse);
+    expect(HintPenalty.nextSeconds(mode, hintsUsed: 2), 0);
+    expect(HintPenalty.chargedSeconds(mode, hintsUsed: 3), 0);
+  });
 }

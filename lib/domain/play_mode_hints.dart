@@ -10,11 +10,16 @@ class HintQuotaForMode {
     required this.daily,
     required this.archive,
     required this.practice,
+    required this.level,
   });
 
   final HintQuotaRepository daily;
   final HintQuotaRepository archive;
   final HintQuotaRepository practice;
+
+  /// Level runs count hints in memory: a hint costs a star, not time, and a
+  /// draft keeps `usedHintsThisRun` itself.
+  final HintQuotaRepository level;
 
   HintQuotaRepository call(PlayMode mode) {
     switch (mode.kind) {
@@ -24,6 +29,8 @@ class HintQuotaForMode {
         return archive;
       case PlayModeKind.practice:
         return practice;
+      case PlayModeKind.level:
+        return level;
     }
   }
 }

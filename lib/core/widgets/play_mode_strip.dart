@@ -24,9 +24,15 @@ extension PlayModeReads on BuildContext {
       mode.isDaily ? null : read<PlayModeRecordRepository>();
 }
 
-/// The hint button's label: what the next hint costs ("Hint +20s"), or
-/// plain "Hint" in practice, where hints are free.
+/// The hint button's label: what the next hint costs ("Hint +20s"), plain
+/// "Hint" in practice, where hints are free, and in a level "Hint · costs a
+/// star" until the first hint of the run.
 String hintLabelFor(PlayMode mode, {required int hintsUsed}) {
+  if (mode.isLevel) {
+    return hintsUsed == 0
+        ? AppStrings.levelHintCostsStar
+        : AppStrings.hintUnlimited;
+  }
   final cost = HintPenalty.nextSeconds(mode, hintsUsed: hintsUsed);
   return cost > 0 ? AppStrings.hintWithCost(cost) : AppStrings.hintUnlimited;
 }

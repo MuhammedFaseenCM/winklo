@@ -122,6 +122,7 @@ void main() {
       daily: dailyHints,
       archive: ArchiveHintQuotaRepositoryImpl(records),
       practice: UnlimitedHintQuotaRepositoryImpl(),
+      level: UnlimitedHintQuotaRepositoryImpl(),
     );
     drafts = _MemoryInProgressRuns()..runs['sudoku_20261015'] = todayDraft;
     now = DateTime(2026, 10, 15, 9);

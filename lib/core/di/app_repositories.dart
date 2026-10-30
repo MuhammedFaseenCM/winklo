@@ -300,6 +300,7 @@ List<SingleChildWidget> buildRepositoryProviders({
           context.read<PlayModeRecordRepository>(),
         ),
         practice: UnlimitedHintQuotaRepositoryImpl(),
+        level: UnlimitedHintQuotaRepositoryImpl(),
       ),
     ),
     RepositoryProvider<StreakRepository>(
