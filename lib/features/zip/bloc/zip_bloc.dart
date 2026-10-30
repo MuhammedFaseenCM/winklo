@@ -11,6 +11,7 @@ import '../../../domain/entities/leaderboard_proof.dart';
 import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/hint_penalty.dart';
+import '../../../domain/logic/level_catalog.dart';
 import '../../../domain/logic/run_rollover.dart';
 import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
@@ -18,6 +19,7 @@ import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/level_world_repository.dart';
 import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
 import '../../../domain/streak_calculator.dart';
@@ -26,6 +28,7 @@ import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/get_clear_board.dart';
 import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
+import '../../../domain/usecases/record_level_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
@@ -53,6 +56,8 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     this.playPeriod = PlayPeriod.daily,
     this.mode = PlayMode.daily,
     this.modeRecords,
+    this.levelWorlds,
+    this.recordLevelClear,
     ZipLevel Function(int seed)? practiceLevel,
     int Function()? newPracticeSeed,
     this.celebrationDuration = const Duration(seconds: 2),
@@ -64,8 +69,12 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
          'ZipBloc requires zipLevelRepository or fetchDailyLevel',
        ),
        assert(
-         mode == PlayMode.daily || modeRecords != null,
+         mode.isDaily || mode.isLevel || modeRecords != null,
          'Archive and practice runs keep their bests in modeRecords',
+       ),
+       assert(
+         !mode.isLevel || (levelWorlds != null && recordLevelClear != null),
+         'Level runs need levelWorlds and recordLevelClear',
        ),
        practiceLevel =
            practiceLevel ??
@@ -118,6 +127,17 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
 
   /// Bests of archive and practice runs; required for those modes.
   final PlayModeRecordRepository? modeRecords;
+
+  /// Where level runs find their board; required for level runs.
+  final LevelWorldRepository? levelWorlds;
+
+  /// Keeps a level clear's stars; required for level runs.
+  final RecordLevelClear? recordLevelClear;
+
+  /// The level on screen and where it sits on the map; null outside level
+  /// runs and until the board has loaded.
+  LevelSlot? get levelSlot => _levelSlot;
+  LevelSlot? _levelSlot;
 
   /// Builds a practice board from a seed.
   final ZipLevel Function(int seed) practiceLevel;
@@ -469,7 +489,11 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       ZipState(
         day: day,
         level: ZipLevel(
-          id: mode.isArchive ? 'daily_$runId' : 'practice',
+          id: mode.isArchive
+              ? 'daily_$runId'
+              : mode.isLevel
+              ? mode.levelId!
+              : 'practice',
           size: 1,
           numbers: const {},
           walls: const [],
@@ -492,6 +516,17 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       if (mode.isArchive) {
         // Past days are always live and read by id, like the dailies.
         level = await fetchDailyLevel(day, period: PlayPeriod.daily);
+      } else if (mode.isLevel) {
+        final catalog = await levelWorlds!.catalog(GameIds.zip);
+        final slot = catalog.slot(mode.levelId!);
+        if (slot == null) {
+          // A level that no longer exists can't be resumed either. Being
+          // offline (LevelsUnavailable) keeps the draft for later.
+          await inProgressRuns.clear(gameId: GameIds.zip, playId: runId);
+          throw StateError('No level ${mode.levelId}');
+        }
+        level = slot.entry.zipLevel;
+        _levelSlot = slot;
       } else {
         final saved = draft?.board['seed'];
         final seed = saved is num ? saved.toInt() : _newPracticeSeed();
@@ -503,7 +538,9 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       emit(
         state.copyWith(
           status: ZipStatus.failed,
-          errorMessage: AppStrings.zipFailed,
+          errorMessage: mode.isLevel
+              ? AppStrings.levelFailed
+              : AppStrings.zipFailed,
         ),
       );
       return;
@@ -577,6 +614,11 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     if (emit.isDone) return;
     emit(state.copyWith(status: ZipStatus.submitting));
 
+    if (mode.isLevel) {
+      await _finishLevel(emit, elapsed: elapsed, points: points, runId: runId);
+      return;
+    }
+
     final records = modeRecords!;
     final best = await records.recordTime(mode.recordKey(GameIds.zip), elapsed);
     if (mode.isArchive) await records.clearHints(GameIds.zip, runId);
@@ -616,6 +658,68 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
             againLocation: mode.isPractice
                 ? PlayMode.practice.location('/zip')
                 : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A level clear: stars into the level progress, then Results with the
+  /// goals and the next level. No score, streak, leaderboard or local best.
+  Future<void> _finishLevel(
+    Emitter<ZipState> emit, {
+    required int elapsed,
+    required int points,
+    required String runId,
+  }) async {
+    final slot = _levelSlot!;
+    final usedHints = state.usedHintsThisRun;
+    final clear = await recordLevelClear!(
+      game: GameIds.zip,
+      slot: slot,
+      usedHints: usedHints,
+      seconds: elapsed,
+    );
+    await analytics.logGameCompleted(
+      gameId: GameIds.zip,
+      points: points,
+      timeSeconds: elapsed,
+      dayId: runId,
+      usedHints: usedHints,
+    );
+    if (emit.isDone) return;
+
+    final nextId = slot.nextId;
+    emit(
+      state.copyWith(
+        improved: clear.improved,
+        status: ZipStatus.navigating,
+        resultsExtra: ResultsArgs(
+          title: AppStrings.levelClearedTitle(slot.number),
+          subtitle: '',
+          timeSeconds: elapsed,
+          improved: clear.improved,
+          points: points,
+          gameId: GameIds.zip,
+          usedHints: usedHints,
+          hadMistakes: false,
+          hintPenaltySeconds: 0,
+          local: LocalResultInfo(
+            kind: LocalResultKind.level,
+            label: AppStrings.levelRunLabel(slot.number, slot.world.theme),
+            bestSeconds: clear.current.bestSeconds,
+            againLocation: mode.location('/zip'),
+            level: LevelResultInfo(
+              runStars: clear.runStars,
+              bestStars: clear.current.stars,
+              previousStars: clear.previous?.stars,
+              usedHints: usedHints,
+              targetSeconds: slot.entry.targetSeconds,
+              nextLocation: nextId == null
+                  ? null
+                  : PlayMode.level(nextId).location('/zip'),
+              nextWorldTheme: slot.nextWorld?.theme,
+            ),
           ),
         ),
       ),
