@@ -1693,6 +1693,10 @@ final class AppTextMl implements AppText {
   String get levelReplay => 'വീണ്ടും കളിക്കുക';
 
   @override
+  String levelStarsLabel(int stars, int maxStars) =>
+      '$maxStars-ൽ $stars നക്ഷത്രം';
+
+  @override
   String get levelAllDone => 'കൂടുതൽ ലോകങ്ങൾ ഉടൻ വരുന്നു';
 
   // Copy moved out of widgets and repositories (roadmap area G)

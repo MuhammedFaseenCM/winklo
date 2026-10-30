@@ -1624,6 +1624,10 @@ final class AppTextEn implements AppText {
   String get levelReplay => 'Replay';
 
   @override
+  String levelStarsLabel(int stars, int maxStars) =>
+      '$stars of $maxStars stars';
+
+  @override
   String get levelAllDone => 'More worlds coming soon';
 
   // Copy moved out of widgets and repositories (roadmap area G)

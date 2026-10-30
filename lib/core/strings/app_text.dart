@@ -583,6 +583,7 @@ abstract interface class AppText {
   String levelNodeLocked(int number);
   String levelNumber(int number);
   String get levelReplay;
+  String levelStarsLabel(int stars, int maxStars);
   String get levelAllDone;
 
   // Copy moved out of widgets and repositories (roadmap area G)

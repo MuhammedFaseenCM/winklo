@@ -658,6 +658,8 @@ abstract final class AppStrings {
   static String levelNodeLocked(int number) => _t.levelNodeLocked(number);
   static String levelNumber(int number) => _t.levelNumber(number);
   static String get levelReplay => _t.levelReplay;
+  static String levelStarsLabel(int stars, int maxStars) =>
+      _t.levelStarsLabel(stars, maxStars);
   static String get levelAllDone => _t.levelAllDone;
 
   // Copy moved out of widgets and repositories (roadmap area G)

@@ -533,6 +533,7 @@ final Map<String, String Function(AppText)> _members = {
   'levelNodeLocked': (t) => t.levelNodeLocked(6),
   'levelNumber': (t) => t.levelNumber(4),
   'levelReplay': (t) => t.levelReplay,
+  'levelStarsLabel': (t) => t.levelStarsLabel(2, 3),
   'levelAllDone': (t) => t.levelAllDone,
 };
 

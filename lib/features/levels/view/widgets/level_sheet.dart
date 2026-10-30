@@ -31,95 +31,110 @@ class LevelSheet extends StatelessWidget {
     final slot = node.slot;
     final size = slot.entry.zipLevelSize;
     final best = node.record?.bestSeconds;
-    final meta = best == null
-        ? '$size × $size'
-        : '$size × $size · ${AppStrings.levelBestTime(AppStrings.formatPlayTime(best))}';
+    final bestText = best == null
+        ? null
+        : AppStrings.levelBestTime(AppStrings.formatPlayTime(best));
+    final meta = [if (size > 0) '$size × $size', ?bestText].join(' · ');
     final target = slot.entry.targetSeconds;
     final cleared = node.state == LevelNodeState.done;
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              AppStrings.levelWorldTitle(slot.world.order, slot.world.theme),
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: ZipColors.inkSoft,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                AppStrings.levelWorldTitle(slot.world.order, slot.world.theme),
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: ZipColors.inkSoft,
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    AppStrings.levelNumber(slot.number),
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Text(
-                  meta,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: ZipColors.inkSoft,
-                  ),
-                ),
-              ],
-            ),
-            if (cleared) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 2),
               Row(
                 children: [
-                  for (var i = 0; i < node.maxStars; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: AppIcon(
-                        i < node.stars ? AppIcons.star : AppIcons.starOutline,
-                        size: 20,
-                        color: i < node.stars
-                            ? ZipColors.star
-                            : ZipColors.outline,
+                  Expanded(
+                    child: Text(
+                      AppStrings.levelNumber(slot.number),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  if (meta.isNotEmpty)
+                    Flexible(
+                      child: Text(
+                        meta,
+                        textAlign: TextAlign.end,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: ZipColors.inkSoft,
+                        ),
                       ),
                     ),
                 ],
               ),
-            ],
-            const SizedBox(height: 14),
-            for (final goal in [
-              AppStrings.levelGoalClear,
-              AppStrings.levelGoalNoHints,
-              if (target != null)
-                AppStrings.levelGoalUnder(AppStrings.formatPlayTime(target)),
-            ])
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
-                  children: [
-                    const AppIcon(
-                      AppIcons.starOutline,
-                      size: 18,
-                      color: ZipColors.inkSoft,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(goal, style: theme.textTheme.bodyLarge),
-                    ),
-                  ],
+              if (cleared) ...[
+                const SizedBox(height: 8),
+                Semantics(
+                  label: AppStrings.levelStarsLabel(node.stars, node.maxStars),
+                  excludeSemantics: true,
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < node.maxStars; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: AppIcon(
+                            i < node.stars
+                                ? AppIcons.star
+                                : AppIcons.starOutline,
+                            size: 20,
+                            color: i < node.stars
+                                ? ZipColors.star
+                                : ZipColors.outline,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
+              ],
+              const SizedBox(height: 14),
+              for (final goal in [
+                AppStrings.levelGoalClear,
+                AppStrings.levelGoalNoHints,
+                if (target != null)
+                  AppStrings.levelGoalUnder(AppStrings.formatPlayTime(target)),
+              ])
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  child: Row(
+                    children: [
+                      const ExcludeSemantics(
+                        child: AppIcon(
+                          AppIcons.starOutline,
+                          size: 18,
+                          color: ZipColors.inkSoft,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(goal, style: theme.textTheme.bodyLarge),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+              ZipPrimaryButton(
+                label: cleared ? AppStrings.levelReplay : AppStrings.levelPlay,
+                icon: AppIcons.play,
+                onPressed: () {
+                  final router = GoRouter.of(context);
+                  Navigator.of(context).pop();
+                  router.push(PlayMode.level(slot.entry.id).location('/zip'));
+                },
               ),
-            const SizedBox(height: 16),
-            ZipPrimaryButton(
-              label: cleared ? AppStrings.levelReplay : AppStrings.levelPlay,
-              icon: AppIcons.play,
-              onPressed: () {
-                final router = GoRouter.of(context);
-                Navigator.of(context).pop();
-                router.push(PlayMode.level(slot.entry.id).location('/zip'));
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
