@@ -560,6 +560,30 @@ abstract final class AppStrings {
   static String get bonusGamesTitle => _t.bonusGamesTitle;
   static String get bonusGamesHint => _t.bonusGamesHint;
   static String archiveRunLabel(DateTime day) => _t.archiveRunLabel(day);
+
+  static String get levelsTitle => _t.levelsTitle;
+  static String levelWorldName(String theme) => _t.levelWorldName(theme);
+
+  /// "Level 27 · Metro", from the world's [theme].
+  static String levelRunLabel(int number, String theme) =>
+      _t.levelRunLabel(number, _t.levelWorldName(theme));
+  static String levelClearedTitle(int number) => _t.levelClearedTitle(number);
+  static String get levelFailed => _t.levelFailed;
+  static String get levelHintCostsStar => _t.levelHintCostsStar;
+  static String levelTarget(String time) => _t.levelTarget(time);
+  static String get levelGoalClear => _t.levelGoalClear;
+  static String get levelGoalNoHints => _t.levelGoalNoHints;
+  static String levelGoalUnder(String time) => _t.levelGoalUnder(time);
+  static String get levelGoalNoHintsHow => _t.levelGoalNoHintsHow;
+  static String levelGoalUnderHow(String time) => _t.levelGoalUnderHow(time);
+  static String levelNewBestStars(int from, int to) =>
+      _t.levelNewBestStars(from, to);
+  static String get levelNewBestTime => _t.levelNewBestTime;
+  static String get levelNext => _t.levelNext;
+  static String levelOpenWorld(String worldName) =>
+      _t.levelOpenWorld(worldName);
+  static String get levelReplay => _t.levelReplay;
+  static String get levelAllDone => _t.levelAllDone;
   static String get practiceRunLabel => _t.practiceRunLabel;
   static String get practiceNewBoard => _t.practiceNewBoard;
   static String get hintUnlimited => _t.hintUnlimited;
