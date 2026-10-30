@@ -51,7 +51,7 @@ class ResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Archive, practice and bonus runs: a local best, nothing of the dailies.
-    if (args.local?.kind == LocalResultKind.level) {
+    if (args.local?.level != null) {
       return LevelResultsView(args: args);
     }
     if (args.local != null) return LocalResultsView(args: args);

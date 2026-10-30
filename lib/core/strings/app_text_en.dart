@@ -1571,6 +1571,12 @@ final class AppTextEn implements AppText {
   String levelOpenWorld(String worldName) => 'Open $worldName';
 
   @override
+  String levelGoalEarned(String goal) => '$goal, earned';
+
+  @override
+  String levelGoalMissed(String goal) => '$goal, missed';
+
+  @override
   String get levelReplay => 'Replay';
 
   @override

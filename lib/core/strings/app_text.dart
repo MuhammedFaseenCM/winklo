@@ -566,6 +566,8 @@ abstract interface class AppText {
   String get levelNewBestTime;
   String get levelNext;
   String levelOpenWorld(String worldName);
+  String levelGoalEarned(String goal);
+  String levelGoalMissed(String goal);
   String get levelReplay;
   String get levelAllDone;
 

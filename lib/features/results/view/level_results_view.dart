@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/zip_ui.dart';
+import '../../../domain/repositories/analytics_repository.dart';
 import '../results_args.dart';
 
 /// Results of a cleared level: the time against the target, the three goals
@@ -17,7 +20,14 @@ class LevelResultsView extends StatelessWidget {
 
   final ResultsArgs args;
 
-  static const _starGold = Color(0xFFFBBF24);
+  Future<void> _log(BuildContext context, String action) async {
+    final gameId = args.gameId;
+    if (gameId == null) return;
+    await context.read<AnalyticsRepository?>()?.logResultsAction(
+      gameId: gameId,
+      action: action,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +107,14 @@ class LevelResultsView extends StatelessWidget {
                       ? AppStrings.levelOpenWorld(level.nextWorldTheme!)
                       : AppStrings.levelNext,
                   icon: AppIcons.play,
-                  onPressed: () => context.pushReplacement(next),
+                  onPressed: () async {
+                    await _log(
+                      context,
+                      level.opensNewWorld ? 'open_world' : 'next_level',
+                    );
+                    if (!context.mounted) return;
+                    context.pushReplacement(next);
+                  },
                 )
               else
                 Text(
@@ -108,11 +125,19 @@ class LevelResultsView extends StatelessWidget {
               const SizedBox(height: 6),
               if (again != null)
                 TextButton(
-                  onPressed: () => context.pushReplacement(again),
+                  onPressed: () async {
+                    await _log(context, 'replay');
+                    if (!context.mounted) return;
+                    context.pushReplacement(again);
+                  },
                   child: Text(AppStrings.levelReplay),
                 ),
               TextButton(
-                onPressed: () => context.go('/'),
+                onPressed: () async {
+                  await _log(context, 'home');
+                  if (!context.mounted) return;
+                  context.go('/');
+                },
                 child: Text(AppStrings.backHome),
               ),
             ],
@@ -135,33 +160,40 @@ class _Goal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            earned ? AppIcons.star : AppIcons.starOutline,
-            size: 22,
-            color: earned ? LevelResultsView._starGold : ZipColors.outline,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: theme.textTheme.bodyLarge),
-                if (!earned && how != null)
-                  Text(
-                    how!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: ZipColors.ember,
-                    ),
-                  ),
-              ],
+    final spoken = earned
+        ? AppStrings.levelGoalEarned(label)
+        : [AppStrings.levelGoalMissed(label), if (how != null) how!].join('. ');
+    return Semantics(
+      label: spoken,
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppIcon(
+              earned ? AppIcons.star : AppIcons.starOutline,
+              size: 22,
+              color: earned ? ZipColors.star : ZipColors.outline,
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: theme.textTheme.bodyLarge),
+                  if (!earned && how != null)
+                    Text(
+                      how!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: ZipColors.ember,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

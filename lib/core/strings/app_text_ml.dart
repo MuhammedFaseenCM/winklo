@@ -1638,6 +1638,12 @@ final class AppTextMl implements AppText {
   String levelOpenWorld(String worldName) => '$worldName തുറക്കുക';
 
   @override
+  String levelGoalEarned(String goal) => '$goal, നേടി';
+
+  @override
+  String levelGoalMissed(String goal) => '$goal, നേടിയില്ല';
+
+  @override
   String get levelReplay => 'വീണ്ടും കളിക്കുക';
 
   @override

@@ -636,6 +636,8 @@ abstract final class AppStrings {
   /// "Open Metro", from the next world's [theme].
   static String levelOpenWorld(String theme) =>
       _t.levelOpenWorld(_t.levelWorldName(theme));
+  static String levelGoalEarned(String goal) => _t.levelGoalEarned(goal);
+  static String levelGoalMissed(String goal) => _t.levelGoalMissed(goal);
   static String get levelReplay => _t.levelReplay;
   static String get levelAllDone => _t.levelAllDone;
 

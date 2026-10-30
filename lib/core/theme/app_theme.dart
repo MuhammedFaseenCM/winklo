@@ -35,6 +35,9 @@ abstract final class ZipColors {
   /// Soft ember wash (dark tint, not peach).
   static const emberSoft = Color(0xFF3A241C);
 
+  /// Gold for earned stars.
+  static const star = Color(0xFFFBBF24);
+
   static const success = Color(0xFF2DD4BF);
 
   /// Profile sound-effects accent (same hue as [success]).

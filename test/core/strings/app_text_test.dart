@@ -516,6 +516,8 @@ final Map<String, String Function(AppText)> _members = {
   'levelNewBestTime': (t) => t.levelNewBestTime,
   'levelNext': (t) => t.levelNext,
   'levelOpenWorld': (t) => t.levelOpenWorld('Metro'),
+  'levelGoalEarned': (t) => t.levelGoalEarned('No hints'),
+  'levelGoalMissed': (t) => t.levelGoalMissed('No hints'),
   'levelReplay': (t) => t.levelReplay,
   'levelAllDone': (t) => t.levelAllDone,
 };
