@@ -302,4 +302,48 @@ void main() {
     // Second dispose is a no-op.
     lifecycle.dispose();
   });
+
+  group('level progress', () {
+    ProgressSyncLifecycle withLevels(
+      Future<void> Function({required bool pull}) syncLevels,
+    ) => ProgressSyncLifecycle(
+      syncProgress: sync,
+      authRepository: auth,
+      localChanges: signal.changes,
+      now: () => now,
+      createTimer: (duration, callback) {
+        final timer = _FakeTimer(duration, callback);
+        timers.add(timer);
+        return timer;
+      },
+      syncLevels: syncLevels,
+    );
+
+    test('syncs after every progress sync, full or push-only', () async {
+      final levelPulls = <bool>[];
+      final lifecycle = withLevels(
+        ({required bool pull}) async => levelPulls.add(pull),
+      );
+      lifecycle.start();
+      await pumpEventQueue();
+      expect(pulls, [true]);
+      expect(levelPulls, [true]);
+      signal.notify();
+      await pumpEventQueue();
+      timers.last.fire();
+      await pumpEventQueue();
+      expect(levelPulls, [true, false]);
+      lifecycle.dispose();
+    });
+
+    test('a failing level sync never breaks the lifecycle', () async {
+      final lifecycle = withLevels(
+        ({required bool pull}) async => throw StateError('offline'),
+      );
+      lifecycle.start();
+      await pumpEventQueue();
+      expect(pulls, [true]);
+      lifecycle.dispose();
+    });
+  });
 }

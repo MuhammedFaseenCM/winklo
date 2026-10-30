@@ -22,6 +22,7 @@ class ProgressSyncLifecycle with WidgetsBindingObserver {
     required this._syncProgress,
     required this._authRepository,
     required this._localChanges,
+    this._syncLevels,
     DateTime Function()? now,
     ProgressSyncTimerFactory? createTimer,
     this.resumeThrottle = const Duration(minutes: 2),
@@ -32,6 +33,9 @@ class ProgressSyncLifecycle with WidgetsBindingObserver {
   final SyncProgress _syncProgress;
   final AuthRepository _authRepository;
   final Stream<void> _localChanges;
+
+  /// Level progress sync, run after each progress sync with the same `pull`.
+  final Future<void> Function({required bool pull})? _syncLevels;
   final DateTime Function() _now;
   final ProgressSyncTimerFactory _createTimer;
   final Duration resumeThrottle;
@@ -121,6 +125,14 @@ class ProgressSyncLifecycle with WidgetsBindingObserver {
     } catch (e) {
       // SyncProgress reports its own failures; never crash the app here.
       debugPrint('Progress sync failed: $e');
+    }
+    final syncLevels = _syncLevels;
+    if (syncLevels == null) return;
+    try {
+      await syncLevels(pull: pull);
+    } catch (e) {
+      // Retried on the next run; the local copy is the source until then.
+      debugPrint('Level progress sync failed: $e');
     }
   }
 }
