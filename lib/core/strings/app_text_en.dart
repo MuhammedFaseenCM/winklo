@@ -1364,52 +1364,6 @@ final class AppTextEn implements AppText {
       'Archive · ${leaderboardShortDate(day.day, day.month)}';
 
   @override
-  String get levelsTitle => 'Levels';
-  @override
-  String levelWorldName(String theme) => switch (theme) {
-    'ink' => 'Ink',
-    'metro' => 'Metro',
-    'embroidery' => 'Embroidery',
-    'neon' => 'Neon',
-    'sparkler' => 'Sparkler',
-    _ => levelsTitle,
-  };
-  @override
-  String levelRunLabel(int number, String worldName) =>
-      'Level $number · $worldName';
-  @override
-  String levelClearedTitle(int number) => 'Level $number cleared';
-  @override
-  String get levelFailed => 'Could not load this level.';
-  @override
-  String get levelHintCostsStar => 'Hint · costs a star';
-  @override
-  String levelTarget(String time) => 'Target $time';
-  @override
-  String get levelGoalClear => 'Clear the board';
-  @override
-  String get levelGoalNoHints => 'No hints';
-  @override
-  String levelGoalUnder(String time) => 'Under $time';
-  @override
-  String get levelGoalNoHintsHow => 'Replay without hints for this star';
-  @override
-  String levelGoalUnderHow(String time) =>
-      'Replay in $time or less for this star';
-  @override
-  String levelNewBestStars(int from, int to) => 'New best · $from → $to stars';
-  @override
-  String get levelNewBestTime => 'New best time';
-  @override
-  String get levelNext => 'Next level';
-  @override
-  String levelOpenWorld(String worldName) => 'Open $worldName';
-  @override
-  String get levelReplay => 'Replay';
-  @override
-  String get levelAllDone => 'More worlds coming soon';
-
-  @override
   String get practiceRunLabel => 'Practice';
 
   @override
@@ -1557,6 +1511,70 @@ final class AppTextEn implements AppText {
   @override
   String localBestScore(int words) =>
       words == 1 ? 'Best 1 word' : 'Best $words words';
+
+  // Levels
+  @override
+  String get levelsTitle => 'Levels';
+
+  @override
+  String levelWorldName(String theme) => switch (theme) {
+    'ink' => 'Ink',
+    'metro' => 'Metro',
+    'embroidery' => 'Embroidery',
+    'neon' => 'Neon',
+    'sparkler' => 'Sparkler',
+    _ => levelsTitle,
+  };
+
+  @override
+  String levelRunLabel(int number, String worldName) =>
+      'Level $number · $worldName';
+
+  @override
+  String levelClearedTitle(int number) => 'Level $number cleared';
+
+  @override
+  String get levelFailed => 'Could not load this level.';
+
+  @override
+  String get levelHintCostsStar => 'Hint · costs a star';
+
+  @override
+  String levelTarget(String time) => 'Target $time';
+
+  @override
+  String get levelGoalClear => 'Clear the board';
+
+  @override
+  String get levelGoalNoHints => 'No hints';
+
+  @override
+  String levelGoalUnder(String time) => '$time or less';
+
+  @override
+  String get levelGoalNoHintsHow => 'Replay without hints for this star';
+
+  @override
+  String levelGoalUnderHow(String time) =>
+      'Replay in $time or less for this star';
+
+  @override
+  String levelNewBestStars(int from, int to) => 'New best · $from → $to stars';
+
+  @override
+  String get levelNewBestTime => 'New best time';
+
+  @override
+  String get levelNext => 'Next level';
+
+  @override
+  String levelOpenWorld(String worldName) => 'Open $worldName';
+
+  @override
+  String get levelReplay => 'Replay';
+
+  @override
+  String get levelAllDone => 'More worlds coming soon';
 
   // Copy moved out of widgets and repositories (roadmap area G)
   @override

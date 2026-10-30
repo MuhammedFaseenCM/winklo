@@ -11,8 +11,8 @@ void main() {
     expect(AppStrings.levelClearedTitle(7), 'Level 7 cleared');
     expect(AppStrings.levelHintCostsStar, 'Hint · costs a star');
     expect(AppStrings.levelTarget('0:30'), 'Target 0:30');
-    expect(AppStrings.levelGoalUnder('0:30'), 'Under 0:30');
+    expect(AppStrings.levelGoalUnder('0:30'), '0:30 or less');
     expect(AppStrings.levelNewBestStars(2, 3), 'New best · 2 → 3 stars');
-    expect(AppStrings.levelOpenWorld('Metro'), 'Open Metro');
+    expect(AppStrings.levelOpenWorld('metro'), 'Open Metro');
   });
 }

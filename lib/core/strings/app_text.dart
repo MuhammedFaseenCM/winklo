@@ -499,29 +499,6 @@ abstract interface class AppText {
   String get bonusGamesTitle;
   String get bonusGamesHint;
   String archiveRunLabel(DateTime day);
-
-  // Levels
-  String get levelsTitle;
-
-  /// A world's name from its theme (`ink`, `metro`, …); [levelsTitle] for
-  /// an unknown theme.
-  String levelWorldName(String theme);
-  String levelRunLabel(int number, String worldName);
-  String levelClearedTitle(int number);
-  String get levelFailed;
-  String get levelHintCostsStar;
-  String levelTarget(String time);
-  String get levelGoalClear;
-  String get levelGoalNoHints;
-  String levelGoalUnder(String time);
-  String get levelGoalNoHintsHow;
-  String levelGoalUnderHow(String time);
-  String levelNewBestStars(int from, int to);
-  String get levelNewBestTime;
-  String get levelNext;
-  String levelOpenWorld(String worldName);
-  String get levelReplay;
-  String get levelAllDone;
   String get practiceRunLabel;
   String get practiceNewBoard;
   String get hintUnlimited;
@@ -568,6 +545,29 @@ abstract interface class AppText {
   String get categoryRaceNoCategories;
   String get resultsWordsLabel;
   String localBestScore(int words);
+
+  // Levels
+  String get levelsTitle;
+
+  /// A world's name from its theme (`ink`, `metro`, …); [levelsTitle] for
+  /// an unknown theme.
+  String levelWorldName(String theme);
+  String levelRunLabel(int number, String worldName);
+  String levelClearedTitle(int number);
+  String get levelFailed;
+  String get levelHintCostsStar;
+  String levelTarget(String time);
+  String get levelGoalClear;
+  String get levelGoalNoHints;
+  String levelGoalUnder(String time);
+  String get levelGoalNoHintsHow;
+  String levelGoalUnderHow(String time);
+  String levelNewBestStars(int from, int to);
+  String get levelNewBestTime;
+  String get levelNext;
+  String levelOpenWorld(String worldName);
+  String get levelReplay;
+  String get levelAllDone;
 
   // Copy moved out of widgets and repositories (roadmap area G)
   String get resultsTitle;

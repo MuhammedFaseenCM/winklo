@@ -1424,54 +1424,6 @@ final class AppTextMl implements AppText {
       'ആർക്കൈവ് · ${leaderboardShortDate(day.day, day.month)}';
 
   @override
-  String get levelsTitle => 'ലെവലുകൾ';
-  @override
-  String levelWorldName(String theme) => switch (theme) {
-    'ink' => 'മഷി',
-    'metro' => 'മെട്രോ',
-    'embroidery' => 'ചിത്രത്തുന്നൽ',
-    'neon' => 'നിയോൺ',
-    'sparkler' => 'കമ്പിത്തിരി',
-    _ => levelsTitle,
-  };
-  @override
-  String levelRunLabel(int number, String worldName) =>
-      'ലെവൽ $number · $worldName';
-  @override
-  String levelClearedTitle(int number) => 'ലെവൽ $number പൂർത്തിയായി';
-  @override
-  String get levelFailed => 'ഈ ലെവൽ ലോഡ് ചെയ്യാനായില്ല.';
-  @override
-  String get levelHintCostsStar => 'സൂചന · ഒരു നക്ഷത്രം കുറയും';
-  @override
-  String levelTarget(String time) => 'ലക്ഷ്യം $time';
-  @override
-  String get levelGoalClear => 'ബോർഡ് പൂർത്തിയാക്കുക';
-  @override
-  String get levelGoalNoHints => 'സൂചനകളില്ലാതെ';
-  @override
-  String levelGoalUnder(String time) => '$time-നുള്ളിൽ';
-  @override
-  String get levelGoalNoHintsHow =>
-      'ഈ നക്ഷത്രത്തിന് സൂചനയില്ലാതെ വീണ്ടും കളിക്കുക';
-  @override
-  String levelGoalUnderHow(String time) =>
-      'ഈ നക്ഷത്രത്തിന് $time-നുള്ളിൽ വീണ്ടും കളിക്കുക';
-  @override
-  String levelNewBestStars(int from, int to) =>
-      'പുതിയ മികച്ചത് · $from → $to നക്ഷത്രങ്ങൾ';
-  @override
-  String get levelNewBestTime => 'പുതിയ മികച്ച സമയം';
-  @override
-  String get levelNext => 'അടുത്ത ലെവൽ';
-  @override
-  String levelOpenWorld(String worldName) => '$worldName തുറക്കുക';
-  @override
-  String get levelReplay => 'വീണ്ടും കളിക്കുക';
-  @override
-  String get levelAllDone => 'കൂടുതൽ ലോകങ്ങൾ ഉടൻ വരുന്നു';
-
-  @override
   String get practiceRunLabel => 'പരിശീലനം';
 
   @override
@@ -1624,6 +1576,72 @@ final class AppTextMl implements AppText {
 
   @override
   String localBestScore(int words) => 'മികച്ചത് $words വാക്ക്';
+
+  // Levels
+  @override
+  String get levelsTitle => 'ലെവലുകൾ';
+
+  @override
+  String levelWorldName(String theme) => switch (theme) {
+    'ink' => 'മഷി',
+    'metro' => 'മെട്രോ',
+    'embroidery' => 'ചിത്രത്തുന്നൽ',
+    'neon' => 'നിയോൺ',
+    'sparkler' => 'കമ്പിത്തിരി',
+    _ => levelsTitle,
+  };
+
+  @override
+  String levelRunLabel(int number, String worldName) =>
+      'ലെവൽ $number · $worldName';
+
+  @override
+  String levelClearedTitle(int number) => 'ലെവൽ $number പൂർത്തിയായി';
+
+  @override
+  String get levelFailed => 'ഈ ലെവൽ ലോഡ് ചെയ്യാനായില്ല.';
+
+  @override
+  String get levelHintCostsStar => 'സൂചന · ഒരു നക്ഷത്രം കുറയും';
+
+  @override
+  String levelTarget(String time) => 'ലക്ഷ്യം $time';
+
+  @override
+  String get levelGoalClear => 'ബോർഡ് പൂർത്തിയാക്കുക';
+
+  @override
+  String get levelGoalNoHints => 'സൂചനയില്ലാതെ';
+
+  @override
+  String levelGoalUnder(String time) => '$time-നുള്ളിൽ';
+
+  @override
+  String get levelGoalNoHintsHow =>
+      'ഈ നക്ഷത്രത്തിന് സൂചനയില്ലാതെ വീണ്ടും കളിക്കുക';
+
+  @override
+  String levelGoalUnderHow(String time) =>
+      'ഈ നക്ഷത്രത്തിന് $time-നുള്ളിൽ വീണ്ടും കളിക്കുക';
+
+  @override
+  String levelNewBestStars(int from, int to) =>
+      'പുതിയ മികച്ചത് · $from → $to നക്ഷത്രങ്ങൾ';
+
+  @override
+  String get levelNewBestTime => 'പുതിയ മികച്ച സമയം';
+
+  @override
+  String get levelNext => 'അടുത്ത ലെവൽ';
+
+  @override
+  String levelOpenWorld(String worldName) => '$worldName തുറക്കുക';
+
+  @override
+  String get levelReplay => 'വീണ്ടും കളിക്കുക';
+
+  @override
+  String get levelAllDone => 'കൂടുതൽ ലോകങ്ങൾ ഉടൻ വരുന്നു';
 
   // Copy moved out of widgets and repositories (roadmap area G)
   @override
