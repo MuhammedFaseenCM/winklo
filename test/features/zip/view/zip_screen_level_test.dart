@@ -112,6 +112,9 @@ void main() {
             value: _MockModeRecords(),
           ),
           RepositoryProvider<LevelWorldRepository>.value(value: _EmptyWorlds()),
+          RepositoryProvider<LevelProgressRepository>.value(
+            value: _MockLevelProgress(),
+          ),
           RepositoryProvider<RecordLevelClear>.value(
             value: RecordLevelClear(_MockLevelProgress(), analytics),
           ),

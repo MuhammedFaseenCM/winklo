@@ -97,25 +97,27 @@ void main() {
     now = DateTime(2026, 10, 31, 9);
   });
 
-  ZipBloc build(String levelId, {LevelCatalog? from}) => ZipBloc(
-    mode: PlayMode.level(levelId),
-    levelWorlds: _Worlds(from ?? catalog),
-    recordLevelClear: RecordLevelClear(progress, analytics),
-    inProgressRuns: drafts,
-    submitScore: submitScore,
-    submitLeaderboardTime: submitLeaderboardTime,
-    recordDailyClear: recordDailyClear,
-    getBestPoints: getBestPoints,
-    getBestTimeSeconds: _MockGetBestTimeSeconds(),
-    isNewPersonalBest: _MockIsNewPersonalBest(),
-    getClearBoard: _MockGetClearBoard(),
-    analytics: analytics,
-    hintQuota: UnlimitedHintQuotaRepositoryImpl(),
-    clockNow: () => now,
-    wait: (_) async {},
-    fetchDailyLevel: (date, {period = const Duration(days: 1)}) =>
-        throw StateError('a level run never reads a daily'),
-  );
+  ZipBloc build(String levelId, {LevelCatalog? from, bool gated = false}) =>
+      ZipBloc(
+        mode: PlayMode.level(levelId),
+        levelWorlds: _Worlds(from ?? catalog),
+        recordLevelClear: RecordLevelClear(progress, analytics),
+        levelProgress: gated ? progress : null,
+        inProgressRuns: drafts,
+        submitScore: submitScore,
+        submitLeaderboardTime: submitLeaderboardTime,
+        recordDailyClear: recordDailyClear,
+        getBestPoints: getBestPoints,
+        getBestTimeSeconds: _MockGetBestTimeSeconds(),
+        isNewPersonalBest: _MockIsNewPersonalBest(),
+        getClearBoard: _MockGetClearBoard(),
+        analytics: analytics,
+        hintQuota: UnlimitedHintQuotaRepositoryImpl(),
+        clockNow: () => now,
+        wait: (_) async {},
+        fetchDailyLevel: (date, {period = const Duration(days: 1)}) =>
+            throw StateError('a level run never reads a daily'),
+      );
 
   Future<ZipState> ready(ZipBloc bloc) => bloc.stream.firstWhere(
     (s) => s.status == ZipStatus.ready || s.status == ZipStatus.failed,
@@ -126,6 +128,40 @@ void main() {
     bloc.add(const ZipEvent.completed());
     return bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
   }
+
+  test(
+    'a locked level fails with the locked message and keeps its draft',
+    () async {
+      drafts.runs['zip_level_zip_1_02'] = InProgressRun(
+        gameId: 'zip',
+        playId: 'level_zip_1_02',
+        elapsedMs: 1000,
+        board: const {'path': []},
+      );
+      final bloc = build('zip_1_02', gated: true);
+      bloc.add(const ZipEvent.started());
+      final state = await ready(bloc);
+      expect(state.status, ZipStatus.failed);
+      expect(state.errorMessage, 'This level is still locked.');
+      expect(drafts.runs['zip_level_zip_1_02'], isNotNull);
+      await bloc.close();
+    },
+  );
+
+  test('the current level and cleared levels play when gated', () async {
+    final first = build('zip_1_01', gated: true);
+    first.add(const ZipEvent.started());
+    expect((await ready(first)).status, ZipStatus.ready);
+    await first.close();
+
+    await progress.record('zip', 'zip_1_01', stars: 2, seconds: 20);
+    for (final id in ['zip_1_01', 'zip_1_02']) {
+      final bloc = build(id, gated: true);
+      bloc.add(const ZipEvent.started());
+      expect((await ready(bloc)).status, ZipStatus.ready, reason: id);
+      await bloc.close();
+    }
+  });
 
   test('loads the board from the catalog', () async {
     final bloc = build('zip_1_02');

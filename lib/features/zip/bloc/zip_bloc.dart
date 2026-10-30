@@ -12,6 +12,7 @@ import '../../../domain/entities/zip_level.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/hint_penalty.dart';
 import '../../../domain/logic/level_catalog.dart';
+import '../../../domain/logic/level_map.dart';
 import '../../../domain/logic/run_rollover.dart';
 import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
@@ -19,6 +20,7 @@ import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/level_progress_repository.dart';
 import '../../../domain/repositories/level_world_repository.dart';
 import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/repositories/zip_level_repository.dart';
@@ -58,6 +60,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     this.modeRecords,
     this.levelWorlds,
     this.recordLevelClear,
+    this.levelProgress,
     ZipLevel Function(int seed)? practiceLevel,
     int Function()? newPracticeSeed,
     this.celebrationDuration = const Duration(seconds: 2),
@@ -133,6 +136,10 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
 
   /// Keeps a level clear's stars; required for level runs.
   final RecordLevelClear? recordLevelClear;
+
+  /// The player's level progress, so a locked level can't be played (a
+  /// link can name any published level). Null skips the check.
+  final LevelProgressRepository? levelProgress;
 
   /// The level on screen and where it sits on the map; null outside level
   /// runs and until the board has loaded. Read by the screen on rebuild; it
@@ -514,6 +521,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     if (emit.isDone) return;
 
     late final ZipLevel level;
+    var lockedLevel = false;
     try {
       if (mode.isArchive) {
         // Past days are always live and read by id, like the dailies.
@@ -526,6 +534,15 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           // offline (LevelsUnavailable) keeps the draft for later.
           await inProgressRuns.clear(gameId: GameIds.zip, playId: runId);
           throw StateError('No level ${mode.levelId}');
+        }
+        final progress = levelProgress;
+        if (progress != null &&
+            !LevelMap.build(
+              catalog,
+              progress.progress(GameIds.zip),
+            ).isPlayable(slot.entry.id)) {
+          lockedLevel = true;
+          throw StateError('Level ${mode.levelId} is locked');
         }
         level = slot.entry.zipLevel;
         _levelSlot = slot;
@@ -540,7 +557,9 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       emit(
         state.copyWith(
           status: ZipStatus.failed,
-          errorMessage: mode.isLevel
+          errorMessage: lockedLevel
+              ? AppStrings.levelLockedMessage
+              : mode.isLevel
               ? AppStrings.levelFailed
               : AppStrings.zipFailed,
         ),
