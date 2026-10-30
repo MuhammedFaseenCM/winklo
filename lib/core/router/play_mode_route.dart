@@ -24,13 +24,16 @@ PlayMode playModeOf(Uri uri, {DateTime? now}) =>
     PlayMode.daily;
 
 /// Sends a game link whose archive day is malformed, today, in the future
-/// or before the archive began to that game's archive calendar, so it never
-/// opens today's puzzle unranked. Null for everything else.
+/// or before the archive began to that game's archive calendar, and a
+/// malformed level link Home, so neither opens today's puzzle unranked.
+/// Null for everything else.
 String? playModeRedirect(Uri uri, {required String gameId, DateTime? now}) {
-  if (uri.queryParameters['mode'] != 'archive') return null;
+  final kind = uri.queryParameters['mode'];
+  if (kind != 'archive' && kind != 'level') return null;
   final mode = PlayMode.fromQuery(
     uri.queryParameters,
     now: now ?? DateTime.now(),
   );
-  return mode == null ? archiveLocation(gameId) : null;
+  if (mode != null) return null;
+  return kind == 'archive' ? archiveLocation(gameId) : '/';
 }

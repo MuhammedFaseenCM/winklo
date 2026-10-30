@@ -153,4 +153,57 @@ void main() {
     expect(mode.hashCode, PlayMode.archive(DateTime(2026, 10, 12)).hashCode);
     expect(mode == PlayMode.practice, isFalse);
   });
+
+  group('level', () {
+    test('parses a level id', () {
+      final mode = PlayMode.fromQuery(const {
+        'mode': 'level',
+        'level': 'zip_1_07',
+      }, now: now);
+      expect(mode, const PlayMode.level('zip_1_07'));
+      expect(mode!.isLevel, isTrue);
+      expect(mode.isDaily, isFalse);
+      expect(mode.levelId, 'zip_1_07');
+    });
+
+    test('refuses a missing or malformed id', () {
+      for (final query in const <Map<String, String>>[
+        {'mode': 'level'},
+        {'mode': 'level', 'level': ''},
+        {'mode': 'level', 'level': 'zip'},
+        {'mode': 'level', 'level': '../zip_1_01'},
+        {'mode': 'level', 'level': 'Zip_1_07'},
+      ]) {
+        expect(PlayMode.fromQuery(query, now: now), isNull, reason: '$query');
+      }
+    });
+
+    test('round-trips through its location', () {
+      const mode = PlayMode.level('zip_2_13');
+      final uri = Uri.parse(mode.location('/zip'));
+      expect(uri.toString(), '/zip?mode=level&level=zip_2_13');
+      expect(PlayMode.fromQuery(uri.queryParameters, now: now), mode);
+    });
+
+    test('keeps drafts under its own run id and has no record key', () {
+      const mode = PlayMode.level('zip_1_07');
+      expect(mode.runId(dailyPlayId: '20261015'), 'level_zip_1_07');
+      expect(() => mode.recordKey('zip'), throwsStateError);
+    });
+
+    test('equality includes the level id', () {
+      expect(
+        const PlayMode.level('zip_1_01'),
+        isNot(const PlayMode.level('zip_1_02')),
+      );
+      expect(
+        const PlayMode.level('zip_1_01').hashCode,
+        const PlayMode.level('zip_1_01').hashCode,
+      );
+      expect(
+        const PlayMode.level('zip_1_01').toString(),
+        'PlayMode.level(zip_1_01)',
+      );
+    });
+  });
 }
