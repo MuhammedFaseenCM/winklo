@@ -7,6 +7,7 @@ import {
   fieldStructuredQuery,
   leagueCodePath,
   uidStructuredQuery,
+  USER_SUBCOLLECTIONS,
   weeklyEntryPath,
   wipeUserFirestore,
 } from './firestore_wipe';
@@ -167,6 +168,11 @@ function fakeFirestore(opts: {
         documents: [{ name: `${DOCS}/users/u1/game_days/zip_20261009` }],
       });
     }
+    if (path.endsWith('/users/u1/level_progress')) {
+      return Response.json({
+        documents: [{ name: `${DOCS}/users/u1/level_progress/zip` }],
+      });
+    }
     return Response.json({});
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -195,6 +201,7 @@ describe('wipeUserFirestore', () => {
       expect.arrayContaining([
         `${DOCS}/users/u1`,
         `${DOCS}/users/u1/game_days/zip_20261009`,
+        `${DOCS}/users/u1/level_progress/zip`,
         `${DOCS}/leaderboards/zip/all_time/u1`,
         `${DOCS}/leaderboards_debug/sudoku/all_time/u1`,
         `${DOCS}/leaderboards/zip/daily/2026-10-01/entries/u1`,
@@ -306,4 +313,8 @@ describe('wipeUserFirestore', () => {
     expect(result).toEqual({ ok: false, errorMessage: 'invalid_uid' });
     expect(fake.deleted).toEqual([]);
   });
+});
+
+it('wipes level progress with the other user subcollections', () => {
+  expect(USER_SUBCOLLECTIONS).toContain('level_progress');
 });

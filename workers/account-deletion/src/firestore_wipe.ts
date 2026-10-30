@@ -2,11 +2,12 @@ import { LEADERBOARD_GAMES, userDocPath } from './paths';
 
 const FIRESTORE_API = 'https://firestore.googleapis.com/v1';
 
-const USER_SUBCOLLECTIONS = [
+export const USER_SUBCOLLECTIONS = [
   'game_days',
   'game_days_debug',
   'game_streaks',
   'game_streaks_debug',
+  'level_progress',
 ] as const;
 
 const LEADERBOARD_ROOTS = ['leaderboards', 'leaderboards_debug'] as const;
