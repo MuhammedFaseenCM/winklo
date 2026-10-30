@@ -19,6 +19,20 @@ void main() {
     verify(() => levels.forget('u1')).called(1);
   });
 
+  test('drops the level progress even when the daily wipe fails', () async {
+    final local = _MockLocal();
+    final levels = _MockLevels();
+    when(
+      () => local.forgetUserProgress('u1'),
+    ).thenAnswer((_) async => throw StateError('disk'));
+    when(() => levels.forget('u1')).thenAnswer((_) async {});
+    await expectLater(
+      ForgetAccountProgress(local, levels)('u1'),
+      throwsA(isA<StateError>()),
+    );
+    verify(() => levels.forget('u1')).called(1);
+  });
+
   test('works without a level store', () async {
     final local = _MockLocal();
     when(() => local.forgetUserProgress('u1')).thenAnswer((_) async {});

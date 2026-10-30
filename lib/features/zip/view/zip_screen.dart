@@ -304,7 +304,7 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    AppStrings.zipFailed,
+                                    state.errorMessage ?? AppStrings.zipFailed,
                                     textAlign: TextAlign.center,
                                     style: Theme.of(context)
                                         .textTheme

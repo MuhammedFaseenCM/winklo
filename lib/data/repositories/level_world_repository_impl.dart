@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/firebase/firestore_read.dart';
 import '../../domain/entities/level_world.dart';
 import '../../domain/logic/level_catalog.dart';
+import '../../domain/play_mode.dart';
 import '../../domain/repositories/level_world_repository.dart';
 import '../clients/level_worlds_source.dart';
 
@@ -67,13 +68,15 @@ class LevelWorldRepositoryImpl implements LevelWorldRepository {
       }
       if (docs.isEmpty) throw const LevelsUnavailable('Nothing cached yet');
     }
-    return (catalog: LevelCatalog(_parse(docs)), fromServer: fromServer);
+    return (catalog: LevelCatalog(_parse(docs, game)), fromServer: fromServer);
   }
 
-  /// Worlds in order, stopping at the first one that doesn't parse or that
-  /// repeats a level id of an earlier world, so a bad world can't shift the
-  /// numbers of the levels after it or share progress with another board.
-  static List<LevelWorld> _parse(List<LevelWorldDoc> docs) {
+  /// Worlds in order, stopping at the first one that doesn't parse, that
+  /// repeats a level id of an earlier world, or that has a level id a route
+  /// can't carry or that names another game (`{game}_…`), so a bad world
+  /// can't shift the numbers of the levels after it or share progress with
+  /// another board.
+  static List<LevelWorld> _parse(List<LevelWorldDoc> docs, String game) {
     final worlds = <LevelWorld>[];
     final seen = <String>{};
     for (final doc in docs) {
@@ -83,6 +86,13 @@ class LevelWorldRepositoryImpl implements LevelWorldRepository {
       } on FormatException {
         break;
       }
+      final prefix = '${world.game.isEmpty ? game : world.game}_';
+      final idsOk = world.levels.every(
+        (level) =>
+            PlayMode.levelIdPattern.hasMatch(level.id) &&
+            level.id.startsWith(prefix),
+      );
+      if (!idsOk) break;
       if (!world.levels.every((level) => seen.add(level.id))) break;
       worlds.add(world);
     }

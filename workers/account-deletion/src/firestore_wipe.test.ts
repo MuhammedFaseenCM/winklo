@@ -313,8 +313,8 @@ describe('wipeUserFirestore', () => {
     expect(result).toEqual({ ok: false, errorMessage: 'invalid_uid' });
     expect(fake.deleted).toEqual([]);
   });
-});
 
-it('wipes level progress with the other user subcollections', () => {
-  expect(USER_SUBCOLLECTIONS).toContain('level_progress');
+  it('wipes level progress with the other user subcollections', () => {
+    expect(USER_SUBCOLLECTIONS).toContain('level_progress');
+  });
 });

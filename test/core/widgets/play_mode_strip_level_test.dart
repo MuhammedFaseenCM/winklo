@@ -26,4 +26,28 @@ void main() {
     );
     expect(find.text('Levels'), findsOneWidget);
   });
+
+  testWidgets('a long label fits a narrow strip at a large text size', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(1.5)),
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                child: PlayModeStrip(
+                  mode: PlayMode.level('zip_27_01'),
+                  levelLabel: 'ലെവൽ 27 · ചിത്രത്തുന്നൽ · ലക്ഷ്യം 0:30',
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

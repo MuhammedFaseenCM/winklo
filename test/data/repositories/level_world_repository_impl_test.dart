@@ -83,6 +83,30 @@ void main() {
     expect(catalog.worlds.map((w) => w.id), ['zip_1']);
   });
 
+  test('stops at a world with a level id a route cannot carry', () async {
+    final bad = levelWorldJson(2, 1)..['levels'] = [levelBoardJson('Zip-2-01')];
+    source.server = [doc(1, 2), (id: 'zip_2', data: bad), doc(3, 2)];
+    final catalog = await LevelWorldRepositoryImpl(source).catalog('zip');
+    expect(catalog.worlds.map((w) => w.id), ['zip_1']);
+  });
+
+  test('stops at a world with a level id of another game', () async {
+    final other = levelWorldJson(2, 1)
+      ..['levels'] = [levelBoardJson('neon_2_01')];
+    source.server = [doc(1, 2), (id: 'zip_2', data: other), doc(3, 2)];
+    final catalog = await LevelWorldRepositoryImpl(source).catalog('zip');
+    expect(catalog.worlds.map((w) => w.id), ['zip_1']);
+  });
+
+  test('without a game field, level ids follow the requested game', () async {
+    final unnamed = levelWorldJson(2, 1)
+      ..remove('game')
+      ..['levels'] = [levelBoardJson('neon_2_01')];
+    source.server = [doc(1, 2), (id: 'zip_2', data: unnamed), doc(3, 2)];
+    final catalog = await LevelWorldRepositoryImpl(source).catalog('zip');
+    expect(catalog.worlds.map((w) => w.id), ['zip_1']);
+  });
+
   test('keeps the catalog for the session; refresh reads again', () async {
     source.server = [doc(1, 2)];
     final repo = LevelWorldRepositoryImpl(source);

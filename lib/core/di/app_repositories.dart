@@ -327,11 +327,14 @@ List<SingleChildWidget> buildRepositoryProviders({
     ),
     // Before ForgetAccountProgress, which drops it on account deletion.
     RepositoryProvider<LevelProgressRepository>(
-      create: (context) => LevelProgressRepositoryImpl(
-        context.read<SharedPreferences>(),
-        currentUid: () => context.read<AuthRepository>().currentUser?.uid,
-        onChanged: context.read<ProgressChangeSignal>().notify,
-      ),
+      create: (context) {
+        final auth = context.read<AuthRepository>();
+        return LevelProgressRepositoryImpl(
+          context.read<SharedPreferences>(),
+          currentUid: () => auth.currentUser?.uid,
+          onChanged: context.read<ProgressChangeSignal>().notify,
+        );
+      },
       dispose: (repo) {
         if (repo is LevelProgressRepositoryImpl) repo.dispose();
       },

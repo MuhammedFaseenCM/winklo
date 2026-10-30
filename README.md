@@ -334,7 +334,7 @@ These aren't features, but they affect how cheap the ideas above are:
 
 - Settled: practice mode uses the Dart generators (`practice(seed)` in each, following the cron's hard rules). Their older date-seeded `generate`/`forDate` paths still run only in tests, and the rules now live in two languages (winklo-admin's TypeScript and the Dart practice ports), so a change to the cron's hard rules should be mirrored in the practice ports.
 - `generate_daily_path_words.dart` and `generate_daily_sudoku.dart` sit in `lib/domain/usecases/` but import `cloud_firestore`, and they fetch rather than generate. Move them behind repositories, as Zip already is, to keep `domain/` pure Dart as CLAUDE.md asks.
-- `FetchZipLevels` and the bundled `assets/zip/levels/*` are unreachable. `WordListRepository` serves only the bonus word list; its daily-nouns path and the `path-words-nouns` client are registered but never read, so that Worker is never called.
+- `WordListRepository` serves only the bonus word list; its daily-nouns path and the `path-words-nouns` client are registered but never read, so that Worker is never called.
 - Path Words' `hintFlashCell` and Sudoku's `hintFlashIndex` (with its drawing code) are left over from older hints; today's hints are drawn another way.
 - The replay fields in `ResultsArgs` are ignored for the dailies, and guest-play code (for example `results_board_tease.dart`) remains from before sign-in became compulsory.
 - `SfxService.tapSoundEnabled` is still `false` ("muted for now").

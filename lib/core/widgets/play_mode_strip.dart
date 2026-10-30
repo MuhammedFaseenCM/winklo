@@ -79,24 +79,33 @@ class PlayModeStrip extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 0, 12, 4),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: ZipColors.skySoft,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: ZipColors.sky.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppIcon(
-                  mode.isArchive ? AppIcons.calendar : AppIcons.infinity,
-                  size: 14,
-                  color: style?.color,
-                ),
-                const SizedBox(width: 6),
-                Text(label, style: style),
-              ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: ZipColors.skySoft,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: ZipColors.sky.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppIcon(
+                    mode.isArchive ? AppIcons.calendar : AppIcons.infinity,
+                    size: 14,
+                    color: style?.color,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: style,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const Spacer(),
