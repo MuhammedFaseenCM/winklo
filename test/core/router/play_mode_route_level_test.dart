@@ -18,4 +18,16 @@ void main() {
     final uri = Uri.parse('/zip?mode=archive&day=2020-01-01');
     expect(playModeRedirect(uri, gameId: 'zip'), '/more/archive?game=zip');
   });
+
+  test('a level link on the wrong game goes Home', () {
+    for (final (path, gameId, query) in const [
+      ('/sudoku', 'sudoku', 'mode=level&level=zip_1_01'),
+      ('/path-words', 'path_words', 'mode=level&level=zip_1_01'),
+      ('/zip', 'zip', 'mode=level&level=path_words_1_01'),
+      ('/zip', 'zip', 'mode=level'),
+    ]) {
+      final uri = Uri.parse('$path?$query');
+      expect(playModeRedirect(uri, gameId: gameId), '/', reason: '$uri');
+    }
+  });
 }

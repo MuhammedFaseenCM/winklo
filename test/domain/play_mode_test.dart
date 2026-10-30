@@ -166,6 +166,16 @@ void main() {
       expect(mode.levelId, 'zip_1_07');
     });
 
+    test('accepts a multi-word game id', () {
+      expect(
+        PlayMode.fromQuery(const {
+          'mode': 'level',
+          'level': 'path_words_2_13',
+        }, now: now),
+        const PlayMode.level('path_words_2_13'),
+      );
+    });
+
     test('refuses a missing or malformed id', () {
       for (final query in const <Map<String, String>>[
         {'mode': 'level'},
@@ -173,6 +183,9 @@ void main() {
         {'mode': 'level', 'level': 'zip'},
         {'mode': 'level', 'level': '../zip_1_01'},
         {'mode': 'level', 'level': 'Zip_1_07'},
+        {'mode': 'level', 'level': 'zip__1_07'},
+        {'mode': 'level', 'level': 'zip_01_07'},
+        {'mode': 'level', 'level': 'zip_1_7'},
       ]) {
         expect(PlayMode.fromQuery(query, now: now), isNull, reason: '$query');
       }

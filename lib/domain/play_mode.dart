@@ -20,7 +20,9 @@ final class PlayMode {
       day = DateTime(day.year, day.month, day.day),
       levelId = null;
 
-  /// One level of the Levels map, by its stable id (`zip_1_07`).
+  /// One level of the Levels map, by its stable id (`zip_1_07`). Callers pass
+  /// ids that match [levelIdPattern] (`location` puts the id in the URL
+  /// unescaped).
   const PlayMode.level(String this.levelId)
     : kind = PlayModeKind.level,
       day = null;
@@ -60,7 +62,9 @@ final class PlayMode {
 
   /// A level id: game, world and level number (`zip_1_07`,
   /// `path_words_2_13`).
-  static final levelIdPattern = RegExp(r'^[a-z][a-z_]*_[0-9]{1,3}_[0-9]{2,3}$');
+  static final levelIdPattern = RegExp(
+    r'^[a-z]+(?:_[a-z]+)*_[1-9][0-9]{0,2}_[0-9]{2,3}$',
+  );
 
   /// Reads `mode` (and `day` or `level`) from a game route's query. A missing
   /// or unknown mode is [daily], so App Links and the widget keep opening
