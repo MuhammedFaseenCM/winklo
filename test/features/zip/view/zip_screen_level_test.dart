@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
 import 'package:winklo/domain/entities/in_progress_run.dart';
@@ -46,8 +48,6 @@ class _MockZipLevels extends Mock implements ZipLevelRepository {}
 
 class _MockModeRecords extends Mock implements PlayModeRecordRepository {}
 
-class _MockLevelProgress extends Mock implements LevelProgressRepository {}
-
 class _MockSfxSettings extends Mock implements SfxSettingsRepository {}
 
 class _EmptyWorlds implements LevelWorldRepository {
@@ -75,6 +75,11 @@ void main() {
     final sfxSettings = _MockSfxSettings();
     when(() => sfxSettings.isEnabled).thenReturn(false);
     final quota = UnlimitedHintQuotaRepositoryImpl();
+    SharedPreferences.setMockInitialValues({});
+    final levelProgress = LevelProgressRepositoryImpl(
+      await SharedPreferences.getInstance(),
+      currentUid: () => 'u1',
+    );
 
     await tester.pumpWidget(
       MultiRepositoryProvider(
@@ -113,10 +118,10 @@ void main() {
           ),
           RepositoryProvider<LevelWorldRepository>.value(value: _EmptyWorlds()),
           RepositoryProvider<LevelProgressRepository>.value(
-            value: _MockLevelProgress(),
+            value: levelProgress,
           ),
           RepositoryProvider<RecordLevelClear>.value(
-            value: RecordLevelClear(_MockLevelProgress(), analytics),
+            value: RecordLevelClear(levelProgress, analytics),
           ),
         ],
         child: const MaterialApp(

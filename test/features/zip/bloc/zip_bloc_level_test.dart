@@ -163,6 +163,22 @@ void main() {
     }
   });
 
+  test('a later world stays locked until the one before is cleared', () async {
+    final locked = build('zip_2_01', gated: true);
+    locked.add(const ZipEvent.started());
+    final lockedState = await ready(locked);
+    expect(lockedState.status, ZipStatus.failed);
+    expect(lockedState.errorMessage, 'This level is still locked.');
+    await locked.close();
+
+    await progress.record('zip', 'zip_1_01', stars: 2, seconds: 20);
+    await progress.record('zip', 'zip_1_02', stars: 2, seconds: 20);
+    final open = build('zip_2_01', gated: true);
+    open.add(const ZipEvent.started());
+    expect((await ready(open)).status, ZipStatus.ready);
+    await open.close();
+  });
+
   test('loads the board from the catalog', () async {
     final bloc = build('zip_1_02');
     bloc.add(const ZipEvent.started());
