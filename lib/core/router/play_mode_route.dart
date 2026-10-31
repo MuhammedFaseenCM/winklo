@@ -38,8 +38,8 @@ const levelGameIds = {GameIds.zip};
 /// or before the archive began to that game's archive calendar, and a
 /// malformed level link, a level link on a game without Levels, or a level
 /// of another game, to the Levels tab, so none of them opens today's puzzle
-/// unranked.
-/// Null for everything else.
+/// unranked. That holds signed in; signed out, app_router.dart's
+/// `playAuthRedirect` sends the player Home first. Null for everything else.
 String? playModeRedirect(Uri uri, {required String gameId, DateTime? now}) {
   final kind = uri.queryParameters['mode'];
   if (kind != 'archive' && kind != 'level') return null;

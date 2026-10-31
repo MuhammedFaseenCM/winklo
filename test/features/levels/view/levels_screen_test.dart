@@ -10,6 +10,7 @@ import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
+import 'package:winklo/features/dashboard/view/widgets/floating_nav_dock.dart';
 import 'package:winklo/features/levels/view/levels_screen.dart';
 import 'package:winklo/features/levels/view/widgets/level_avatar_pin.dart';
 import 'package:winklo/features/levels/view/widgets/level_node.dart';
@@ -47,7 +48,7 @@ void main() {
     WidgetTester tester,
     LevelCatalog? catalog, {
     String? open,
-    double? dock,
+    bool dock = false,
   }) async {
     final router = GoRouter(
       routes: [
@@ -55,14 +56,14 @@ void main() {
           path: '/',
           builder: (_, _) {
             final screen = LevelsScreen(openLevelId: open);
-            if (dock == null) return screen;
-            // The dashboard shell's frame: the tab under a floating dock.
+            if (!dock) return screen;
+            // The dashboard shell's frame: the tab under the floating dock.
             return Scaffold(
               extendBody: true,
               body: screen,
-              bottomNavigationBar: SizedBox(
-                key: const Key('dock'),
-                height: dock,
+              bottomNavigationBar: FloatingNavDock(
+                selectedIndex: 1,
+                onDestinationSelected: (_) {},
               ),
             );
           },
@@ -261,7 +262,8 @@ void main() {
   }
 
   group('under the shell dock', () {
-    const dock = 110.0;
+    double dockTop(WidgetTester tester) =>
+        tester.getRect(find.byKey(const Key('floating_nav_dock'))).top;
 
     Rect nodeRect(WidgetTester tester, int number) => tester.getRect(
       find.byWidgetPredicate(
@@ -276,16 +278,16 @@ void main() {
       await pump(
         tester,
         LevelCatalog([levelWorld(1, 4), levelWorld(2, 3, theme: 'metro')]),
-        dock: dock,
+        dock: true,
       );
-      final dockTop = tester.getRect(find.byKey(const Key('dock'))).top;
-      expect(dockTop, 844 - dock);
+      final top = dockTop(tester);
+      expect(top, lessThan(844 - 60));
       expect(viewport(tester).bottom, 844);
-      expect(nodeRect(tester, 1).bottom, lessThanOrEqualTo(dockTop - 8));
+      expect(nodeRect(tester, 1).bottom, lessThanOrEqualTo(top - 8));
       final label = tester.getRect(
         find.text(AppStrings.levelWorldTitle(1, 'ink')),
       );
-      expect(label.bottom, lessThanOrEqualTo(dockTop));
+      expect(label.bottom, lessThanOrEqualTo(top));
     });
 
     testWidgets('the current level sits mid-way down the part it leaves', (
@@ -293,8 +295,8 @@ void main() {
     ) async {
       await phone(tester);
       await clear([for (var n = 1; n <= 20; n++) n]);
-      await pump(tester, LevelCatalog([levelWorld(1, 30)]), dock: dock);
-      final visible = (viewport(tester).top + 844 - dock) / 2;
+      await pump(tester, LevelCatalog([levelWorld(1, 30)]), dock: true);
+      final visible = (viewport(tester).top + dockTop(tester)) / 2;
       expect(circleOf(tester, 21).dy, closeTo(visible, 1));
     });
   });

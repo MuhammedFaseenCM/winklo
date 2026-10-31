@@ -3,9 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/features/dashboard/view/widgets/floating_nav_dock.dart';
 
 void main() {
-  testWidgets('the dock has Home, Levels, Board and Profile, in order', (
-    tester,
-  ) async {
+  testWidgets('Levels is the second destination', (tester) async {
     int? picked;
     await tester.pumpWidget(
       MaterialApp(

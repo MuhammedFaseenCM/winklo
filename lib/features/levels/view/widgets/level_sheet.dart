@@ -10,10 +10,12 @@ import '../../../../domain/logic/level_map.dart';
 import '../../../../domain/play_mode.dart';
 
 /// Opens the sheet for a playable [node]: its world, number, best, goals,
-/// and Play (or Replay).
+/// and Play (or Replay). On the root navigator, so it covers the shell's
+/// nav dock instead of opening under it in the tab's branch.
 Future<void> showLevelSheet(BuildContext context, LevelMapNode node) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     showDragHandle: true,
     backgroundColor: ZipColors.paper,
     builder: (_) => LevelSheet(node: node),
