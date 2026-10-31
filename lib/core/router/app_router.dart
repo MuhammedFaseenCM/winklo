@@ -55,6 +55,16 @@ String? playAuthRedirect({
   return '/';
 }
 
+/// The `/levels` page. It's keyed on `open=` and `extra`: Results and a
+/// failed level go to the map with a fresh `extra: Object()`, so each visit
+/// builds a fresh map that places itself (and opens `open=`'s sheet) anew,
+/// even for the same `open=` as last time. Switching tabs back restores the
+/// branch's last location with the same `extra`, so the map is kept.
+Widget buildLevelsRoute(BuildContext context, GoRouterState state) {
+  final open = state.uri.queryParameters['open'];
+  return LevelsScreen(key: ValueKey((open, state.extra)), openLevelId: open);
+}
+
 GoRouter buildRouter({
   required AnalyticsRepository analytics,
   required AuthCubit authCubit,
@@ -97,11 +107,7 @@ GoRouter buildRouter({
               GoRoute(
                 path: levelsLocation,
                 name: 'levels',
-                builder: (context, state) {
-                  final open = state.uri.queryParameters['open'];
-                  // A new open= (Next level) builds a fresh map that opens it.
-                  return LevelsScreen(key: ValueKey(open), openLevelId: open);
-                },
+                builder: buildLevelsRoute,
               ),
             ],
           ),

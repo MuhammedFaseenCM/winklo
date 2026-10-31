@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winklo/core/theme/app_icons.dart';
+import 'package:winklo/core/widgets/app_icon.dart';
 import 'package:winklo/core/widgets/play_mode_strip.dart';
 import 'package:winklo/domain/play_mode.dart';
 
@@ -25,6 +27,18 @@ void main() {
       ),
     );
     expect(find.text('Levels'), findsOneWidget);
+  });
+
+  testWidgets("a level run's strip shows the Levels icon", (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: PlayModeStrip(mode: PlayMode.level('zip_1_07'))),
+      ),
+    );
+    Finder icon(IconData data) =>
+        find.byWidgetPredicate((w) => w is AppIcon && w.icon == data);
+    expect(icon(AppIcons.levels), findsOneWidget);
+    expect(icon(AppIcons.infinity), findsNothing);
   });
 
   testWidgets('a long label fits a narrow strip at a large text size', (

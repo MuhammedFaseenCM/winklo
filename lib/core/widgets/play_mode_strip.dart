@@ -91,7 +91,11 @@ class PlayModeStrip extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AppIcon(
-                    mode.isArchive ? AppIcons.calendar : AppIcons.infinity,
+                    mode.isArchive
+                        ? AppIcons.calendar
+                        : mode.isLevel
+                        ? AppIcons.levels
+                        : AppIcons.infinity,
                     size: 14,
                     color: style?.color,
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/play_mode_route.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
@@ -39,7 +40,7 @@ class LevelResultsView extends StatelessWidget {
     final targetText = target == null
         ? null
         : AppStrings.formatPlayTime(target);
-    final next = level.nextLocation;
+    final next = level.nextLevelId;
     final again = info.againLocation;
     final newBest = level.moreStars
         ? AppStrings.levelNewBestStars(level.previousStars!, level.bestStars)
@@ -113,7 +114,9 @@ class LevelResultsView extends StatelessWidget {
                       level.opensNewWorld ? 'open_world' : 'next_level',
                     );
                     if (!context.mounted) return;
-                    context.pushReplacement(next);
+                    // A fresh map, so the sheet opens even if it was the
+                    // level opened last time.
+                    context.go(levelsOpenLocation(next), extra: Object());
                   },
                 )
               else
@@ -134,11 +137,11 @@ class LevelResultsView extends StatelessWidget {
                 ),
               TextButton(
                 onPressed: () async {
-                  await _log(context, 'home');
+                  await _log(context, 'map');
                   if (!context.mounted) return;
-                  context.go('/');
+                  context.go(levelsLocation, extra: Object());
                 },
-                child: Text(AppStrings.backHome),
+                child: Text(AppStrings.levelBackToMap),
               ),
             ],
           ),

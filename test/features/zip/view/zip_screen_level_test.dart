@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
 import 'package:winklo/core/sfx/sfx_service.dart';
 import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
@@ -68,69 +70,110 @@ class _NoDrafts implements InProgressRunRepository {
   Future<void> clear({required String gameId, required String playId}) async {}
 }
 
+/// The repositories ZipScreen reads, around [child].
+Future<Widget> withRepositories(Widget child) async {
+  final analytics = MockAnalyticsRepository();
+  stubAnalytics(analytics);
+  final sfxSettings = _MockSfxSettings();
+  when(() => sfxSettings.isEnabled).thenReturn(false);
+  final quota = UnlimitedHintQuotaRepositoryImpl();
+  SharedPreferences.setMockInitialValues({});
+  final levelProgress = LevelProgressRepositoryImpl(
+    await SharedPreferences.getInstance(),
+    currentUid: () => 'u1',
+  );
+  return MultiRepositoryProvider(
+    providers: [
+      RepositoryProvider<SfxService>.value(
+        value: SfxService(settings: sfxSettings),
+      ),
+      RepositoryProvider<SubmitScore>.value(value: _MockSubmitScore()),
+      RepositoryProvider<SubmitLeaderboardTime>.value(
+        value: _MockSubmitLeaderboardTime(),
+      ),
+      RepositoryProvider<RecordDailyClear>.value(
+        value: _MockRecordDailyClear(),
+      ),
+      RepositoryProvider<GetBestPoints>.value(value: _MockGetBestPoints()),
+      RepositoryProvider<GetBestTimeSeconds>.value(
+        value: _MockGetBestTimeSeconds(),
+      ),
+      RepositoryProvider<IsNewPersonalBest>.value(
+        value: _MockIsNewPersonalBest(),
+      ),
+      RepositoryProvider<GetClearBoard>.value(value: _MockGetClearBoard()),
+      RepositoryProvider<AnalyticsRepository>.value(value: analytics),
+      RepositoryProvider<HintQuotaForMode>.value(
+        value: HintQuotaForMode(
+          daily: quota,
+          archive: quota,
+          practice: quota,
+          level: quota,
+        ),
+      ),
+      RepositoryProvider<InProgressRunRepository>.value(value: _NoDrafts()),
+      RepositoryProvider<ZipLevelRepository>.value(value: _MockZipLevels()),
+      RepositoryProvider<PlayModeRecordRepository>.value(
+        value: _MockModeRecords(),
+      ),
+      RepositoryProvider<LevelWorldRepository>.value(value: _EmptyWorlds()),
+      RepositoryProvider<LevelProgressRepository>.value(value: levelProgress),
+      RepositoryProvider<RecordLevelClear>.value(
+        value: RecordLevelClear(levelProgress, analytics),
+      ),
+    ],
+    child: child,
+  );
+}
+
 void main() {
   testWidgets('a level that is not in the catalog says so', (tester) async {
-    final analytics = MockAnalyticsRepository();
-    stubAnalytics(analytics);
-    final sfxSettings = _MockSfxSettings();
-    when(() => sfxSettings.isEnabled).thenReturn(false);
-    final quota = UnlimitedHintQuotaRepositoryImpl();
-    SharedPreferences.setMockInitialValues({});
-    final levelProgress = LevelProgressRepositoryImpl(
-      await SharedPreferences.getInstance(),
-      currentUid: () => 'u1',
-    );
-
     await tester.pumpWidget(
-      MultiRepositoryProvider(
-        providers: [
-          RepositoryProvider<SfxService>.value(
-            value: SfxService(settings: sfxSettings),
-          ),
-          RepositoryProvider<SubmitScore>.value(value: _MockSubmitScore()),
-          RepositoryProvider<SubmitLeaderboardTime>.value(
-            value: _MockSubmitLeaderboardTime(),
-          ),
-          RepositoryProvider<RecordDailyClear>.value(
-            value: _MockRecordDailyClear(),
-          ),
-          RepositoryProvider<GetBestPoints>.value(value: _MockGetBestPoints()),
-          RepositoryProvider<GetBestTimeSeconds>.value(
-            value: _MockGetBestTimeSeconds(),
-          ),
-          RepositoryProvider<IsNewPersonalBest>.value(
-            value: _MockIsNewPersonalBest(),
-          ),
-          RepositoryProvider<GetClearBoard>.value(value: _MockGetClearBoard()),
-          RepositoryProvider<AnalyticsRepository>.value(value: analytics),
-          RepositoryProvider<HintQuotaForMode>.value(
-            value: HintQuotaForMode(
-              daily: quota,
-              archive: quota,
-              practice: quota,
-              level: quota,
-            ),
-          ),
-          RepositoryProvider<InProgressRunRepository>.value(value: _NoDrafts()),
-          RepositoryProvider<ZipLevelRepository>.value(value: _MockZipLevels()),
-          RepositoryProvider<PlayModeRecordRepository>.value(
-            value: _MockModeRecords(),
-          ),
-          RepositoryProvider<LevelWorldRepository>.value(value: _EmptyWorlds()),
-          RepositoryProvider<LevelProgressRepository>.value(
-            value: levelProgress,
-          ),
-          RepositoryProvider<RecordLevelClear>.value(
-            value: RecordLevelClear(levelProgress, analytics),
-          ),
-        ],
-        child: const MaterialApp(
-          home: ZipScreen(mode: PlayMode.level('zip_9_01')),
-        ),
+      await withRepositories(
+        const MaterialApp(home: ZipScreen(mode: PlayMode.level('zip_9_01'))),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Could not load this level.'), findsOneWidget);
+  });
+
+  testWidgets('a failed level offers Map under Retry, back to the map', (
+    tester,
+  ) async {
+    final visits = <(Uri, Object?)>[];
+    final router = GoRouter(
+      initialLocation: '/zip',
+      routes: [
+        GoRoute(
+          path: '/zip',
+          builder: (_, _) => const ZipScreen(mode: PlayMode.level('zip_9_01')),
+        ),
+        GoRoute(
+          path: '/levels',
+          builder: (_, state) {
+            visits.add((state.uri, state.extra));
+            return const Text('map');
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      await withRepositories(MaterialApp.router(routerConfig: router)),
+    );
+    await tester.pumpAndSettle();
+
+    final retry = tester.getCenter(find.text(AppStrings.retry));
+    final map = find.text(AppStrings.levelBackToMap);
+    expect(map, findsOneWidget);
+    expect(tester.getCenter(map).dy, greaterThan(retry.dy));
+
+    await tester.tap(map);
+    await tester.pumpAndSettle();
+    expect(find.text('map'), findsOneWidget);
+    expect(visits.single.$1.toString(), '/levels');
+    // A fresh token, so the map is built anew.
+    expect(visits.single.$2, isNotNull);
   });
 }

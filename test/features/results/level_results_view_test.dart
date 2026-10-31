@@ -37,12 +37,16 @@ ResultsArgs args({
 Future<void> pump(WidgetTester tester, ResultsArgs value) =>
     tester.pumpWidget(MaterialApp(home: LevelResultsView(args: value)));
 
+/// Where the routed view last went to the map: its uri and extra.
+final mapVisits = <(Uri, Object?)>[];
+
 Future<MockAnalyticsRepository> pumpRouted(
   WidgetTester tester,
   ResultsArgs value,
 ) async {
   final analytics = MockAnalyticsRepository();
   stubAnalytics(analytics);
+  mapVisits.clear();
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -50,8 +54,16 @@ Future<MockAnalyticsRepository> pumpRouted(
         builder: (_, _) => LevelResultsView(args: value),
       ),
       GoRoute(path: '/zip', builder: (_, _) => const Scaffold()),
+      GoRoute(
+        path: '/levels',
+        builder: (_, state) {
+          mapVisits.add((state.uri, state.extra));
+          return const Text('map');
+        },
+      ),
     ],
   );
+  addTearDown(router.dispose);
   await tester.pumpWidget(
     RepositoryProvider<AnalyticsRepository>.value(
       value: analytics,
@@ -71,7 +83,7 @@ void main() {
           bestStars: 3,
           usedHints: false,
           targetSeconds: 30,
-          nextLocation: '/zip?mode=level&level=zip_1_08',
+          nextLevelId: 'zip_1_08',
         ),
       ),
     );
@@ -112,7 +124,7 @@ void main() {
           previousStars: 2,
           usedHints: false,
           targetSeconds: 30,
-          nextLocation: '/zip?mode=level&level=zip_2_01',
+          nextLevelId: 'zip_2_01',
           nextWorldTheme: 'metro',
         ),
       ),
@@ -178,7 +190,7 @@ void main() {
     expect(find.textContaining('or less'), findsNothing);
   });
 
-  testWidgets('Replay and Back home are logged, then navigate', (tester) async {
+  testWidgets('Replay and Map are logged, then navigate', (tester) async {
     final analytics = await pumpRouted(
       tester,
       args(
@@ -190,11 +202,59 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Back home'), findsOneWidget);
+    expect(find.text('Map'), findsOneWidget);
+    expect(find.text('Back home'), findsNothing);
     await tester.tap(find.text('Replay'));
     await tester.pumpAndSettle();
     verify(
       () => analytics.logResultsAction(gameId: 'zip', action: 'replay'),
+    ).called(1);
+  });
+
+  testWidgets('Next level opens the next level on the map', (tester) async {
+    final analytics = await pumpRouted(
+      tester,
+      args(
+        level: const LevelResultInfo(
+          runStars: 3,
+          bestStars: 3,
+          usedHints: false,
+          targetSeconds: 30,
+          nextLevelId: 'zip_1_08',
+        ),
+      ),
+    );
+    await tester.tap(find.text('Next level'));
+    await tester.pumpAndSettle();
+    expect(find.text('map'), findsOneWidget);
+    expect(mapVisits.last.$1.toString(), '/levels?open=zip_1_08');
+    // A fresh token each time, so the map reopens the sheet.
+    expect(mapVisits.last.$2, isNotNull);
+    verify(
+      () => analytics.logResultsAction(gameId: 'zip', action: 'next_level'),
+    ).called(1);
+  });
+
+  testWidgets('Map goes to the map', (tester) async {
+    final analytics = await pumpRouted(
+      tester,
+      args(
+        level: const LevelResultInfo(
+          runStars: 3,
+          bestStars: 3,
+          usedHints: false,
+          targetSeconds: 30,
+          nextLevelId: 'zip_1_08',
+        ),
+      ),
+    );
+    await tester.tap(find.text('Map'));
+    await tester.pumpAndSettle();
+    expect(find.text('map'), findsOneWidget);
+    expect(mapVisits.last.$1.toString(), '/levels');
+    expect(mapVisits.last.$2, isNotNull);
+    verify(
+      () => analytics.logResultsAction(gameId: 'zip', action: 'map'),
     ).called(1);
   });
 

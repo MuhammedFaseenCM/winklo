@@ -111,7 +111,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsLabel('Level 1, next to play'));
+    await tester.tap(find.bySemanticsLabel(AppStrings.levelNodeCurrent(1)));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.levelPlay), findsOneWidget);
   }

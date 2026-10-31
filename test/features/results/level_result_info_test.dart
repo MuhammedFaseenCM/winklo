@@ -69,7 +69,7 @@ void main() {
       bestStars: 3,
       previousStars: 2,
       usedHints: false,
-      nextLocation: '/zip?mode=level&level=zip_2_01',
+      nextLevelId: 'zip_2_01',
       nextWorldTheme: 'metro',
     );
     expect(info.moreStars, isTrue);

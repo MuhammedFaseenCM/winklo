@@ -116,7 +116,7 @@ class LevelResultInfo {
     required this.usedHints,
     this.previousStars,
     this.targetSeconds,
-    this.nextLocation,
+    this.nextLevelId,
     this.nextWorldTheme,
   });
 
@@ -135,8 +135,9 @@ class LevelResultInfo {
   /// Null (or 0 or less) when the level has no time goal.
   final int? targetSeconds;
 
-  /// The next level's route; null on the last published level.
-  final String? nextLocation;
+  /// The next level; null on the last published level. Next level opens it
+  /// on the map.
+  final String? nextLevelId;
 
   /// The next world's theme when the next level starts a new world.
   final String? nextWorldTheme;

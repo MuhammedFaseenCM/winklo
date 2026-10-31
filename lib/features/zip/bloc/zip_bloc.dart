@@ -737,9 +737,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
               previousStars: clear.previous?.stars,
               usedHints: usedHints,
               targetSeconds: slot.entry.targetSeconds,
-              nextLocation: nextId == null
-                  ? null
-                  : PlayMode.level(nextId).location('/zip'),
+              nextLevelId: nextId,
               nextWorldTheme: slot.nextWorld?.theme,
             ),
           ),

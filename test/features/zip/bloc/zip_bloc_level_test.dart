@@ -204,7 +204,7 @@ void main() {
       expect(args.local!.label, 'Level 1 · Ink');
       expect(args.local!.againLocation, '/zip?mode=level&level=zip_1_01');
       expect(args.local!.level!.runStars, 3);
-      expect(args.local!.level!.nextLocation, '/zip?mode=level&level=zip_1_02');
+      expect(args.local!.level!.nextLevelId, 'zip_1_02');
       expect(args.local!.level!.opensNewWorld, isFalse);
       expect(progress.progress('zip')['zip_1_01']!.stars, 3);
       verifyNever(
@@ -240,7 +240,7 @@ void main() {
     now = now.add(const Duration(seconds: 12));
     final done = await finish(bloc);
     final level = done.resultsExtra!.local!.level!;
-    expect(level.nextLocation, '/zip?mode=level&level=zip_2_01');
+    expect(level.nextLevelId, 'zip_2_01');
     expect(level.nextWorldTheme, 'metro');
     await bloc.close();
   });
@@ -251,7 +251,7 @@ void main() {
     await ready(bloc);
     now = now.add(const Duration(seconds: 12));
     final done = await finish(bloc);
-    expect(done.resultsExtra!.local!.level!.nextLocation, isNull);
+    expect(done.resultsExtra!.local!.level!.nextLevelId, isNull);
     await bloc.close();
   });
 

@@ -34,6 +34,7 @@ import '../../../domain/usecases/record_level_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
+import '../../../core/router/play_mode_route.dart';
 import '../../../core/router/pop_or_go_home.dart';
 import '../bloc/zip_bloc.dart';
 import '../bloc/zip_event.dart';
@@ -326,6 +327,17 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                     icon: const AppIcon(AppIcons.refresh),
                                     label: Text(AppStrings.retry),
                                   ),
+                                  if (widget.mode.isLevel) ...[
+                                    const SizedBox(height: 8),
+                                    TextButton.icon(
+                                      onPressed: () => context.go(
+                                        levelsLocation,
+                                        extra: Object(),
+                                      ),
+                                      icon: const AppIcon(AppIcons.levels),
+                                      label: Text(AppStrings.levelBackToMap),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
