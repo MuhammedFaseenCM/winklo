@@ -9,9 +9,9 @@ void main() {
     expect(playModeOf(uri), const PlayMode.level('zip_1_01'));
   });
 
-  test('a malformed level link goes Home instead of opening the daily', () {
+  test('a malformed level link goes to Levels instead of the daily', () {
     final uri = Uri.parse('/zip?mode=level&level=nope');
-    expect(playModeRedirect(uri, gameId: 'zip'), '/');
+    expect(playModeRedirect(uri, gameId: 'zip'), '/levels');
   });
 
   test('archive redirects are unchanged', () {
@@ -19,7 +19,7 @@ void main() {
     expect(playModeRedirect(uri, gameId: 'zip'), '/more/archive?game=zip');
   });
 
-  test('a level link on the wrong game goes Home', () {
+  test('a level link on the wrong game goes to Levels', () {
     for (final (path, gameId, query) in const [
       ('/sudoku', 'sudoku', 'mode=level&level=zip_1_01'),
       ('/path-words', 'path_words', 'mode=level&level=zip_1_01'),
@@ -27,7 +27,12 @@ void main() {
       ('/zip', 'zip', 'mode=level'),
     ]) {
       final uri = Uri.parse('$path?$query');
-      expect(playModeRedirect(uri, gameId: gameId), '/', reason: '$uri');
+      expect(playModeRedirect(uri, gameId: gameId), '/levels', reason: '$uri');
     }
+  });
+
+  test('levels locations', () {
+    expect(levelsLocation, '/levels');
+    expect(levelsOpenLocation('zip_1_02'), '/levels?open=zip_1_02');
   });
 }

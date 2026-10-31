@@ -178,7 +178,7 @@ void main() {
             extendBody: true,
             body: const LeaderboardScreen(showAllTimeLeaderboard: true),
             bottomNavigationBar: FloatingNavDock(
-              selectedIndex: 1,
+              selectedIndex: 2,
               onDestinationSelected: (_) {},
             ),
           ),

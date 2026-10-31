@@ -7,7 +7,7 @@ import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/features/dashboard/view/widgets/floating_nav_dock.dart';
 
 void main() {
-  testWidgets('shows three labels and reports taps', (tester) async {
+  testWidgets('shows four labels and reports taps', (tester) async {
     final taps = <int>[];
     await tester.pumpWidget(
       MaterialApp(
@@ -23,12 +23,15 @@ void main() {
     );
 
     expect(find.text(AppStrings.navHome), findsOneWidget);
+    expect(find.text(AppStrings.levelsTitle), findsOneWidget);
     expect(find.text(AppStrings.navLeaderboard), findsOneWidget);
     expect(find.text(AppStrings.navProfile), findsOneWidget);
 
+    await tester.tap(find.text(AppStrings.levelsTitle));
     await tester.tap(find.text(AppStrings.navLeaderboard));
+    await tester.tap(find.text(AppStrings.navProfile));
     await tester.pump();
-    expect(taps, [1]);
+    expect(taps, [1, 2, 3]);
   });
 
   testWidgets('dock is horizontally inset from screen edges', (tester) async {
@@ -82,13 +85,29 @@ void main() {
     expect(dock.bottom, lessThanOrEqualTo(screen.bottom - bottomInset - 11));
   });
 
-  testWidgets('leaderboard uses trophy icons', (tester) async {
+  testWidgets('levels uses map icons, leaderboard trophy icons', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildAppTheme(),
         home: Scaffold(
           bottomNavigationBar: FloatingNavDock(
             selectedIndex: 1,
+            onDestinationSelected: (_) {},
+          ),
+        ),
+      ),
+    );
+    expect(find.byIcon(AppIcons.levelsSelected), findsWidgets);
+    expect(find.byIcon(AppIcons.trophy), findsWidgets);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          bottomNavigationBar: FloatingNavDock(
+            selectedIndex: 2,
             onDestinationSelected: (_) {},
           ),
         ),
@@ -117,7 +136,7 @@ void main() {
       find.byKey(const Key('floating_nav_dock_pill')),
     );
 
-    await pumpIndex(2);
+    await pumpIndex(3);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 110));
     final mid = tester.getTopLeft(
@@ -140,7 +159,7 @@ void main() {
         theme: buildAppTheme(),
         home: Scaffold(
           bottomNavigationBar: FloatingNavDock(
-            selectedIndex: 1,
+            selectedIndex: 2,
             onDestinationSelected: (_) {},
           ),
         ),

@@ -23,18 +23,24 @@ class LevelMapLayout {
     required this.nodes,
     required this.centers,
     required this.bands,
+    required this.bottomInset,
   });
 
   static const step = 76.0;
   static const gateGap = 180.0;
   static const topPad = 96.0;
-  static const bottomPad = 120.0;
+
+  /// From the bottom of the open map (above [bottomInset]) to Level 1.
+  static const bottomPad = 72.0;
   static const amplitudeFraction = 0.24;
 
+  /// [bottomInset] is the strip at the bottom that something covers (the
+  /// shell's nav dock): the map runs under it, its levels start above it.
   factory LevelMapLayout.of(
     LevelMap map,
     double width, {
     double minHeight = 0,
+    double bottomInset = 0,
   }) {
     final worlds = [
       for (final w in map.worlds)
@@ -48,6 +54,7 @@ class LevelMapLayout {
       minHeight,
       topPad +
           bottomPad +
+          bottomInset +
           math.max(0, count - 1) * step +
           math.max(0, worlds.length - 1) * (gateGap - step),
     );
@@ -56,7 +63,7 @@ class LevelMapLayout {
     final nodes = <LevelMapNode>[];
     final centers = <String, Offset>{};
     final spans = <(double, double)>[];
-    var y = height - bottomPad;
+    var y = height - bottomInset - bottomPad;
     var index = 0;
     for (var w = 0; w < worlds.length; w++) {
       if (w > 0) y -= gateGap - step;
@@ -89,10 +96,14 @@ class LevelMapLayout {
       nodes: List.unmodifiable(nodes),
       centers: Map.unmodifiable(centers),
       bands: List.unmodifiable(bands),
+      bottomInset: bottomInset,
     );
   }
 
   final Size size;
+
+  /// The covered strip at the bottom, as given to [LevelMapLayout.of].
+  final double bottomInset;
 
   /// Every level, Level 1 first.
   final List<LevelMapNode> nodes;

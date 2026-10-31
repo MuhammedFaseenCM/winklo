@@ -122,7 +122,7 @@ void main() {
       extendBody: true,
       body: body,
       bottomNavigationBar: FloatingNavDock(
-        selectedIndex: 2,
+        selectedIndex: 3,
         onDestinationSelected: (_) {},
       ),
     );

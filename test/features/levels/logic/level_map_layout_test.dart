@@ -115,4 +115,28 @@ void main() {
     );
     expect(rightCross.labelOnRight(1), isFalse);
   });
+
+  test(
+    'bottomInset lifts Level 1 above it; the map still reaches the edge',
+    () {
+      final lifted = LevelMapLayout.of(map, width, bottomInset: 100);
+      expect(lifted.bottomInset, 100);
+      expect(lifted.size.height, layout.size.height + 100);
+      expect(
+        lifted.centers['zip_1_01']!.dy,
+        lifted.size.height - 100 - LevelMapLayout.bottomPad,
+      );
+      expect(lifted.bands[0].rect.bottom, lifted.size.height);
+      expect(layout.bottomInset, 0);
+
+      final tall = LevelMapLayout.of(
+        LevelMap.build(LevelCatalog([levelWorld(1, 1)]), LevelProgress.empty),
+        width,
+        minHeight: 900,
+        bottomInset: 100,
+      );
+      expect(tall.size.height, 900);
+      expect(tall.centers['zip_1_01']!.dy, 800 - LevelMapLayout.bottomPad);
+    },
+  );
 }

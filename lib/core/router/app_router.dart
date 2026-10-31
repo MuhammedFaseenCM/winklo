@@ -10,6 +10,7 @@ import '../../features/dashboard/view/dashboard_shell.dart';
 import '../../features/home/view/home_screen.dart';
 import '../../features/leaderboard/view/leaderboard_screen.dart';
 import '../../features/leagues/view/league_routes.dart';
+import '../../features/levels/view/levels_screen.dart';
 import '../../features/more_play/view/archive_screen.dart';
 import '../../features/more_play/view/more_play_screen.dart';
 import '../../features/path_words/view/path_words_screen.dart';
@@ -88,6 +89,19 @@ GoRouter buildRouter({
                 path: '/',
                 name: 'home',
                 builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: levelsLocation,
+                name: 'levels',
+                builder: (context, state) {
+                  final open = state.uri.queryParameters['open'];
+                  // A new open= (Next level) builds a fresh map that opens it.
+                  return LevelsScreen(key: ValueKey(open), openLevelId: open);
+                },
               ),
             ],
           ),

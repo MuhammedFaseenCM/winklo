@@ -64,6 +64,14 @@ void main() {
             StatefulShellBranch(
               routes: [
                 GoRoute(
+                  path: '/levels',
+                  builder: (_, _) => const Text('levels-body'),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/leaderboard',
                   builder: (_, _) => const Text('lb-body'),
                 ),
@@ -90,12 +98,13 @@ void main() {
     );
   }
 
-  testWidgets('shows three nav destinations', (tester) async {
+  testWidgets('shows four nav destinations', (tester) async {
     final router = buildTestRouter();
 
     await tester.pumpWidget(wrap(MaterialApp.router(routerConfig: router)));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.navHome), findsOneWidget);
+    expect(find.text(AppStrings.levelsTitle), findsOneWidget);
     expect(find.text(AppStrings.navLeaderboard), findsOneWidget);
     expect(find.text(AppStrings.navProfile), findsOneWidget);
     expect(find.text('home-body'), findsOneWidget);
@@ -107,6 +116,32 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle();
     expect(find.text('profile-body'), findsOneWidget);
+
+    await tester.tap(find.text(AppStrings.levelsTitle));
+    await tester.pumpAndSettle();
+    expect(find.text('levels-body'), findsOneWidget);
+    expect(router.state.uri.path, '/levels');
+
+    await tester.tap(find.text(AppStrings.navLeaderboard));
+    await tester.pumpAndSettle();
+    expect(find.text('lb-body'), findsOneWidget);
+  });
+
+  testWidgets('system back from levels returns to home', (tester) async {
+    final router = buildTestRouter();
+
+    await tester.pumpWidget(wrap(MaterialApp.router(routerConfig: router)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(AppStrings.levelsTitle));
+    await tester.pumpAndSettle();
+    expect(find.text('levels-body'), findsOneWidget);
+
+    final handled = await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(handled, isTrue);
+    expect(router.state.uri.path, '/');
   });
 
   testWidgets('profile sub-screens hide the bottom nav', (tester) async {

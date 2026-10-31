@@ -66,8 +66,9 @@ class _LevelsViewState extends State<_LevelsView> {
   /// that leaves it where it was. The first placement focuses
   /// [openLevelId] when it's on the map and opens its sheet (or, for a
   /// locked level, says what to clear first); later ones follow the
-  /// current level. The scroll waits for the frame, when the scroll view
-  /// has its new extent.
+  /// current level. The focus goes mid-way down the part of the
+  /// [viewport] the shell's dock leaves open. The scroll waits for the
+  /// frame, when the scroll view has its new extent.
   void _place(LevelMap map, LevelMapLayout layout, double viewport) {
     final currentId =
         map.currentId ??
@@ -84,7 +85,10 @@ class _LevelsViewState extends State<_LevelsView> {
       if (!mounted) return;
       final center = focusId == null ? null : layout.centers[focusId];
       if (center != null && _scroll.hasClients) {
-        final offset = layout.size.height - center.dy - viewport / 2;
+        final offset =
+            layout.size.height -
+            center.dy -
+            (viewport + layout.bottomInset) / 2;
         _scroll.jumpTo(offset.clamp(0.0, _scroll.position.maxScrollExtent));
       }
       if (open == null) return;
@@ -119,7 +123,10 @@ class _LevelsViewState extends State<_LevelsView> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: ZipAtmosphere(
+        // The map runs under the shell's glass dock (extendBody puts the
+        // dock in padding.bottom); LevelMapLayout keeps its levels above it.
         child: SafeArea(
+          bottom: false,
           child: BlocBuilder<LevelMapCubit, LevelMapState>(
             builder: (context, state) {
               final map = state.map;
@@ -129,17 +136,21 @@ class _LevelsViewState extends State<_LevelsView> {
                   _Header(stars: map?.stars, maxStars: map?.maxStars),
                   Expanded(
                     child: switch (state.status) {
-                      LevelMapStatus.loading => const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                      LevelMapStatus.unavailable => _Message(
-                        text: AppStrings.levelsNeedConnection,
-                        onRetry: () => context.read<LevelMapCubit>().load(),
-                      ),
-                      LevelMapStatus.empty => _Message(
-                        text: AppStrings.levelsComingSoon,
-                      ),
                       LevelMapStatus.ready => _map(context, map!),
+                      // Centred in the part the dock leaves open.
+                      final status => SafeArea(
+                        top: false,
+                        child: switch (status) {
+                          LevelMapStatus.unavailable => _Message(
+                            text: AppStrings.levelsNeedConnection,
+                            onRetry: () => context.read<LevelMapCubit>().load(),
+                          ),
+                          LevelMapStatus.empty => _Message(
+                            text: AppStrings.levelsComingSoon,
+                          ),
+                          _ => const Center(child: CircularProgressIndicator()),
+                        },
+                      ),
                     },
                   ),
                 ],
@@ -159,6 +170,7 @@ class _LevelsViewState extends State<_LevelsView> {
           map,
           constraints.maxWidth,
           minHeight: constraints.maxHeight,
+          bottomInset: MediaQuery.paddingOf(context).bottom,
         );
         _place(map, layout, constraints.maxHeight);
         final current = map.currentId == null
@@ -221,7 +233,7 @@ class _LevelsViewState extends State<_LevelsView> {
   /// within that half, short of the middle by the pin's half-width (a
   /// level at the middle carries the pin there). It's centred on the gate,
   /// so a taller label grows both ways. The bottom world's "gate" is the
-  /// map's bottom edge: its label sits just above it.
+  /// map's bottom edge: its label sits just above the dock's strip.
   Widget _worldLabel(LevelMapLayout layout, int i) {
     final band = layout.bands[i];
     final onRight = layout.labelOnRight(i);
@@ -238,7 +250,9 @@ class _LevelsViewState extends State<_LevelsView> {
       right: onRight ? 14 : null,
       width: layout.size.width / 2 - 14 - LevelAvatarPin.width / 2 - 4,
       top: i == 0 ? null : band.gateY,
-      bottom: i == 0 ? layout.size.height - band.gateY + 12 : null,
+      bottom: i == 0
+          ? layout.size.height - band.gateY + layout.bottomInset + 12
+          : null,
       child: i == 0
           ? label
           : FractionalTranslation(

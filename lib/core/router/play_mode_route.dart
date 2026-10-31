@@ -4,6 +4,12 @@ import '../../domain/play_mode.dart';
 /// The hub of archive, practice and bonus games.
 const moreWaysLocation = '/more';
 
+/// The Levels tab.
+const levelsLocation = '/levels';
+
+/// The Levels tab with [levelId]'s sheet open (Results' Next level).
+String levelsOpenLocation(String levelId) => '$levelsLocation?open=$levelId';
+
 /// The archive calendar, optionally opened on [gameId].
 String archiveLocation([String? gameId]) =>
     gameId == null ? '/more/archive' : '/more/archive?game=$gameId';
@@ -20,7 +26,7 @@ String gameRoute(String gameId) => switch (gameId) {
 /// An archive day that isn't in the archive falls back to the daily here;
 /// [playModeRedirect] sends such links to the archive first. A malformed
 /// level id falls back to the daily too; [playModeRedirect] sends such links
-/// Home first.
+/// to the Levels tab first.
 PlayMode playModeOf(Uri uri, {DateTime? now}) =>
     PlayMode.fromQuery(uri.queryParameters, now: now ?? DateTime.now()) ??
     PlayMode.daily;
@@ -31,7 +37,8 @@ const levelGameIds = {GameIds.zip};
 /// Sends a game link whose archive day is malformed, today, in the future
 /// or before the archive began to that game's archive calendar, and a
 /// malformed level link, a level link on a game without Levels, or a level
-/// of another game, Home, so none of them opens today's puzzle unranked.
+/// of another game, to the Levels tab, so none of them opens today's puzzle
+/// unranked.
 /// Null for everything else.
 String? playModeRedirect(Uri uri, {required String gameId, DateTime? now}) {
   final kind = uri.queryParameters['mode'];
@@ -40,11 +47,13 @@ String? playModeRedirect(Uri uri, {required String gameId, DateTime? now}) {
     uri.queryParameters,
     now: now ?? DateTime.now(),
   );
-  if (mode == null) return kind == 'archive' ? archiveLocation(gameId) : '/';
+  if (mode == null) {
+    return kind == 'archive' ? archiveLocation(gameId) : levelsLocation;
+  }
   if (mode.isLevel &&
       (!levelGameIds.contains(gameId) ||
           !mode.levelId!.startsWith('${gameId}_'))) {
-    return '/';
+    return levelsLocation;
   }
   return null;
 }

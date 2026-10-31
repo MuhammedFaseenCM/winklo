@@ -47,12 +47,25 @@ void main() {
     WidgetTester tester,
     LevelCatalog? catalog, {
     String? open,
+    double? dock,
   }) async {
     final router = GoRouter(
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, _) => LevelsScreen(openLevelId: open),
+          builder: (_, _) {
+            final screen = LevelsScreen(openLevelId: open);
+            if (dock == null) return screen;
+            // The dashboard shell's frame: the tab under a floating dock.
+            return Scaffold(
+              extendBody: true,
+              body: screen,
+              bottomNavigationBar: SizedBox(
+                key: const Key('dock'),
+                height: dock,
+              ),
+            );
+          },
         ),
         GoRoute(path: '/zip', builder: (_, _) => const Text('zip screen')),
       ],
@@ -246,4 +259,43 @@ void main() {
       },
     );
   }
+
+  group('under the shell dock', () {
+    const dock = 110.0;
+
+    Rect nodeRect(WidgetTester tester, int number) => tester.getRect(
+      find.byWidgetPredicate(
+        (w) => w is LevelNode && w.node.slot.number == number,
+      ),
+    );
+
+    testWidgets('the map runs under it, Level 1 and its world label above', (
+      tester,
+    ) async {
+      await phone(tester);
+      await pump(
+        tester,
+        LevelCatalog([levelWorld(1, 4), levelWorld(2, 3, theme: 'metro')]),
+        dock: dock,
+      );
+      final dockTop = tester.getRect(find.byKey(const Key('dock'))).top;
+      expect(dockTop, 844 - dock);
+      expect(viewport(tester).bottom, 844);
+      expect(nodeRect(tester, 1).bottom, lessThanOrEqualTo(dockTop - 8));
+      final label = tester.getRect(
+        find.text(AppStrings.levelWorldTitle(1, 'ink')),
+      );
+      expect(label.bottom, lessThanOrEqualTo(dockTop));
+    });
+
+    testWidgets('the current level sits mid-way down the part it leaves', (
+      tester,
+    ) async {
+      await phone(tester);
+      await clear([for (var n = 1; n <= 20; n++) n]);
+      await pump(tester, LevelCatalog([levelWorld(1, 30)]), dock: dock);
+      final visible = (viewport(tester).top + 844 - dock) / 2;
+      expect(circleOf(tester, 21).dy, closeTo(visible, 1));
+    });
+  });
 }

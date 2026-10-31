@@ -24,6 +24,11 @@ class FloatingNavDock extends StatelessWidget {
       selectedIcon: AppIcons.homeSelected,
     ),
     _DockDestination(
+      label: AppStrings.levelsTitle,
+      icon: AppIcons.levels,
+      selectedIcon: AppIcons.levelsSelected,
+    ),
+    _DockDestination(
       label: AppStrings.navLeaderboard,
       icon: AppIcons.trophy,
       selectedIcon: AppIcons.trophySelected,
