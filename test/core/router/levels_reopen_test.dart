@@ -20,9 +20,14 @@ import '../../helpers/mock_analytics_repository.dart';
 class _MockAuth extends Mock implements AuthRepository {}
 
 class _Worlds implements LevelWorldRepository {
+  /// Each map built loads the catalog once, so this counts maps built.
+  int loads = 0;
+
   @override
-  Future<LevelCatalog> catalog(String game, {bool refresh = false}) async =>
-      LevelCatalog([levelWorld(1, 3)]);
+  Future<LevelCatalog> catalog(String game, {bool refresh = false}) async {
+    loads++;
+    return LevelCatalog([levelWorld(1, 3)]);
+  }
 }
 
 /// The real `/levels` builder: a fresh `extra` token rebuilds the map, so
@@ -30,6 +35,7 @@ class _Worlds implements LevelWorldRepository {
 void main() {
   late GoRouter router;
   late StatefulNavigationShell shell;
+  late _Worlds worlds;
 
   Future<void> pumpRouter(WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -41,6 +47,7 @@ void main() {
     when(() => auth.currentUser).thenReturn(null);
     final analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
+    worlds = _Worlds();
     router = GoRouter(
       routes: [
         StatefulShellRoute.indexedStack(
@@ -69,7 +76,7 @@ void main() {
     await tester.pumpWidget(
       MultiRepositoryProvider(
         providers: [
-          RepositoryProvider<LevelWorldRepository>.value(value: _Worlds()),
+          RepositoryProvider<LevelWorldRepository>.value(value: worlds),
           RepositoryProvider<LevelProgressRepository>.value(value: progress),
           RepositoryProvider<AuthRepository>.value(value: auth),
           RepositoryProvider<AnalyticsRepository>.value(value: analytics),
@@ -92,12 +99,12 @@ void main() {
     await pumpRouter(tester);
     final a = levelId(1, 1);
 
-    router.go(levelsOpenLocation(a), extra: Object());
+    router.go(levelsOpenLocation(a), extra: levelsVisitToken());
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.levelPlay), findsOneWidget);
     await dismissSheet(tester);
 
-    router.go(levelsOpenLocation(a), extra: Object());
+    router.go(levelsOpenLocation(a), extra: levelsVisitToken());
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.levelPlay), findsOneWidget);
   });
@@ -106,7 +113,7 @@ void main() {
     tester,
   ) async {
     await pumpRouter(tester);
-    router.go(levelsOpenLocation(levelId(1, 1)), extra: Object());
+    router.go(levelsOpenLocation(levelId(1, 1)), extra: levelsVisitToken());
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.levelPlay), findsOneWidget);
     await dismissSheet(tester);
@@ -118,5 +125,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(router.state.uri.toString(), levelsOpenLocation(levelId(1, 1)));
     expect(find.text(AppStrings.levelPlay), findsNothing);
+  });
+
+  testWidgets('a router refresh keeps the map, sheet closed', (tester) async {
+    await pumpRouter(tester);
+    router.go(levelsOpenLocation(levelId(1, 1)), extra: levelsVisitToken());
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.levelPlay), findsOneWidget);
+    await dismissSheet(tester);
+    final loads = worlds.loads;
+
+    // AuthRouterRefresh does this on every auth emission.
+    router.refresh();
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.levelPlay), findsNothing);
+    expect(worlds.loads, loads, reason: 'the map was not rebuilt');
   });
 }

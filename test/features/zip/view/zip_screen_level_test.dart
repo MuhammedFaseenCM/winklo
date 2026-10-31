@@ -174,6 +174,24 @@ void main() {
     expect(find.text('map'), findsOneWidget);
     expect(visits.single.$1.toString(), '/levels');
     // A fresh token, so the map is built anew.
-    expect(visits.single.$2, isNotNull);
+    expect(visits.single.$2, isA<int>());
+  });
+
+  testWidgets('a failed level scrolls in a short window at 2x text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 420);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(
+      await withRepositories(
+        const MaterialApp(home: ZipScreen(mode: PlayMode.level('zip_9_01'))),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text(AppStrings.levelBackToMap), findsOneWidget);
   });
 }

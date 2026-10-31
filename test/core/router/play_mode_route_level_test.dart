@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/core/router/play_mode_route.dart';
 import 'package:winklo/domain/play_mode.dart';
@@ -34,5 +36,12 @@ void main() {
   test('levels locations', () {
     expect(levelsLocation, '/levels');
     expect(levelsOpenLocation('zip_1_02'), '/levels?open=zip_1_02');
+  });
+
+  test('a map visit token is new each time and survives JSON', () {
+    final tokens = [for (var i = 0; i < 1000; i++) levelsVisitToken()];
+    expect(tokens.toSet(), hasLength(tokens.length));
+    final token = tokens.last;
+    expect(jsonDecode(jsonEncode(token)), token);
   });
 }

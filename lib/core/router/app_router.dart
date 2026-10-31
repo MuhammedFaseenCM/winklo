@@ -55,11 +55,17 @@ String? playAuthRedirect({
   return '/';
 }
 
-/// The `/levels` page. It's keyed on `open=` and `extra`: Results and a
-/// failed level go to the map with a fresh `extra: Object()`, so each visit
-/// builds a fresh map that places itself (and opens `open=`'s sheet) anew,
-/// even for the same `open=` as last time. Switching tabs back restores the
-/// branch's last location with the same `extra`, so the map is kept.
+/// The `/levels` page, keyed on `open=` and `extra`, so:
+/// - an in-app trip (Results' Next level and Map, a failed level's Map)
+///   passes a fresh [levelsVisitToken]: a fresh map that places itself and
+///   opens `open=`'s sheet, even for the same `open=` as last time;
+/// - switching tabs back restores the branch's last location with the same
+///   token: the map is kept, and no sheet reopens;
+/// - re-tapping the active Levels tab goes to the branch's initial
+///   `/levels` with no `extra`: a fresh map (tap the active tab to reset);
+/// - a router refresh (every auth emission) replays the token through its
+///   JSON round trip unchanged: the map is kept;
+/// - a cold start or a deep link has no `extra` (null): a fresh map.
 Widget buildLevelsRoute(BuildContext context, GoRouterState state) {
   final open = state.uri.queryParameters['open'];
   return LevelsScreen(key: ValueKey((open, state.extra)), openLevelId: open);

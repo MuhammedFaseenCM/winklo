@@ -229,7 +229,7 @@ void main() {
     expect(find.text('map'), findsOneWidget);
     expect(mapVisits.last.$1.toString(), '/levels?open=zip_1_08');
     // A fresh token each time, so the map reopens the sheet.
-    expect(mapVisits.last.$2, isNotNull);
+    expect(mapVisits.last.$2, isA<int>());
     verify(
       () => analytics.logResultsAction(gameId: 'zip', action: 'next_level'),
     ).called(1);
@@ -252,7 +252,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('map'), findsOneWidget);
     expect(mapVisits.last.$1.toString(), '/levels');
-    expect(mapVisits.last.$2, isNotNull);
+    expect(mapVisits.last.$2, isA<int>());
     verify(
       () => analytics.logResultsAction(gameId: 'zip', action: 'map'),
     ).called(1);

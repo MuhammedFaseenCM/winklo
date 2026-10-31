@@ -302,45 +302,65 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                         )
                       else if (isFailed)
                         Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(18),
-                            child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    state.errorMessage ?? AppStrings.zipFailed,
-                                    textAlign: TextAlign.center,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          color: ZipColors.onInk,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 14),
-                                  FilledButton.icon(
-                                    onPressed: () => _bloc.add(
-                                      ZipEvent.started(date: widget.date),
+                          // Centred when it fits; scrolls on a short screen
+                          // at a large text size.
+                          child: LayoutBuilder(
+                            builder: (context, constraints) =>
+                                SingleChildScrollView(
+                                  padding: const EdgeInsets.all(18),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      minHeight: (constraints.maxHeight - 36)
+                                          .clamp(0.0, double.infinity),
                                     ),
-                                    icon: const AppIcon(AppIcons.refresh),
-                                    label: Text(AppStrings.retry),
-                                  ),
-                                  if (widget.mode.isLevel) ...[
-                                    const SizedBox(height: 8),
-                                    TextButton.icon(
-                                      onPressed: () => context.go(
-                                        levelsLocation,
-                                        extra: Object(),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            state.errorMessage ??
+                                                AppStrings.zipFailed,
+                                            textAlign: TextAlign.center,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  color: ZipColors.onInk,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 14),
+                                          FilledButton.icon(
+                                            onPressed: () => _bloc.add(
+                                              ZipEvent.started(
+                                                date: widget.date,
+                                              ),
+                                            ),
+                                            icon: const AppIcon(
+                                              AppIcons.refresh,
+                                            ),
+                                            label: Text(AppStrings.retry),
+                                          ),
+                                          if (widget.mode.isLevel) ...[
+                                            const SizedBox(height: 8),
+                                            TextButton.icon(
+                                              onPressed: () => context.go(
+                                                levelsLocation,
+                                                extra: levelsVisitToken(),
+                                              ),
+                                              icon: const AppIcon(
+                                                AppIcons.levels,
+                                              ),
+                                              label: Text(
+                                                AppStrings.levelBackToMap,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
-                                      icon: const AppIcon(AppIcons.levels),
-                                      label: Text(AppStrings.levelBackToMap),
                                     ),
-                                  ],
-                                ],
-                              ),
-                            ),
+                                  ),
+                                ),
                           ),
                         )
                       else ...[

@@ -116,7 +116,10 @@ class LevelResultsView extends StatelessWidget {
                     if (!context.mounted) return;
                     // A fresh map, so the sheet opens even if it was the
                     // level opened last time.
-                    context.go(levelsOpenLocation(next), extra: Object());
+                    context.go(
+                      levelsOpenLocation(next),
+                      extra: levelsVisitToken(),
+                    );
                   },
                 )
               else
@@ -139,7 +142,7 @@ class LevelResultsView extends StatelessWidget {
                 onPressed: () async {
                   await _log(context, 'map');
                   if (!context.mounted) return;
-                  context.go(levelsLocation, extra: Object());
+                  context.go(levelsLocation, extra: levelsVisitToken());
                 },
                 child: Text(AppStrings.levelBackToMap),
               ),

@@ -10,6 +10,19 @@ const levelsLocation = '/levels';
 /// The Levels tab with [levelId]'s sheet open (Results' Next level).
 String levelsOpenLocation(String levelId) => '$levelsLocation?open=$levelId';
 
+int _lastLevelsVisitToken = 0;
+
+/// A fresh, JSON-safe `extra` for an in-app trip to the map: go_router
+/// serialises `extra` and replays it on refresh, so it must survive a JSON
+/// round trip and compare by value. Never the same twice in a run.
+int levelsVisitToken() {
+  final now = DateTime.now().microsecondsSinceEpoch;
+  _lastLevelsVisitToken = now > _lastLevelsVisitToken
+      ? now
+      : _lastLevelsVisitToken + 1;
+  return _lastLevelsVisitToken;
+}
+
 /// The archive calendar, optionally opened on [gameId].
 String archiveLocation([String? gameId]) =>
     gameId == null ? '/more/archive' : '/more/archive?game=$gameId';
