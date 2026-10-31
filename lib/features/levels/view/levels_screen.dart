@@ -366,10 +366,12 @@ class _WorldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final world = band.world;
-    final title = AppStrings.levelWorldTitle(
-      world.world.order,
-      world.world.theme,
-    );
+    // A locked world also says how big its boards get (its first level's).
+    final first = world.world.levels.firstOrNull;
+    final title = [
+      AppStrings.levelWorldTitle(world.world.order, world.world.theme),
+      if (!world.open && first != null) ?levelBoardSize(first),
+    ].join(' · ');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(

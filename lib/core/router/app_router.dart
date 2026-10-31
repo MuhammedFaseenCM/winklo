@@ -62,7 +62,9 @@ String? playAuthRedirect({
 /// - switching tabs back restores the branch's last location with the same
 ///   token: the map is kept, and no sheet reopens;
 /// - re-tapping the active Levels tab goes to the branch's initial
-///   `/levels` with no `extra`: a fresh map (tap the active tab to reset);
+///   `/levels` with no `extra`: a fresh map when the one on screen came
+///   with `open=` or a visit token; one already keyed `(null, null)` (a
+///   cold start, an earlier re-tap) is kept as it is, scroll and all;
 /// - a router refresh (every auth emission) replays the token through its
 ///   JSON round trip unchanged: the map is kept;
 /// - a cold start or a deep link has no `extra` (null): a fresh map.

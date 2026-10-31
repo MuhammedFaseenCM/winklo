@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
+import 'package:winklo/domain/entities/level_world.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
@@ -97,8 +98,34 @@ void main() {
     expect(find.text('Levels'), findsWidgets);
     expect(find.text('3 / 15'), findsOneWidget);
     expect(find.bySemanticsLabel('Level 2, next to play'), findsOneWidget);
-    expect(find.text('World 2 · Metro'), findsOneWidget);
+    expect(find.text('World 2 · Metro · 3 × 3'), findsOneWidget);
     expect(find.text('Clear Level 3 to open'), findsOneWidget);
+  });
+
+  /// World 2, Metro, whose boards are [size] wide (no size when null).
+  LevelWorld metroOfSize(int? size) {
+    final json = levelWorldJson(2, 2, theme: 'metro');
+    json['levels'] = [
+      for (final level in json['levels'] as List)
+        {
+          for (final e in (level as Map<String, dynamic>).entries)
+            if (e.key != 'size') e.key: e.value,
+          'size': ?size,
+        },
+    ];
+    return LevelWorld.fromJson('zip_2', json);
+  }
+
+  testWidgets("a locked world's label says its board size", (tester) async {
+    await pump(tester, LevelCatalog([levelWorld(1, 3), metroOfSize(5)]));
+    expect(find.text('World 2 · Metro · 5 × 5'), findsOneWidget);
+    // An open world doesn't.
+    expect(find.text(AppStrings.levelWorldTitle(1, 'ink')), findsOneWidget);
+  });
+
+  testWidgets('a locked world of unknown size says no size', (tester) async {
+    await pump(tester, LevelCatalog([levelWorld(1, 3), metroOfSize(null)]));
+    expect(find.text('World 2 · Metro'), findsOneWidget);
   });
 
   testWidgets('tapping a locked level says what to clear first', (
@@ -242,7 +269,7 @@ void main() {
         final label = tester.getRect(
           find
               .ancestor(
-                of: find.text(AppStrings.levelWorldTitle(2, 'metro')),
+                of: find.textContaining(AppStrings.levelWorldTitle(2, 'metro')),
                 matching: find.byType(Container),
               )
               .first,

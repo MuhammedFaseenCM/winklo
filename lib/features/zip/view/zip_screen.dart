@@ -329,18 +329,24 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                                   fontWeight: FontWeight.w800,
                                                 ),
                                           ),
-                                          const SizedBox(height: 14),
-                                          FilledButton.icon(
-                                            onPressed: () => _bloc.add(
-                                              ZipEvent.started(
-                                                date: widget.date,
+                                          // A locked level stays locked:
+                                          // Retry would only fail again.
+                                          if (state.errorMessage !=
+                                              AppStrings
+                                                  .levelLockedMessage) ...[
+                                            const SizedBox(height: 14),
+                                            FilledButton.icon(
+                                              onPressed: () => _bloc.add(
+                                                ZipEvent.started(
+                                                  date: widget.date,
+                                                ),
                                               ),
+                                              icon: const AppIcon(
+                                                AppIcons.refresh,
+                                              ),
+                                              label: Text(AppStrings.retry),
                                             ),
-                                            icon: const AppIcon(
-                                              AppIcons.refresh,
-                                            ),
-                                            label: Text(AppStrings.retry),
-                                          ),
+                                          ],
                                           if (widget.mode.isLevel) ...[
                                             const SizedBox(height: 8),
                                             TextButton.icon(

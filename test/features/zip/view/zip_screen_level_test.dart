@@ -29,6 +29,7 @@ import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/features/zip/view/zip_screen.dart';
 
+import '../../../helpers/level_fixtures.dart';
 import '../../../helpers/mock_analytics_repository.dart';
 
 class _MockSubmitScore extends Mock implements SubmitScore {}
@@ -58,6 +59,12 @@ class _EmptyWorlds implements LevelWorldRepository {
       LevelCatalog(const []);
 }
 
+class _Worlds implements LevelWorldRepository {
+  @override
+  Future<LevelCatalog> catalog(String game, {bool refresh = false}) async =>
+      LevelCatalog([levelWorld(1, 3)]);
+}
+
 class _NoDrafts implements InProgressRunRepository {
   @override
   Future<InProgressRun?> load({
@@ -71,7 +78,10 @@ class _NoDrafts implements InProgressRunRepository {
 }
 
 /// The repositories ZipScreen reads, around [child].
-Future<Widget> withRepositories(Widget child) async {
+Future<Widget> withRepositories(
+  Widget child, {
+  LevelWorldRepository? worlds,
+}) async {
   final analytics = MockAnalyticsRepository();
   stubAnalytics(analytics);
   final sfxSettings = _MockSfxSettings();
@@ -116,7 +126,9 @@ Future<Widget> withRepositories(Widget child) async {
       RepositoryProvider<PlayModeRecordRepository>.value(
         value: _MockModeRecords(),
       ),
-      RepositoryProvider<LevelWorldRepository>.value(value: _EmptyWorlds()),
+      RepositoryProvider<LevelWorldRepository>.value(
+        value: worlds ?? _EmptyWorlds(),
+      ),
       RepositoryProvider<LevelProgressRepository>.value(value: levelProgress),
       RepositoryProvider<RecordLevelClear>.value(
         value: RecordLevelClear(levelProgress, analytics),
@@ -136,6 +148,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Could not load this level.'), findsOneWidget);
+    // Another load may work: Retry stays.
+    expect(find.text(AppStrings.retry), findsOneWidget);
+  });
+
+  testWidgets('a locked level offers Map and no Retry', (tester) async {
+    await tester.pumpWidget(
+      await withRepositories(
+        const MaterialApp(home: ZipScreen(mode: PlayMode.level('zip_1_03'))),
+        worlds: _Worlds(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.levelLockedMessage), findsOneWidget);
+    expect(find.text(AppStrings.retry), findsNothing);
+    expect(find.text(AppStrings.levelBackToMap), findsOneWidget);
   });
 
   testWidgets('a failed level offers Map under Retry, back to the map', (

@@ -6,8 +6,16 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/zip_ui.dart';
+import '../../../../domain/entities/level_world.dart';
 import '../../../../domain/logic/level_map.dart';
 import '../../../../domain/play_mode.dart';
+
+/// [entry]'s board size, "5 × 5", as the sheet and a locked world's label
+/// show it; null when the size is unknown.
+String? levelBoardSize(LevelEntry entry) {
+  final size = entry.zipLevelSize;
+  return size > 0 ? '$size × $size' : null;
+}
 
 /// Opens the sheet for a playable [node]: its world, number, best, goals,
 /// and Play (or Replay). On the root navigator, so it covers the shell's
@@ -31,12 +39,11 @@ class LevelSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final slot = node.slot;
-    final size = slot.entry.zipLevelSize;
     final best = node.record?.bestSeconds;
     final bestText = best == null
         ? null
         : AppStrings.levelBestTime(AppStrings.formatPlayTime(best));
-    final meta = [if (size > 0) '$size × $size', ?bestText].join(' · ');
+    final meta = [?levelBoardSize(slot.entry), ?bestText].join(' · ');
     final target = slot.entry.targetSeconds;
     final cleared = node.state == LevelNodeState.done;
     return SafeArea(
