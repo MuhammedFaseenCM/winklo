@@ -141,10 +141,13 @@ class LevelSheet extends StatelessWidget {
                 onPressed: () async {
                   final router = GoRouter.of(context);
                   final navigator = Navigator.of(context);
+                  final route = ModalRoute.of(context);
                   // Signed out: the sign-in sheet opens over this one (both on
                   // the root navigator). Cancelled, this sheet stays open.
                   if (!await ensureSignedInForPlay(context)) return;
-                  if (!context.mounted) return;
+                  // Dismissed while signing in or syncing: the sheet's route is
+                  // on its way out, so a pop would take the page beneath it.
+                  if (!context.mounted || route?.isCurrent != true) return;
                   navigator.pop();
                   router.push(PlayMode.level(slot.entry.id).location('/zip'));
                 },
