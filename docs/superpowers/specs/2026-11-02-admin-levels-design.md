@@ -90,6 +90,31 @@ match /users/{uid}/level_stats/{gameId} {
 
 Players who cleared levels before this release have `level_progress` but no `level_stats`. The admin shows their clears from progress and "—" for starts, unfinished and hints.
 
+## 1b. App fixes shipped with plan 2a
+
+### Play from the level sheet while signed out
+
+**Bug**: a signed-out player taps Play (or Replay) in the level sheet and lands on Home. The sheet pushes `/zip?mode=level…` directly; `playAuthRedirect` sends any signed-out play location to `/`.
+
+**Fix**: the sheet's Play calls `ensureSignedInForPlay(context)` first, like Home, Archive, More play and the Leaderboard do. The sign-in sheet opens over the level sheet (both on the root navigator); the level is pushed only when it returns true, after closing the level sheet. Cancelling the sign-in leaves the level sheet open. The router redirect stays as the backstop for links.
+
+### A dark Ink world
+
+**Problem**: the Ink world's backdrop is light rice paper (`#EFE8D8`); the rest of the app (`ZipColors.ink` `#0F172A`) and the Metro world (`#13233A`) are dark, so the Levels tab is the one light screen.
+
+**Fix**: Ink becomes **ink-stone**, a warm near-black ground, so it stays distinct from Metro's navy while matching the app. Same material, inverted: the line is rice-paper white on the stone.
+
+| Element | Was | Becomes |
+|---|---|---|
+| Ground (backdrop, node discs, the star-mark patch) | `#EFE8D8` paper | `#1C1915` ink-stone |
+| Grid | vermilion `#C2410C` at 0.28 | vermilion at 0.30 |
+| Reached line | `#2B2724` ink, 8 px | `#EFE8D8` rice paper, 8 px |
+| Unreached road (dots) | `#A8A29E` pencil | `#57534E` |
+| Node ensō and number | `#111111` | `#EFE8D8`; locked `#78716C` |
+| Star seals | `#B91C1C` | `#DC2626` (contrast on stone) |
+
+The colours move into one `InkPalette` class (`lib/features/levels/view/widgets/ink_palette.dart`) that the backdrop, path, node and star painters read, instead of each painter keeping its own copy. World labels already sit on a dark chip and don't change. A render of the map at 360 px is checked before the task is done.
+
 ## 2. admin-api (Cloudflare Worker)
 
 All routes go behind the existing `requireAdmin`. `:game` accepts only `zip` for now (a list, so Path Words and Sudoku can join later).
@@ -242,7 +267,7 @@ Players without counters are left out of the counter columns, and the tab says h
 
 **Plan 2a — tracking and views**
 
-1. App: `LevelPlayStatsRepository`, ZipBloc counting, rules, the deletion list.
+1. App: `LevelPlayStatsRepository`, ZipBloc counting, rules, the deletion list; the two fixes in 1b (sign-in from the level sheet, the dark Ink world).
 2. admin-api: `/progress` and `/players/:uid`.
 3. Admin: `levelsModel.ts`, the Levels page with the read-only Worlds list, Players, the player page, Stats, the Users tab link.
 
