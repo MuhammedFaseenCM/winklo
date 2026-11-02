@@ -2834,6 +2834,14 @@ describe('PlayersTab', () => {
     expect(screen.queryByText('Ada Lovelace')).not.toBeInTheDocument();
   });
 
+  it('Refresh reads the players again', async () => {
+    renderPlayers();
+    await screen.findByText('Ada Lovelace');
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    await userEvent.click(refresh);
+    expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument();
+  });
+
   it('opens the player page from a row', async () => {
     const { router } = renderPlayers();
     await userEvent.click(await screen.findByText('Ben Okafor'));
@@ -2916,7 +2924,7 @@ Expected: FAIL (stubs render nothing).
 - [ ] **Step 3: `PlayersTab.tsx`**
 
 ```tsx
-import { Users } from 'lucide-react';
+import { RefreshCw, Users } from 'lucide-react';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStringParam } from '../../hooks/useStringParam';
@@ -2927,6 +2935,7 @@ import { Callout } from '../../ui/Callout';
 import { DataTable, type Column } from '../../ui/DataTable';
 import { EmptyState } from '../../ui/EmptyState';
 import { FilterBar } from '../../ui/FilterBar';
+import { IconButton } from '../../ui/IconButton';
 import { NoResults } from '../../ui/NoResults';
 import { SearchInput } from '../../ui/SearchInput';
 import { countersCoverage, levelLabel, mapLevels, summarizePlayer, type PlayerSummary } from './levelsModel';
@@ -3014,6 +3023,16 @@ export function PlayersTab({ game }: { game: string }) {
       ) : null}
       <FilterBar>
         <SearchInput label="Search players" placeholder="Search by name, email or UID…" value={q} onChange={setQ} />
+        {/* Results are cached 5 minutes; this reads every player's docs again. */}
+        <IconButton
+          label="Refresh"
+          icon={<RefreshCw />}
+          disabled={progress.isFetching}
+          onClick={() => {
+            void worlds.refetch();
+            void progress.refetch();
+          }}
+        />
       </FilterBar>
       {rows && coverage.total > 0 ? (
         <p className="lv-muted">{`Play counts cover ${coverage.withCounters} of ${coverage.total} players`}</p>
