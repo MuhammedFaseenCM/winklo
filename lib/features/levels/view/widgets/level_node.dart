@@ -7,6 +7,7 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/logic/level_map.dart';
+import 'ink_palette.dart';
 import 'world_backdrop_painter.dart';
 
 /// One level on the map, drawn in its world's material: a brushed ensō on
@@ -39,8 +40,8 @@ class LevelNode extends StatelessWidget {
     final theme = node.slot.world.theme;
     final locked = node.state == LevelNodeState.locked;
     final numberColor = switch ((theme, node.state)) {
-      ('ink', LevelNodeState.locked) => const Color(0xFFA8A29E),
-      ('ink', _) => const Color(0xFF111111),
+      ('ink', LevelNodeState.locked) => InkPalette.pencilLight,
+      ('ink', _) => InkPalette.rice,
       (_, LevelNodeState.locked) => ZipColors.inkSoft,
       _ => ZipColors.ink,
     };
@@ -120,7 +121,7 @@ class LevelNode extends StatelessWidget {
 
 /// The ground of a world's backdrop (see [WorldBackdropPainter]).
 Color _paper(String theme) => switch (theme) {
-  'ink' => WorldBackdropPainter.paper,
+  'ink' => InkPalette.stone,
   'metro' => WorldBackdropPainter.metroNight,
   _ => ZipColors.ink,
 };
@@ -131,14 +132,12 @@ class _NodePainter extends CustomPainter {
   final String theme;
   final LevelNodeState state;
 
-  static const paper = Color(0xFFEFE8D8);
-
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = size.shortestSide / 2 - 2;
     if (theme == 'ink') {
-      canvas.drawCircle(c, r, Paint()..color = paper);
+      canvas.drawCircle(c, r, Paint()..color = InkPalette.stone);
       final stroke = Paint()
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
@@ -152,7 +151,7 @@ class _NodePainter extends CustomPainter {
             false,
             stroke
               ..strokeWidth = 3.4
-              ..color = const Color(0xFF2B2724),
+              ..color = InkPalette.rice,
           );
         case LevelNodeState.current:
           canvas.drawCircle(
@@ -160,7 +159,7 @@ class _NodePainter extends CustomPainter {
             r,
             stroke
               ..strokeWidth = 3.4
-              ..color = const Color(0xFF111111),
+              ..color = InkPalette.rice,
           );
         case LevelNodeState.locked:
           canvas.drawCircle(
@@ -168,7 +167,7 @@ class _NodePainter extends CustomPainter {
             r,
             stroke
               ..strokeWidth = 1.2
-              ..color = const Color(0xFFA8A29E),
+              ..color = InkPalette.pencil,
           );
       }
       return;
@@ -218,7 +217,7 @@ class _StarMarksPainter extends CustomPainter {
         ..style = on ? PaintingStyle.fill : PaintingStyle.stroke
         ..strokeWidth = 1;
       if (theme == 'ink') {
-        paint.color = const Color(0xFFB91C1C);
+        paint.color = InkPalette.seal;
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromCenter(center: Offset(cx, 4), width: 7, height: 7),

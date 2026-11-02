@@ -5,9 +5,10 @@ import 'package:flutter/rendering.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../domain/logic/level_map.dart';
 import '../../logic/level_map_layout.dart';
+import 'ink_palette.dart';
 
 /// The line through the levels: drawn in the world's material up to the
-/// current level (sumi ink on paper, a sky route on Metro), and a dotted
+/// current level (rice-paper white on ink-stone, a sky route on Metro), and a dotted
 /// pencil road beyond it. Where it crosses into the next world it changes
 /// to that world's material at the edge.
 class LevelPathPainter extends CustomPainter {
@@ -15,8 +16,8 @@ class LevelPathPainter extends CustomPainter {
 
   final LevelMapLayout layout;
 
-  static const ink = Color(0xFF2B2724);
-  static const pencil = Color(0xFFA8A29E);
+  static const ink = InkPalette.rice;
+  static const pencil = InkPalette.pencil;
 
   @override
   void paint(Canvas canvas, Size size) {

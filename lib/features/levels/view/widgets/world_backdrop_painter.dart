@@ -4,8 +4,9 @@ import 'package:flutter/rendering.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../logic/level_map_layout.dart';
+import 'ink_palette.dart';
 
-/// Each world's backdrop: rice paper with a vermilion grid (Ink), a night
+/// Each world's backdrop: ink-stone with a vermilion grid (Ink), a night
 /// transit map (Metro), or, for a world not yet open, its outlines only
 /// ("unprinted"). An unknown theme gets the plain app background.
 class WorldBackdropPainter extends CustomPainter {
@@ -13,8 +14,6 @@ class WorldBackdropPainter extends CustomPainter {
 
   final List<LevelMapBand> bands;
 
-  static const paper = Color(0xFFEFE8D8);
-  static const vermilion = Color(0xFFC2410C);
   static const metroNight = Color(0xFF13233A);
 
   @override
@@ -37,9 +36,9 @@ class WorldBackdropPainter extends CustomPainter {
   }
 
   void _ink(Canvas canvas, Rect r) {
-    canvas.drawRect(r, Paint()..color = paper);
+    canvas.drawRect(r, Paint()..color = InkPalette.stone);
     final grid = Paint()
-      ..color = vermilion.withValues(alpha: 0.28)
+      ..color = InkPalette.vermilion.withValues(alpha: InkPalette.gridAlpha)
       ..strokeWidth = 0.8;
     for (var i = 1; i < 4; i++) {
       final x = r.left + r.width * i / 4;

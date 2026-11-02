@@ -44,8 +44,16 @@ void main() {
       ),
     );
     final decoration = backing.decoration as BoxDecoration;
-    expect(decoration.color, const Color(0xFFEFE8D8));
+    expect(decoration.color, const Color(0xFF1C1915));
     expect(decoration.borderRadius, BorderRadius.circular(4));
+  });
+
+  testWidgets('on Ink the level number is rice-paper white on the stone', (
+    tester,
+  ) async {
+    await pump(tester, LevelNode(node: map.node('zip_1_02')!, onTap: () {}));
+    final number = tester.widget<Text>(find.text('2'));
+    expect(number.style?.color, const Color(0xFFEFE8D8));
   });
 
   testWidgets('the current and a locked level', (tester) async {
