@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   orderBy,
   query,
   serverTimestamp,
@@ -98,6 +99,43 @@ describe('users/{uid}/level_progress', () => {
     await assertFails(setDoc(doc(db('u1'), path('u1')), { ...valid(), extra: 1 }));
     await assertFails(setDoc(doc(db('u1'), path('u1')), { levels: [], updatedAt: serverTimestamp() }));
     await assertFails(setDoc(doc(db('u1'), path('u1')), { levels: {}, updatedAt: new Date(2020, 0, 1) }));
+  });
+
+  it('cannot be deleted', async () => {
+    await seed(path('u1'), { levels: {}, updatedAt: new Date() });
+    await assertFails(deleteDoc(doc(db('u1'), path('u1'))));
+  });
+});
+
+describe('users/{uid}/level_stats', () => {
+  const path = (uid: string, game = 'zip') => `users/${uid}/level_stats/${game}`;
+  const valid = () => ({
+    levels: { zip_1_01: { starts: increment(1), lastPlayedAt: serverTimestamp() } },
+    updatedAt: serverTimestamp(),
+  });
+
+  it('the owner adds to their counters with merge writes', async () => {
+    await assertSucceeds(setDoc(doc(db('u1'), path('u1')), valid(), { merge: true }));
+    await assertSucceeds(setDoc(doc(db('u1'), path('u1')), valid(), { merge: true }));
+  });
+
+  it('nobody reads it from the app, not even the owner', async () => {
+    await seed(path('u1'), { levels: {}, updatedAt: new Date() });
+    await assertFails(getDoc(doc(db('u1'), path('u1'))));
+    await assertFails(getDoc(doc(db('u2'), path('u1'))));
+  });
+
+  it('nobody else writes it', async () => {
+    await assertFails(setDoc(doc(db('u2'), path('u1')), valid(), { merge: true }));
+    await assertFails(setDoc(doc(db(null), path('u1')), valid(), { merge: true }));
+  });
+
+  it('refuses an unknown game, extra fields and a client clock', async () => {
+    await assertFails(setDoc(doc(db('u1'), path('u1', 'chess')), valid(), { merge: true }));
+    await assertFails(setDoc(doc(db('u1'), path('u1')), { ...valid(), extra: 1 }, { merge: true }));
+    await assertFails(
+      setDoc(doc(db('u1'), path('u1')), { levels: {}, updatedAt: new Date(2020, 0, 1) }, { merge: true }),
+    );
   });
 
   it('cannot be deleted', async () => {

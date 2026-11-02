@@ -173,6 +173,19 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    // users/{uid}/level_stats/{gameId}: {levels: map, updatedAt}. Play
+    // counters for winklo-admin only; the app never reads them back. Entries
+    // aren't checked one by one (rules can't walk a map with dynamic keys):
+    // a hand-edited doc only skews its owner's numbers, and the admin drops
+    // invalid values.
+    function validLevelStats(gameId) {
+      let data = request.resource.data;
+      return validGame(gameId)
+        && data.keys().hasOnly(['levels', 'updatedAt'])
+        && data.levels is map
+        && data.updatedAt == request.time;
+    }
+
     match /zip_levels/{id} {
       allow get: if puzzleDocReadable(id);
       // A query could return a daily before it's live; only admins list.
@@ -327,6 +340,12 @@ service cloud.firestore {
     match /users/{uid}/level_progress/{gameId} {
       allow read: if isOwner(uid);
       allow create, update: if isOwner(uid) && validLevelProgress(gameId);
+      allow delete: if false;
+    }
+
+    match /users/{uid}/level_stats/{gameId} {
+      allow read: if false;
+      allow create, update: if isOwner(uid) && validLevelStats(gameId);
       allow delete: if false;
     }
 

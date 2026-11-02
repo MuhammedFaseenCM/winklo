@@ -317,4 +317,8 @@ describe('wipeUserFirestore', () => {
   it('wipes level progress with the other user subcollections', () => {
     expect(USER_SUBCOLLECTIONS).toContain('level_progress');
   });
+
+  it('wipes level play counters with the other user subcollections', () => {
+    expect(USER_SUBCOLLECTIONS).toContain('level_stats');
+  });
 });

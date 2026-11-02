@@ -8,6 +8,7 @@ export const USER_SUBCOLLECTIONS = [
   'game_streaks',
   'game_streaks_debug',
   'level_progress',
+  'level_stats',
 ] as const;
 
 const LEADERBOARD_ROOTS = ['leaderboards', 'leaderboards_debug'] as const;
