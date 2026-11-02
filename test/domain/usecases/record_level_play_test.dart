@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/client_error_report.dart';
+import 'package:winklo/domain/failures.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/level_play_stats_repository.dart';
 import 'package:winklo/domain/usecases/record_level_play.dart';
@@ -81,7 +82,11 @@ void main() {
     expect(sent.code, 'level_stats_write_failed');
     expect(sent.uid, 'u1');
 
-    now = now.add(const Duration(minutes: 11));
+    now = now.add(const Duration(minutes: 9));
+    await record(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
+    verifyNever(() => report(any()));
+
+    now = now.add(const Duration(minutes: 2));
     await record(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
     verify(() => report(any())).called(1);
   });
@@ -91,5 +96,44 @@ void main() {
         .thenThrow(TimeoutException('slow'));
     await build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
     verifyNever(() => report(any()));
+  });
+
+  test('a different error inside the cooldown is reported', () async {
+    final record = build();
+    when(() => stats.increment(any(), any(), any(), any()))
+        .thenThrow(StateError('a'));
+    await record(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
+    when(() => stats.increment(any(), any(), any(), any()))
+        .thenThrow(StateError('b'));
+    await record(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
+    verify(() => report(any())).called(2);
+  });
+
+  test('a non-reportable Failure is not reported', () async {
+    when(() => stats.increment(any(), any(), any(), any()))
+        .thenThrow(const Failure('offline', reportable: false));
+    await build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
+    verifyNever(() => report(any()));
+  });
+
+  test('no report when the account changed before reporting', () async {
+    var reads = 0;
+    when(() => auth.currentUser).thenAnswer(
+      (_) => AppUser(uid: reads++ == 0 ? 'u1' : 'u2', displayName: 'x'),
+    );
+    when(() => stats.increment(any(), any(), any(), any()))
+        .thenThrow(StateError('boom'));
+    await build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
+    verifyNever(() => report(any()));
+  });
+
+  test('a synchronous throw from the reporter does not escape', () async {
+    when(() => stats.increment(any(), any(), any(), any()))
+        .thenThrow(StateError('boom'));
+    when(() => report(any())).thenThrow(StateError('reporter'));
+    await expectLater(
+      build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start),
+      completes,
+    );
   });
 }

@@ -30,6 +30,8 @@ class RecordLevelPlay {
   final ReportClientError? _reportClientError;
   final bool Function() _isRemoteAvailable;
   final DateTime Function() _now;
+
+  /// The same failure is reported at most once per this interval.
   final Duration reportCooldown;
 
   String? _lastReportKey;
@@ -42,12 +44,13 @@ class RecordLevelPlay {
     required String levelId,
     required LevelPlayEvent event,
   }) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null || !_isRemoteAvailable()) return;
+    String? uid;
     try {
+      uid = _auth.currentUser?.uid;
+      if (uid == null || !_isRemoteAvailable()) return;
       await _stats.increment(uid, game, levelId, event);
     } catch (error, stack) {
-      _report(uid, error, stack);
+      if (uid != null) _report(uid, error, stack);
     }
   }
 
@@ -67,7 +70,8 @@ class RecordLevelPlay {
     _lastReportKey = key;
     _lastReportAt = at;
     unawaited(
-      report(
+      _send(
+        report,
         ClientErrorReport(
           severity: 'error',
           source: 'handled',
@@ -78,7 +82,18 @@ class RecordLevelPlay {
           function: 'RecordLevelPlay',
           uid: uid,
         ),
-      ).catchError((Object _) {}),
+      ),
     );
+  }
+
+  static Future<void> _send(
+    ReportClientError report,
+    ClientErrorReport error,
+  ) async {
+    try {
+      await report(error);
+    } catch (_) {
+      // Best-effort telemetry.
+    }
   }
 }
