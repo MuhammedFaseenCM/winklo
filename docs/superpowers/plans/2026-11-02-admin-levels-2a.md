@@ -1298,8 +1298,8 @@ type FirestoreDoc = { name: string; fields?: Record<string, unknown> };
 
 /** Each runQuery page; one Worker subrequest. */
 export const PAGE_SIZE = 500;
-/** Pages per collection group: 2 × 20 subrequests stays inside the Free plan's 50 per request. */
-export const MAX_PAGES = 20;
+/** Pages per collection group. CPU on the Workers Free plan (~10 ms) is the binding limit, not subrequests: see the Task 6 review note. */
+export const MAX_PAGES = 2;
 
 function isNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v);
@@ -3012,8 +3012,8 @@ export function PlayersTab({ game }: { game: string }) {
   return (
     <div className="lv-tab">
       {progress.data?.truncated ? (
-        <Callout tone="warning" title="Showing the first 10,000 players">
-          More players have played Levels than one load reads. Counts below cover the players shown.
+        <Callout tone="warning" title="Showing part of the players">
+          More players have played Levels than one load reads (about 1,000). Counts below cover the players shown.
         </Callout>
       ) : null}
       {names.error ? (
