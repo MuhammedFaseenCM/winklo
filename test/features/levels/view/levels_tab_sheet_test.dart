@@ -14,6 +14,10 @@ import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
+import 'package:winklo/domain/entities/app_user.dart';
+import 'package:winklo/domain/usecases/sign_in_with_google.dart';
+import 'package:winklo/domain/usecases/sign_out.dart';
+import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/dashboard/view/dashboard_shell.dart';
 import 'package:winklo/features/levels/view/levels_screen.dart';
 
@@ -21,6 +25,10 @@ import '../../../helpers/level_fixtures.dart';
 import '../../../helpers/mock_analytics_repository.dart';
 
 class _MockAuth extends Mock implements AuthRepository {}
+
+class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
+
+class _MockSignOut extends Mock implements SignOut {}
 
 class _MockCheckAppUpdate extends Mock implements CheckAppUpdate {}
 
@@ -36,14 +44,18 @@ class _Worlds implements LevelWorldRepository {
 void main() {
   late GoRouter router;
 
-  Future<void> pumpShell(WidgetTester tester) async {
+  Future<void> pumpShell(WidgetTester tester, {bool signedIn = true}) async {
     SharedPreferences.setMockInitialValues({});
     final progress = LevelProgressRepositoryImpl(
       await SharedPreferences.getInstance(),
       currentUid: () => 'u1',
     );
     final auth = _MockAuth();
-    when(() => auth.currentUser).thenReturn(null);
+    const user = AppUser(uid: 'u1', displayName: 'Ada');
+    when(() => auth.currentUser).thenReturn(signedIn ? user : null);
+    when(
+      () => auth.authStateChanges(),
+    ).thenAnswer((_) => Stream.value(signedIn ? user : null));
     final analytics = MockAnalyticsRepository();
     stubAnalytics(analytics);
     final checkAppUpdate = _MockCheckAppUpdate();
@@ -107,7 +119,14 @@ void main() {
             value: _MockAppUpdateRepository(),
           ),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: BlocProvider(
+          create: (_) => AuthCubit(
+            authRepository: auth,
+            signInWithGoogle: _MockSignInWithGoogle(),
+            signOut: _MockSignOut(),
+          ),
+          child: MaterialApp.router(routerConfig: router),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -152,6 +171,27 @@ void main() {
     router.pop();
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.levelPlay), findsNothing);
+    expect(router.state.uri.path, '/levels');
+  });
+
+  testWidgets('signed out, Play asks for sign-in and stays on the map', (
+    tester,
+  ) async {
+    await pumpShell(tester, signedIn: false);
+    await tester.tap(find.text(AppStrings.levelPlay));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text(AppStrings.playSignInTitle), findsOneWidget);
+    expect(find.text('zip screen'), findsNothing);
+    expect(find.text('home-body'), findsNothing);
+
+    await tester.tap(find.text(AppStrings.signInCancel));
+    await tester.pumpAndSettle();
+
+    // Cancelled: the level sheet is still open over the map.
+    expect(find.text(AppStrings.playSignInTitle), findsNothing);
+    expect(find.text(AppStrings.levelPlay), findsOneWidget);
     expect(router.state.uri.path, '/levels');
   });
 }

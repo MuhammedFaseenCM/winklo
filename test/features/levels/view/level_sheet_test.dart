@@ -1,12 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/level_progress.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/logic/level_map.dart';
+import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/usecases/sign_in_with_google.dart';
+import 'package:winklo/domain/usecases/sign_out.dart';
+import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/levels/view/widgets/level_sheet.dart';
 
 import '../../../helpers/level_fixtures.dart';
+
+class _MockAuth extends Mock implements AuthRepository {}
+
+class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
+
+class _MockSignOut extends Mock implements SignOut {}
 
 void main() {
   final map = LevelMap.build(
@@ -44,14 +57,25 @@ void main() {
         ),
       ],
     );
+    final auth = _MockAuth();
+    const user = AppUser(uid: 'u1', displayName: 'Ada');
+    when(() => auth.currentUser).thenReturn(user);
+    when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(user));
     await tester.pumpWidget(
-      MaterialApp.router(
-        routerConfig: router,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(textScale)),
-          child: child!,
+      BlocProvider(
+        create: (_) => AuthCubit(
+          authRepository: auth,
+          signInWithGoogle: _MockSignInWithGoogle(),
+          signOut: _MockSignOut(),
+        ),
+        child: MaterialApp.router(
+          routerConfig: router,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
         ),
       ),
     );

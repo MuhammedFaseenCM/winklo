@@ -9,6 +9,7 @@ import '../../../../core/widgets/zip_ui.dart';
 import '../../../../domain/entities/level_world.dart';
 import '../../../../domain/logic/level_map.dart';
 import '../../../../domain/play_mode.dart';
+import '../../../auth/view/ensure_signed_in_for_play.dart';
 
 /// [entry]'s board size, "5 × 5", as the sheet and a locked world's label
 /// show it; null when the size is unknown.
@@ -19,7 +20,8 @@ String? levelBoardSize(LevelEntry entry) {
 
 /// Opens the sheet for a playable [node]: its world, number, best, goals,
 /// and Play (or Replay). On the root navigator, so it covers the shell's
-/// nav dock instead of opening under it in the tab's branch.
+/// nav dock instead of opening under it in the tab's branch. Play asks a
+/// signed-out player to sign in first, like every other Play.
 Future<void> showLevelSheet(BuildContext context, LevelMapNode node) {
   return showModalBottomSheet<void>(
     context: context,
@@ -136,9 +138,14 @@ class LevelSheet extends StatelessWidget {
               ZipPrimaryButton(
                 label: cleared ? AppStrings.levelReplay : AppStrings.levelPlay,
                 icon: AppIcons.play,
-                onPressed: () {
+                onPressed: () async {
                   final router = GoRouter.of(context);
-                  Navigator.of(context).pop();
+                  final navigator = Navigator.of(context);
+                  // Signed out: the sign-in sheet opens over this one (both on
+                  // the root navigator). Cancelled, this sheet stays open.
+                  if (!await ensureSignedInForPlay(context)) return;
+                  if (!context.mounted) return;
+                  navigator.pop();
                   router.push(PlayMode.level(slot.entry.id).location('/zip'));
                 },
               ),
