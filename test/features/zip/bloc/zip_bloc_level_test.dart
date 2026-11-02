@@ -171,6 +171,25 @@ void main() {
       await bloc.close();
     });
 
+    test(
+      'a saved run for a changed board is dropped and counts a start',
+      () async {
+        drafts.runs['zip_level_zip_1_01'] = InProgressRun(
+          gameId: 'zip',
+          playId: 'level_zip_1_01',
+          elapsedMs: 1000,
+          board: const {'path': []},
+          boardFingerprint: 'old-board',
+        );
+        final bloc = build('zip_1_01');
+        bloc.add(const ZipEvent.started());
+        final state = await ready(bloc);
+        expect(plays.events, [('zip_1_01', LevelPlayEvent.start)]);
+        expect(state.path, isEmpty);
+        await bloc.close();
+      },
+    );
+
     test('each hint counts; Reset does not start a run', () async {
       final bloc = build('zip_1_01');
       bloc.add(const ZipEvent.started());
