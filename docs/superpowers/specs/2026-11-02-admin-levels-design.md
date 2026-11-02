@@ -109,8 +109,8 @@ Players who cleared levels before this release have `level_progress` but no `lev
 | Ground (backdrop, node discs, the star-mark patch) | `#EFE8D8` paper | `#1C1915` ink-stone |
 | Grid | vermilion `#C2410C` at 0.28 | vermilion at 0.30 |
 | Reached line | `#2B2724` ink, 8 px | `#EFE8D8` rice paper, 8 px |
-| Unreached road (dots) | `#A8A29E` pencil | `#57534E` |
-| Node ensō and number | `#111111` | `#EFE8D8`; locked `#78716C` |
+| Unreached road (dots), locked ring | `#A8A29E` pencil | `#78716C` |
+| Node ensō and number | `#111111` | `#EFE8D8`; locked number `#A8A29E` |
 | Star seals | `#B91C1C` | `#DC2626` (contrast on stone) |
 
 The colours move into one `InkPalette` class (`lib/features/levels/view/widgets/ink_palette.dart`) that the backdrop, path, node and star painters read, instead of each painter keeping its own copy. World labels already sit on a dark chip and don't change. A render of the map at 360 px is checked before the task is done.
@@ -119,7 +119,7 @@ The colours move into one `InkPalette` class (`lib/features/levels/view/widgets/
 
 All routes go behind the existing `requireAdmin`. `:game` accepts only `zip` for now (a list, so Path Words and Sudoku can join later).
 
-### Worlds (the editor) — plan 2b
+### Worlds (the editor) — plan 2b, except `GET /worlds`, which plan 2a needs for the read-only list and the level numbering
 
 | Route | Does |
 |---|---|
@@ -176,7 +176,7 @@ Board coordinates: Firestore can't hold an array directly inside an array, so `l
 
 ## 3. Admin UI — the Levels page
 
-A **Levels** item in the sidebar (lucide icon, matching the others), lazy-loaded like every page (`pageLoaders.levels`). Route `/levels`, tabs in `?tab=worlds|players|stats` via `useTabParam` (default `worlds`). A game switcher at the top shows Zip only for now.
+A **Levels** item in the sidebar (lucide icon, matching the others), lazy-loaded like every page (`pageLoaders.levels`). Route `/levels`, tabs in `?tab=worlds|players|stats` via `useTabParam` (default `worlds`). A Zip badge in the header names the game; a switcher comes when a second game has levels.
 
 ### Worlds tab
 
