@@ -8,16 +8,13 @@ import '../../logic/level_map_layout.dart';
 import 'ink_palette.dart';
 
 /// The line through the levels: drawn in the world's material up to the
-/// current level (rice-paper white on ink-stone, a sky route on Metro), and a dotted
-/// pencil road beyond it. Where it crosses into the next world it changes
-/// to that world's material at the edge.
+/// current level (rice-paper white on ink-stone, a sky route on Metro), and
+/// a dotted pencil road beyond it. Where it crosses into the next world it
+/// changes to that world's material at the edge.
 class LevelPathPainter extends CustomPainter {
   LevelPathPainter(this.layout);
 
   final LevelMapLayout layout;
-
-  static const ink = InkPalette.rice;
-  static const pencil = InkPalette.pencil;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -49,7 +46,7 @@ class LevelPathPainter extends CustomPainter {
                 _ => 6,
               }
               ..color = switch (theme) {
-                'ink' => ink,
+                'ink' => InkPalette.rice,
                 'metro' => ZipColors.sky,
                 _ => ZipColors.onInk.withValues(alpha: 0.6),
               },
@@ -70,7 +67,7 @@ class LevelPathPainter extends CustomPainter {
               ..style = PaintingStyle.stroke
               ..strokeCap = StrokeCap.round
               ..strokeWidth = 1.6
-              ..color = theme == 'ink' ? pencil : ZipColors.outline,
+              ..color = theme == 'ink' ? InkPalette.pencil : ZipColors.outline,
           );
         }
         canvas.restore();

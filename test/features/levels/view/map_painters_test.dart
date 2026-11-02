@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:winklo/domain/entities/level_progress.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
@@ -54,6 +55,29 @@ void main() {
       ),
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an ink band is painted on the warm ink-stone ground', (
+    tester,
+  ) async {
+    final layout = layoutWith(const {});
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SingleChildScrollView(
+          child: SizedBox.fromSize(
+            size: layout.size,
+            child: CustomPaint(painter: WorldBackdropPainter(layout.bands)),
+          ),
+        ),
+      ),
+    );
+    final box = tester.renderObject<RenderCustomPaint>(
+      find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.painter is WorldBackdropPainter,
+      ),
+    );
+    expect(box, paints..rect(color: const Color(0xFF1C1915)));
   });
 
   testWidgets('the line crosses from a cleared ink world into metro', (

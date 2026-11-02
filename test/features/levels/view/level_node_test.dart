@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winklo/core/widgets/app_icon.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/level_progress.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
@@ -33,7 +34,7 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets("a done level's marks sit on a patch of its world's paper", (
+  testWidgets("a done level's marks sit on a patch of its world's ground", (
     tester,
   ) async {
     await pump(tester, LevelNode(node: map.node('zip_1_01')!, onTap: () {}));
@@ -54,6 +55,14 @@ void main() {
     await pump(tester, LevelNode(node: map.node('zip_1_02')!, onTap: () {}));
     final number = tester.widget<Text>(find.text('2'));
     expect(number.style?.color, const Color(0xFFEFE8D8));
+  });
+
+  testWidgets("on Ink a locked level's padlock is light pencil grey", (
+    tester,
+  ) async {
+    await pump(tester, LevelNode(node: map.node('zip_1_03')!, onTap: () {}));
+    final lock = tester.widget<AppIcon>(find.byType(AppIcon));
+    expect(lock.color, const Color(0xFFA8A29E));
   });
 
   testWidgets('the current and a locked level', (tester) async {

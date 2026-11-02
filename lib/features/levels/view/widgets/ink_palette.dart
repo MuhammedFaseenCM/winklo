@@ -18,7 +18,7 @@ abstract final class InkPalette {
   /// The unreached road and a locked level's ring.
   static const pencil = Color(0xFF78716C);
 
-  /// A locked level's number.
+  /// A locked level's padlock.
   static const pencilLight = Color(0xFFA8A29E);
 
   /// Earned and unearned star seals.

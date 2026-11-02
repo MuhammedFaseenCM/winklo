@@ -87,11 +87,11 @@ class LevelNode extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               if (node.state == LevelNodeState.done)
-                // A patch of the world's paper, so the marks sit on top of
+                // A patch of the world's ground, so the marks sit on top of
                 // a line running past them.
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: _paper(theme),
+                    color: _ground(theme),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Padding(
@@ -120,7 +120,7 @@ class LevelNode extends StatelessWidget {
 }
 
 /// The ground of a world's backdrop (see [WorldBackdropPainter]).
-Color _paper(String theme) => switch (theme) {
+Color _ground(String theme) => switch (theme) {
   'ink' => InkPalette.stone,
   'metro' => WorldBackdropPainter.metroNight,
   _ => ZipColors.ink,
