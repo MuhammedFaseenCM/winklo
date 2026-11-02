@@ -23,6 +23,7 @@ import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/sync_progress.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+import 'package:winklo/features/auth/cubit/auth_state.dart';
 import 'package:winklo/features/dashboard/view/dashboard_shell.dart';
 import 'package:winklo/features/levels/view/levels_screen.dart';
 
@@ -80,6 +81,9 @@ void main() {
       signOut: _MockSignOut(),
     );
     addTearDown(authCubit.close);
+    // Really signed out: the cubit leaves AuthStatus.unknown, so the router's
+    // play redirect is live.
+    if (!signedIn) authStream.add(null);
     final refresh = AuthRouterRefresh(authCubit);
     addTearDown(refresh.dispose);
     final analytics = MockAnalyticsRepository();
@@ -162,6 +166,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel(AppStrings.levelNodeCurrent(1)));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.levelPlay), findsOneWidget);
+    if (!signedIn) expect(authCubit.state.status, AuthStatus.signedOut);
   }
 
   testWidgets('the open sheet covers the dock: no dock tab can be hit', (
@@ -234,10 +239,9 @@ void main() {
 
     // Signed in, the sync is pending: a second Play is a no-op.
     expect(find.text(AppStrings.playSignInTitle), findsNothing);
-    if (find.text(AppStrings.levelPlay).evaluate().isNotEmpty) {
-      await tester.tap(find.text(AppStrings.levelPlay));
-      await tester.pumpAndSettle();
-    }
+    expect(find.text(AppStrings.levelPlay), findsOneWidget);
+    await tester.tap(find.text(AppStrings.levelPlay));
+    await tester.pumpAndSettle();
     expect(router.state.uri.path, '/levels');
 
     syncDone.complete(const SyncProgressResult());
