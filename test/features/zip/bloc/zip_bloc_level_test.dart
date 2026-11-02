@@ -8,6 +8,7 @@ import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/play_mode.dart';
 import 'package:winklo/domain/play_period.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
+import 'package:winklo/domain/repositories/level_play_stats_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
 import 'package:winklo/domain/usecases/get_best_points.dart';
 import 'package:winklo/domain/usecases/get_best_time_seconds.dart';
@@ -39,6 +40,16 @@ class _MockGetBestTimeSeconds extends Mock implements GetBestTimeSeconds {}
 class _MockIsNewPersonalBest extends Mock implements IsNewPersonalBest {}
 
 class _MockGetClearBoard extends Mock implements GetClearBoard {}
+
+class _Plays {
+  final List<(String, LevelPlayEvent)> events = [];
+
+  Future<void> call({
+    required String game,
+    required String levelId,
+    required LevelPlayEvent event,
+  }) async => events.add((levelId, event));
+}
 
 class _Worlds implements LevelWorldRepository {
   _Worlds(this.value);
@@ -81,6 +92,7 @@ void main() {
   late _MockGetBestPoints getBestPoints;
   late LevelProgressRepositoryImpl progress;
   late _MemoryInProgressRuns drafts;
+  late _Plays plays;
   late DateTime now;
 
   setUp(() async {
@@ -94,6 +106,7 @@ void main() {
     getBestPoints = _MockGetBestPoints();
     progress = LevelProgressRepositoryImpl(prefs, currentUid: () => 'u1');
     drafts = _MemoryInProgressRuns();
+    plays = _Plays();
     now = DateTime(2026, 10, 31, 9);
   });
 
@@ -103,6 +116,7 @@ void main() {
         levelWorlds: _Worlds(from ?? catalog),
         recordLevelClear: RecordLevelClear(progress, analytics),
         levelProgress: gated ? progress : null,
+        recordLevelPlay: plays.call,
         inProgressRuns: drafts,
         submitScore: submitScore,
         submitLeaderboardTime: submitLeaderboardTime,
@@ -128,6 +142,75 @@ void main() {
     bloc.add(const ZipEvent.completed());
     return bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
   }
+
+  group('play counters', () {
+    test('a fresh run counts a start; a clear counts a clear', () async {
+      final bloc = build('zip_1_01');
+      bloc.add(const ZipEvent.started());
+      await ready(bloc);
+      expect(plays.events, [('zip_1_01', LevelPlayEvent.start)]);
+      await finish(bloc);
+      expect(plays.events, [
+        ('zip_1_01', LevelPlayEvent.start),
+        ('zip_1_01', LevelPlayEvent.clear),
+      ]);
+      await bloc.close();
+    });
+
+    test('resuming a saved run is not a start', () async {
+      drafts.runs['zip_level_zip_1_01'] = InProgressRun(
+        gameId: 'zip',
+        playId: 'level_zip_1_01',
+        elapsedMs: 1000,
+        board: const {'path': []},
+      );
+      final bloc = build('zip_1_01');
+      bloc.add(const ZipEvent.started());
+      await ready(bloc);
+      expect(plays.events, isEmpty);
+      await bloc.close();
+    });
+
+    test('each hint counts; Reset does not start a run', () async {
+      final bloc = build('zip_1_01');
+      bloc.add(const ZipEvent.started());
+      await ready(bloc);
+      bloc.add(const ZipEvent.hint());
+      await bloc.stream.firstWhere((s) => s.usedHintsThisRun);
+      bloc.add(const ZipEvent.reset());
+      await pumpEventQueue();
+      expect(plays.events, [
+        ('zip_1_01', LevelPlayEvent.start),
+        ('zip_1_01', LevelPlayEvent.hint),
+      ]);
+      await bloc.close();
+    });
+
+    test('a Replay of a cleared level is a new start', () async {
+      final first = build('zip_1_01');
+      first.add(const ZipEvent.started());
+      await ready(first);
+      await finish(first);
+      await first.close();
+
+      final replay = build('zip_1_01');
+      replay.add(const ZipEvent.started());
+      await ready(replay);
+      expect(
+        plays.events.where((e) => e.$2 == LevelPlayEvent.start),
+        hasLength(2),
+      );
+      await replay.close();
+    });
+
+    test('a level that fails to load counts nothing', () async {
+      final bloc = build('zip_1_02', gated: true);
+      bloc.add(const ZipEvent.started());
+      expect((await ready(bloc)).status, ZipStatus.failed);
+      expect(plays.events, isEmpty);
+      await bloc.close();
+    });
+  });
 
   test(
     'a locked level fails with the locked message and keeps its draft',

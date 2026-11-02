@@ -31,6 +31,7 @@ import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/get_clear_board.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/record_level_clear.dart';
+import '../../../domain/usecases/record_level_play.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
@@ -155,6 +156,9 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
           : null,
       levelProgress: widget.mode.isLevel
           ? context.read<LevelProgressRepository>()
+          : null,
+      recordLevelPlay: widget.mode.isLevel
+          ? context.read<RecordLevelPlay>().call
           : null,
     );
     _bloc.add(ZipEvent.started(date: widget.date));

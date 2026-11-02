@@ -41,6 +41,7 @@ import 'package:winklo/data/repositories/leaderboard_repository_impl.dart';
 import 'package:winklo/data/repositories/league_repository_impl.dart';
 import 'package:winklo/data/repositories/level_progress_remote_repository_impl.dart';
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
+import 'package:winklo/data/repositories/level_play_stats_repository_impl.dart';
 import 'package:winklo/data/repositories/level_world_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
@@ -114,6 +115,7 @@ import 'package:winklo/domain/usecases/load_game_history.dart';
 import 'package:winklo/domain/usecases/record_app_open.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/record_level_clear.dart';
+import 'package:winklo/domain/usecases/record_level_play.dart';
 import 'package:winklo/domain/usecases/report_client_error.dart';
 import 'package:winklo/domain/usecases/schedule_engagement_notifications.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
@@ -500,6 +502,16 @@ List<SingleChildWidget> buildRepositoryProviders({
       create: (context) => RecordLevelClear(
         context.read<LevelProgressRepository>(),
         context.read<AnalyticsRepository>(),
+      ),
+    ),
+    RepositoryProvider<RecordLevelPlay>(
+      create: (context) => RecordLevelPlay(
+        auth: context.read<AuthRepository>(),
+        stats: LevelPlayStatsRepositoryImpl(),
+        isRemoteAvailable: () => FirebaseBootstrap.isReady,
+        reportClientError: clientErrorRepository == null
+            ? null
+            : ReportClientError(clientErrorRepository),
       ),
     ),
     RepositoryProvider<SyncLevelProgress>(

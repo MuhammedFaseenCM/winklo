@@ -18,6 +18,7 @@ import '../../../domain/play_mode.dart';
 import '../../../domain/play_period.dart';
 import '../../../domain/play_run_clock.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/level_play_stats_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
 import '../../../domain/repositories/level_progress_repository.dart';
@@ -61,6 +62,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     this.levelWorlds,
     this.recordLevelClear,
     this.levelProgress,
+    this.recordLevelPlay,
     ZipLevel Function(int seed)? practiceLevel,
     int Function()? newPracticeSeed,
     this.celebrationDuration = const Duration(seconds: 2),
@@ -140,6 +142,23 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
   /// The player's level progress, so a locked level can't be played (a
   /// link can name any published level). Null skips the check.
   final LevelProgressRepository? levelProgress;
+
+  /// Counts level starts, clears and hints for the admin (a
+  /// `RecordLevelPlay`); null records nothing. Never awaited: a counter
+  /// must not hold up play.
+  final Future<void> Function({
+    required String game,
+    required String levelId,
+    required LevelPlayEvent event,
+  })?
+  recordLevelPlay;
+
+  void _countPlay(LevelPlayEvent event) {
+    final slot = _levelSlot;
+    final record = recordLevelPlay;
+    if (!mode.isLevel || slot == null || record == null) return;
+    unawaited(record(game: GameIds.zip, levelId: slot.entry.id, event: event));
+  }
 
   /// The level on screen and where it sits on the map; null outside level
   /// runs and until the board has loaded. Read by the screen on rebuild; it
@@ -425,6 +444,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       ),
     );
     await _persistDraft();
+    _countPlay(LevelPlayEvent.hint);
     await analytics.logHintUsed(
       gameId: GameIds.zip,
       hintsUsed: spent.hintsUsed,
@@ -600,6 +620,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
         path: draft == null ? const <Cell>[] : _pathFromDraft(draft),
       ),
     );
+    if (draft == null) _countPlay(LevelPlayEvent.start);
     // Keep the practice seed, so leaving and coming back finds this board.
     if (draft == null && mode.isPractice) await _persistDraft();
     await analytics.logGameStarted(
@@ -702,6 +723,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       usedHints: usedHints,
       seconds: elapsed,
     );
+    _countPlay(LevelPlayEvent.clear);
     await analytics.logGameCompleted(
       gameId: GameIds.zip,
       points: points,

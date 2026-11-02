@@ -13,6 +13,8 @@ import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/play_mode.dart';
 import 'package:winklo/domain/play_mode_hints.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
+import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/repositories/level_play_stats_repository.dart';
 import 'package:winklo/domain/repositories/in_progress_run_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
@@ -25,6 +27,7 @@ import 'package:winklo/domain/usecases/get_clear_board.dart';
 import 'package:winklo/domain/usecases/is_new_personal_best.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/record_level_clear.dart';
+import 'package:winklo/domain/usecases/record_level_play.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/features/zip/view/zip_screen.dart';
@@ -75,6 +78,18 @@ class _NoDrafts implements InProgressRunRepository {
   Future<void> save(InProgressRun run) async {}
   @override
   Future<void> clear({required String gameId, required String playId}) async {}
+}
+
+class _MockAuth extends Mock implements AuthRepository {}
+
+class _NoStats implements LevelPlayStatsRepository {
+  @override
+  Future<void> increment(
+    String uid,
+    String game,
+    String levelId,
+    LevelPlayEvent event,
+  ) => Future.value();
 }
 
 /// The repositories ZipScreen reads, around [child].
@@ -132,6 +147,9 @@ Future<Widget> withRepositories(
       RepositoryProvider<LevelProgressRepository>.value(value: levelProgress),
       RepositoryProvider<RecordLevelClear>.value(
         value: RecordLevelClear(levelProgress, analytics),
+      ),
+      RepositoryProvider<RecordLevelPlay>.value(
+        value: RecordLevelPlay(auth: _MockAuth(), stats: _NoStats()),
       ),
     ],
     child: child,
