@@ -22,7 +22,7 @@ A **Levels** page in winklo-admin with three tabs: **Worlds** (see, edit, genera
 | Where plays live | **Counters**, one doc per player per game, `users/{uid}/level_stats/{game}`, written with server-side increments. Not a per-run log, not GA4 |
 | Unfinished runs | **Derived**: `starts − clears`. The app never detects a quit |
 | Who does the maths | The Worker **fetches and trims**; the browser **aggregates** (`levelsModel.ts`, pure TS) |
-| Read cost | One load ≈ 2 reads per player who has played Levels, cached 5 minutes. A nightly rollup is out of scope until the player count needs it |
+| Read cost | One load ≈ 2 reads per player who has played Levels, cached 5 minutes, and capped at 1,000 docs per collection group (the Worker's CPU on the Workers Free plan is the limit). A capped load says so; a nightly rollup is out of scope until the player count needs it |
 | Editing progress | **Read-only.** Admin never changes a player's progress or counters |
 
 ## 1. App: recording plays
@@ -51,7 +51,7 @@ All in `ZipBloc` level mode, through a new domain interface `LevelPlayStatsRepos
 |---|---|---|
 | A new run starts | the board loads with **no saved run**: a first play, a Replay, a draft dropped for a changed board | `starts` +1, `lastPlayedAt` |
 | A run is cleared | `_finishLevel`, next to `recordLevelClear` | `clears` +1, `lastPlayedAt` |
-| A hint is spent | the hint handler, level mode only | `hints` +1 |
+| A hint is spent | the hint handler, level mode only | `hints` +1, `lastPlayedAt` |
 
 - Resuming a saved run is **not** a start. Reset (clear the path, keep the run) is **not** a start.
 - Writes are fire-and-forget: never awaited by the UI, never blocking play. A failure goes through the existing client-error report (code `level_stats_write_failed`, rate-limited like `level_progress_sync_failed`).
@@ -123,7 +123,7 @@ All routes go behind the existing `requireAdmin`. `:game` accepts only `zip` for
 
 | Route | Does |
 |---|---|
-| `GET /v1/levels/:game/worlds` | Every world, published or not: `order`, `theme`, `title`, size, level count, `published`, `updatedAt` (no boards) |
+| `GET /v1/levels/:game/worlds` | Every world of the game, published or not: `id`, `order`, `theme`, `title`, `published`, `updatedAt`, and per level `{id, size, targetSeconds}` (no boards) |
 | `GET /v1/levels/:game/worlds/:order` | One world in full, plus its Firestore `updateTime` |
 | `PUT /v1/levels/:game/worlds/:order` | Save (create or replace). Body includes the `updateTime` it loaded (absent for a new world) |
 | `POST /v1/levels/:game/worlds/:order/publish` | Publish |
@@ -167,9 +167,13 @@ Board coordinates: Firestore can't hold an array directly inside an array, so `l
       "hasCounters": true,                                                   // false when no level_stats doc
       "updatedAt": "2026-11-02T10:00:00Z"                                    // the later of the two docs
     }
-  ]
+  ],
+  "truncated": false,                                                        // true when a collection group hit the cap
+  "limit": 1000                                                              // docs read per collection group at most
 }
 ```
+
+- **The cap.** Each collection group is read 500 docs a page, 2 pages at most (≤ 1,000 docs), ordered by document name. A truncated load drops players past the earlier of the two groups' cutoffs, so no player comes back half-joined; the Players and Stats tabs show a warning with the limit. Check the Worker's CPU time in the Cloudflare dashboard before raising it.
 
 - **The Worker only trims.** It drops invalid values with the app's rules (stars 1–3, best time ≥ 1, counters whole numbers ≥ 0) and sends nothing else. All counting, joining with worlds and sorting is in the browser. This keeps the Worker's CPU time small on its plan.
 - Collection-group queries with no filter need no new index.
@@ -205,7 +209,7 @@ Inputs: size (4–8) and level count (default 20). Output replaces the draft's l
 | Player | name and email from the existing `/v1/platform/users/lookup` route, in batches; the uid under it. A uid with no Auth account shows "Deleted account" |
 | Current level | the first published level, in map order, that isn't cleared; "All cleared" when none |
 | Cleared | records ∩ published levels, as "14 / 40" |
-| Stars | sum of stars, as "35 / 120" |
+| Stars | sum of stars, as "35 / 118": each level counts up to 3 stars, or 2 when it has no target time (as the app does) |
 | Starts | sum of `starts`, or "—" without counters |
 | Unfinished | sum of `max(0, starts − clears)`, or "—" |
 | Hints | sum of `hints`, or "—" |
@@ -231,7 +235,7 @@ Per level:
 | Tries per clear | Σ starts ÷ Σ clears, players with counters only |
 | Unfinished | Σ `max(0, starts − clears)`, players with counters only |
 
-A **drop-off chart** shows players by the furthest level cleared, a bar per level, in the Analytics page's chart style and colours. A level where the bars step down sharply is a level that stops people.
+A **"Where players are stuck" chart** (the repo's `RankedBars`) shows players by the level they are on now — their first uncleared level — a bar per map level in map order, with players who cleared everything counted separately below it. A long bar is a level that stops people. (Built this way instead of "furthest level cleared": that version hid players who tried Level 1 and quit, and showed finished players as drop-off at the last level.)
 
 Players without counters are left out of the counter columns, and the tab says how many that is ("Play counts cover 31 of 42 players").
 
