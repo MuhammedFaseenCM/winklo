@@ -185,22 +185,23 @@ A **Levels** item in the sidebar (lucide icon, matching the others), lazy-loaded
 ### Worlds tab
 
 - **List** (plan 2a, read-only): a card per world — "World N · Theme", board size, level count, a Published or Draft badge, last updated.
-- **New world** (2b): the next order, size defaulting to order + 3, theme defaulting to the next of Ink → Metro → Embroidery → Neon → Sparkler.
-- **World page** `/levels/zip/:order` (2b):
-  - Header: theme dropdown, title, Save, Publish or Unpublish, Generate world (drafts only), Delete (drafts with no later world).
-  - A row per level: Level N (worked out across published worlds, as in the app), id, number count, wall count, target time.
-  - A row opens the existing **`ZipBoardEditor`** with a target-time field, checked live by `validateZip`.
+- **New world** (2b): a "New world" button navigates to the next free order with `?new=1`, size defaulting to `clamp(order + 3, 4, 8)`, theme defaulting to the next of Ink → Metro → Embroidery → Neon → Sparkler (`LEVEL_THEMES[(order-1) % 5]`).
+- **World page** `/levels/:game/worlds/:order` (2b; `?new=1` with no stored world starts a draft instead of loading one — "new" is a query flag, not a route):
+  - Header: theme dropdown, title, Save (disabled when not dirty), Publish or Unpublish (disabled with "Save first" while dirty, so an admin can never publish unsaved changes), Generate world (drafts only), Delete (drafts with no later world; `typeToConfirm: 'delete'`).
+  - A row per level: `#{position}` and the id (the level's global number across published worlds isn't known on this page), number count, wall count, target time.
+  - A row opens the existing **`ZipBoardEditor`** with a target-time field, checked live by `validateZip`. **The editor fixes the level's board size to the world's size** (from the first level, or Generate's `size` input for an empty world); the board size doesn't change in the per-level editor — a size mismatch is refused inline and the old board kept. Only Generate world sets a world's board size.
   - Adding, removing and reordering levels is disabled on a published world, with a line saying why.
   - Leaving with unsaved changes asks first (`useUnsavedChanges`).
+  - **Stale save**: a concurrent edit returns `world_changed` ("Changed elsewhere. Reload to see the latest."), shown inline with a Reload action that re-seeds the draft from the server; a create race (two admins both saving a brand-new world at the same order) returns `world_exists` ("A world with this number was created meanwhile. Reload the worlds."). A `world_changed` refusal on Publish, Unpublish or Delete surfaces the same Reload action in place, rather than only on Save — Delete's confirm dialog re-sends the `updateTime` it captured on open, so after reloading, reopen Delete to retry with the fresh value.
 
 ### Generate world (2b)
 
-Inputs: size (4–8) and level count (default 20). Output replaces the draft's levels after a confirm.
+Inputs: board size (4–8, default `clamp(order + 3, 4, 8)` or the world's current size) and level count (1–`MAX_WORLD_LEVELS` (40), default 20). On a draft that already has levels, Generate confirms ("Replace all N levels?", tone warn) before replacing them; a decline or Stop leaves the old levels untouched. Output replaces the draft's levels only on success — never on cancel or error.
 
-- For level *i* of *N* (`t = i / (N − 1)`, `t = 0` when `N = 1`): numbers fall and walls rise linearly between per-size bounds (`levelRamp(size, t)` in a new `levelRamp.ts`, beside `zipDifficulty.ts`). Early levels have many numbers and no walls; the last ones are as sparse as the daily "Hard" band.
-- Boards come from the existing seeded `generateZip`, extended with an optional exact `{numbers, walls}` count, run in the existing generator web worker. The seed is derived from world order and level index, so a regenerate is reproducible.
-- Each board must pass `validateZip`; a failure retries with the next seed (bounded; after the bound, generation stops and names the level).
-- Suggested `targetSeconds` = round(size² × seconds per cell): 4×4 → 1.25, 5×5 → 1.2, 6×6 → 1.15, 7×7 → 1.1, 8×8 → 1.05 (4×4 → 20 s, as the Zip Levels spec's example). Starting values, editable per level.
+- For level *i* of *N* (`t = i / (N − 1)`, `t = 0` when `N = 1`): numbers fall and walls rise linearly between per-size bounds — `rampBounds(size) = { maxNumbers: size + 4, minNumbers: max(4, size − 2), maxWalls: 2×size − 4 }`, `levelRamp(size, i, N) = { numbers: round(maxNumbers + (minNumbers − maxNumbers) × t), walls: round(maxWalls × t) }` (`src/pages/content/generators/levelRamp.ts`, beside `zipDifficulty.ts`). Early levels have many numbers and no walls; the last ones are as sparse as the daily "Hard" band.
+- Boards come from the existing seeded `generateZip`, extended with an optional exact `{numbers, walls}` count (from `levelRamp`), run one board at a time in the existing generator web worker (never in parallel). The seed is `worldLevelSeed(order, index, attempt) = order × 1,000,000 + attempt × 1,000 + index + 1`, so a regenerate of the same world/size/count is reproducible.
+- Each board must pass `validateZip`; a failure retries with the next `attempt`, up to 5 attempts, then generation stops and names the level ("Level 7 couldn't be generated. Try again or change the size.").
+- Suggested `targetSeconds` = `round(size² × secondsPerCell[size])`, `secondsPerCell = {4: 1.25, 5: 1.2, 6: 1.15, 7: 1.1, 8: 1.05}` (4×4 → 20 s, as the Zip Levels spec's example; 8×8 → 67 s). Starting values, editable per level in the board editor.
 
 ### Players tab (2a)
 
