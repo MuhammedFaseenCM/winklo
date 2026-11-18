@@ -585,6 +585,9 @@ abstract interface class AppText {
   String get levelReplay;
   String levelStarsLabel(int stars, int maxStars);
   String get levelAllDone;
+  String get levelStarGoals;
+  String levelTimeLeft(String time);
+  String levelGoalOpen(String goal);
 
   // Copy moved out of widgets and repositories (roadmap area G)
   String get resultsTitle;

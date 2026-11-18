@@ -661,6 +661,9 @@ abstract final class AppStrings {
   static String levelStarsLabel(int stars, int maxStars) =>
       _t.levelStarsLabel(stars, maxStars);
   static String get levelAllDone => _t.levelAllDone;
+  static String get levelStarGoals => _t.levelStarGoals;
+  static String levelTimeLeft(String time) => _t.levelTimeLeft(time);
+  static String levelGoalOpen(String goal) => _t.levelGoalOpen(goal);
 
   // Copy moved out of widgets and repositories (roadmap area G)
   static String get resultsTitle => _t.resultsTitle;

@@ -90,7 +90,9 @@ void main() {
     final visited = await openSheet(tester, 'zip_1_01');
     expect(find.text('World 1 · Ink'), findsOneWidget);
     expect(find.text('Level 1'), findsOneWidget);
-    expect(find.text('3 × 3 · Best 0:17'), findsOneWidget);
+    expect(find.text('3 × 3'), findsOneWidget);
+    expect(find.text('Best 0:17'), findsOneWidget);
+    expect(find.text('STAR GOALS'), findsOneWidget);
     expect(find.text('Clear the board'), findsOneWidget);
     expect(find.text('No hints'), findsOneWidget);
     expect(find.text('0:30 or less'), findsOneWidget);

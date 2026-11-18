@@ -1630,6 +1630,15 @@ final class AppTextEn implements AppText {
   @override
   String get levelAllDone => 'More worlds coming soon';
 
+  @override
+  String get levelStarGoals => 'Star goals';
+
+  @override
+  String levelTimeLeft(String time) => '$time left';
+
+  @override
+  String levelGoalOpen(String goal) => '$goal, still possible';
+
   // Copy moved out of widgets and repositories (roadmap area G)
   @override
   String get resultsTitle => 'Results';

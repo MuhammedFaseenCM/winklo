@@ -34,26 +34,47 @@ ResultsArgs args({
   ),
 );
 
-Future<void> pump(WidgetTester tester, ResultsArgs value) =>
-    tester.pumpWidget(MaterialApp(home: LevelResultsView(args: value)));
+/// A phone-sized window, so the whole screen is built.
+void phoneSize(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+}
+
+Future<void> pump(WidgetTester tester, ResultsArgs value) async {
+  phoneSize(tester);
+  await tester.pumpWidget(MaterialApp(home: LevelResultsView(args: value)));
+  await tester.pumpAndSettle();
+}
 
 /// Where the routed view last went to the map: its uri and extra.
 final mapVisits = <(Uri, Object?)>[];
+
+/// Where the routed view last went to a board.
+final zipVisits = <Uri>[];
 
 Future<MockAnalyticsRepository> pumpRouted(
   WidgetTester tester,
   ResultsArgs value,
 ) async {
+  phoneSize(tester);
   final analytics = MockAnalyticsRepository();
   stubAnalytics(analytics);
   mapVisits.clear();
+  zipVisits.clear();
   final router = GoRouter(
     routes: [
       GoRoute(
         path: '/',
         builder: (_, _) => LevelResultsView(args: value),
       ),
-      GoRoute(path: '/zip', builder: (_, _) => const Scaffold()),
+      GoRoute(
+        path: '/zip',
+        builder: (_, state) {
+          zipVisits.add(state.uri);
+          return const Text('board');
+        },
+      ),
       GoRoute(
         path: '/levels',
         builder: (_, state) {
@@ -70,6 +91,7 @@ Future<MockAnalyticsRepository> pumpRouted(
       child: MaterialApp.router(routerConfig: router),
     ),
   );
+  await tester.pumpAndSettle();
   return analytics;
 }
 
@@ -89,7 +111,9 @@ void main() {
     );
     expect(find.text('Level 7 cleared'), findsOneWidget);
     expect(find.text('Level 7 · Ink'), findsOneWidget);
-    expect(find.text('0:24 · Target 0:30'), findsOneWidget);
+    expect(find.text('0:24'), findsOneWidget);
+    expect(find.text('Target 0:30'), findsOneWidget);
+    expect(find.bySemanticsLabel('3 of 3 stars'), findsOneWidget);
     expect(find.text('Clear the board'), findsOneWidget);
     expect(find.text('No hints'), findsOneWidget);
     expect(find.text('0:30 or less'), findsOneWidget);
@@ -211,7 +235,7 @@ void main() {
     ).called(1);
   });
 
-  testWidgets('Next level opens the next level on the map', (tester) async {
+  testWidgets('Next level opens the next level\'s board', (tester) async {
     final analytics = await pumpRouted(
       tester,
       args(
@@ -226,10 +250,9 @@ void main() {
     );
     await tester.tap(find.text('Next level'));
     await tester.pumpAndSettle();
-    expect(find.text('map'), findsOneWidget);
-    expect(mapVisits.last.$1.toString(), '/levels?open=zip_1_08');
-    // A fresh token each time, so the map reopens the sheet.
-    expect(mapVisits.last.$2, isA<int>());
+    expect(find.text('board'), findsOneWidget);
+    expect(zipVisits.last.toString(), '/zip?mode=level&level=zip_1_08');
+    expect(mapVisits, isEmpty);
     verify(
       () => analytics.logResultsAction(gameId: 'zip', action: 'next_level'),
     ).called(1);
@@ -276,5 +299,7 @@ void main() {
       ),
     );
     expect(find.byType(LevelResultsView), findsOneWidget);
+    // Let the stars finish popping in.
+    await tester.pumpAndSettle();
   });
 }

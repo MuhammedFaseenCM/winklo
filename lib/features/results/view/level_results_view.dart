@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,15 +8,15 @@ import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_icon.dart';
+import '../../../core/widgets/level_goals.dart';
 import '../../../core/widgets/zip_ui.dart';
+import '../../../domain/play_mode.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../results_args.dart';
 
-/// Results of a cleared level: the time against the target, the three goals
-/// (earned, or how to earn them), what improved, and the next level.
-///
-/// Deliberately still: the level's reward is the line drawn on the map
-/// (Levels plan 3), not an effect here.
+/// Results of a cleared level: the stars this run earned, the time against
+/// the target, the goals (earned, or how to earn them), what improved, and
+/// the next level.
 class LevelResultsView extends StatelessWidget {
   const LevelResultsView({super.key, required this.args});
 
@@ -37,9 +38,9 @@ class LevelResultsView extends StatelessWidget {
     final theme = Theme.of(context);
     final time = AppStrings.formatPlayTime(args.timeSeconds);
     final target = level.targetSeconds;
-    final targetText = target == null
-        ? null
-        : AppStrings.formatPlayTime(target);
+    final hasTarget = target != null && target > 0;
+    final targetText = hasTarget ? AppStrings.formatPlayTime(target) : null;
+    final maxStars = hasTarget ? 3 : 2;
     final next = level.nextLevelId;
     final again = info.againLocation;
     final newBest = level.moreStars
@@ -52,55 +53,61 @@ class LevelResultsView extends StatelessWidget {
       body: ZipAtmosphere(
         child: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+            padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
             children: [
+              _StarHero(stars: level.runStars, maxStars: maxStars),
+              const SizedBox(height: 18),
               Text(
                 args.title,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                info.label,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: ZipColors.inkSoft,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                targetText == null
-                    ? time
-                    : '$time · ${AppStrings.levelTarget(targetText)}',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: ZipColors.ember,
+                style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w900,
                 ),
-              ),
-              if (newBest != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  newBest,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: ZipColors.success,
-                  ),
+              ).animate().fadeIn(delay: 150.ms, duration: 350.ms),
+              const SizedBox(height: 8),
+              Center(
+                child: _Pill(
+                  icon: AppIcons.levels,
+                  text: info.label,
+                  color: ZipColors.sky,
                 ),
-              ],
-              const SizedBox(height: 20),
-              _Goal(earned: true, label: AppStrings.levelGoalClear),
-              _Goal(
-                earned: level.noHintsEarned,
-                label: AppStrings.levelGoalNoHints,
-                how: AppStrings.levelGoalNoHintsHow,
               ),
-              if (targetText != null)
-                _Goal(
-                  earned: level.timeEarned,
-                  label: AppStrings.levelGoalUnder(targetText),
-                  how: AppStrings.levelGoalUnderHow(targetText),
-                ),
+              const SizedBox(height: 22),
+              _TimeCard(
+                    time: time,
+                    targetText: targetText,
+                    beatTarget: level.timeEarned,
+                    newBest: newBest,
+                  )
+                  .animate()
+                  .fadeIn(delay: 250.ms, duration: 350.ms)
+                  .slideY(begin: 0.08, end: 0),
+              const SizedBox(height: 14),
+              _GoalsCard(
+                    children: [
+                      _Goal(
+                        kind: LevelGoalKind.clear,
+                        earned: true,
+                        label: AppStrings.levelGoalClear,
+                      ),
+                      _Goal(
+                        kind: LevelGoalKind.noHints,
+                        earned: level.noHintsEarned,
+                        label: AppStrings.levelGoalNoHints,
+                        how: AppStrings.levelGoalNoHintsHow,
+                      ),
+                      if (targetText != null)
+                        _Goal(
+                          kind: LevelGoalKind.time,
+                          earned: level.timeEarned,
+                          label: AppStrings.levelGoalUnder(targetText),
+                          how: AppStrings.levelGoalUnderHow(targetText),
+                        ),
+                    ],
+                  )
+                  .animate()
+                  .fadeIn(delay: 350.ms, duration: 350.ms)
+                  .slideY(begin: 0.08, end: 0),
               const SizedBox(height: 24),
               if (next != null)
                 ZipPrimaryButton(
@@ -114,37 +121,52 @@ class LevelResultsView extends StatelessWidget {
                       level.opensNewWorld ? 'open_world' : 'next_level',
                     );
                     if (!context.mounted) return;
-                    // A fresh map, so the sheet opens even if it was the
-                    // level opened last time.
-                    context.go(
-                      levelsOpenLocation(next),
-                      extra: levelsVisitToken(),
+                    // Straight into the next board, in Results' place, so
+                    // Back from it lands on the map. The player is signed
+                    // in (they just played) and the clear unlocked it.
+                    context.pushReplacement(
+                      PlayMode.level(next).location('/zip'),
                     );
                   },
                 )
               else
-                Text(
-                  AppStrings.levelAllDone,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium,
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    AppStrings.levelAllDone,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium,
+                  ),
                 ),
-              const SizedBox(height: 6),
-              if (again != null)
-                TextButton(
-                  onPressed: () async {
-                    await _log(context, 'replay');
-                    if (!context.mounted) return;
-                    context.pushReplacement(again);
-                  },
-                  child: Text(AppStrings.levelReplay),
-                ),
-              TextButton(
-                onPressed: () async {
-                  await _log(context, 'map');
-                  if (!context.mounted) return;
-                  context.go(levelsLocation, extra: levelsVisitToken());
-                },
-                child: Text(AppStrings.levelBackToMap),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (again != null) ...[
+                    Expanded(
+                      child: _SecondaryButton(
+                        icon: AppIcons.replay,
+                        label: AppStrings.levelReplay,
+                        onPressed: () async {
+                          await _log(context, 'replay');
+                          if (!context.mounted) return;
+                          context.pushReplacement(again);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: _SecondaryButton(
+                      icon: AppIcons.levels,
+                      label: AppStrings.levelBackToMap,
+                      onPressed: () async {
+                        await _log(context, 'map');
+                        if (!context.mounted) return;
+                        context.go(levelsLocation, extra: levelsVisitToken());
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -154,9 +176,182 @@ class LevelResultsView extends StatelessWidget {
   }
 }
 
-class _Goal extends StatelessWidget {
-  const _Goal({required this.earned, required this.label, this.how});
+/// The run's stars, the middle one raised, popping in one after another.
+class _StarHero extends StatelessWidget {
+  const _StarHero({required this.stars, required this.maxStars});
 
+  final int stars;
+  final int maxStars;
+
+  @override
+  Widget build(BuildContext context) {
+    final middle = (maxStars - 1) / 2;
+    return Semantics(
+      label: AppStrings.levelStarsLabel(stars, maxStars),
+      excludeSemantics: true,
+      child: SizedBox(
+        height: 96,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            for (var i = 0; i < maxStars; i++)
+              Padding(
+                padding: EdgeInsets.only(
+                  left: i == 0 ? 0 : 6,
+                  bottom: (i - middle).abs() < 0.6 ? 18 : 0,
+                ),
+                child: _HeroStar(
+                  earned: i < stars,
+                  size: (i - middle).abs() < 0.6 ? 72 : 58,
+                  delay: Duration(milliseconds: 120 + 160 * i),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroStar extends StatelessWidget {
+  const _HeroStar({
+    required this.earned,
+    required this.size,
+    required this.delay,
+  });
+
+  final bool earned;
+  final double size;
+  final Duration delay;
+
+  @override
+  Widget build(BuildContext context) {
+    final star = DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: earned
+            ? [
+                BoxShadow(
+                  color: ZipColors.star.withValues(alpha: 0.35),
+                  blurRadius: size * 0.45,
+                ),
+              ]
+            : const [],
+      ),
+      child: AppIcon(
+        earned ? AppIcons.star : AppIcons.starOutline,
+        size: size,
+        color: earned ? ZipColors.star : ZipColors.outline,
+      ),
+    );
+    if (!earned) return star.animate().fadeIn(delay: delay, duration: 300.ms);
+    return star
+        .animate()
+        .fadeIn(delay: delay, duration: 200.ms)
+        .scaleXY(
+          delay: delay,
+          begin: 0.3,
+          end: 1,
+          duration: 450.ms,
+          curve: Curves.easeOutBack,
+        );
+  }
+}
+
+/// The run's time, big, beside the target, with what improved under them.
+class _TimeCard extends StatelessWidget {
+  const _TimeCard({
+    required this.time,
+    required this.targetText,
+    required this.beatTarget,
+    required this.newBest,
+  });
+
+  final String time;
+  final String? targetText;
+  final bool beatTarget;
+  final String? newBest;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final targetText = this.targetText;
+    final timeColor = targetText == null || beatTarget
+        ? ZipColors.success
+        : ZipColors.ember;
+    return _Card(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppIcon(AppIcons.timer, size: 26, color: timeColor),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  time,
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    color: timeColor,
+                    fontWeight: FontWeight.w900,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (targetText != null) ...[
+            const SizedBox(height: 8),
+            _Pill(
+              icon: beatTarget ? AppIcons.checkCircle : AppIcons.flag,
+              text: AppStrings.levelTarget(targetText),
+              color: beatTarget ? ZipColors.success : ZipColors.inkSoft,
+            ),
+          ],
+          if (newBest != null) ...[
+            const SizedBox(height: 10),
+            _Pill(
+              icon: AppIcons.sparkle,
+              text: newBest!,
+              color: ZipColors.star,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GoalsCard extends StatelessWidget {
+  const _GoalsCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      child: Column(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const Divider(height: 1, color: ZipColors.outlineQuiet),
+            children[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Goal extends StatelessWidget {
+  const _Goal({
+    required this.kind,
+    required this.earned,
+    required this.label,
+    this.how,
+  });
+
+  final LevelGoalKind kind;
   final bool earned;
   final String label;
 
@@ -169,38 +364,155 @@ class _Goal extends StatelessWidget {
     final spoken = earned
         ? AppStrings.levelGoalEarned(label)
         : [AppStrings.levelGoalMissed(label), ?how].join('. ');
+    final accent = !earned
+        ? ZipColors.outline
+        : switch (kind) {
+            LevelGoalKind.clear => ZipColors.success,
+            LevelGoalKind.noHints => ZipColors.sky,
+            LevelGoalKind.time => ZipColors.ember,
+          };
+    final icon = switch (kind) {
+      LevelGoalKind.clear => AppIcons.flag,
+      LevelGoalKind.noHints => AppIcons.noHints,
+      LevelGoalKind.time => AppIcons.timer,
+    };
     return Semantics(
+      container: true,
       label: spoken,
       excludeSemantics: true,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppIcon(
-              earned ? AppIcons.star : AppIcons.starOutline,
-              size: 22,
-              color: earned ? ZipColors.star : ZipColors.outline,
+            Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: accent.withValues(alpha: 0.16),
+              ),
+              child: AppIcon(icon, size: 20, color: accent),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: theme.textTheme.bodyLarge),
-                  if (!earned && how != null)
+                  Text(
+                    label,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: earned ? ZipColors.onInk : ZipColors.inkSoft,
+                    ),
+                  ),
+                  if (!earned && how != null) ...[
+                    const SizedBox(height: 2),
                     Text(
                       how!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: ZipColors.ember,
                       ),
                     ),
+                  ],
                 ],
               ),
+            ),
+            const SizedBox(width: 8),
+            AppIcon(
+              earned ? AppIcons.star : AppIcons.starOutline,
+              size: 24,
+              color: earned ? ZipColors.star : ZipColors.outline,
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _Card extends StatelessWidget {
+  const _Card({
+    required this.child,
+    this.padding = const EdgeInsets.fromLTRB(16, 18, 16, 18),
+  });
+
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        gradient: ZipColors.cardGradient,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: ZipColors.glassBorder),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.icon, required this.text, required this.color});
+
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ExcludeSemantics(child: AppIcon(icon, size: 14, color: color)),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SecondaryButton extends StatelessWidget {
+  const _SecondaryButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: ZipColors.onInk,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        side: const BorderSide(color: ZipColors.outline),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      icon: AppIcon(icon, size: 18),
+      label: Text(label),
     );
   }
 }

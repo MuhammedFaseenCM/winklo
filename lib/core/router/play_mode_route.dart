@@ -7,7 +7,7 @@ const moreWaysLocation = '/more';
 /// The Levels tab.
 const levelsLocation = '/levels';
 
-/// The Levels tab with [levelId]'s sheet open (Results' Next level).
+/// The Levels tab with [levelId]'s sheet open.
 String levelsOpenLocation(String levelId) => '$levelsLocation?open=$levelId';
 
 int _lastLevelsVisitToken = 0;

@@ -15,6 +15,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
+import '../../../core/widgets/level_goals.dart';
 import '../../../core/widgets/play_mode_strip.dart';
 import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
@@ -166,14 +167,12 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
     _maybeShowTutorial(_bloc.state);
   }
 
-  /// "Level 7 · Ink · Target 0:30" once a level's board has loaded.
+  /// "Level 7 · Ink" once a level's board has loaded; the target lives in
+  /// the star goals under it.
   String? _levelLabel() {
     final slot = _bloc.levelSlot;
     if (slot == null) return null;
-    final base = AppStrings.levelRunLabel(slot.number, slot.world.theme);
-    final target = slot.entry.targetSeconds;
-    if (target == null) return base;
-    return '$base · ${AppStrings.levelTarget(AppStrings.formatPlayTime(target))}';
+    return AppStrings.levelRunLabel(slot.number, slot.world.theme);
   }
 
   @override
@@ -297,6 +296,15 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                               }
                             : null,
                       ),
+                      if (_bloc.levelSlot case final slot?
+                          when !isLoading && !isFailed && !isReview)
+                        LevelGoalsBar(
+                          targetSeconds: slot.entry.targetSeconds,
+                          usedHints: state.usedHintsThisRun,
+                          elapsedMs: state.elapsedMs,
+                          resumedAt: state.resumedAt,
+                          cleared: finished,
+                        ),
                       if (isLoading)
                         Expanded(
                           child: Semantics(

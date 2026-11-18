@@ -5,6 +5,7 @@ import '../../../../core/strings/app_strings.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_icon.dart';
+import '../../../../core/widgets/level_goals.dart';
 import '../../../../core/widgets/zip_ui.dart';
 import '../../../../domain/entities/level_world.dart';
 import '../../../../domain/logic/level_map.dart';
@@ -26,6 +27,9 @@ Future<void> showLevelSheet(BuildContext context, LevelMapNode node) {
   return showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
+    // Sized to its content rather than capped at 9/16 of the screen, so
+    // Play never hides below the fold; it scrolls only on a short screen.
+    isScrollControlled: true,
     showDragHandle: true,
     backgroundColor: ZipColors.paper,
     builder: (_) => LevelSheet(node: node),
@@ -42,102 +46,119 @@ class LevelSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final slot = node.slot;
     final best = node.record?.bestSeconds;
-    final bestText = best == null
-        ? null
-        : AppStrings.levelBestTime(AppStrings.formatPlayTime(best));
-    final meta = [?levelBoardSize(slot.entry), ?bestText].join(' · ');
+    final size = levelBoardSize(slot.entry);
     final target = slot.entry.targetSeconds;
     final cleared = node.state == LevelNodeState.done;
+    // Stars are 1 (clear) + no hints + time, so all of them, or just the
+    // clear, say which goals are in; two of three could be either.
+    final allEarned = cleared && node.stars >= node.maxStars;
+    LevelGoalStatus extra() =>
+        allEarned ? LevelGoalStatus.earned : LevelGoalStatus.open;
+    final goals = [
+      LevelGoalTile(
+        kind: LevelGoalKind.clear,
+        label: AppStrings.levelGoalClear,
+        status: cleared ? LevelGoalStatus.earned : LevelGoalStatus.open,
+      ),
+      LevelGoalTile(
+        kind: LevelGoalKind.noHints,
+        label: AppStrings.levelGoalNoHints,
+        status: extra(),
+      ),
+      if (target != null)
+        LevelGoalTile(
+          kind: LevelGoalKind.time,
+          label: AppStrings.levelGoalUnder(AppStrings.formatPlayTime(target)),
+          status: extra(),
+        ),
+    ];
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                AppStrings.levelWorldTitle(slot.world.order, slot.world.theme),
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: ZipColors.inkSoft,
-                ),
-              ),
-              const SizedBox(height: 2),
               Row(
                 children: [
+                  _NumberBadge(number: slot.number, cleared: cleared),
+                  const SizedBox(width: 14),
                   Expanded(
-                    child: Text(
-                      AppStrings.levelNumber(slot.number),
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  if (meta.isNotEmpty)
-                    Flexible(
-                      child: Text(
-                        meta,
-                        textAlign: TextAlign.end,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: ZipColors.inkSoft,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              if (cleared) ...[
-                const SizedBox(height: 8),
-                Semantics(
-                  label: AppStrings.levelStarsLabel(node.stars, node.maxStars),
-                  excludeSemantics: true,
-                  child: Row(
-                    children: [
-                      for (var i = 0; i < node.maxStars; i++)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: AppIcon(
-                            i < node.stars
-                                ? AppIcons.star
-                                : AppIcons.starOutline,
-                            size: 20,
-                            color: i < node.stars
-                                ? ZipColors.star
-                                : ZipColors.outline,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppStrings.levelWorldTitle(
+                            slot.world.order,
+                            slot.world.theme,
+                          ),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: ZipColors.sky,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
                           ),
                         ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          AppStrings.levelNumber(slot.number),
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            height: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-              const SizedBox(height: 14),
-              for (final goal in [
-                AppStrings.levelGoalClear,
-                AppStrings.levelGoalNoHints,
-                if (target != null)
-                  AppStrings.levelGoalUnder(AppStrings.formatPlayTime(target)),
-              ])
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: Row(
-                    children: [
-                      const ExcludeSemantics(
-                        child: AppIcon(
-                          AppIcons.starOutline,
-                          size: 18,
-                          color: ZipColors.inkSoft,
+                  if (cleared) ...[
+                    const SizedBox(width: 8),
+                    _StarRow(stars: node.stars, maxStars: node.maxStars),
+                  ],
+                ],
+              ),
+              if (size != null || best != null) ...[
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (size != null)
+                      _InfoChip(icon: AppIcons.grid, text: size),
+                    if (best != null)
+                      _InfoChip(
+                        icon: AppIcons.clock,
+                        text: AppStrings.levelBestTime(
+                          AppStrings.formatPlayTime(best),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(goal, style: theme.textTheme.bodyLarge),
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
-              const SizedBox(height: 16),
+              ],
+              const SizedBox(height: 20),
+              Text(
+                AppStrings.levelStarGoals.toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: ZipColors.inkSoft,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 10),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < goals.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(child: goals[i]),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
               ZipPrimaryButton(
                 label: cleared ? AppStrings.levelReplay : AppStrings.levelPlay,
-                icon: AppIcons.play,
+                icon: cleared ? AppIcons.replay : AppIcons.play,
                 onPressed: () async {
                   final router = GoRouter.of(context);
                   final navigator = Navigator.of(context);
@@ -155,6 +176,120 @@ class LevelSheet extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The level's number in a coin: ember while it waits, gold once cleared.
+class _NumberBadge extends StatelessWidget {
+  const _NumberBadge({required this.number, required this.cleared});
+
+  final int number;
+  final bool cleared;
+
+  @override
+  Widget build(BuildContext context) {
+    final glow = cleared ? ZipColors.star : ZipColors.ember;
+    return ExcludeSemantics(
+      child: Container(
+        width: 56,
+        height: 56,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: cleared
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFCD34D), Color(0xFFF59E0B)],
+                )
+              : ZipColors.emberGradient,
+          boxShadow: [
+            BoxShadow(
+              color: glow.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Text(
+              '$number',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: cleared ? ZipColors.ink : Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StarRow extends StatelessWidget {
+  const _StarRow({required this.stars, required this.maxStars});
+
+  final int stars;
+  final int maxStars;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: AppStrings.levelStarsLabel(stars, maxStars),
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < maxStars; i++)
+            Padding(
+              padding: EdgeInsets.only(left: i == 0 ? 0 : 2),
+              child: AppIcon(
+                i < stars ? AppIcons.star : AppIcons.starOutline,
+                size: 22,
+                color: i < stars ? ZipColors.star : ZipColors.outline,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: ZipColors.wall,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: ZipColors.glassBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ExcludeSemantics(
+            child: AppIcon(icon, size: 14, color: ZipColors.inkSoft),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: ZipColors.onInk,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

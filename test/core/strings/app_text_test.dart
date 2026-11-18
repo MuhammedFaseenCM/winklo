@@ -535,6 +535,9 @@ final Map<String, String Function(AppText)> _members = {
   'levelReplay': (t) => t.levelReplay,
   'levelStarsLabel': (t) => t.levelStarsLabel(2, 3),
   'levelAllDone': (t) => t.levelAllDone,
+  'levelStarGoals': (t) => t.levelStarGoals,
+  'levelTimeLeft': (t) => t.levelTimeLeft('0:18'),
+  'levelGoalOpen': (t) => t.levelGoalOpen('No hints'),
 };
 
 /// Members that are deliberately the same in every language: the game names

@@ -1699,6 +1699,15 @@ final class AppTextMl implements AppText {
   @override
   String get levelAllDone => 'കൂടുതൽ ലോകങ്ങൾ ഉടൻ വരുന്നു';
 
+  @override
+  String get levelStarGoals => 'നക്ഷത്ര ലക്ഷ്യങ്ങൾ';
+
+  @override
+  String levelTimeLeft(String time) => '$time ബാക്കി';
+
+  @override
+  String levelGoalOpen(String goal) => '$goal, ഇനിയും നേടാം';
+
   // Copy moved out of widgets and repositories (roadmap area G)
   @override
   String get resultsTitle => 'ഫലം';
