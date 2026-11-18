@@ -6,17 +6,27 @@ import 'entities/leaderboard_period.dart';
 ///
 /// Daily and all-time: time ascending, then the earlier `updatedAt`. Weekly:
 /// days cleared descending, then total time ascending, then `updatedAt`.
-/// Entries tie (share a rank) on the time, or on days and total for weekly.
+/// Levels: stars descending, then levels cleared ascending (fewer levels for
+/// the same stars is better), then total time, then `updatedAt`. Entries tie
+/// (share a rank) on the time, on days and total for weekly, or on stars,
+/// levels and total for levels.
 List<LeaderboardEntry> rankLeaderboardEntries(
   Iterable<LeaderboardEntry> entries,
   LeaderboardPeriod period,
 ) {
   final weekly = period == LeaderboardPeriod.weekly;
+  final levels = period == LeaderboardPeriod.levels;
   final sorted = [...entries]
     ..sort((a, b) {
       if (weekly) {
         final days = (b.daysCleared ?? 0).compareTo(a.daysCleared ?? 0);
         if (days != 0) return days;
+      }
+      if (levels) {
+        final stars = (b.stars ?? 0).compareTo(a.stars ?? 0);
+        if (stars != 0) return stars;
+        final cleared = (a.levelsCleared ?? 0).compareTo(b.levelsCleared ?? 0);
+        if (cleared != 0) return cleared;
       }
       final time = a.timeSeconds.compareTo(b.timeSeconds);
       if (time != 0) return time;
@@ -31,7 +41,10 @@ List<LeaderboardEntry> rankLeaderboardEntries(
     final tied =
         previous != null &&
         previous.timeSeconds == entry.timeSeconds &&
-        (!weekly || previous.daysCleared == entry.daysCleared);
+        (!weekly || previous.daysCleared == entry.daysCleared) &&
+        (!levels ||
+            (previous.stars == entry.stars &&
+                previous.levelsCleared == entry.levelsCleared));
     if (!tied) rank += 1;
     ranked.add(entry.withRank(rank));
     previous = entry;

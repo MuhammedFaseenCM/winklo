@@ -1,0 +1,13 @@
+{
+  "_comment": "Stars a cleared level run earns. Both sides run this table: workers/leaderboard/src/level_stars.test.ts and test/firestore/level_stars_fixture_test.dart.",
+  "cases": [
+    { "usedHints": false, "seconds": 20, "targetSeconds": 20, "stars": 3 },
+    { "usedHints": false, "seconds": 21, "targetSeconds": 20, "stars": 2 },
+    { "usedHints": true, "seconds": 10, "targetSeconds": 20, "stars": 2 },
+    { "usedHints": true, "seconds": 30, "targetSeconds": 20, "stars": 1 },
+    { "usedHints": false, "seconds": 10, "targetSeconds": null, "stars": 2 },
+    { "usedHints": false, "seconds": 10, "targetSeconds": 0, "stars": 2 },
+    { "usedHints": false, "seconds": 10, "targetSeconds": -5, "stars": 2 },
+    { "usedHints": false, "seconds": 0, "targetSeconds": 20, "stars": 2 }
+  ]
+}

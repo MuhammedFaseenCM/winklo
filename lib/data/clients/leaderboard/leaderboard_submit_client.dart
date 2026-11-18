@@ -9,6 +9,14 @@ abstract class LeaderboardSubmitClient {
     required String idToken,
     required Map<String, Object?> body,
   });
+
+  /// Sends one level clear (`POST /v1/level-clear`) for the user behind
+  /// [idToken]. Throws what [submit] does; a 404 (a Worker without the route
+  /// yet) is [LeaderboardSubmitUnavailable], so the clear stays pending.
+  Future<LeaderboardSubmitResult> submitLevelClear({
+    required String idToken,
+    required Map<String, Object?> body,
+  });
 }
 
 class LeaderboardSubmitResult {
@@ -24,6 +32,7 @@ const leaderboardSubmitRefusalCodes = {
   'bad_request',
   'not_live',
   'too_fast',
+  'too_slow',
   'bad_proof',
   'unknown_puzzle',
   'unauthorized',
@@ -35,7 +44,7 @@ class LeaderboardSubmitRejected implements Exception {
 
   final int statusCode;
 
-  /// `bad_request`, `not_live`, `too_fast`, `bad_proof`, `unknown_puzzle` or
+  /// `bad_request`, `not_live`, `too_fast`, `too_slow`, `bad_proof`, `unknown_puzzle` or
   /// `unauthorized` (a 401).
   final String code;
 

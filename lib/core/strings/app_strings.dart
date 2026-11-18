@@ -354,6 +354,21 @@ abstract final class AppStrings {
   static String get leaderboardScopeSheetTitle => _t.leaderboardScopeSheetTitle;
   static String get leaderboardThisWeekHint => _t.leaderboardThisWeekHint;
   static String get leaderboardAllTimeHint => _t.leaderboardAllTimeHint;
+
+  // Leaderboard: the Levels board
+  static String get leaderboardBoardLevels => _t.leaderboardBoardLevels;
+  static String get leaderboardBoardLevelsHint => _t.leaderboardBoardLevelsHint;
+  static String leaderboardLevelsStars(int stars) =>
+      _t.leaderboardLevelsStars(stars);
+  static String leaderboardLevelsStarsSemantics(int stars) =>
+      _t.leaderboardLevelsStarsSemantics(stars);
+  static String leaderboardLevelsDetail(int levels, String time) =>
+      _t.leaderboardLevelsDetail(levels, time);
+  static String get leaderboardLevelsEmpty => _t.leaderboardLevelsEmpty;
+  static String get leaderboardLevelsPlay => _t.leaderboardLevelsPlay;
+  static String get leaderboardLevelsJoin => _t.leaderboardLevelsJoin;
+  static String get leaderboardLevelsReplay => _t.leaderboardLevelsReplay;
+
   static String get leaderboardSingleDayLabel => _t.leaderboardSingleDayLabel;
   static String get leaderboardColumnPlayer => _t.leaderboardColumnPlayer;
   static String get leaderboardColumnTime => _t.leaderboardColumnTime;
@@ -374,6 +389,9 @@ abstract final class AppStrings {
   static String get playerCardTime => _t.playerCardTime;
   static String get playerCardWeekTotal => _t.playerCardWeekTotal;
   static String get playerCardDays => _t.playerCardDays;
+  static String get playerCardStars => _t.playerCardStars;
+  static String get playerCardLevels => _t.playerCardLevels;
+  static String get playerCardTotalTime => _t.playerCardTotalTime;
   static String get gamePaused => _t.gamePaused;
   static String get gamePausedResume => _t.gamePausedResume;
   static String get leaguesTitle => _t.leaguesTitle;
@@ -658,6 +676,8 @@ abstract final class AppStrings {
   static String levelNodeLocked(int number) => _t.levelNodeLocked(number);
   static String levelNumber(int number) => _t.levelNumber(number);
   static String get levelReplay => _t.levelReplay;
+  static String get levelSheetNotOnBoard => _t.levelSheetNotOnBoard;
+  static String get levelsStarsToBoard => _t.levelsStarsToBoard;
   static String levelStarsLabel(int stars, int maxStars) =>
       _t.levelStarsLabel(stars, maxStars);
   static String get levelAllDone => _t.levelAllDone;

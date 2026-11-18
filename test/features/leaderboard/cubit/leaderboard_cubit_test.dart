@@ -91,6 +91,62 @@ void main() {
   );
 
   blocTest<LeaderboardCubit, LeaderboardState>(
+    'selectBoard(levels) resubscribes to the levels board',
+    build: buildCubit,
+    act: (cubit) {
+      cubit.selectBoard(LeaderboardPeriod.levels);
+      boardController.add([entry]);
+    },
+    expect: () => [
+      const LeaderboardState(
+        period: LeaderboardPeriod.levels,
+        status: LeaderboardStatus.loading,
+      ),
+      LeaderboardState(
+        period: LeaderboardPeriod.levels,
+        status: LeaderboardStatus.ready,
+        entries: [entry],
+      ),
+    ],
+    verify: (_) {
+      verify(
+        () => watch(
+          gameId: GameIds.zip,
+          period: LeaderboardPeriod.levels,
+          dayId: any(named: 'dayId'),
+        ),
+      ).called(1);
+    },
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
+    'leaving Zip on the Levels board falls back to the daily board',
+    build: buildCubit,
+    seed: () => const LeaderboardState(period: LeaderboardPeriod.levels),
+    act: (cubit) => cubit.selectGame(GameIds.sudoku),
+    expect: () => [
+      const LeaderboardState(
+        gameId: GameIds.sudoku,
+        status: LeaderboardStatus.loading,
+      ),
+    ],
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
+    'the Levels board is not selectable on a game without levels',
+    build: () => LeaderboardCubit(
+      watchLeaderboard: watch,
+      authRepository: auth,
+      initialGameId: GameIds.sudoku,
+    ),
+    act: (cubit) {
+      cubit.selectBoard(LeaderboardPeriod.levels);
+      cubit.selectPeriod(LeaderboardPeriod.levels);
+    },
+    expect: () => <LeaderboardState>[],
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
     'selectGame switches to path words',
     build: buildCubit,
     act: (cubit) => cubit.selectGame(GameIds.pathWords),

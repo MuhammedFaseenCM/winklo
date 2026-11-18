@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/play_mode_route.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_layout.dart';
@@ -16,6 +17,7 @@ import '../../../data/clients/remote_config_client.dart';
 import '../../../domain/entities/leaderboard_entry.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/leaderboard_limits.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/repositories/league_repository.dart';
 import '../../../domain/usecases/watch_leaderboard.dart';
@@ -31,6 +33,7 @@ import 'widgets/leaderboard_board_sheet.dart';
 import 'widgets/leaderboard_board_view.dart';
 import 'widgets/leaderboard_filter_row.dart';
 import 'widgets/leaderboard_game_tabs.dart';
+import 'widgets/leaderboard_levels_note.dart';
 import 'widgets/leaderboard_scope_sheet.dart';
 import 'widgets/leaderboard_shimmer.dart';
 import 'widgets/leaderboard_table.dart';
@@ -78,7 +81,8 @@ String _resolveLeaderboardGameId(String? game) {
 }
 
 /// IndexedStack keeps [LeaderboardCubit] alive, so a later
-/// `go('/leaderboard?game=...')` must call [LeaderboardCubit.selectGame].
+/// `go('/leaderboard?game=...')` must call [LeaderboardCubit.selectGame]
+/// (and `board=levels` [LeaderboardCubit.selectBoard]).
 class _RouteGameSync extends StatefulWidget {
   const _RouteGameSync({required this.child});
 
@@ -95,6 +99,15 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
   /// The last `league` query applied, so coming back to the tab doesn't undo
   /// a later pick in the scope bar.
   String? _appliedLeagueQuery;
+
+  /// Likewise for `board`, so a later pick in the board sheet stays.
+  String? _appliedBoardQuery;
+
+  /// The `extra` of the last leaderboard location seen. A link that means
+  /// "show Levels now" (the Levels tab's star total) passes a fresh token, so
+  /// it applies `board=levels` again; coming back by the nav bar brings back
+  /// the same token (or none) and leaves a later pick alone.
+  Object? _leaderboardExtra;
 
   @override
   void didChangeDependencies() {
@@ -116,19 +129,27 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
 
   void _applyRouteGame() {
     if (!mounted) return;
-    final uri = _router?.routerDelegate.currentConfiguration.uri;
-    if (uri == null) return;
+    final configuration = _router?.routerDelegate.currentConfiguration;
+    if (configuration == null) return;
+    final uri = configuration.uri;
     final location = uri.toString();
     final previous = _appliedLocation;
     _appliedLocation = location;
     if (uri.path != '/leaderboard') return;
+    final extra = configuration.extra;
+    final newExtra = extra != _leaderboardExtra;
+    _leaderboardExtra = extra;
     final previousUri = previous == null ? null : Uri.tryParse(previous);
     final sameLeaderboard =
-        previousUri?.path == '/leaderboard' && previous == location;
+        previousUri?.path == '/leaderboard' &&
+        previous == location &&
+        !newExtra;
     if (sameLeaderboard) return;
+    final freshLink = newExtra && extra != null;
     final game = uri.queryParameters['game'];
     final gameId = _resolveLeaderboardGameId(game);
     final leagueId = uri.queryParameters['league'];
+    final board = uri.queryParameters['board'];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final cubit = context.read<LeaderboardCubit>();
@@ -138,6 +159,11 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
         cubit.selectLeague(leagueId);
       }
       _appliedLeagueQuery = leagueId;
+      // `/leaderboard?game=zip&board=levels`: the Levels board.
+      if (board == 'levels' && (board != _appliedBoardQuery || freshLink)) {
+        cubit.selectBoard(LeaderboardPeriod.levels);
+      }
+      _appliedBoardQuery = board;
     });
   }
 
@@ -346,6 +372,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
       dayId: cubit.state.dayId,
       recentDayIds: cubit.recentDayIds,
       showAllTime: _showAllTimeLeaderboard,
+      showLevels: levelGameIds.contains(cubit.state.gameId),
     );
     if (choice == null || !mounted || cubit.isClosed) return;
     // Remote Config may have hidden All-time while the sheet was open.
@@ -371,6 +398,16 @@ class _LeaderboardViewState extends State<_LeaderboardView>
     }
     cubit.selectLeague(choice.leagueId);
   }
+
+  /// The Levels board's join/replay line: signed in, not on the board, and
+  /// not looking at a league. Not when the board is full: only its top
+  /// [leaderboardDailyLimit] are read, so the player may be ranked below.
+  bool _showsLevelsNote(LeaderboardState state, AuthState auth, bool onBoard) =>
+      state.period == LeaderboardPeriod.levels &&
+      state.leagueId == null &&
+      auth.user != null &&
+      !onBoard &&
+      state.entries.length < leaderboardDailyLimit;
 
   /// The empty board's message when there's nothing to play for on a past day.
   String? _quietEmptyMessage(LeaderboardState state) {
@@ -489,6 +526,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                             LeaderboardPeriod.daily => AppIcons.today,
                             LeaderboardPeriod.weekly => AppIcons.week,
                             LeaderboardPeriod.allTime => AppIcons.medal,
+                            LeaderboardPeriod.levels => AppIcons.levels,
                           },
                           boardLabel: leaderboardBoardLabel(
                             period: state.period,
@@ -604,6 +642,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                       ? AppStrings.leaderboardLeagueEmpty
                                       : state.period == LeaderboardPeriod.weekly
                                       ? AppStrings.leaderboardWeeklyEmpty
+                                      : state.period == LeaderboardPeriod.levels
+                                      ? AppStrings.leaderboardLevelsEmpty
                                       : AppStrings.leaderboardEmpty,
                                   messageStyle: Theme.of(context)
                                       .textTheme
@@ -614,26 +654,55 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                         letterSpacing: -0.2,
                                       ),
                                   messageSpacing: 24,
-                                  action: SizedBox(
-                                    width: 220,
-                                    child: ZipPrimaryButton(
-                                      label: AppStrings.leaderboardPlayGame(
-                                        gameTitle,
+                                  action: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 220,
+                                        child: ZipPrimaryButton(
+                                          label:
+                                              state.period ==
+                                                  LeaderboardPeriod.levels
+                                              ? AppStrings.leaderboardLevelsPlay
+                                              : AppStrings.leaderboardPlayGame(
+                                                  gameTitle,
+                                                ),
+                                          icon: AppIcons.play,
+                                          onPressed:
+                                              state.period ==
+                                                  LeaderboardPeriod.levels
+                                              ? () => context.go(
+                                                  levelsLocation,
+                                                  extra: levelsVisitToken(),
+                                                )
+                                              : () async {
+                                                  final ok =
+                                                      await ensureSignedInForPlay(
+                                                        context,
+                                                      );
+                                                  if (!ok || !context.mounted) {
+                                                    return;
+                                                  }
+                                                  await context.push(gameRoute);
+                                                  if (context.mounted) {
+                                                    context
+                                                        .read<
+                                                          LeaderboardCubit
+                                                        >()
+                                                        .retry();
+                                                  }
+                                                },
+                                        ),
                                       ),
-                                      icon: AppIcons.play,
-                                      onPressed: () async {
-                                        final ok = await ensureSignedInForPlay(
-                                          context,
-                                        );
-                                        if (!ok || !context.mounted) return;
-                                        await context.push(gameRoute);
-                                        if (context.mounted) {
-                                          context
-                                              .read<LeaderboardCubit>()
-                                              .retry();
-                                        }
-                                      },
-                                    ),
+                                      if (_showsLevelsNote(
+                                        state,
+                                        auth,
+                                        false,
+                                      )) ...[
+                                        const SizedBox(height: 20),
+                                        const LeaderboardLevelsNote(),
+                                      ],
+                                    ],
                                   ),
                                 );
                               }
@@ -654,6 +723,12 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                   ? layout.space(8)
                                   : layout.pagePadding.bottom;
                               final showSignInFab = auth.user == null;
+                              // Signed in but not on the Levels board yet.
+                              final showLevelsNote = _showsLevelsNote(
+                                state,
+                                auth,
+                                userEntry != null,
+                              );
                               final showPinned =
                                   userEntry != null &&
                                   !inInitialList &&
@@ -678,50 +753,78 @@ class _LeaderboardViewState extends State<_LeaderboardView>
 
                               return Stack(
                                 children: [
-                                  Padding(
-                                    padding: EdgeInsets.fromLTRB(
-                                      12,
-                                      0,
-                                      12,
-                                      bottomGap,
-                                    ),
-                                    child:
-                                        NotificationListener<
-                                          ScrollNotification
-                                        >(
-                                          onNotification: (_) {
-                                            _onBoardScrolled(layout, userIndex);
-                                            return false;
-                                          },
-                                          child: LeaderboardBoardView(
-                                            listKey: _listKey,
-                                            headKey: _boardHeadKey,
-                                            userKey: _userRowKey,
-                                            controller: _scrollController,
-                                            entries: state.entries,
-                                            period: state.period,
-                                            gameId: state.gameId,
-                                            currentUid: state.currentUid,
-                                            // Kept while the pin can show, so
-                                            // hiding it doesn't move the rows.
-                                            bottomPadding:
-                                                (userEntry != null &&
-                                                        !inInitialList
-                                                    ? 64.0
-                                                    : 0.0) +
-                                                (showSignInFab ? 80.0 : 0.0),
-                                            onTapEntry: (entry) =>
-                                                showPlayerCardSheet(
-                                                  context,
-                                                  entry: entry,
-                                                  gameId: state.gameId,
-                                                  period: state.period,
-                                                  isYou:
-                                                      entry.uid ==
-                                                      state.currentUid,
+                                  Positioned.fill(
+                                    child: Column(
+                                      children: [
+                                        Expanded(
+                                          child: Padding(
+                                            padding: EdgeInsets.fromLTRB(
+                                              12,
+                                              0,
+                                              12,
+                                              showLevelsNote ? 8 : bottomGap,
+                                            ),
+                                            child:
+                                                NotificationListener<
+                                                  ScrollNotification
+                                                >(
+                                                  onNotification: (_) {
+                                                    _onBoardScrolled(
+                                                      layout,
+                                                      userIndex,
+                                                    );
+                                                    return false;
+                                                  },
+                                                  child: LeaderboardBoardView(
+                                                    listKey: _listKey,
+                                                    headKey: _boardHeadKey,
+                                                    userKey: _userRowKey,
+                                                    controller:
+                                                        _scrollController,
+                                                    entries: state.entries,
+                                                    period: state.period,
+                                                    gameId: state.gameId,
+                                                    currentUid:
+                                                        state.currentUid,
+                                                    // Kept while the pin can show, so
+                                                    // hiding it doesn't move the rows.
+                                                    bottomPadding:
+                                                        (userEntry != null &&
+                                                                !inInitialList
+                                                            ? 64.0
+                                                            : 0.0) +
+                                                        (showSignInFab
+                                                            ? 80.0
+                                                            : 0.0),
+                                                    onTapEntry: (entry) =>
+                                                        showPlayerCardSheet(
+                                                          context,
+                                                          entry: entry,
+                                                          gameId: state.gameId,
+                                                          period: state.period,
+                                                          isYou:
+                                                              entry.uid ==
+                                                              state.currentUid,
+                                                        ),
+                                                  ),
                                                 ),
                                           ),
                                         ),
+                                        // Under the list, so it takes the
+                                        // height its text needs.
+                                        if (showLevelsNote)
+                                          Padding(
+                                            padding: EdgeInsets.fromLTRB(
+                                              12,
+                                              0,
+                                              12,
+                                              bottomGap,
+                                            ),
+                                            child:
+                                                const LeaderboardLevelsNote(),
+                                          ),
+                                      ],
+                                    ),
                                   ),
                                   if (userEntry != null && !inInitialList)
                                     Positioned(

@@ -22,6 +22,7 @@ import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/progress_remote_repository.dart';
 import 'package:winklo/domain/usecases/get_streak.dart';
 import 'package:winklo/domain/usecases/report_client_error.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 import 'package:winklo/domain/usecases/sync_progress.dart';
 import 'package:winklo/domain/usecases/upload_progress_history.dart';
 
@@ -32,6 +33,8 @@ class _MockRemote extends Mock implements ProgressRemoteRepository {}
 class _MockLeaderboard extends Mock implements LeaderboardRepository {}
 
 class _MockClientErrors extends Mock implements ClientErrorRepository {}
+
+class _MockSubmitLevelClear extends Mock implements SubmitLevelClear {}
 
 class _MockUploadHistory extends Mock implements UploadProgressHistory {}
 
@@ -76,6 +79,7 @@ void main() {
     DateTime Function()? clockFn,
     Duration leaderboardTimeout = const Duration(seconds: 20),
     UploadProgressHistory? uploadHistory,
+    SubmitLevelClear? submitLevelClear,
   }) async {
     SharedPreferences.setMockInitialValues(initial);
     prefs = await SharedPreferences.getInstance();
@@ -95,6 +99,7 @@ void main() {
       now: clockFn ?? () => clock,
       leaderboardTimeout: leaderboardTimeout,
       uploadHistory: uploadHistory,
+      submitLevelClear: submitLevelClear,
     );
   }
 
@@ -1905,5 +1910,128 @@ void main() {
 
     expect(savedDays().single.timeSeconds, 30);
     verifyNoSubmit();
+  });
+
+  group('level clears', () {
+    late _MockSubmitLevelClear levels;
+
+    setUp(() {
+      levels = _MockSubmitLevelClear();
+      when(() => levels.resendPending(any())).thenAnswer((_) async {});
+    });
+
+    test('a pass resends the pending Zip clears once, after the daily '
+        'boards', () async {
+      final order = <String>[];
+      when(
+        () => leaderboard.submitBestTime(
+          gameId: any(named: 'gameId'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          currentStreak: any(named: 'currentStreak'),
+          dayId: any(named: 'dayId'),
+          expectedUid: any(named: 'expectedUid'),
+        ),
+      ).thenAnswer((_) async => order.add('daily'));
+      when(() => levels.resendPending(any())).thenAnswer((_) async {
+        order.add('levels');
+      });
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 30,
+        },
+        submitLevelClear: levels,
+      );
+
+      final result = await sync();
+
+      expect(result.failures, 0);
+      verify(() => levels.resendPending('zip')).called(1);
+      expect(order, ['daily', 'levels']);
+    });
+
+    test('signed out resends nothing', () async {
+      when(() => auth.currentUser).thenReturn(null);
+      await build(submitLevelClear: levels);
+
+      await sync();
+
+      verifyNever(() => levels.resendPending(any()));
+    });
+
+    test('an account switch before the resend skips it', () async {
+      when(
+        () => remote.saveStreak(
+          uid: any(named: 'uid'),
+          streak: any(named: 'streak'),
+        ),
+      ).thenAnswer((_) async {
+        when(
+          () => auth.currentUser,
+        ).thenReturn(const AppUser(uid: 'u2', displayName: 'Bo'));
+      });
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 30,
+        },
+        submitLevelClear: levels,
+      );
+      remoteStreaks['zip'] = const GameStreak(gameId: 'zip', current: 3);
+
+      final result = await sync();
+
+      expect(result.failures, 0);
+      verifyNever(() => levels.resendPending(any()));
+    });
+
+    test(
+      'a slow resend times out as a transient failure, unreported',
+      () async {
+        when(() => levels.resendPending(any())).thenAnswer((_) async {
+          await Future<void>.delayed(const Duration(days: 1));
+        });
+        await build(
+          initial: {'progress_owner_uid': _uid},
+          leaderboardTimeout: const Duration(milliseconds: 10),
+          submitLevelClear: levels,
+        );
+
+        final result = await sync();
+
+        expect(result.failures, 1);
+        verifyNever(() => clientErrors.report(any()));
+      },
+    );
+
+    test('a stalled daily board skips the resend', () async {
+      when(
+        () => leaderboard.submitBestTime(
+          gameId: any(named: 'gameId'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          hadMistakes: any(named: 'hadMistakes'),
+          currentStreak: any(named: 'currentStreak'),
+          dayId: any(named: 'dayId'),
+          expectedUid: any(named: 'expectedUid'),
+        ),
+      ).thenAnswer((_) async {
+        await Future<void>.delayed(const Duration(days: 1));
+      });
+      await build(
+        initial: {
+          'progress_owner_uid': _uid,
+          'best_time_zip_daily_$_today': 30,
+        },
+        leaderboardTimeout: const Duration(milliseconds: 10),
+        submitLevelClear: levels,
+      );
+
+      await sync();
+
+      verifyNever(() => levels.resendPending(any()));
+    });
   });
 }

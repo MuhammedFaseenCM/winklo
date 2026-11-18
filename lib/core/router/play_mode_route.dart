@@ -7,6 +7,11 @@ const moreWaysLocation = '/more';
 /// The Levels tab.
 const levelsLocation = '/levels';
 
+/// The Levels leaderboard (the Levels tab's star total). Go there with a
+/// fresh [levelsVisitToken] as `extra`, so it shows Levels even when an
+/// earlier visit's board was changed since.
+const levelsBoardLocation = '/leaderboard?game=${GameIds.zip}&board=levels';
+
 /// The Levels tab with [levelId]'s sheet open.
 String levelsOpenLocation(String levelId) => '$levelsLocation?open=$levelId';
 
@@ -43,9 +48,6 @@ String gameRoute(String gameId) => switch (gameId) {
 PlayMode playModeOf(Uri uri, {DateTime? now}) =>
     PlayMode.fromQuery(uri.queryParameters, now: now ?? DateTime.now()) ??
     PlayMode.daily;
-
-/// Games with Levels so far; Path Words and Sudoku join later.
-const levelGameIds = {GameIds.zip};
 
 /// Sends a game link whose archive day is malformed, today, in the future
 /// or before the archive began to that game's archive calendar, and a

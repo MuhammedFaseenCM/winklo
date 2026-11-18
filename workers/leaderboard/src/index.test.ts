@@ -1,6 +1,16 @@
 import { errors } from 'jose';
 import { describe, expect, it, vi } from 'vitest';
 import { MAX_BODY_BYTES, isBadTokenError, route, type Env } from './index';
+import { handleLevelClear } from './level_submit';
+import { handleSubmit } from './submit';
+
+vi.mock('./submit', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./submit')>()),
+  handleSubmit: vi.fn(async () => ({ status: 400, body: { error: 'bad_request' } })),
+}));
+vi.mock('./level_submit', () => ({
+  handleLevelClear: vi.fn(async () => ({ status: 400, body: { error: 'bad_request' } })),
+}));
 
 const env: Env = { FIREBASE_PROJECT_ID: 'p', FIREBASE_SERVICE_ACCOUNT_JSON: '' };
 
@@ -54,6 +64,26 @@ describe('route', () => {
     expect(await notJson.json()).toEqual({ error: 'bad_request' });
     const big = await route(post('x'.repeat(MAX_BODY_BYTES + 1), auth), env, verify);
     expect(big.status).toBe(400);
+  });
+
+  it('routes each POST path to its handler, behind the same token check', async () => {
+    const auth = { Authorization: 'Bearer ok' };
+    const verify = async () => ({ uid: 'u1' });
+    const level = (headers: Record<string, string> = {}) =>
+      new Request('https://w.example/v1/level-clear', { method: 'POST', body: '{}', headers });
+    const configured: Env = { ...env, FIREBASE_SERVICE_ACCOUNT_JSON: '{}' };
+    vi.mocked(handleSubmit).mockClear();
+    vi.mocked(handleLevelClear).mockClear();
+
+    expect((await route(level(), configured, verify)).status).toBe(401);
+    expect(vi.mocked(handleLevelClear)).not.toHaveBeenCalled();
+
+    await route(level(auth), configured, verify);
+    expect(vi.mocked(handleLevelClear)).toHaveBeenCalledWith(expect.anything(), 'u1', {});
+    expect(vi.mocked(handleSubmit)).not.toHaveBeenCalled();
+
+    await route(post('{}', auth), configured, verify);
+    expect(vi.mocked(handleSubmit)).toHaveBeenCalledWith(expect.anything(), 'u1', {});
   });
 
   it('500s without the service account, so the app falls back', async () => {

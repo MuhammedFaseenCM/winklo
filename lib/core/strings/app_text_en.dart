@@ -808,6 +808,36 @@ final class AppTextEn implements AppText {
   String get leaderboardAllTimeHint => 'Best time ever';
 
   @override
+  String get leaderboardBoardLevels => 'Levels';
+
+  @override
+  String get leaderboardBoardLevelsHint =>
+      'Stars, then fewer levels, then total time';
+
+  @override
+  String leaderboardLevelsStars(int stars) => '$stars★';
+
+  @override
+  String leaderboardLevelsStarsSemantics(int stars) =>
+      stars == 1 ? '1 star' : '$stars stars';
+
+  @override
+  String leaderboardLevelsDetail(int levels, String time) =>
+      '$levels ${levels == 1 ? 'level' : 'levels'} · $time';
+
+  @override
+  String get leaderboardLevelsEmpty => "No one's on the Levels board yet";
+
+  @override
+  String get leaderboardLevelsPlay => 'Play levels';
+
+  @override
+  String get leaderboardLevelsJoin => 'Clear a level to join';
+
+  @override
+  String get leaderboardLevelsReplay => 'Replay a level to count your stars';
+
+  @override
   String get leaderboardSingleDayLabel => 'A single day · last 14 days';
 
   @override
@@ -855,6 +885,15 @@ final class AppTextEn implements AppText {
 
   @override
   String get playerCardDays => 'Days cleared';
+
+  @override
+  String get playerCardStars => 'Stars';
+
+  @override
+  String get playerCardLevels => 'Levels';
+
+  @override
+  String get playerCardTotalTime => 'Total time';
 
   @override
   String get gamePaused => 'Paused';
@@ -1622,6 +1661,12 @@ final class AppTextEn implements AppText {
 
   @override
   String get levelReplay => 'Replay';
+
+  @override
+  String get levelSheetNotOnBoard => 'Not on the board yet · replay to count';
+
+  @override
+  String get levelsStarsToBoard => 'Open the Levels leaderboard';
 
   @override
   String levelStarsLabel(int stars, int maxStars) =>

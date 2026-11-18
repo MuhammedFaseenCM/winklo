@@ -23,7 +23,14 @@ String? levelBoardSize(LevelEntry entry) {
 /// and Play (or Replay). On the root navigator, so it covers the shell's
 /// nav dock instead of opening under it in the tab's branch. Play asks a
 /// signed-out player to sign in first, like every other Play.
-Future<void> showLevelSheet(BuildContext context, LevelMapNode node) {
+///
+/// [boardLevelIds] are the levels the Levels board holds, when known: a
+/// cleared level missing from them says it isn't on the board yet.
+Future<void> showLevelSheet(
+  BuildContext context,
+  LevelMapNode node, {
+  Set<String>? boardLevelIds,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
@@ -32,14 +39,17 @@ Future<void> showLevelSheet(BuildContext context, LevelMapNode node) {
     isScrollControlled: true,
     showDragHandle: true,
     backgroundColor: ZipColors.paper,
-    builder: (_) => LevelSheet(node: node),
+    builder: (_) => LevelSheet(node: node, boardLevelIds: boardLevelIds),
   );
 }
 
 class LevelSheet extends StatelessWidget {
-  const LevelSheet({super.key, required this.node});
+  const LevelSheet({super.key, required this.node, this.boardLevelIds});
 
   final LevelMapNode node;
+
+  /// The levels the Levels board holds; null when unknown.
+  final Set<String>? boardLevelIds;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +82,8 @@ class LevelSheet extends StatelessWidget {
           status: extra(),
         ),
     ];
+    final ids = boardLevelIds;
+    final notOnBoard = cleared && ids != null && !ids.contains(slot.entry.id);
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
@@ -132,6 +144,15 @@ class LevelSheet extends StatelessWidget {
                         ),
                       ),
                   ],
+                ),
+              ],
+              if (notOnBoard) ...[
+                const SizedBox(height: 12),
+                Text(
+                  AppStrings.levelSheetNotOnBoard,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: ZipColors.inkSoft,
+                  ),
                 ),
               ],
               const SizedBox(height: 20),

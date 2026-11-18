@@ -302,6 +302,17 @@ abstract interface class AppText {
   String get leaderboardScopeSheetTitle;
   String get leaderboardThisWeekHint;
   String get leaderboardAllTimeHint;
+
+  // Leaderboard: the Levels board
+  String get leaderboardBoardLevels;
+  String get leaderboardBoardLevelsHint;
+  String leaderboardLevelsStars(int stars);
+  String leaderboardLevelsStarsSemantics(int stars);
+  String leaderboardLevelsDetail(int levels, String time);
+  String get leaderboardLevelsEmpty;
+  String get leaderboardLevelsPlay;
+  String get leaderboardLevelsJoin;
+  String get leaderboardLevelsReplay;
   String get leaderboardSingleDayLabel;
   String get leaderboardColumnPlayer;
   String get leaderboardColumnTime;
@@ -319,6 +330,9 @@ abstract interface class AppText {
   String get playerCardTime;
   String get playerCardWeekTotal;
   String get playerCardDays;
+  String get playerCardStars;
+  String get playerCardLevels;
+  String get playerCardTotalTime;
   String get gamePaused;
   String get gamePausedResume;
   String get leaguesTitle;
@@ -583,6 +597,13 @@ abstract interface class AppText {
   String levelNodeLocked(int number);
   String levelNumber(int number);
   String get levelReplay;
+
+  /// A cleared level's sheet, when the Levels board doesn't have it yet.
+  String get levelSheetNotOnBoard;
+
+  /// Semantics label of the Levels tab's star total, which opens the Levels
+  /// leaderboard.
+  String get levelsStarsToBoard;
   String levelStarsLabel(int stars, int maxStars);
   String get levelAllDone;
   String get levelStarGoals;

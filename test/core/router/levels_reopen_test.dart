@@ -11,13 +11,25 @@ import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 
 import '../../helpers/level_fixtures.dart';
 import '../../helpers/mock_analytics_repository.dart';
 
+class _MockLeaderboard extends Mock implements LeaderboardRepository {}
+
 class _MockAuth extends Mock implements AuthRepository {}
+
+class _MockSubmitLevelClear extends Mock implements SubmitLevelClear {}
+
+_MockSubmitLevelClear _submitLevelClear() {
+  final submit = _MockSubmitLevelClear();
+  when(() => submit.accepted).thenAnswer((_) => const Stream<String>.empty());
+  return submit;
+}
 
 class _Worlds implements LevelWorldRepository {
   /// Each map built loads the catalog once, so this counts maps built.
@@ -79,6 +91,12 @@ void main() {
           RepositoryProvider<LevelWorldRepository>.value(value: worlds),
           RepositoryProvider<LevelProgressRepository>.value(value: progress),
           RepositoryProvider<AuthRepository>.value(value: auth),
+          RepositoryProvider<LeaderboardRepository>.value(
+            value: _MockLeaderboard(),
+          ),
+          RepositoryProvider<SubmitLevelClear>.value(
+            value: _submitLevelClear(),
+          ),
           RepositoryProvider<AnalyticsRepository>.value(value: analytics),
         ],
         child: MaterialApp.router(routerConfig: router),

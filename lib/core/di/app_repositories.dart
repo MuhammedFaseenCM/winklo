@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/single_child_widget.dart';
@@ -43,6 +45,7 @@ import 'package:winklo/data/repositories/level_progress_remote_repository_impl.d
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
 import 'package:winklo/data/repositories/level_play_stats_repository_impl.dart';
 import 'package:winklo/data/repositories/level_world_repository_impl.dart';
+import 'package:winklo/data/repositories/pending_level_clear_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
@@ -76,6 +79,7 @@ import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/league_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
+import 'package:winklo/domain/repositories/pending_level_clear_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
 import 'package:winklo/domain/repositories/play_mode_record_repository.dart';
 import 'package:winklo/domain/play_mode_hints.dart';
@@ -122,6 +126,7 @@ import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_issue_report.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/domain/usecases/sync_fcm_token.dart';
 import 'package:winklo/domain/usecases/sync_level_progress.dart';
@@ -363,6 +368,24 @@ List<SingleChildWidget> buildRepositoryProviders({
         progress: context.read<ProgressLocalRepository>(),
       ),
     ),
+    RepositoryProvider<PendingLevelClearRepository>(
+      create: (context) =>
+          PendingLevelClearRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    // One shared instance: it queues the pending store's writes, so the Zip
+    // bloc and SyncProgress must not each build their own.
+    RepositoryProvider<SubmitLevelClear>(
+      create: (context) => SubmitLevelClear(
+        auth: context.read<AuthRepository>(),
+        leaderboard: context.read<LeaderboardRepository>(),
+        pending: context.read<PendingLevelClearRepository>(),
+        analytics: context.read<AnalyticsRepository>(),
+        reportClientError: clientErrorRepository == null
+            ? null
+            : ReportClientError(clientErrorRepository),
+      ),
+      dispose: (submit) => unawaited(submit.dispose()),
+    ),
     RepositoryProvider<UploadProgressHistory>(
       create: (context) => UploadProgressHistory(
         scores: context.read<ScoreRepository>(),
@@ -385,6 +408,7 @@ List<SingleChildWidget> buildRepositoryProviders({
             ? null
             : ReportClientError(clientErrorRepository),
         uploadHistory: context.read<UploadProgressHistory>(),
+        submitLevelClear: context.read<SubmitLevelClear>(),
         isRemoteAvailable: () => FirebaseBootstrap.isReady,
       ),
     ),

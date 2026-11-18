@@ -33,6 +33,16 @@ abstract class AnalyticsRepository {
     required bool improved,
   });
 
+  /// A level clear went to the Levels board: whether the Worker [accepted]
+  /// it, whether the run [improved] the level's record, and the refusal or
+  /// failure [code] when it was not accepted.
+  Future<void> logLevelBoardSubmit({
+    required String levelId,
+    required bool accepted,
+    required bool improved,
+    String? code,
+  });
+
   /// [hintsUsed] counts this hint; [penaltySeconds] is the time it added
   /// (0 in practice).
   Future<void> logHintUsed({

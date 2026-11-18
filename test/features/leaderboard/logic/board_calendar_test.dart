@@ -84,6 +84,10 @@ void main() {
       );
       expect(label(LeaderboardPeriod.weekly), AppStrings.leaderboardThisWeek);
       expect(label(LeaderboardPeriod.allTime), AppStrings.leaderboardAllTime);
+      expect(
+        label(LeaderboardPeriod.levels),
+        AppStrings.leaderboardBoardLevels,
+      );
     });
   });
 }

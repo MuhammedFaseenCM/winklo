@@ -26,6 +26,16 @@
       ]
     },
     {
+      "collectionGroup": "levels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "stars", "order": "DESCENDING" },
+        { "fieldPath": "levelsCleared", "order": "ASCENDING" },
+        { "fieldPath": "timeSeconds", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "level_worlds",
       "queryScope": "COLLECTION",
       "fields": [

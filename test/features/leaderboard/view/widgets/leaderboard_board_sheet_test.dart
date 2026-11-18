@@ -14,6 +14,7 @@ void main() {
     LeaderboardPeriod period = LeaderboardPeriod.daily,
     String? dayId,
     bool showAllTime = true,
+    bool showLevels = true,
     Future<void> Function()? act,
   }) async {
     LeaderboardBoardChoice? picked;
@@ -31,6 +32,7 @@ void main() {
                   dayId: dayId,
                   recentDayIds: days,
                   showAllTime: showAllTime,
+                  showLevels: showLevels,
                 );
                 closed = true;
               },
@@ -94,6 +96,32 @@ void main() {
       act: () => tester.tap(find.text(AppStrings.leaderboardAllTime)),
     );
     expect(choice?.period, LeaderboardPeriod.allTime);
+  });
+
+  testWidgets('picking Levels returns the levels board', (tester) async {
+    final choice = await open(
+      tester,
+      act: () => tester.tap(find.text(AppStrings.leaderboardBoardLevels)),
+    );
+    expect(choice?.period, LeaderboardPeriod.levels);
+    expect(choice?.dayId, isNull);
+  });
+
+  testWidgets('Levels says how its board is ordered', (tester) async {
+    await open(tester);
+    expect(find.text(AppStrings.leaderboardBoardLevelsHint), findsOneWidget);
+  });
+
+  testWidgets('hides Levels for a game without levels', (tester) async {
+    await open(tester, showLevels: false);
+    expect(find.text(AppStrings.leaderboardBoardLevels), findsNothing);
+    expect(find.text(AppStrings.leaderboardBoardLevelsHint), findsNothing);
+    expect(find.text(AppStrings.leaderboardAllTime), findsOneWidget);
+  });
+
+  testWidgets('Levels stays listed when All-time is hidden', (tester) async {
+    await open(tester, showAllTime: false);
+    expect(find.text(AppStrings.leaderboardBoardLevels), findsOneWidget);
   });
 
   testWidgets('the selected day is marked selected', (tester) async {

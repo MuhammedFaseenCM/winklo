@@ -102,15 +102,24 @@ class _PodiumPlace extends StatelessWidget {
     // By rank, so a tie for first is two golds; the step height is by place.
     final medal = podiumColor(entry.rank) ?? podiumColor(place)!;
     final badges = leaderboardBadgesFor(entry, period: period, gameId: gameId);
-    final time = AppStrings.formatPlayTime(entry.timeSeconds);
-    final days = period == LeaderboardPeriod.weekly
-        ? AppStrings.leaderboardDaysShort(entry.daysCleared ?? 0)
-        : null;
+    final levels = period == LeaderboardPeriod.levels;
+    final time = levels
+        ? AppStrings.leaderboardLevelsStars(entry.stars ?? 0)
+        : AppStrings.formatPlayTime(entry.timeSeconds);
+    final days = switch (period) {
+      LeaderboardPeriod.weekly => AppStrings.leaderboardDaysShort(
+        entry.daysCleared ?? 0,
+      ),
+      LeaderboardPeriod.levels => levelsBoardDetail(entry, period),
+      _ => null,
+    };
     final label = [
       AppStrings.leaderboardPodiumSemantics(
         entry.rank,
         entry.displayName,
-        time,
+        levels
+            ? AppStrings.leaderboardLevelsStarsSemantics(entry.stars ?? 0)
+            : time,
       ),
       ?days,
       if (isYou) AppStrings.youLabel,
@@ -215,10 +224,15 @@ class _PodiumPlace extends StatelessWidget {
               ),
             ),
             if (days != null)
-              Text(
-                days,
-                maxLines: 1,
-                style: textTheme.labelSmall?.copyWith(color: ZipColors.inkSoft),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  days,
+                  maxLines: 1,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: ZipColors.inkSoft,
+                  ),
+                ),
               ),
             SizedBox(height: layout.space(6)),
             // The step: slate like the table card, with a medal-coloured lip.

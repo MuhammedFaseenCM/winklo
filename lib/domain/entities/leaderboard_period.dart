@@ -7,6 +7,10 @@ enum LeaderboardPeriod {
   /// total time. Only the leaderboard Worker writes it.
   weekly,
   allTime,
+
+  /// Every level cleared, ranked by stars, then fewest levels, then total
+  /// best time. One row per player; only the leaderboard Worker writes it.
+  levels,
 }
 
 /// Device-local calendar day key `yyyy-MM-dd` for daily leaderboard paths.

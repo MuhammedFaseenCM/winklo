@@ -31,6 +31,25 @@ void main() {
     ]);
   });
 
+  test('identity refresh covers all-time, today and the Levels rows', () {
+    expect(
+      leaderboardIdentityDocPaths(
+        root: 'leaderboards',
+        uid: 'u1',
+        dayId: '2026-11-18',
+      ),
+      [
+        'leaderboards/zip/all_time/u1',
+        'leaderboards/zip/daily/2026-11-18/entries/u1',
+        'leaderboards/zip/levels/u1',
+        'leaderboards/path_words/all_time/u1',
+        'leaderboards/path_words/daily/2026-11-18/entries/u1',
+        'leaderboards/sudoku/all_time/u1',
+        'leaderboards/sudoku/daily/2026-11-18/entries/u1',
+      ],
+    );
+  });
+
   test('leaderboardIdentityPatch omits updatedAt', () {
     final patch = leaderboardIdentityPatch(
       const AppUser(

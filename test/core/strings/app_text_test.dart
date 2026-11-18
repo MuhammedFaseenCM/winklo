@@ -203,6 +203,15 @@ final Map<String, String Function(AppText)> _members = {
   'leaderboardToday': (t) => t.leaderboardToday,
   'leaderboardYesterday': (t) => t.leaderboardYesterday,
   'leaderboardPastDayEmpty': (t) => t.leaderboardPastDayEmpty,
+  'leaderboardBoardLevels': (t) => t.leaderboardBoardLevels,
+  'leaderboardLevelsStars': (t) => t.leaderboardLevelsStars(92),
+  'leaderboardLevelsStarsSemantics': (t) =>
+      t.leaderboardLevelsStarsSemantics(92),
+  'leaderboardLevelsDetail': (t) => t.leaderboardLevelsDetail(40, '42:11'),
+  'leaderboardLevelsEmpty': (t) => t.leaderboardLevelsEmpty,
+  'leaderboardLevelsPlay': (t) => t.leaderboardLevelsPlay,
+  'leaderboardLevelsJoin': (t) => t.leaderboardLevelsJoin,
+  'leaderboardLevelsReplay': (t) => t.leaderboardLevelsReplay,
   'leaderboardWeeklyEmpty': (t) => t.leaderboardWeeklyEmpty,
   'leaderboardWeeklyDebugNote': (t) => t.leaderboardWeeklyDebugNote,
   'leaderboardLeagueEmpty': (t) => t.leaderboardLeagueEmpty,
@@ -212,6 +221,7 @@ final Map<String, String Function(AppText)> _members = {
   'leaderboardScopeSheetTitle': (t) => t.leaderboardScopeSheetTitle,
   'leaderboardThisWeekHint': (t) => t.leaderboardThisWeekHint,
   'leaderboardAllTimeHint': (t) => t.leaderboardAllTimeHint,
+  'leaderboardBoardLevelsHint': (t) => t.leaderboardBoardLevelsHint,
   'leaderboardSingleDayLabel': (t) => t.leaderboardSingleDayLabel,
   'leaderboardColumnPlayer': (t) => t.leaderboardColumnPlayer,
   'leaderboardColumnTime': (t) => t.leaderboardColumnTime,
@@ -224,6 +234,9 @@ final Map<String, String Function(AppText)> _members = {
   'playerCardTime': (t) => t.playerCardTime,
   'playerCardWeekTotal': (t) => t.playerCardWeekTotal,
   'playerCardDays': (t) => t.playerCardDays,
+  'playerCardStars': (t) => t.playerCardStars,
+  'playerCardLevels': (t) => t.playerCardLevels,
+  'playerCardTotalTime': (t) => t.playerCardTotalTime,
   'gamePaused': (t) => t.gamePaused,
   'gamePausedResume': (t) => t.gamePausedResume,
   'leaguesTitle': (t) => t.leaguesTitle,
@@ -533,6 +546,8 @@ final Map<String, String Function(AppText)> _members = {
   'levelNodeLocked': (t) => t.levelNodeLocked(6),
   'levelNumber': (t) => t.levelNumber(4),
   'levelReplay': (t) => t.levelReplay,
+  'levelSheetNotOnBoard': (t) => t.levelSheetNotOnBoard,
+  'levelsStarsToBoard': (t) => t.levelsStarsToBoard,
   'levelStarsLabel': (t) => t.levelStarsLabel(2, 3),
   'levelAllDone': (t) => t.levelAllDone,
   'levelStarGoals': (t) => t.levelStarGoals,
@@ -544,6 +559,7 @@ final Map<String, String Function(AppText)> _members = {
 /// and "Winklo", symbols, and formats made of numbers.
 const _sameInEveryLanguage = {
   'appTitle',
+  'leaderboardLevelsStars',
   'zipTitle',
   'pathWordsTitle',
   'sudokuTitle',
@@ -592,6 +608,16 @@ void main() {
     expect(en.resultsRankOfToday(50, capped: true), 'of 50+ today');
     expect(ml.resultsRankOfToday(50, capped: true), contains('50+'));
     expect(en.resultsRankSemantics(3, 50, capped: true), contains('50+'));
+  });
+
+  test('the Levels board copy keeps the star and the numbers', () {
+    expect(en.leaderboardLevelsStars(92), '92★');
+    expect(ml.leaderboardLevelsStars(92), '92★');
+    expect(en.leaderboardLevelsStarsSemantics(92), '92 stars');
+    expect(en.leaderboardLevelsDetail(40, '42:11'), '40 levels · 42:11');
+    expect(en.leaderboardLevelsDetail(1, '0:30'), '1 level · 0:30');
+    expect(ml.leaderboardLevelsDetail(40, '42:11'), contains('40'));
+    expect(ml.leaderboardLevelsDetail(40, '42:11'), contains('42:11'));
   });
 
   test('Malayalam differs from English, except the allowlist', () {

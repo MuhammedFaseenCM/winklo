@@ -851,6 +851,36 @@ final class AppTextMl implements AppText {
   String get leaderboardAllTimeHint => 'എക്കാലത്തെയും മികച്ച സമയം';
 
   @override
+  String get leaderboardBoardLevels => 'ലെവലുകൾ';
+
+  @override
+  String get leaderboardBoardLevelsHint =>
+      'നക്ഷത്രങ്ങൾ, പിന്നെ കുറഞ്ഞ ലെവലുകൾ, പിന്നെ ആകെ സമയം';
+
+  @override
+  String leaderboardLevelsStars(int stars) => '$stars★';
+
+  @override
+  String leaderboardLevelsStarsSemantics(int stars) => '$stars നക്ഷത്രം';
+
+  @override
+  String leaderboardLevelsDetail(int levels, String time) =>
+      '$levels ലെവൽ · $time';
+
+  @override
+  String get leaderboardLevelsEmpty => 'ലെവൽ ബോർഡിൽ ഇതുവരെ ആരുമില്ല';
+
+  @override
+  String get leaderboardLevelsPlay => 'ലെവലുകൾ കളിക്കൂ';
+
+  @override
+  String get leaderboardLevelsJoin => 'ചേരാൻ ഒരു ലെവൽ പൂർത്തിയാക്കൂ';
+
+  @override
+  String get leaderboardLevelsReplay =>
+      'നക്ഷത്രങ്ങൾ കണക്കാക്കാൻ ഒരു ലെവൽ വീണ്ടും കളിക്കൂ';
+
+  @override
   String get leaderboardSingleDayLabel => 'ഒരു ദിവസം · കഴിഞ്ഞ 14 ദിവസം';
 
   @override
@@ -897,6 +927,15 @@ final class AppTextMl implements AppText {
 
   @override
   String get playerCardDays => 'പൂർത്തിയാക്കിയ ദിവസം';
+
+  @override
+  String get playerCardStars => 'നക്ഷത്രങ്ങൾ';
+
+  @override
+  String get playerCardLevels => 'ലെവലുകൾ';
+
+  @override
+  String get playerCardTotalTime => 'ആകെ സമയം';
 
   @override
   String get gamePaused => 'നിർത്തിവെച്ചു';
@@ -1691,6 +1730,13 @@ final class AppTextMl implements AppText {
 
   @override
   String get levelReplay => 'വീണ്ടും കളിക്കുക';
+
+  @override
+  String get levelSheetNotOnBoard =>
+      'ബോർഡിൽ ഇതുവരെ ഇല്ല · എണ്ണാൻ വീണ്ടും കളിക്കുക';
+
+  @override
+  String get levelsStarsToBoard => 'ലെവൽ ലീഡർബോർഡ് തുറക്കുക';
 
   @override
   String levelStarsLabel(int stars, int maxStars) =>

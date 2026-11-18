@@ -15,12 +15,14 @@ import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/repositories/analytics_repository.dart';
 import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
+import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 import 'package:winklo/domain/usecases/sync_progress.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/auth/cubit/auth_state.dart';
@@ -32,6 +34,8 @@ import '../../../helpers/mock_analytics_repository.dart';
 
 class _MockAuth extends Mock implements AuthRepository {}
 
+class _MockLeaderboard extends Mock implements LeaderboardRepository {}
+
 class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
 
 class _MockSignOut extends Mock implements SignOut {}
@@ -41,6 +45,8 @@ class _MockSyncProgress extends Mock implements SyncProgress {}
 class _MockCheckAppUpdate extends Mock implements CheckAppUpdate {}
 
 class _MockAppUpdateRepository extends Mock implements AppUpdateRepository {}
+
+class _MockSubmitLevelClear extends Mock implements SubmitLevelClear {}
 
 class _Worlds implements LevelWorldRepository {
   @override
@@ -72,6 +78,10 @@ void main() {
     });
     syncDone = Completer<SyncProgressResult>();
     final syncProgress = _MockSyncProgress();
+    final submitLevelClear = _MockSubmitLevelClear();
+    when(
+      () => submitLevelClear.accepted,
+    ).thenAnswer((_) => const Stream<String>.empty());
     when(
       () => syncProgress.call(pull: true),
     ).thenAnswer((_) => syncDone.future);
@@ -149,6 +159,10 @@ void main() {
           RepositoryProvider<LevelWorldRepository>.value(value: _Worlds()),
           RepositoryProvider<LevelProgressRepository>.value(value: progress),
           RepositoryProvider<AuthRepository>.value(value: auth),
+          RepositoryProvider<LeaderboardRepository>.value(
+            value: _MockLeaderboard(),
+          ),
+          RepositoryProvider<SubmitLevelClear>.value(value: submitLevelClear),
           RepositoryProvider<SyncProgress>.value(value: syncProgress),
           RepositoryProvider<AnalyticsRepository>.value(value: analytics),
           RepositoryProvider<CheckAppUpdate>.value(value: checkAppUpdate),

@@ -3,15 +3,23 @@ import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/leaderboard_ranking.dart';
 
-LeaderboardEntry _entry(String uid, int time, {int at = 0, int? days}) =>
-    LeaderboardEntry(
-      uid: uid,
-      displayName: uid,
-      timeSeconds: time,
-      updatedAt: DateTime.utc(2026, 10, 15, 10, at),
-      rank: 0,
-      daysCleared: days,
-    );
+LeaderboardEntry _entry(
+  String uid,
+  int time, {
+  int at = 0,
+  int? days,
+  int? stars,
+  int? levels,
+}) => LeaderboardEntry(
+  uid: uid,
+  displayName: uid,
+  timeSeconds: time,
+  updatedAt: DateTime.utc(2026, 10, 15, 10, at),
+  rank: 0,
+  daysCleared: days,
+  stars: stars,
+  levelsCleared: levels,
+);
 
 void main() {
   test('daily: time ascending, earlier updatedAt first, dense ranks', () {
@@ -43,6 +51,29 @@ void main() {
     ], LeaderboardPeriod.weekly);
     expect(ranked.map((e) => e.rank), [1, 2]);
   });
+
+  test('levels: stars descending, then fewer levels, then total time', () {
+    final ranked = rankLeaderboardEntries([
+      _entry('a', 60, stars: 9, levels: 3),
+      _entry('b', 40, stars: 9, levels: 5),
+      _entry('c', 99, stars: 12, levels: 6),
+    ], LeaderboardPeriod.levels);
+    expect(ranked.map((e) => e.uid), ['c', 'a', 'b']);
+    expect(ranked.map((e) => e.rank), [1, 2, 3]);
+  });
+
+  test(
+    'levels: equal stars, levels and time tie; one second apart does not',
+    () {
+      final ranked = rankLeaderboardEntries([
+        _entry('a', 60, stars: 9, levels: 3, at: 1),
+        _entry('b', 60, stars: 9, levels: 3, at: 2),
+        _entry('c', 61, stars: 9, levels: 3),
+      ], LeaderboardPeriod.levels);
+      expect(ranked.map((e) => e.uid), ['a', 'b', 'c']);
+      expect(ranked.map((e) => e.rank), [1, 1, 2]);
+    },
+  );
 
   test('recentLeaderboardDayIds lists 14 days, today first', () {
     final days = recentLeaderboardDayIds(DateTime(2026, 3, 2, 9));

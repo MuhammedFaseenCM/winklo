@@ -6,6 +6,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
+import '../../core/firebase/firestore_read.dart';
 import '../../core/strings/app_strings.dart';
 import '../../domain/entities/leaderboard_entry.dart';
 import '../../domain/entities/leaderboard_period.dart';
@@ -54,6 +55,19 @@ const weeklyLeaderboardFields = {
   'days',
   'daysCleared',
   'totalSeconds',
+  'updatedAt',
+};
+
+/// Every field on a levels row (`leaderboards/{gameId}/levels/{uid}`). Only
+/// the leaderboard Worker writes them (`LEVEL_BOARD_FIELDS` in
+/// workers/leaderboard/src/limits.ts); `test/firestore` pins both.
+const levelBoardFields = {
+  'stars',
+  'levelsCleared',
+  'timeSeconds',
+  'displayName',
+  'photoUrl',
+  'avatarId',
   'updatedAt',
 };
 
@@ -165,6 +179,57 @@ List<LeaderboardEntry> mapWeeklyLeaderboardRows(
             : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
         rank: rank,
         daysCleared: days,
+      ),
+    );
+  }
+  return entries;
+}
+
+/// Maps levels rows (`leaderboards/{gameId}/levels/{uid}`, already ordered by
+/// stars descending, levels cleared ascending, total best time, `updatedAt`)
+/// to ranked entries whose [LeaderboardEntry.timeSeconds] is the total of the
+/// best times. Equal stars, levels and time share a dense rank. Identity
+/// fields may be absent (a first clear without a name).
+List<LeaderboardEntry> mapLevelsLeaderboardRows(
+  Iterable<({String id, Map<String, dynamic> data})> rows,
+) {
+  final entries = <LeaderboardEntry>[];
+  var rank = 0;
+  (int, int, int)? previous;
+  for (final row in rows) {
+    final data = row.data;
+    final stars = data['stars'];
+    final levels = data['levelsCleared'];
+    final total = data['timeSeconds'];
+    if (stars is! int ||
+        stars < 0 ||
+        levels is! int ||
+        levels <= 0 ||
+        total is! int ||
+        total <= 0) {
+      continue;
+    }
+    final updatedAtRaw = data['updatedAt'];
+    final name = data['displayName'];
+    final photo = data['photoUrl'];
+    final avatar = data['avatarId'];
+    if (previous != (stars, levels, total)) rank += 1;
+    previous = (stars, levels, total);
+    entries.add(
+      LeaderboardEntry(
+        uid: row.id,
+        displayName: name is String && name.trim().isNotEmpty
+            ? name.trim()
+            : AppStrings.playerFallbackName,
+        photoUrl: photo is String && photo.isNotEmpty ? photo : null,
+        avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
+        timeSeconds: total,
+        updatedAt: updatedAtRaw is Timestamp
+            ? updatedAtRaw.toDate()
+            : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        rank: rank,
+        stars: stars,
+        levelsCleared: levels,
       ),
     );
   }
@@ -400,6 +465,8 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
             .collection('weekly')
             .doc(isoWeekIdForDayId(day))
             .collection('entries');
+      case LeaderboardPeriod.levels:
+        return gameRef.collection('levels');
     }
   }
 
@@ -408,9 +475,11 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     QuerySnapshot<Map<String, dynamic>> snap,
   ) {
     final rows = snap.docs.map((d) => (id: d.id, data: d.data()));
-    return period == LeaderboardPeriod.weekly
-        ? mapWeeklyLeaderboardRows(rows)
-        : mapLeaderboardRows(rows);
+    return switch (period) {
+      LeaderboardPeriod.weekly => mapWeeklyLeaderboardRows(rows),
+      LeaderboardPeriod.levels => mapLevelsLeaderboardRows(rows),
+      _ => mapLeaderboardRows(rows),
+    };
   }
 
   @override
@@ -430,6 +499,24 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     if (period == LeaderboardPeriod.weekly) {
       if (!_isReleaseRoot) return Stream.value(const []);
       return _watchWeeklyFromDaily(db: db, gameId: gameId, dayId: dayId);
+    }
+
+    // The Worker writes the levels board on the release root only.
+    if (period == LeaderboardPeriod.levels) {
+      if (!_isReleaseRoot) return Stream.value(const []);
+      return _boardCollection(
+            db: db,
+            gameId: gameId,
+            period: period,
+            dayId: dayId,
+          )
+          .orderBy('stars', descending: true)
+          .orderBy('levelsCleared')
+          .orderBy('timeSeconds')
+          .orderBy('updatedAt')
+          .limit(leaderboardDailyLimit)
+          .snapshots()
+          .map((snap) => _mapRows(period, snap));
     }
 
     // Daily path uses a subcollection under the day doc so queries stay flat.
@@ -470,6 +557,9 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         dayId: dayId,
         memberUids: uids,
       );
+    }
+    if (period == LeaderboardPeriod.levels && !_isReleaseRoot) {
+      return Stream.value(const []);
     }
     // A league has at most 30 members, the most `whereIn` takes; the board is
     // ranked here with the server boards' rules.
@@ -648,8 +738,8 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     final viaWorker = _isReleaseRoot && client != null && proof != null;
     if (viaWorker) {
       final posted = await _postToWorker(
-        client,
         user,
+        send: (idToken, body) => client.submit(idToken: idToken, body: body),
         body: leaderboardSubmitBody(
           gameId: gameId,
           dayId: dayId,
@@ -733,8 +823,12 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
   /// can be stale when the phone's clock is off); if the Worker still won't
   /// take it, the clear is written directly rather than lost.
   Future<bool> _postToWorker(
-    LeaderboardSubmitClient client,
     User user, {
+    required Future<LeaderboardSubmitResult> Function(
+      String idToken,
+      Map<String, Object?> body,
+    )
+    send,
     required Map<String, Object?> body,
   }) async {
     for (var attempt = 0; attempt < 2; attempt++) {
@@ -748,7 +842,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         return false;
       }
       try {
-        await client.submit(idToken: idToken, body: body);
+        await send(idToken, body);
         return true;
       } on LeaderboardSubmitRejected catch (e, st) {
         if (e.code == 'unauthorized') {
@@ -759,11 +853,95 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         _reportRejected(e, st);
         throw LeaderboardSubmitRefused(e.code);
       } on LeaderboardSubmitUnavailable catch (e) {
-        debugPrint('Leaderboard Worker unavailable, writing directly: $e');
+        debugPrint('Leaderboard Worker unavailable: $e');
         return false;
       }
     }
     return false;
+  }
+
+  @override
+  Future<LevelClearSubmitOutcome> submitLevelClear({
+    required String gameId,
+    required String levelId,
+    required int timeSeconds,
+    required bool usedHints,
+    required LeaderboardProof proof,
+    required String expectedUid,
+  }) async {
+    final client = _submitClient;
+    if (!_isReleaseRoot || client == null) {
+      return LevelClearSubmitOutcome.notSent;
+    }
+    final auth = _firebaseAuth;
+    final user = auth?.currentUser;
+    if (user == null) return LevelClearSubmitOutcome.notSent;
+    _assertExpectedUser(auth, expectedUid);
+
+    // The name and avatar the daily boards show: the profile's, read here.
+    Map<String, dynamic>? profile;
+    var profileDocumentRead = false;
+    final db = _db;
+    if (db != null) {
+      try {
+        profile = (await db.collection('users').doc(user.uid).get()).data();
+        profileDocumentRead = true;
+      } catch (e, st) {
+        debugPrint('Leaderboard profile read failed: $e');
+        debugPrint('$st');
+      }
+    }
+    final identity = leaderboardSubmitIdentity(
+      profileDocumentRead: profileDocumentRead,
+      authDisplayName: user.displayName,
+      authPhotoUrl: user.photoURL,
+      profile: profile,
+    );
+    // The account may have switched during the profile read.
+    _assertExpectedUser(auth, expectedUid);
+
+    // No direct-write fallback: an unreachable Worker leaves the clear for the
+    // caller to keep and send again.
+    final posted = await _postToWorker(
+      user,
+      send: (idToken, body) =>
+          client.submitLevelClear(idToken: idToken, body: body),
+      body: {
+        'gameId': gameId,
+        'levelId': levelId,
+        'timeSeconds': timeSeconds,
+        'usedHints': usedHints,
+        'proof': proof.toJson(),
+        'displayName': identity?.displayName,
+        'photoUrl': identity?.photoUrl,
+        'avatarId': identity?.avatarId,
+      },
+    );
+    return posted
+        ? LevelClearSubmitOutcome.sent
+        : LevelClearSubmitOutcome.unavailable;
+  }
+
+  @override
+  Future<Set<String>?> myBoardLevelIds(String gameId) async {
+    if (!_isReleaseRoot) return null;
+    final db = _db;
+    final auth = _firebaseAuth;
+    final uid = auth?.currentUser?.uid;
+    if (db == null || uid == null) return null;
+    try {
+      _assertGameId(gameId);
+      final snap = await getDocPreferringServer(
+        db.collection(_root).doc(gameId).collection('level_records').doc(uid),
+      );
+      // The account may have switched during the read.
+      if (auth?.currentUser?.uid != uid) return null;
+      final levels = snap.data()?['levels'];
+      return levels is Map ? {for (final id in levels.keys) '$id'} : {};
+    } catch (e) {
+      debugPrint('Leaderboard level records read failed: $e');
+      return null;
+    }
   }
 
   Future<void> _writeImproveOnly(
