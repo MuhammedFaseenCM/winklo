@@ -853,7 +853,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         _reportRejected(e, st);
         throw LeaderboardSubmitRefused(e.code);
       } on LeaderboardSubmitUnavailable catch (e) {
-        debugPrint('Leaderboard Worker unavailable, writing directly: $e');
+        debugPrint('Leaderboard Worker unavailable: $e');
         return false;
       }
     }
