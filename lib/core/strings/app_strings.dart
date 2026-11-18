@@ -354,6 +354,20 @@ abstract final class AppStrings {
   static String get leaderboardScopeSheetTitle => _t.leaderboardScopeSheetTitle;
   static String get leaderboardThisWeekHint => _t.leaderboardThisWeekHint;
   static String get leaderboardAllTimeHint => _t.leaderboardAllTimeHint;
+
+  // Leaderboard: the Levels board
+  static String get leaderboardBoardLevels => _t.leaderboardBoardLevels;
+  static String leaderboardLevelsStars(int stars) =>
+      _t.leaderboardLevelsStars(stars);
+  static String leaderboardLevelsStarsSemantics(int stars) =>
+      _t.leaderboardLevelsStarsSemantics(stars);
+  static String leaderboardLevelsDetail(int levels, String time) =>
+      _t.leaderboardLevelsDetail(levels, time);
+  static String get leaderboardLevelsEmpty => _t.leaderboardLevelsEmpty;
+  static String get leaderboardLevelsPlay => _t.leaderboardLevelsPlay;
+  static String get leaderboardLevelsJoin => _t.leaderboardLevelsJoin;
+  static String get leaderboardLevelsReplay => _t.leaderboardLevelsReplay;
+
   static String get leaderboardSingleDayLabel => _t.leaderboardSingleDayLabel;
   static String get leaderboardColumnPlayer => _t.leaderboardColumnPlayer;
   static String get leaderboardColumnTime => _t.leaderboardColumnTime;

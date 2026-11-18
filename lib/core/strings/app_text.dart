@@ -302,6 +302,16 @@ abstract interface class AppText {
   String get leaderboardScopeSheetTitle;
   String get leaderboardThisWeekHint;
   String get leaderboardAllTimeHint;
+
+  // Leaderboard: the Levels board
+  String get leaderboardBoardLevels;
+  String leaderboardLevelsStars(int stars);
+  String leaderboardLevelsStarsSemantics(int stars);
+  String leaderboardLevelsDetail(int levels, String time);
+  String get leaderboardLevelsEmpty;
+  String get leaderboardLevelsPlay;
+  String get leaderboardLevelsJoin;
+  String get leaderboardLevelsReplay;
   String get leaderboardSingleDayLabel;
   String get leaderboardColumnPlayer;
   String get leaderboardColumnTime;

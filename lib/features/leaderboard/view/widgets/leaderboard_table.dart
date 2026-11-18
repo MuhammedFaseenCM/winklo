@@ -50,7 +50,7 @@ class LeaderboardTableHeader extends StatelessWidget {
       LeaderboardPeriod.daily => AppStrings.leaderboardColumnTime,
       LeaderboardPeriod.weekly => AppStrings.leaderboardColumnTotal,
       LeaderboardPeriod.allTime => AppStrings.leaderboardColumnBest,
-      LeaderboardPeriod.levels => AppStrings.leaderboardColumnTotal,
+      LeaderboardPeriod.levels => AppStrings.leaderboardBoardLevels,
     };
     return Container(
       height: leaderboardTableHeaderHeight,
@@ -105,7 +105,8 @@ class LeaderboardTableHeader extends StatelessWidget {
 
 /// One player below the podium: rank, avatar, name (with clean-run icons on
 /// the daily board), then the time and its gap to #1, or days and total on
-/// the weekly board.
+/// the weekly board, or stars on the Levels board (with its levels and time
+/// under the name).
 class LeaderboardTableRow extends StatelessWidget {
   const LeaderboardTableRow({
     super.key,
@@ -132,7 +133,8 @@ class LeaderboardTableRow extends StatelessWidget {
   /// Seconds behind #1, shown under the time.
   final int? gapSeconds;
 
-  /// A line under the name (the pinned row's "behind #N").
+  /// A line under the name (the pinned row's "behind #N"); the Levels board
+  /// fills it with its own detail when this is null.
   final String? subtitle;
 
   /// A medal instead of the number for ranks 1 to 3: the Results mini
@@ -185,15 +187,32 @@ class LeaderboardTableRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  AppStrings.formatPlayTime(entry.timeSeconds),
-                  maxLines: 1,
-                  style: numberStyle?.copyWith(
-                    color: isYou
-                        ? ZipColors.ember
-                        : ZipColors.onInk.withValues(alpha: 0.95),
+                if (period == LeaderboardPeriod.levels)
+                  Semantics(
+                    label: AppStrings.leaderboardLevelsStarsSemantics(
+                      entry.stars ?? 0,
+                    ),
+                    excludeSemantics: true,
+                    child: Text(
+                      AppStrings.leaderboardLevelsStars(entry.stars ?? 0),
+                      maxLines: 1,
+                      style: numberStyle?.copyWith(
+                        color: isYou
+                            ? ZipColors.ember
+                            : ZipColors.onInk.withValues(alpha: 0.95),
+                      ),
+                    ),
+                  )
+                else
+                  Text(
+                    AppStrings.formatPlayTime(entry.timeSeconds),
+                    maxLines: 1,
+                    style: numberStyle?.copyWith(
+                      color: isYou
+                          ? ZipColors.ember
+                          : ZipColors.onInk.withValues(alpha: 0.95),
+                    ),
                   ),
-                ),
                 if (gapSeconds case final gap?)
                   Text(
                     '+${AppStrings.formatPlayTime(gap)}',
@@ -289,7 +308,8 @@ class LeaderboardTableRow extends StatelessWidget {
         ],
       ],
     );
-    final line = subtitle;
+    // The Levels board's second line: levels cleared and their total time.
+    final line = subtitle ?? levelsBoardDetail(entry, period);
     if (line == null) return nameRow;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -308,6 +328,15 @@ class LeaderboardTableRow extends StatelessWidget {
       ],
     );
   }
+}
+
+/// "40 levels · 42:11" under a Levels board name; null on the other boards.
+String? levelsBoardDetail(LeaderboardEntry entry, LeaderboardPeriod period) {
+  if (period != LeaderboardPeriod.levels) return null;
+  return AppStrings.leaderboardLevelsDetail(
+    entry.levelsCleared ?? 0,
+    AppStrings.formatPlayTime(entry.timeSeconds),
+  );
 }
 
 /// Compact "You" marker next to the player's name.

@@ -79,7 +79,7 @@ String leaderboardBoardLabel({
     case LeaderboardPeriod.allTime:
       return AppStrings.leaderboardAllTime;
     case LeaderboardPeriod.levels:
-      return AppStrings.levelsTitle;
+      return AppStrings.leaderboardBoardLevels;
     case LeaderboardPeriod.daily:
       if (dayId == null) return AppStrings.leaderboardToday;
       final index = recentDayIds.indexOf(dayId);

@@ -808,6 +808,32 @@ final class AppTextEn implements AppText {
   String get leaderboardAllTimeHint => 'Best time ever';
 
   @override
+  String get leaderboardBoardLevels => 'Levels';
+
+  @override
+  String leaderboardLevelsStars(int stars) => '$stars★';
+
+  @override
+  String leaderboardLevelsStarsSemantics(int stars) =>
+      stars == 1 ? '1 star' : '$stars stars';
+
+  @override
+  String leaderboardLevelsDetail(int levels, String time) =>
+      '$levels ${levels == 1 ? 'level' : 'levels'} · $time';
+
+  @override
+  String get leaderboardLevelsEmpty => "No one's on the Levels board yet";
+
+  @override
+  String get leaderboardLevelsPlay => 'Play levels';
+
+  @override
+  String get leaderboardLevelsJoin => 'Clear a level to join';
+
+  @override
+  String get leaderboardLevelsReplay => 'Replay a level to count your stars';
+
+  @override
   String get leaderboardSingleDayLabel => 'A single day · last 14 days';
 
   @override

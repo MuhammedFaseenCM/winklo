@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/play_mode_route.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_layout.dart';
@@ -18,6 +19,7 @@ import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/repositories/league_repository.dart';
+import '../../../domain/repositories/level_progress_repository.dart';
 import '../../../domain/usecases/watch_leaderboard.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/cubit/auth_state.dart';
@@ -31,6 +33,7 @@ import 'widgets/leaderboard_board_sheet.dart';
 import 'widgets/leaderboard_board_view.dart';
 import 'widgets/leaderboard_filter_row.dart';
 import 'widgets/leaderboard_game_tabs.dart';
+import 'widgets/leaderboard_levels_note.dart';
 import 'widgets/leaderboard_scope_sheet.dart';
 import 'widgets/leaderboard_shimmer.dart';
 import 'widgets/leaderboard_table.dart';
@@ -78,7 +81,8 @@ String _resolveLeaderboardGameId(String? game) {
 }
 
 /// IndexedStack keeps [LeaderboardCubit] alive, so a later
-/// `go('/leaderboard?game=...')` must call [LeaderboardCubit.selectGame].
+/// `go('/leaderboard?game=...')` must call [LeaderboardCubit.selectGame]
+/// (and `board=levels` [LeaderboardCubit.selectBoard]).
 class _RouteGameSync extends StatefulWidget {
   const _RouteGameSync({required this.child});
 
@@ -95,6 +99,9 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
   /// The last `league` query applied, so coming back to the tab doesn't undo
   /// a later pick in the scope bar.
   String? _appliedLeagueQuery;
+
+  /// Likewise for `board`, so a later pick in the board sheet stays.
+  String? _appliedBoardQuery;
 
   @override
   void didChangeDependencies() {
@@ -129,6 +136,7 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
     final game = uri.queryParameters['game'];
     final gameId = _resolveLeaderboardGameId(game);
     final leagueId = uri.queryParameters['league'];
+    final board = uri.queryParameters['board'];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final cubit = context.read<LeaderboardCubit>();
@@ -138,6 +146,11 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
         cubit.selectLeague(leagueId);
       }
       _appliedLeagueQuery = leagueId;
+      // `/leaderboard?game=zip&board=levels`: the Levels board.
+      if (board == 'levels' && board != _appliedBoardQuery) {
+        cubit.selectBoard(LeaderboardPeriod.levels);
+      }
+      _appliedBoardQuery = board;
     });
   }
 
@@ -489,7 +502,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                             LeaderboardPeriod.daily => AppIcons.today,
                             LeaderboardPeriod.weekly => AppIcons.week,
                             LeaderboardPeriod.allTime => AppIcons.medal,
-                            LeaderboardPeriod.levels => AppIcons.star,
+                            LeaderboardPeriod.levels => AppIcons.levels,
                           },
                           boardLabel: leaderboardBoardLabel(
                             period: state.period,
@@ -605,6 +618,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                       ? AppStrings.leaderboardLeagueEmpty
                                       : state.period == LeaderboardPeriod.weekly
                                       ? AppStrings.leaderboardWeeklyEmpty
+                                      : state.period == LeaderboardPeriod.levels
+                                      ? AppStrings.leaderboardLevelsEmpty
                                       : AppStrings.leaderboardEmpty,
                                   messageStyle: Theme.of(context)
                                       .textTheme
@@ -618,22 +633,36 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                   action: SizedBox(
                                     width: 220,
                                     child: ZipPrimaryButton(
-                                      label: AppStrings.leaderboardPlayGame(
-                                        gameTitle,
-                                      ),
+                                      label:
+                                          state.period ==
+                                              LeaderboardPeriod.levels
+                                          ? AppStrings.leaderboardLevelsPlay
+                                          : AppStrings.leaderboardPlayGame(
+                                              gameTitle,
+                                            ),
                                       icon: AppIcons.play,
-                                      onPressed: () async {
-                                        final ok = await ensureSignedInForPlay(
-                                          context,
-                                        );
-                                        if (!ok || !context.mounted) return;
-                                        await context.push(gameRoute);
-                                        if (context.mounted) {
-                                          context
-                                              .read<LeaderboardCubit>()
-                                              .retry();
-                                        }
-                                      },
+                                      onPressed:
+                                          state.period ==
+                                              LeaderboardPeriod.levels
+                                          ? () => context.go(
+                                              levelsLocation,
+                                              extra: levelsVisitToken(),
+                                            )
+                                          : () async {
+                                              final ok =
+                                                  await ensureSignedInForPlay(
+                                                    context,
+                                                  );
+                                              if (!ok || !context.mounted) {
+                                                return;
+                                              }
+                                              await context.push(gameRoute);
+                                              if (context.mounted) {
+                                                context
+                                                    .read<LeaderboardCubit>()
+                                                    .retry();
+                                              }
+                                            },
                                     ),
                                   ),
                                 );
@@ -655,6 +684,19 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                   ? layout.space(8)
                                   : layout.pagePadding.bottom;
                               final showSignInFab = auth.user == null;
+                              // Signed in but not on the Levels board yet.
+                              final showLevelsNote =
+                                  state.period == LeaderboardPeriod.levels &&
+                                  state.leagueId == null &&
+                                  auth.user != null &&
+                                  userEntry == null;
+                              final hasLocalStars =
+                                  (context
+                                          .read<LevelProgressRepository?>()
+                                          ?.progress(GameIds.zip)
+                                          .totalStars ??
+                                      0) >
+                                  0;
                               final showPinned =
                                   userEntry != null &&
                                   !inInitialList &&
@@ -710,7 +752,8 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                                         !inInitialList
                                                     ? 64.0
                                                     : 0.0) +
-                                                (showSignInFab ? 80.0 : 0.0),
+                                                (showSignInFab ? 80.0 : 0.0) +
+                                                (showLevelsNote ? 64.0 : 0.0),
                                             onTapEntry: (entry) =>
                                                 showPlayerCardSheet(
                                                   context,
@@ -724,6 +767,15 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                           ),
                                         ),
                                   ),
+                                  if (showLevelsNote)
+                                    Positioned(
+                                      left: 12,
+                                      right: 12,
+                                      bottom: bottomGap,
+                                      child: LeaderboardLevelsNote(
+                                        hasLocalStars: hasLocalStars,
+                                      ),
+                                    ),
                                   if (userEntry != null && !inInitialList)
                                     Positioned(
                                       left: 0,

@@ -851,6 +851,32 @@ final class AppTextMl implements AppText {
   String get leaderboardAllTimeHint => 'എക്കാലത്തെയും മികച്ച സമയം';
 
   @override
+  String get leaderboardBoardLevels => 'ലെവലുകൾ';
+
+  @override
+  String leaderboardLevelsStars(int stars) => '$stars★';
+
+  @override
+  String leaderboardLevelsStarsSemantics(int stars) => '$stars നക്ഷത്രം';
+
+  @override
+  String leaderboardLevelsDetail(int levels, String time) =>
+      '$levels ലെവൽ · $time';
+
+  @override
+  String get leaderboardLevelsEmpty => 'ലെവൽ ബോർഡിൽ ഇതുവരെ ആരുമില്ല';
+
+  @override
+  String get leaderboardLevelsPlay => 'ലെവലുകൾ കളിക്കൂ';
+
+  @override
+  String get leaderboardLevelsJoin => 'ചേരാൻ ഒരു ലെവൽ പൂർത്തിയാക്കൂ';
+
+  @override
+  String get leaderboardLevelsReplay =>
+      'നക്ഷത്രങ്ങൾ കണക്കാക്കാൻ ഒരു ലെവൽ വീണ്ടും കളിക്കൂ';
+
+  @override
   String get leaderboardSingleDayLabel => 'ഒരു ദിവസം · കഴിഞ്ഞ 14 ദിവസം';
 
   @override
