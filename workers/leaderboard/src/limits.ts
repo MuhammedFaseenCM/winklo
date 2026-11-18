@@ -60,3 +60,22 @@ export const WEEKLY_FIELDS = [
   'totalSeconds',
   'updatedAt',
 ] as const;
+
+/** Games with a Levels board (`leaderboards/{gameId}/levels/{uid}`). */
+export const LEVEL_GAMES = ['zip'] as const;
+
+export type LevelGameId = (typeof LEVEL_GAMES)[number];
+
+/** Fields on a Levels board row (`leaderboards/{gameId}/levels/{uid}`). */
+export const LEVEL_BOARD_FIELDS = [
+  'stars',
+  'levelsCleared',
+  'timeSeconds',
+  'displayName',
+  'photoUrl',
+  'avatarId',
+  'updatedAt',
+] as const;
+
+/** Fields on the server's level bests (`leaderboards/{gameId}/level_records/{uid}`). */
+export const LEVEL_RECORD_FIELDS = ['levels', 'updatedAt'] as const;
