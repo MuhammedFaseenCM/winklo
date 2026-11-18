@@ -234,6 +234,56 @@ void main() {
     });
   });
 
+  group('an empty Levels board', () {
+    Future<void> openEmpty(WidgetTester tester, {int localStars = 0}) async {
+      final mock = _MockLevelProgress();
+      when(() => mock.progress(GameIds.zip)).thenReturn(
+        localStars == 0
+            ? LevelProgress.empty
+            : LevelProgress({
+                'l1': LevelRecord(stars: localStars, bestSeconds: 30),
+              }),
+      );
+      await pump(tester, progress: mock);
+      await showLevels(tester);
+      board.add(const []);
+      await tester.pumpAndSettle();
+      expect(find.text(AppStrings.leaderboardLevelsEmpty), findsOneWidget);
+      expect(find.text(AppStrings.leaderboardLevelsPlay), findsOneWidget);
+    }
+
+    testWidgets('with local stars shows the replay line', (tester) async {
+      await openEmpty(tester, localStars: 3);
+      expect(find.text(AppStrings.leaderboardLevelsReplay), findsOneWidget);
+      expect(find.text(AppStrings.leaderboardLevelsJoin), findsNothing);
+    });
+
+    testWidgets('without local stars shows the join line', (tester) async {
+      await openEmpty(tester);
+      expect(find.text(AppStrings.leaderboardLevelsJoin), findsOneWidget);
+      expect(find.text(AppStrings.leaderboardLevelsReplay), findsNothing);
+    });
+  });
+
+  testWidgets('Levels is not offered on other games', (tester) async {
+    final router = await pump(tester);
+    router.go('/leaderboard?game=sudoku');
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('leaderboard_board_pill')));
+    await settle(tester);
+    expect(find.byKey(const Key('leaderboard_board_levels')), findsNothing);
+  });
+
+  testWidgets('board=levels on a game without levels does nothing', (
+    tester,
+  ) async {
+    final router = await pump(tester);
+    router.go('/leaderboard?game=sudoku&board=levels');
+    await settle(tester);
+    expect(periods, isNot(contains(LeaderboardPeriod.levels)));
+    expect(find.text(AppStrings.leaderboardToday), findsOneWidget);
+  });
+
   testWidgets('a player on the board gets no join line', (tester) async {
     await pump(tester);
     await showLevels(tester);

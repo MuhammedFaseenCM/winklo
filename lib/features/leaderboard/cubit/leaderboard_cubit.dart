@@ -66,12 +66,27 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
         gameId != GameIds.sudoku) {
       return;
     }
-    emit(state.copyWith(gameId: gameId, status: LeaderboardStatus.loading));
+    // Levels is a Zip-only board; other games go back to the daily one.
+    final dropLevels =
+        state.period == LeaderboardPeriod.levels &&
+        !levelGameIds.contains(gameId);
+    emit(
+      state.copyWith(
+        gameId: gameId,
+        period: dropLevels ? LeaderboardPeriod.daily : state.period,
+        dayId: dropLevels ? null : state.dayId,
+        status: LeaderboardStatus.loading,
+      ),
+    );
     _resubscribe();
   }
 
   void selectPeriod(LeaderboardPeriod period) {
     if (period == state.period) return;
+    if (period == LeaderboardPeriod.levels &&
+        !levelGameIds.contains(state.gameId)) {
+      return;
+    }
     emit(state.copyWith(period: period, status: LeaderboardStatus.loading));
     _resubscribe();
   }
@@ -95,6 +110,10 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
   /// Shows [period]'s board in one load; for the daily board, [dayId]'s
   /// (`yyyy-MM-dd`, today's for null). Weekly and all-time clear the day.
   void selectBoard(LeaderboardPeriod period, {String? dayId}) {
+    if (period == LeaderboardPeriod.levels &&
+        !levelGameIds.contains(state.gameId)) {
+      return;
+    }
     String? nextDay;
     if (period == LeaderboardPeriod.daily) {
       final today = leaderboardDayId(_now());

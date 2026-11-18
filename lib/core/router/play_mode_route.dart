@@ -44,9 +44,6 @@ PlayMode playModeOf(Uri uri, {DateTime? now}) =>
     PlayMode.fromQuery(uri.queryParameters, now: now ?? DateTime.now()) ??
     PlayMode.daily;
 
-/// Games with Levels so far; Path Words and Sudoku join later.
-const levelGameIds = {GameIds.zip};
-
 /// Sends a game link whose archive day is malformed, today, in the future
 /// or before the archive began to that game's archive calendar, and a
 /// malformed level link, a level link on a game without Levels, or a level

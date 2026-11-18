@@ -18,7 +18,7 @@ class LeaderboardBoardChoice {
   final String? dayId;
 }
 
-/// "Which board?": This week, All-time (when [showAllTime]), Levels, or one of the
+/// "Which board?": This week, All-time (when [showAllTime]), Levels (when [showLevels]), or one of the
 /// [recentDayIds] (today first) on a Monday-first calendar. Null when
 /// dismissed.
 Future<LeaderboardBoardChoice?> showLeaderboardBoardSheet(
@@ -27,6 +27,7 @@ Future<LeaderboardBoardChoice?> showLeaderboardBoardSheet(
   required String? dayId,
   required List<String> recentDayIds,
   required bool showAllTime,
+  bool showLevels = true,
 }) {
   return showModalBottomSheet<LeaderboardBoardChoice>(
     context: context,
@@ -59,14 +60,15 @@ Future<LeaderboardBoardChoice?> showLeaderboardBoardSheet(
               onTap: () =>
                   pick(const LeaderboardBoardChoice(LeaderboardPeriod.allTime)),
             ),
-          LeaderboardSheetOption(
-            key: const Key('leaderboard_board_levels'),
-            leading: const AppIcon(AppIcons.levels, color: ZipColors.teal),
-            label: AppStrings.leaderboardBoardLevels,
-            selected: period == LeaderboardPeriod.levels,
-            onTap: () =>
-                pick(const LeaderboardBoardChoice(LeaderboardPeriod.levels)),
-          ),
+          if (showLevels)
+            LeaderboardSheetOption(
+              key: const Key('leaderboard_board_levels'),
+              leading: const AppIcon(AppIcons.levels, color: ZipColors.teal),
+              label: AppStrings.leaderboardBoardLevels,
+              selected: period == LeaderboardPeriod.levels,
+              onTap: () =>
+                  pick(const LeaderboardBoardChoice(LeaderboardPeriod.levels)),
+            ),
           const SizedBox(height: 10),
           Text(
             AppStrings.leaderboardSingleDayLabel,

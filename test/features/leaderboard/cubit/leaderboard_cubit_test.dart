@@ -120,6 +120,33 @@ void main() {
   );
 
   blocTest<LeaderboardCubit, LeaderboardState>(
+    'leaving Zip on the Levels board falls back to the daily board',
+    build: buildCubit,
+    seed: () => const LeaderboardState(period: LeaderboardPeriod.levels),
+    act: (cubit) => cubit.selectGame(GameIds.sudoku),
+    expect: () => [
+      const LeaderboardState(
+        gameId: GameIds.sudoku,
+        status: LeaderboardStatus.loading,
+      ),
+    ],
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
+    'the Levels board is not selectable on a game without levels',
+    build: () => LeaderboardCubit(
+      watchLeaderboard: watch,
+      authRepository: auth,
+      initialGameId: GameIds.sudoku,
+    ),
+    act: (cubit) {
+      cubit.selectBoard(LeaderboardPeriod.levels);
+      cubit.selectPeriod(LeaderboardPeriod.levels);
+    },
+    expect: () => <LeaderboardState>[],
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
     'selectGame switches to path words',
     build: buildCubit,
     act: (cubit) => cubit.selectGame(GameIds.pathWords),
