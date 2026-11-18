@@ -22,6 +22,21 @@ const leaderboardIdentityGameIds = [
   GameIds.sudoku,
 ];
 
+/// The leaderboard docs a name / avatar change is copied onto (those that
+/// exist): each game's all-time and today's daily row, and the Levels row
+/// of each game with levels.
+List<String> leaderboardIdentityDocPaths({
+  required String root,
+  required String uid,
+  required String dayId,
+}) => [
+  for (final gameId in leaderboardIdentityGameIds) ...[
+    '$root/$gameId/all_time/$uid',
+    '$root/$gameId/daily/$dayId/entries/$uid',
+    if (levelGameIds.contains(gameId)) '$root/$gameId/levels/$uid',
+  ],
+];
+
 /// Identity fields copied onto existing leaderboard docs.
 /// Omits `updatedAt` so tie-break order stays on the score submit time.
 /// Null photo/avatar become deletes so presets clear a custom photo cleanly;
@@ -229,20 +244,15 @@ class ProfileRepositoryImpl implements ProfileRepository {
     AppUser user,
   ) async {
     try {
-      final dayId = leaderboardDayId();
-      final refs = <DocumentReference<Map<String, dynamic>>>[];
-      final root = leaderboardRootCollection();
-      for (final gameId in leaderboardIdentityGameIds) {
-        final game = db.collection(root).doc(gameId);
-        refs.add(game.collection('all_time').doc(user.uid));
-        refs.add(
-          game
-              .collection('daily')
-              .doc(dayId)
-              .collection('entries')
-              .doc(user.uid),
-        );
-      }
+      // The release root: the only one the Worker writes Levels rows on.
+      final refs = [
+        for (final path in leaderboardIdentityDocPaths(
+          root: leaderboardRootCollection(),
+          uid: user.uid,
+          dayId: leaderboardDayId(),
+        ))
+          db.doc(path),
+      ];
       // Omit updatedAt so a name/avatar refresh does not reorder ties.
       final patch = leaderboardIdentityPatch(user);
       await db.runTransaction((tx) async {
