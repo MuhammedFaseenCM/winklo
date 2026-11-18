@@ -51,6 +51,8 @@ void main() {
   late _MockFirebaseAuth auth;
   late _MockUser user;
   late _MockSubmitClient client;
+  late _MockSnapshot snapshot;
+  late _MockDoc docRef;
   late _FakeSkipLog skipLog;
   late List<Object> rejected;
 
@@ -65,8 +67,8 @@ void main() {
 
     firestore = _MockFirestore();
     final collection = _MockCollection();
-    final docRef = _MockDoc();
-    final snapshot = _MockSnapshot();
+    docRef = _MockDoc();
+    snapshot = _MockSnapshot();
     when(() => firestore.collection(any())).thenReturn(collection);
     when(() => collection.doc(any())).thenReturn(docRef);
     when(() => docRef.collection(any())).thenReturn(collection);
@@ -117,7 +119,6 @@ void main() {
     usedHints: true,
     proof: _proof,
     expectedUid: expectedUid,
-    identity: (displayName: 'Ada', photoUrl: null, avatarId: 'preset_01'),
   );
 
   void stubClient(Future<LeaderboardSubmitResult> Function() answer) {
@@ -254,6 +255,37 @@ void main() {
       send(repo(), expectedUid: 'someone-else'),
       throwsA(isA<Failure>()),
     );
+    verifyNeverSent();
+  });
+
+  test('the profile name is posted, not the auth name', () async {
+    when(
+      () => snapshot.data(),
+    ).thenReturn({'displayName': 'Renamed', 'avatarId': 'preset_07'});
+    stubClient(() async => const LeaderboardSubmitResult(improved: true));
+
+    await send(repo());
+
+    final body =
+        verify(
+              () => client.submitLevelClear(
+                idToken: any(named: 'idToken'),
+                body: captureAny(named: 'body'),
+              ),
+            ).captured.single
+            as Map<String, Object?>;
+    expect(body['displayName'], 'Renamed');
+    expect(body['avatarId'], 'preset_07');
+  });
+
+  test('an account switch during the profile read throws before '
+      'posting', () async {
+    when(() => docRef.get()).thenAnswer((_) async {
+      when(() => user.uid).thenReturn('u2');
+      return snapshot;
+    });
+
+    await expectLater(send(repo()), throwsA(isA<Failure>()));
     verifyNeverSent();
   });
 }

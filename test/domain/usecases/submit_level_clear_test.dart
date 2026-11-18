@@ -152,7 +152,6 @@ void main() {
         usedHints: any(named: 'usedHints'),
         proof: any(named: 'proof'),
         expectedUid: any(named: 'expectedUid'),
-        identity: any(named: 'identity'),
       ),
     ).thenAnswer(answer);
   }
@@ -202,7 +201,6 @@ void main() {
           usedHints: any(named: 'usedHints'),
           proof: any(named: 'proof'),
           expectedUid: any(named: 'expectedUid'),
-          identity: any(named: 'identity'),
         ),
       );
     });
@@ -223,7 +221,6 @@ void main() {
           usedHints: false,
           proof: _proof,
           expectedUid: 'u1',
-          identity: (displayName: 'Ana', photoUrl: 'p.png', avatarId: 'a1'),
         ),
       ).called(1);
     });
@@ -294,7 +291,6 @@ void main() {
           usedHints: any(named: 'usedHints'),
           proof: any(named: 'proof'),
           expectedUid: 'u1',
-          identity: any(named: 'identity'),
         ),
       ).called(2);
     });
@@ -310,7 +306,6 @@ void main() {
           usedHints: any(named: 'usedHints'),
           proof: any(named: 'proof'),
           expectedUid: any(named: 'expectedUid'),
-          identity: any(named: 'identity'),
         ),
       );
     });
@@ -476,5 +471,32 @@ void main() {
       [for (final c in gappy.pending('u1', 'zip')) c.levelId],
       ['zip_1_03'],
     );
+  });
+
+  test('overlapping resends post each clear once', () async {
+    await store.keep('u1', 'zip', clear('zip_1_01'));
+    await store.keep('u1', 'zip', clear('zip_1_02'));
+    final release = Completer<void>();
+    final sent = <String>[];
+    stubSubmit((inv) async {
+      sent.add(inv.namedArguments[#levelId] as String);
+      await release.future;
+      return LevelClearSubmitOutcome.sent;
+    });
+
+    final first = submit.resendPending('zip');
+    await pumpEventQueue();
+    // The next sync pass, while the first loop is still sending.
+    final second = submit.resendPending('zip');
+    release.complete();
+    await Future.wait([first, second]);
+
+    expect(sent, ['zip_1_01', 'zip_1_02']);
+    expect(store.pending('u1', 'zip'), isEmpty);
+
+    // Once it has finished, a new resend starts a new run.
+    await store.keep('u1', 'zip', clear('zip_1_03'));
+    await submit.resendPending('zip');
+    expect(sent, ['zip_1_01', 'zip_1_02', 'zip_1_03']);
   });
 }

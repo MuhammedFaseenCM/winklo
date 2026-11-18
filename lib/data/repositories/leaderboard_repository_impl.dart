@@ -778,7 +778,6 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     required bool usedHints,
     required LeaderboardProof proof,
     required String expectedUid,
-    ({String displayName, String? photoUrl, String? avatarId})? identity,
   }) async {
     final client = _submitClient;
     if (!_isReleaseRoot || client == null) {
@@ -787,6 +786,28 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     final auth = _firebaseAuth;
     final user = auth?.currentUser;
     if (user == null) return LevelClearSubmitOutcome.notSent;
+    _assertExpectedUser(auth, expectedUid);
+
+    // The name and avatar the daily boards show: the profile's, read here.
+    Map<String, dynamic>? profile;
+    var profileDocumentRead = false;
+    final db = _db;
+    if (db != null) {
+      try {
+        profile = (await db.collection('users').doc(user.uid).get()).data();
+        profileDocumentRead = true;
+      } catch (e, st) {
+        debugPrint('Leaderboard profile read failed: $e');
+        debugPrint('$st');
+      }
+    }
+    final identity = leaderboardSubmitIdentity(
+      profileDocumentRead: profileDocumentRead,
+      authDisplayName: user.displayName,
+      authPhotoUrl: user.photoURL,
+      profile: profile,
+    );
+    // The account may have switched during the profile read.
     _assertExpectedUser(auth, expectedUid);
 
     // No direct-write fallback: an unreachable Worker leaves the clear for the

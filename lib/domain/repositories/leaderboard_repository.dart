@@ -97,7 +97,8 @@ abstract class LeaderboardRepository {
   });
 
   /// Posts one level clear to the Worker (`POST /v1/level-clear`), which
-  /// checks the [proof] and writes the stars board. Level clears have no
+  /// checks the [proof] and writes the stars board, under the profile's name
+  /// and avatar as the daily boards show them. Level clears have no
   /// direct-write fallback.
   ///
   /// Throws when [expectedUid] is no longer the signed-in account, and
@@ -110,6 +111,5 @@ abstract class LeaderboardRepository {
     required bool usedHints,
     required LeaderboardProof proof,
     required String expectedUid,
-    ({String displayName, String? photoUrl, String? avatarId})? identity,
   });
 }

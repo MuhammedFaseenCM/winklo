@@ -38,6 +38,7 @@ class SubmitLevelClear {
   final ReportClientError? _reportClientError;
 
   Future<void> _tail = Future<void>.value();
+  Future<void>? _resending;
 
   /// Runs [op] after every earlier store operation has finished, whether it
   /// succeeded or not.
@@ -79,7 +80,18 @@ class SubmitLevelClear {
   /// stops when another account signs in (the rest belong to the first
   /// account and the write would land on the wrong one) and at the first
   /// clear the Worker can't be reached for (the rest would fail too).
-  Future<void> resendPending(String game) async {
+  ///
+  /// One resend runs at a time: a call made while one is running (a timed-out
+  /// sync pass leaves its loop going) gets that run's future instead of
+  /// starting a second loop that would post the same clears again.
+  Future<void> resendPending(String game) {
+    final running = _resending;
+    if (running != null) return running;
+    final run = _resend(game).whenComplete(() => _resending = null);
+    return _resending = run;
+  }
+
+  Future<void> _resend(String game) async {
     try {
       final uid = _auth.currentUser?.uid;
       if (uid == null || uid.isEmpty) return;
@@ -104,7 +116,6 @@ class SubmitLevelClear {
   }) async {
     final user = _auth.currentUser;
     if (user == null || user.uid != uid) return null;
-    final name = user.displayName.trim();
     try {
       final outcome = await _leaderboard.submitLevelClear(
         gameId: game,
@@ -113,13 +124,6 @@ class SubmitLevelClear {
         usedHints: clear.usedHints,
         proof: clear.proof,
         expectedUid: uid,
-        identity: name.isEmpty
-            ? null
-            : (
-                displayName: name,
-                photoUrl: user.photoUrl,
-                avatarId: user.avatarId,
-              ),
       );
       switch (outcome) {
         case LevelClearSubmitOutcome.sent:
