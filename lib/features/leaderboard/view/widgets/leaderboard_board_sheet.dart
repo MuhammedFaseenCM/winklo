@@ -65,6 +65,7 @@ Future<LeaderboardBoardChoice?> showLeaderboardBoardSheet(
               key: const Key('leaderboard_board_levels'),
               leading: const AppIcon(AppIcons.levels, color: ZipColors.teal),
               label: AppStrings.leaderboardBoardLevels,
+              subtitle: AppStrings.leaderboardBoardLevelsHint,
               selected: period == LeaderboardPeriod.levels,
               onTap: () =>
                   pick(const LeaderboardBoardChoice(LeaderboardPeriod.levels)),

@@ -854,6 +854,10 @@ final class AppTextMl implements AppText {
   String get leaderboardBoardLevels => 'ലെവലുകൾ';
 
   @override
+  String get leaderboardBoardLevelsHint =>
+      'നക്ഷത്രങ്ങൾ, പിന്നെ കുറഞ്ഞ ലെവലുകൾ, പിന്നെ ആകെ സമയം';
+
+  @override
   String leaderboardLevelsStars(int stars) => '$stars★';
 
   @override
@@ -923,6 +927,15 @@ final class AppTextMl implements AppText {
 
   @override
   String get playerCardDays => 'പൂർത്തിയാക്കിയ ദിവസം';
+
+  @override
+  String get playerCardStars => 'നക്ഷത്രങ്ങൾ';
+
+  @override
+  String get playerCardLevels => 'ലെവലുകൾ';
+
+  @override
+  String get playerCardTotalTime => 'ആകെ സമയം';
 
   @override
   String get gamePaused => 'നിർത്തിവെച്ചു';

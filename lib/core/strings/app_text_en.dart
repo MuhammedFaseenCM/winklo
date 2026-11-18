@@ -811,6 +811,10 @@ final class AppTextEn implements AppText {
   String get leaderboardBoardLevels => 'Levels';
 
   @override
+  String get leaderboardBoardLevelsHint =>
+      'Stars, then fewer levels, then total time';
+
+  @override
   String leaderboardLevelsStars(int stars) => '$stars★';
 
   @override
@@ -881,6 +885,15 @@ final class AppTextEn implements AppText {
 
   @override
   String get playerCardDays => 'Days cleared';
+
+  @override
+  String get playerCardStars => 'Stars';
+
+  @override
+  String get playerCardLevels => 'Levels';
+
+  @override
+  String get playerCardTotalTime => 'Total time';
 
   @override
   String get gamePaused => 'Paused';

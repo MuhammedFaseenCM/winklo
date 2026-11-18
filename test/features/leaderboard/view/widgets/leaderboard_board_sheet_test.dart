@@ -107,9 +107,15 @@ void main() {
     expect(choice?.dayId, isNull);
   });
 
+  testWidgets('Levels says how its board is ordered', (tester) async {
+    await open(tester);
+    expect(find.text(AppStrings.leaderboardBoardLevelsHint), findsOneWidget);
+  });
+
   testWidgets('hides Levels for a game without levels', (tester) async {
     await open(tester, showLevels: false);
     expect(find.text(AppStrings.leaderboardBoardLevels), findsNothing);
+    expect(find.text(AppStrings.leaderboardBoardLevelsHint), findsNothing);
     expect(find.text(AppStrings.leaderboardAllTime), findsOneWidget);
   });
 

@@ -305,6 +305,7 @@ abstract interface class AppText {
 
   // Leaderboard: the Levels board
   String get leaderboardBoardLevels;
+  String get leaderboardBoardLevelsHint;
   String leaderboardLevelsStars(int stars);
   String leaderboardLevelsStarsSemantics(int stars);
   String leaderboardLevelsDetail(int levels, String time);
@@ -329,6 +330,9 @@ abstract interface class AppText {
   String get playerCardTime;
   String get playerCardWeekTotal;
   String get playerCardDays;
+  String get playerCardStars;
+  String get playerCardLevels;
+  String get playerCardTotalTime;
   String get gamePaused;
   String get gamePausedResume;
   String get leaguesTitle;

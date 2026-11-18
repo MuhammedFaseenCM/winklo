@@ -52,6 +52,7 @@ class PlayerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final weekly = period == LeaderboardPeriod.weekly;
+    final levels = period == LeaderboardPeriod.levels;
     final chips = [
       if (isYou) AppStrings.youLabel,
       if (period == LeaderboardPeriod.daily)
@@ -95,6 +96,20 @@ class PlayerCard extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
+                if (levels) ...[
+                  Expanded(
+                    child: _Stat(
+                      label: AppStrings.playerCardStars,
+                      value: '${entry.stars ?? 0}',
+                    ),
+                  ),
+                  Expanded(
+                    child: _Stat(
+                      label: AppStrings.playerCardLevels,
+                      value: '${entry.levelsCleared ?? 0}',
+                    ),
+                  ),
+                ],
                 if (weekly)
                   Expanded(
                     child: _Stat(
@@ -104,9 +119,13 @@ class PlayerCard extends StatelessWidget {
                   ),
                 Expanded(
                   child: _Stat(
-                    label: weekly
-                        ? AppStrings.playerCardWeekTotal
-                        : AppStrings.playerCardTime,
+                    label: switch (period) {
+                      LeaderboardPeriod.weekly =>
+                        AppStrings.playerCardWeekTotal,
+                      LeaderboardPeriod.levels =>
+                        AppStrings.playerCardTotalTime,
+                      _ => AppStrings.playerCardTime,
+                    },
                     value: time,
                   ),
                 ),
@@ -167,6 +186,7 @@ class _Stat extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
+            textAlign: TextAlign.center,
             style: theme.textTheme.labelMedium?.copyWith(
               color: ZipColors.inkSoft,
             ),

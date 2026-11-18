@@ -357,6 +357,7 @@ abstract final class AppStrings {
 
   // Leaderboard: the Levels board
   static String get leaderboardBoardLevels => _t.leaderboardBoardLevels;
+  static String get leaderboardBoardLevelsHint => _t.leaderboardBoardLevelsHint;
   static String leaderboardLevelsStars(int stars) =>
       _t.leaderboardLevelsStars(stars);
   static String leaderboardLevelsStarsSemantics(int stars) =>
@@ -388,6 +389,9 @@ abstract final class AppStrings {
   static String get playerCardTime => _t.playerCardTime;
   static String get playerCardWeekTotal => _t.playerCardWeekTotal;
   static String get playerCardDays => _t.playerCardDays;
+  static String get playerCardStars => _t.playerCardStars;
+  static String get playerCardLevels => _t.playerCardLevels;
+  static String get playerCardTotalTime => _t.playerCardTotalTime;
   static String get gamePaused => _t.gamePaused;
   static String get gamePausedResume => _t.gamePausedResume;
   static String get leaguesTitle => _t.leaguesTitle;
