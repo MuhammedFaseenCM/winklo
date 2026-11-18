@@ -33,6 +33,7 @@ import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/record_level_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
+import '../../../domain/usecases/submit_level_clear.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
 import '../logic/daily_puzzle_generator.dart';
@@ -61,6 +62,7 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
     this.modeRecords,
     this.levelWorlds,
     this.recordLevelClear,
+    this.submitLevelClear,
     this.levelProgress,
     this.recordLevelPlay,
     ZipLevel Function(int seed)? practiceLevel,
@@ -138,6 +140,10 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
 
   /// Keeps a level clear's stars; required for level runs.
   final RecordLevelClear? recordLevelClear;
+
+  /// Sends a level clear to the Levels board; null sends nothing. Never
+  /// awaited: the network must not hold up the results.
+  final SubmitLevelClear? submitLevelClear;
 
   /// The player's level progress, so a locked level can't be played (a
   /// link can name any published level). Null skips the check.
@@ -724,6 +730,20 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
       seconds: elapsed,
     );
     _countPlay(LevelPlayEvent.clear);
+    final submit = submitLevelClear;
+    if (submit != null) {
+      unawaited(
+        submit(
+          game: GameIds.zip,
+          levelId: slot.entry.id,
+          stars: clear.runStars,
+          timeSeconds: elapsed,
+          usedHints: usedHints,
+          proof: ZipLeaderboardProof(state.path),
+          improved: clear.improved,
+        ),
+      );
+    }
     await analytics.logGameCompleted(
       gameId: GameIds.zip,
       points: points,

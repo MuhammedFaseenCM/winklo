@@ -124,6 +124,7 @@ import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_issue_report.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/domain/usecases/sync_fcm_token.dart';
 import 'package:winklo/domain/usecases/sync_level_progress.dart';
@@ -365,6 +366,23 @@ List<SingleChildWidget> buildRepositoryProviders({
         progress: context.read<ProgressLocalRepository>(),
       ),
     ),
+    RepositoryProvider<PendingLevelClearRepository>(
+      create: (context) =>
+          PendingLevelClearRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    // One shared instance: it queues the pending store's writes, so the Zip
+    // bloc and SyncProgress must not each build their own.
+    RepositoryProvider<SubmitLevelClear>(
+      create: (context) => SubmitLevelClear(
+        auth: context.read<AuthRepository>(),
+        leaderboard: context.read<LeaderboardRepository>(),
+        pending: context.read<PendingLevelClearRepository>(),
+        analytics: context.read<AnalyticsRepository>(),
+        reportClientError: clientErrorRepository == null
+            ? null
+            : ReportClientError(clientErrorRepository),
+      ),
+    ),
     RepositoryProvider<UploadProgressHistory>(
       create: (context) => UploadProgressHistory(
         scores: context.read<ScoreRepository>(),
@@ -387,6 +405,7 @@ List<SingleChildWidget> buildRepositoryProviders({
             ? null
             : ReportClientError(clientErrorRepository),
         uploadHistory: context.read<UploadProgressHistory>(),
+        submitLevelClear: context.read<SubmitLevelClear>(),
         isRemoteAvailable: () => FirebaseBootstrap.isReady,
       ),
     ),
@@ -499,10 +518,6 @@ List<SingleChildWidget> buildRepositoryProviders({
             ? FirestoreLevelWorldsSource(FirebaseFirestore.instance)
             : null,
       ),
-    ),
-    RepositoryProvider<PendingLevelClearRepository>(
-      create: (context) =>
-          PendingLevelClearRepositoryImpl(context.read<SharedPreferences>()),
     ),
     RepositoryProvider<RecordLevelClear>(
       create: (context) => RecordLevelClear(

@@ -33,6 +33,7 @@ import '../../../domain/usecases/record_daily_clear.dart';
 import '../../../domain/usecases/record_level_clear.dart';
 import '../../../domain/usecases/record_level_play.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
+import '../../../domain/usecases/submit_level_clear.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
 import '../../../core/router/play_mode_route.dart';
@@ -153,6 +154,9 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
           : null,
       recordLevelClear: widget.mode.isLevel
           ? context.read<RecordLevelClear>()
+          : null,
+      submitLevelClear: widget.mode.isLevel
+          ? context.read<SubmitLevelClear>()
           : null,
       levelProgress: widget.mode.isLevel
           ? context.read<LevelProgressRepository>()

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,7 +18,9 @@ import 'package:winklo/domain/usecases/get_clear_board.dart';
 import 'package:winklo/domain/usecases/is_new_personal_best.dart';
 import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/record_level_clear.dart';
+import 'package:winklo/domain/entities/leaderboard_proof.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/features/results/results_args.dart';
 import 'package:winklo/features/zip/bloc/zip_bloc.dart';
@@ -30,6 +34,8 @@ class _MockSubmitScore extends Mock implements SubmitScore {}
 
 class _MockSubmitLeaderboardTime extends Mock
     implements SubmitLeaderboardTime {}
+
+class _MockSubmitLevelClear extends Mock implements SubmitLevelClear {}
 
 class _MockRecordDailyClear extends Mock implements RecordDailyClear {}
 
@@ -95,6 +101,8 @@ void main() {
   late _Plays plays;
   late DateTime now;
 
+  setUpAll(() => registerFallbackValue(const ZipLeaderboardProof([])));
+
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
@@ -110,28 +118,33 @@ void main() {
     now = DateTime(2026, 10, 31, 9);
   });
 
-  ZipBloc build(String levelId, {LevelCatalog? from, bool gated = false}) =>
-      ZipBloc(
-        mode: PlayMode.level(levelId),
-        levelWorlds: _Worlds(from ?? catalog),
-        recordLevelClear: RecordLevelClear(progress, analytics),
-        levelProgress: gated ? progress : null,
-        recordLevelPlay: plays.call,
-        inProgressRuns: drafts,
-        submitScore: submitScore,
-        submitLeaderboardTime: submitLeaderboardTime,
-        recordDailyClear: recordDailyClear,
-        getBestPoints: getBestPoints,
-        getBestTimeSeconds: _MockGetBestTimeSeconds(),
-        isNewPersonalBest: _MockIsNewPersonalBest(),
-        getClearBoard: _MockGetClearBoard(),
-        analytics: analytics,
-        hintQuota: UnlimitedHintQuotaRepositoryImpl(),
-        clockNow: () => now,
-        wait: (_) async {},
-        fetchDailyLevel: (date, {period = const Duration(days: 1)}) =>
-            throw StateError('a level run never reads a daily'),
-      );
+  ZipBloc build(
+    String levelId, {
+    LevelCatalog? from,
+    bool gated = false,
+    SubmitLevelClear? submitLevelClear,
+  }) => ZipBloc(
+    mode: PlayMode.level(levelId),
+    levelWorlds: _Worlds(from ?? catalog),
+    recordLevelClear: RecordLevelClear(progress, analytics),
+    submitLevelClear: submitLevelClear,
+    levelProgress: gated ? progress : null,
+    recordLevelPlay: plays.call,
+    inProgressRuns: drafts,
+    submitScore: submitScore,
+    submitLeaderboardTime: submitLeaderboardTime,
+    recordDailyClear: recordDailyClear,
+    getBestPoints: getBestPoints,
+    getBestTimeSeconds: _MockGetBestTimeSeconds(),
+    isNewPersonalBest: _MockIsNewPersonalBest(),
+    getClearBoard: _MockGetClearBoard(),
+    analytics: analytics,
+    hintQuota: UnlimitedHintQuotaRepositoryImpl(),
+    clockNow: () => now,
+    wait: (_) async {},
+    fetchDailyLevel: (date, {period = const Duration(days: 1)}) =>
+        throw StateError('a level run never reads a daily'),
+  );
 
   Future<ZipState> ready(ZipBloc bloc) => bloc.stream.firstWhere(
     (s) => s.status == ZipStatus.ready || s.status == ZipStatus.failed,
@@ -142,6 +155,86 @@ void main() {
     bloc.add(const ZipEvent.completed());
     return bloc.stream.firstWhere((s) => s.status == ZipStatus.navigating);
   }
+
+  group('level board', () {
+    late _MockSubmitLevelClear submit;
+
+    setUp(() {
+      submit = _MockSubmitLevelClear();
+    });
+
+    void stubSubmit(Future<void> Function() answer) {
+      when(
+        () => submit(
+          game: any(named: 'game'),
+          levelId: any(named: 'levelId'),
+          stars: any(named: 'stars'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: any(named: 'usedHints'),
+          proof: any(named: 'proof'),
+          improved: any(named: 'improved'),
+        ),
+      ).thenAnswer((_) => answer());
+    }
+
+    test('a clear is sent with its stars, time, hints and path', () async {
+      stubSubmit(() async {});
+      final bloc = build('zip_1_01', submitLevelClear: submit);
+      bloc.add(const ZipEvent.started());
+      await ready(bloc);
+      final solution = bloc.state.level.solution;
+      final done = await finish(bloc);
+      final level = done.resultsExtra!.local!.level!;
+
+      final captured = verify(
+        () => submit(
+          game: 'zip',
+          levelId: 'zip_1_01',
+          stars: level.runStars,
+          timeSeconds: done.resultsExtra!.timeSeconds,
+          usedHints: false,
+          proof: captureAny(named: 'proof'),
+          improved: done.improved == true,
+        ),
+      ).captured;
+      final proof = captured.single as ZipLeaderboardProof;
+      expect(proof.path, solution);
+      await bloc.close();
+    });
+
+    test('a hinted run says so', () async {
+      stubSubmit(() async {});
+      final bloc = build('zip_1_01', submitLevelClear: submit);
+      bloc.add(const ZipEvent.started());
+      await ready(bloc);
+      bloc.add(const ZipEvent.hint());
+      await bloc.stream.firstWhere((s) => s.usedHintsThisRun);
+      await finish(bloc);
+      verify(
+        () => submit(
+          game: 'zip',
+          levelId: 'zip_1_01',
+          stars: any(named: 'stars'),
+          timeSeconds: any(named: 'timeSeconds'),
+          usedHints: true,
+          proof: any(named: 'proof'),
+          improved: any(named: 'improved'),
+        ),
+      ).called(1);
+      await bloc.close();
+    });
+
+    test('Results do not wait for the network', () async {
+      final never = Completer<void>();
+      stubSubmit(() => never.future);
+      final bloc = build('zip_1_01', submitLevelClear: submit);
+      bloc.add(const ZipEvent.started());
+      await ready(bloc);
+      final done = await finish(bloc).timeout(const Duration(seconds: 5));
+      expect(done.status, ZipStatus.navigating);
+      await bloc.close();
+    });
+  });
 
   group('play counters', () {
     test('a fresh run counts a start; a clear counts a clear', () async {

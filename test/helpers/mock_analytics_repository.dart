@@ -39,6 +39,14 @@ void stubAnalytics(MockAnalyticsRepository analytics) {
     ),
   ).thenAnswer((_) async {});
   when(
+    () => analytics.logLevelBoardSubmit(
+      levelId: any(named: 'levelId'),
+      accepted: any(named: 'accepted'),
+      improved: any(named: 'improved'),
+      code: any(named: 'code'),
+    ),
+  ).thenAnswer((_) async {});
+  when(
     () => analytics.logHintUsed(
       gameId: any(named: 'gameId'),
       hintsUsed: any(named: 'hintsUsed'),

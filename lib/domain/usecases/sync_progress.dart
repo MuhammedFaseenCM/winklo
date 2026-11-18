@@ -18,6 +18,7 @@ import '../repositories/score_repository.dart';
 import '../repositories/streak_repository.dart';
 import '../streak_calculator.dart';
 import 'report_client_error.dart';
+import 'submit_level_clear.dart';
 import 'upload_progress_history.dart';
 
 /// Outcome of one [SyncProgress] run.
@@ -74,6 +75,7 @@ class SyncProgress {
     required this._playPeriod,
     this._reportClientError,
     this._uploadHistory,
+    this._submitLevelClear,
     bool Function()? isRemoteAvailable,
     DateTime Function()? now,
     this.leaderboardTimeout = const Duration(seconds: 20),
@@ -99,6 +101,10 @@ class SyncProgress {
   /// Uploads this device's older daily clears once per account, at the end
   /// of a full (pull) run.
   final UploadProgressHistory? _uploadHistory;
+
+  /// Sends the level clears that couldn't be sent when they were made; the
+  /// same instance the Zip bloc uses.
+  final SubmitLevelClear? _submitLevelClear;
 
   /// Domain cannot see Firebase; DI passes e.g. `() => FirebaseBootstrap.isReady`.
   final bool Function() _isRemoteAvailable;
@@ -255,6 +261,21 @@ class _Run {
           if (day == null || _leaderboardStalled) continue;
           await _attempt(() => _syncLeaderboard(day));
         }
+      }
+      // Level clears the Worker hadn't taken. The account guard and timeout
+      // are the daily boards': it is the same Worker.
+      final levels = _s._submitLevelClear;
+      if (levels != null && !_leaderboardStalled) {
+        await _attempt(() async {
+          try {
+            await levels
+                .resendPending(GameIds.zip)
+                .timeout(_s.leaderboardTimeout);
+          } on TimeoutException {
+            _leaderboardStalled = true;
+            rethrow;
+          }
+        });
       }
       // Skipped after a failure above (likely offline): it retries on the
       // next full sync instead of holding this one.

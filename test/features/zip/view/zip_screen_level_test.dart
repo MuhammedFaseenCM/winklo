@@ -29,11 +29,14 @@ import 'package:winklo/domain/usecases/record_daily_clear.dart';
 import 'package:winklo/domain/usecases/record_level_clear.dart';
 import 'package:winklo/domain/usecases/record_level_play.dart';
 import 'package:winklo/domain/usecases/submit_leaderboard_time.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 import 'package:winklo/domain/usecases/submit_score.dart';
 import 'package:winklo/features/zip/view/zip_screen.dart';
 
 import '../../../helpers/level_fixtures.dart';
 import '../../../helpers/mock_analytics_repository.dart';
+
+class _MockSubmitLevelClear extends Mock implements SubmitLevelClear {}
 
 class _MockSubmitScore extends Mock implements SubmitScore {}
 
@@ -147,6 +150,9 @@ Future<Widget> withRepositories(
       RepositoryProvider<LevelProgressRepository>.value(value: levelProgress),
       RepositoryProvider<RecordLevelClear>.value(
         value: RecordLevelClear(levelProgress, analytics),
+      ),
+      RepositoryProvider<SubmitLevelClear>.value(
+        value: _MockSubmitLevelClear(),
       ),
       RepositoryProvider<RecordLevelPlay>.value(
         value: RecordLevelPlay(auth: _MockAuth(), stats: _NoStats()),

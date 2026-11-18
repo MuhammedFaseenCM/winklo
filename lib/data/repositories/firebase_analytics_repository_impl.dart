@@ -87,6 +87,26 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
   }
 
   @override
+  Future<void> logLevelBoardSubmit({
+    required String levelId,
+    required bool accepted,
+    required bool improved,
+    String? code,
+  }) {
+    return _safe(
+      (a) => a.logEvent(
+        name: 'level_board_submit',
+        parameters: <String, Object>{
+          'level_id': levelId,
+          'accepted': _flag(accepted),
+          'improved': _flag(improved),
+          'code': ?code,
+        },
+      ),
+    );
+  }
+
+  @override
   Future<void> logLevelCleared({
     required String gameId,
     required String levelId,
