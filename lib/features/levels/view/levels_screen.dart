@@ -12,6 +12,7 @@ import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/repositories/leaderboard_repository.dart';
 import '../../../domain/repositories/level_progress_repository.dart';
 import '../../../domain/repositories/level_world_repository.dart';
+import '../../../domain/usecases/submit_level_clear.dart';
 import '../cubit/level_map_cubit.dart';
 import '../logic/level_map_layout.dart';
 import 'widgets/level_avatar_pin.dart';
@@ -35,6 +36,7 @@ class LevelsScreen extends StatelessWidget {
         worlds: context.read<LevelWorldRepository>(),
         progress: context.read<LevelProgressRepository>(),
         leaderboard: context.read<LeaderboardRepository>(),
+        submitLevelClear: context.read<SubmitLevelClear>(),
       )..load(),
       child: _LevelsView(openLevelId: openLevelId),
     );

@@ -39,6 +39,12 @@ class SubmitLevelClear {
 
   Future<void> _tail = Future<void>.value();
   Future<void>? _resending;
+  final _accepted = StreamController<String>.broadcast();
+
+  /// The level id of each clear the Worker took (from [call] and
+  /// [resendPending]), while the account that sent it is still signed in:
+  /// the board now holds that level.
+  Stream<String> get accepted => _accepted.stream;
 
   /// Runs [op] after every earlier store operation has finished, whether it
   /// succeeded or not.
@@ -127,6 +133,9 @@ class SubmitLevelClear {
       );
       switch (outcome) {
         case LevelClearSubmitOutcome.sent:
+          if (_auth.currentUser?.uid == uid && !_accepted.isClosed) {
+            _accepted.add(clear.levelId);
+          }
           await _settled(uid, game, clear);
           await _log(clear, accepted: true, improved: improved);
         case LevelClearSubmitOutcome.unavailable:
@@ -163,6 +172,8 @@ class SubmitLevelClear {
       return null;
     }
   }
+
+  Future<void> dispose() => _accepted.close();
 
   /// Drops [clear] unless a better run of the level was kept while it was
   /// being sent: that one is still waiting.

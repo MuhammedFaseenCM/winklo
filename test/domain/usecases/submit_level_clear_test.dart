@@ -271,6 +271,57 @@ void main() {
     );
   });
 
+  group('accepted', () {
+    test('emits the level id when the Worker takes a clear', () async {
+      stubOutcome(LevelClearSubmitOutcome.sent);
+      final ids = <String>[];
+      final sub = submit.accepted.listen(ids.add);
+      await run();
+      await pumpEventQueue();
+      expect(ids, ['zip_1_01']);
+      await sub.cancel();
+    });
+
+    test('emits nothing for unavailable, notSent or a refusal', () async {
+      final ids = <String>[];
+      final sub = submit.accepted.listen(ids.add);
+      stubOutcome(LevelClearSubmitOutcome.unavailable);
+      await run();
+      stubOutcome(LevelClearSubmitOutcome.notSent);
+      await run();
+      stubSubmit((_) async => throw const LeaderboardSubmitRefused('too_fast'));
+      await run();
+      await pumpEventQueue();
+      expect(ids, isEmpty);
+      await sub.cancel();
+    });
+
+    test('emits each clear a resend gets taken', () async {
+      await store.keep('u1', 'zip', clear('zip_1_01'));
+      await store.keep('u1', 'zip', clear('zip_1_02'));
+      stubOutcome(LevelClearSubmitOutcome.sent);
+      final ids = <String>[];
+      final sub = submit.accepted.listen(ids.add);
+      await submit.resendPending('zip');
+      await pumpEventQueue();
+      expect(ids, ['zip_1_01', 'zip_1_02']);
+      await sub.cancel();
+    });
+
+    test('emits nothing when another account signed in meanwhile', () async {
+      stubSubmit((_) async {
+        current = const AppUser(uid: 'u2', displayName: 'Bo');
+        return LevelClearSubmitOutcome.sent;
+      });
+      final ids = <String>[];
+      final sub = submit.accepted.listen(ids.add);
+      await run();
+      await pumpEventQueue();
+      expect(ids, isEmpty);
+      await sub.cancel();
+    });
+  });
+
   group('resendPending', () {
     setUp(() async {
       await store.keep('u1', 'zip', clear('zip_1_01'));

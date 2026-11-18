@@ -7,6 +7,7 @@ import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 import 'package:winklo/features/levels/cubit/level_map_cubit.dart';
 
 import '../../../helpers/level_fixtures.dart';
@@ -24,6 +25,8 @@ class _Worlds implements LevelWorldRepository {
 }
 
 class _MockLeaderboard extends Mock implements LeaderboardRepository {}
+
+class _MockSubmitLevelClear extends Mock implements SubmitLevelClear {}
 
 void main() {
   late _Worlds worlds;
@@ -173,6 +176,104 @@ void main() {
       expect(cubit.state.boardLevelIds, {'zip_1_01'});
       verify(() => leaderboard.myBoardLevelIds('zip')).called(2);
       await cubit.close();
+    });
+
+    group('with the clear submitter', () {
+      late _MockSubmitLevelClear submit;
+      late StreamController<String> accepted;
+
+      setUp(() {
+        submit = _MockSubmitLevelClear();
+        accepted = StreamController<String>.broadcast();
+        when(() => submit.accepted).thenAnswer((_) => accepted.stream);
+      });
+
+      tearDown(() => accepted.close());
+
+      LevelMapCubit withSubmit() => LevelMapCubit(
+        worlds: worlds,
+        progress: progress,
+        leaderboard: leaderboard,
+        submitLevelClear: submit,
+      );
+
+      test('a fresh clear reaches the ids once the Worker takes it', () async {
+        // The board read on the progress change runs before the Worker
+        // post lands, so it still sees the pre-clear board.
+        when(
+          () => leaderboard.myBoardLevelIds('zip'),
+        ).thenAnswer((_) async => <String>{});
+        final cubit = withSubmit();
+        await cubit.load();
+        await progress.record('zip', 'zip_1_01', stars: 3, seconds: 10);
+        await pumpEventQueue();
+        expect(cubit.state.boardLevelIds, isEmpty);
+
+        accepted.add('zip_1_01');
+        await pumpEventQueue();
+        expect(cubit.state.boardLevelIds, {'zip_1_01'});
+        await cubit.close();
+      });
+
+      test(
+        'an accepted clear while the ids are unknown reads them again',
+        () async {
+          final reads = <Completer<Set<String>?>>[];
+          when(() => leaderboard.myBoardLevelIds('zip')).thenAnswer((_) {
+            final read = Completer<Set<String>?>();
+            reads.add(read);
+            return read.future;
+          });
+          final cubit = withSubmit();
+          unawaited(cubit.load());
+          await pumpEventQueue();
+          expect(reads, hasLength(1));
+
+          accepted.add('zip_1_01');
+          await pumpEventQueue();
+          expect(reads, hasLength(2));
+          // The first (pre-clear) read lands last and is dropped.
+          reads[1].complete({'zip_1_01'});
+          reads[0].complete(<String>{});
+          await pumpEventQueue();
+          expect(cubit.state.boardLevelIds, {'zip_1_01'});
+          await cubit.close();
+        },
+      );
+
+      test('a progress change forgets the ids until the read lands', () async {
+        final reads = <Completer<Set<String>?>>[];
+        when(() => leaderboard.myBoardLevelIds('zip')).thenAnswer((_) {
+          final read = Completer<Set<String>?>();
+          reads.add(read);
+          return read.future;
+        });
+        final cubit = withSubmit();
+        unawaited(cubit.load());
+        await pumpEventQueue();
+        reads[0].complete({'zip_1_01'});
+        await pumpEventQueue();
+        expect(cubit.state.boardLevelIds, {'zip_1_01'});
+
+        // e.g. another account signed in: the old ids aren't theirs.
+        await progress.record('zip', 'zip_1_02', stars: 1, seconds: 10);
+        await pumpEventQueue();
+        expect(cubit.state.boardLevelIds, isNull);
+        reads[1].complete(<String>{});
+        await pumpEventQueue();
+        expect(cubit.state.boardLevelIds, isEmpty);
+        await cubit.close();
+      });
+
+      test('stops listening when closed', () async {
+        when(
+          () => leaderboard.myBoardLevelIds('zip'),
+        ).thenAnswer((_) async => <String>{});
+        final cubit = withSubmit();
+        await cubit.load();
+        await cubit.close();
+        expect(accepted.hasListener, isFalse);
+      });
     });
 
     test('no repository means no ids', () async {

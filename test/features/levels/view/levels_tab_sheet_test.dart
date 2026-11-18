@@ -22,6 +22,7 @@ import 'package:winklo/domain/usecases/check_app_update.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 import 'package:winklo/domain/usecases/sync_progress.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/auth/cubit/auth_state.dart';
@@ -44,6 +45,8 @@ class _MockSyncProgress extends Mock implements SyncProgress {}
 class _MockCheckAppUpdate extends Mock implements CheckAppUpdate {}
 
 class _MockAppUpdateRepository extends Mock implements AppUpdateRepository {}
+
+class _MockSubmitLevelClear extends Mock implements SubmitLevelClear {}
 
 class _Worlds implements LevelWorldRepository {
   @override
@@ -75,6 +78,10 @@ void main() {
     });
     syncDone = Completer<SyncProgressResult>();
     final syncProgress = _MockSyncProgress();
+    final submitLevelClear = _MockSubmitLevelClear();
+    when(
+      () => submitLevelClear.accepted,
+    ).thenAnswer((_) => const Stream<String>.empty());
     when(
       () => syncProgress.call(pull: true),
     ).thenAnswer((_) => syncDone.future);
@@ -155,6 +162,7 @@ void main() {
           RepositoryProvider<LeaderboardRepository>.value(
             value: _MockLeaderboard(),
           ),
+          RepositoryProvider<SubmitLevelClear>.value(value: submitLevelClear),
           RepositoryProvider<SyncProgress>.value(value: syncProgress),
           RepositoryProvider<AnalyticsRepository>.value(value: analytics),
           RepositoryProvider<CheckAppUpdate>.value(value: checkAppUpdate),

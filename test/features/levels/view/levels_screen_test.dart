@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +14,7 @@ import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
+import 'package:winklo/domain/usecases/submit_level_clear.dart';
 import 'package:winklo/features/dashboard/view/widgets/floating_nav_dock.dart';
 import 'package:winklo/features/levels/view/levels_screen.dart';
 import 'package:winklo/features/levels/view/widgets/level_avatar_pin.dart';
@@ -22,6 +25,8 @@ import '../../../helpers/level_fixtures.dart';
 class _MockAuth extends Mock implements AuthRepository {}
 
 class _MockLeaderboard extends Mock implements LeaderboardRepository {}
+
+class _MockSubmitLevelClear extends Mock implements SubmitLevelClear {}
 
 class _Worlds implements LevelWorldRepository {
   _Worlds(this.value);
@@ -38,6 +43,8 @@ void main() {
   late LevelProgressRepositoryImpl progress;
   late _MockAuth auth;
   late _MockLeaderboard leaderboard;
+  late _MockSubmitLevelClear submit;
+  late StreamController<String> accepted;
   late List<String> visited;
 
   setUp(() async {
@@ -51,6 +58,10 @@ void main() {
     when(
       () => leaderboard.myBoardLevelIds(any()),
     ).thenAnswer((_) async => null);
+    submit = _MockSubmitLevelClear();
+    accepted = StreamController<String>.broadcast();
+    addTearDown(accepted.close);
+    when(() => submit.accepted).thenAnswer((_) => accepted.stream);
     visited = [];
     when(() => auth.currentUser).thenReturn(null);
   });
@@ -98,6 +109,7 @@ void main() {
           RepositoryProvider<LevelProgressRepository>.value(value: progress),
           RepositoryProvider<AuthRepository>.value(value: auth),
           RepositoryProvider<LeaderboardRepository>.value(value: leaderboard),
+          RepositoryProvider<SubmitLevelClear>.value(value: submit),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -142,6 +154,24 @@ void main() {
     await tester.tap(find.bySemanticsLabel(RegExp('Level 1')));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.levelSheetNotOnBoard), findsOneWidget);
+  });
+
+  testWidgets('a fresh clear the Worker takes is not flagged in its sheet', (
+    tester,
+  ) async {
+    // The board read on the clear's progress change runs before the post
+    // lands: it still sees the board without the level.
+    when(
+      () => leaderboard.myBoardLevelIds('zip'),
+    ).thenAnswer((_) async => <String>{});
+    await pump(tester, LevelCatalog([levelWorld(1, 3)]));
+    await progress.record('zip', 'zip_1_01', stars: 3, seconds: 10);
+    await tester.pumpAndSettle();
+    accepted.add('zip_1_01');
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel(RegExp('Level 1')));
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.levelSheetNotOnBoard), findsNothing);
   });
 
   /// World 2, Metro, whose boards are [size] wide (no size when null).
