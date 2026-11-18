@@ -7,6 +7,11 @@ const moreWaysLocation = '/more';
 /// The Levels tab.
 const levelsLocation = '/levels';
 
+/// The Levels leaderboard (the Levels tab's star total). Go there with a
+/// fresh [levelsVisitToken] as `extra`, so it shows Levels even when an
+/// earlier visit's board was changed since.
+const levelsBoardLocation = '/leaderboard?game=${GameIds.zip}&board=levels';
+
 /// The Levels tab with [levelId]'s sheet open (Results' Next level).
 String levelsOpenLocation(String levelId) => '$levelsLocation?open=$levelId';
 

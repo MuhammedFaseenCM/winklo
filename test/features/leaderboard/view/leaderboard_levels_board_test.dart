@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:winklo/core/router/play_mode_route.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/core/theme/app_theme.dart';
 import 'package:winklo/domain/entities/app_user.dart';
@@ -342,5 +343,119 @@ void main() {
     router.go('/leaderboard?game=zip&board=levels');
     await settle(tester);
     expect(periods.last, LeaderboardPeriod.weekly);
+  });
+
+  group('the star total link, with the board alive in the tab shell', () {
+    late StatefulNavigationShell shell;
+
+    Future<void> pumpShell(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final authCubit = AuthCubit(
+        authRepository: auth,
+        signInWithGoogle: _MockSignInWithGoogle(),
+        signOut: _MockSignOut(),
+      );
+      addTearDown(authCubit.close);
+      final router = GoRouter(
+        initialLocation: levelsLocation,
+        routes: [
+          StatefulShellRoute.indexedStack(
+            builder: (_, _, navigationShell) {
+              shell = navigationShell;
+              return navigationShell;
+            },
+            branches: [
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: levelsLocation,
+                    // Stands in for the Levels tab's star total.
+                    builder: (context, _) => Scaffold(
+                      body: TextButton(
+                        onPressed: () => context.go(
+                          levelsBoardLocation,
+                          extra: levelsVisitToken(),
+                        ),
+                        child: const Text('star total'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: '/leaderboard',
+                    builder: (_, _) =>
+                        const LeaderboardScreen(showAllTimeLeaderboard: true),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MultiRepositoryProvider(
+          providers: [
+            RepositoryProvider<WatchLeaderboard>.value(value: watch),
+            RepositoryProvider<AuthRepository>.value(value: auth),
+          ],
+          child: BlocProvider.value(
+            value: authCubit,
+            child: MaterialApp.router(
+              theme: buildAppTheme(),
+              routerConfig: router,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+    }
+
+    Future<void> tapStarTotal(WidgetTester tester) async {
+      shell.goBranch(0);
+      await settle(tester);
+      await tester.tap(find.text('star total'));
+      await settle(tester);
+    }
+
+    Future<void> pickWeekly(WidgetTester tester) async {
+      await tester.tap(find.byKey(const Key('leaderboard_board_pill')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('leaderboard_board_weekly')));
+      await settle(tester);
+      expect(periods.last, LeaderboardPeriod.weekly);
+    }
+
+    testWidgets('opens Levels every time, even after another pick', (
+      tester,
+    ) async {
+      await pumpShell(tester);
+      await tapStarTotal(tester);
+      expect(periods.last, LeaderboardPeriod.levels);
+
+      await pickWeekly(tester);
+      await tapStarTotal(tester);
+      expect(periods.last, LeaderboardPeriod.levels);
+    });
+
+    testWidgets('coming back by the nav bar keeps a later pick', (
+      tester,
+    ) async {
+      await pumpShell(tester);
+      await tapStarTotal(tester);
+      await pickWeekly(tester);
+
+      shell.goBranch(0);
+      await settle(tester);
+      shell.goBranch(1);
+      await settle(tester);
+      expect(periods.last, LeaderboardPeriod.weekly);
+    });
   });
 }

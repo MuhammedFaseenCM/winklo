@@ -103,6 +103,12 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
   /// Likewise for `board`, so a later pick in the board sheet stays.
   String? _appliedBoardQuery;
 
+  /// The `extra` of the last leaderboard location seen. A link that means
+  /// "show Levels now" (the Levels tab's star total) passes a fresh token, so
+  /// it applies `board=levels` again; coming back by the nav bar brings back
+  /// the same token (or none) and leaves a later pick alone.
+  Object? _leaderboardExtra;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -123,16 +129,23 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
 
   void _applyRouteGame() {
     if (!mounted) return;
-    final uri = _router?.routerDelegate.currentConfiguration.uri;
-    if (uri == null) return;
+    final configuration = _router?.routerDelegate.currentConfiguration;
+    if (configuration == null) return;
+    final uri = configuration.uri;
     final location = uri.toString();
     final previous = _appliedLocation;
     _appliedLocation = location;
     if (uri.path != '/leaderboard') return;
+    final extra = configuration.extra;
+    final newExtra = extra != _leaderboardExtra;
+    _leaderboardExtra = extra;
     final previousUri = previous == null ? null : Uri.tryParse(previous);
     final sameLeaderboard =
-        previousUri?.path == '/leaderboard' && previous == location;
+        previousUri?.path == '/leaderboard' &&
+        previous == location &&
+        !newExtra;
     if (sameLeaderboard) return;
+    final freshLink = newExtra && extra != null;
     final game = uri.queryParameters['game'];
     final gameId = _resolveLeaderboardGameId(game);
     final leagueId = uri.queryParameters['league'];
@@ -147,7 +160,7 @@ class _RouteGameSyncState extends State<_RouteGameSync> {
       }
       _appliedLeagueQuery = leagueId;
       // `/leaderboard?game=zip&board=levels`: the Levels board.
-      if (board == 'levels' && board != _appliedBoardQuery) {
+      if (board == 'levels' && (board != _appliedBoardQuery || freshLink)) {
         cubit.selectBoard(LeaderboardPeriod.levels);
       }
       _appliedBoardQuery = board;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/play_mode_route.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
@@ -344,7 +345,7 @@ class _StarsLink extends StatelessWidget {
       excludeSemantics: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(99),
-        onTap: () => context.go('/leaderboard?game=zip&board=levels'),
+        onTap: () => context.go(levelsBoardLocation, extra: levelsVisitToken()),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
           child: Center(
