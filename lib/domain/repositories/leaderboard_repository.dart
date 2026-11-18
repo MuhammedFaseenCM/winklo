@@ -30,6 +30,19 @@ class LeaderboardSubmitRefused extends Failure {
   final String code;
 }
 
+/// What [LeaderboardRepository.submitLevelClear] did with a level clear.
+enum LevelClearSubmitOutcome {
+  /// The Worker took it.
+  sent,
+
+  /// The Worker couldn't be reached or failed; keep the clear and try later.
+  unavailable,
+
+  /// Nothing was sent (debug build, no Worker client, or not signed in);
+  /// not worth retrying.
+  notSent,
+}
+
 abstract class LeaderboardRepository {
   /// Live top entries for [gameId] and [period], ranked 1…n.
   /// For [LeaderboardPeriod.daily], [dayId] defaults to today's local calendar
@@ -81,5 +94,22 @@ abstract class LeaderboardRepository {
     String? dayId,
     String? expectedUid,
     LeaderboardProof? proof,
+  });
+
+  /// Posts one level clear to the Worker (`POST /v1/level-clear`), which
+  /// checks the [proof] and writes the stars board. Level clears have no
+  /// direct-write fallback.
+  ///
+  /// Throws when [expectedUid] is no longer the signed-in account, and
+  /// [LeaderboardSubmitRefused] on a refusal (final). See
+  /// [LevelClearSubmitOutcome] for the rest.
+  Future<LevelClearSubmitOutcome> submitLevelClear({
+    required String gameId,
+    required String levelId,
+    required int timeSeconds,
+    required bool usedHints,
+    required LeaderboardProof proof,
+    required String expectedUid,
+    ({String displayName, String? photoUrl, String? avatarId})? identity,
   });
 }

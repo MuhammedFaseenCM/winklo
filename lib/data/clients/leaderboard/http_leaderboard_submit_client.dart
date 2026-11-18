@@ -22,7 +22,19 @@ class HttpLeaderboardSubmitClient implements LeaderboardSubmitClient {
   Future<LeaderboardSubmitResult> submit({
     required String idToken,
     required Map<String, Object?> body,
-  }) async {
+  }) => _post('/v1/submit', idToken, body);
+
+  @override
+  Future<LeaderboardSubmitResult> submitLevelClear({
+    required String idToken,
+    required Map<String, Object?> body,
+  }) => _post('/v1/level-clear', idToken, body);
+
+  Future<LeaderboardSubmitResult> _post(
+    String path,
+    String idToken,
+    Map<String, Object?> body,
+  ) async {
     final root = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
     if (root.isEmpty) {
       throw const LeaderboardSubmitUnavailable('not configured');
@@ -32,7 +44,7 @@ class HttpLeaderboardSubmitClient implements LeaderboardSubmitClient {
     try {
       response = await _http
           .post(
-            Uri.parse('$root/v1/submit'),
+            Uri.parse('$root$path'),
             headers: {
               'Authorization': 'Bearer $idToken',
               'Content-Type': 'application/json',

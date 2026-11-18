@@ -165,6 +165,17 @@ void main() {
       read('workers/leaderboard/src/index.ts'),
       contains("'unauthorized'"),
     );
-    expect({...quoted(union), 'unauthorized'}, leaderboardSubmitRefusalCodes);
+    final levels = read('workers/leaderboard/src/level_submit.ts');
+    final levelStart = levels.indexOf('export type LevelClearErrorCode =');
+    expect(levelStart, isNot(-1));
+    final levelUnion = levels.substring(
+      levelStart,
+      levels.indexOf(';', levelStart),
+    );
+    expect({
+      ...quoted(union),
+      ...quoted(levelUnion),
+      'unauthorized',
+    }, leaderboardSubmitRefusalCodes);
   });
 }

@@ -116,6 +116,68 @@ void main() {
     );
   });
 
+  group('submitLevelClear', () {
+    test('posts to /v1/level-clear with the ID token', () async {
+      late http.Request sent;
+      final client = clientFor((request) async {
+        sent = request;
+        return http.Response(
+          jsonEncode({'accepted': true, 'improved': true}),
+          200,
+        );
+      });
+
+      final result = await client.submitLevelClear(idToken: 'tok', body: body);
+
+      expect(result.improved, isTrue);
+      expect(sent.url.toString(), 'https://lb.example/v1/level-clear');
+      expect(sent.headers['Authorization'], 'Bearer tok');
+      expect(jsonDecode(sent.body), body);
+    });
+
+    test('a 422 verdict is a final rejection with its code', () async {
+      for (final code in ['bad_proof', 'too_slow']) {
+        final client = clientFor(
+          (_) async => http.Response(jsonEncode({'error': code}), 422),
+        );
+        await expectLater(
+          client.submitLevelClear(idToken: 'tok', body: body),
+          throwsA(
+            isA<LeaderboardSubmitRejected>()
+                .having((e) => e.statusCode, 'status', 422)
+                .having((e) => e.code, 'code', code),
+          ),
+        );
+      }
+    });
+
+    test('a 503, a 404 or a timeout is unavailable, never final', () async {
+      for (final response in [
+        http.Response(jsonEncode({'error': 'busy'}), 503),
+        http.Response('<html>nothing here</html>', 404),
+      ]) {
+        final client = clientFor((_) async => response);
+        await expectLater(
+          client.submitLevelClear(idToken: 'tok', body: body),
+          throwsA(isA<LeaderboardSubmitUnavailable>()),
+          reason: '${response.statusCode}',
+        );
+      }
+      final slow = HttpLeaderboardSubmitClient(
+        baseUrl: 'https://lb.example',
+        timeout: const Duration(milliseconds: 10),
+        httpClient: MockClient((_) async {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+          return http.Response('{}', 200);
+        }),
+      );
+      await expectLater(
+        slow.submitLevelClear(idToken: 'tok', body: body),
+        throwsA(isA<LeaderboardSubmitUnavailable>()),
+      );
+    });
+  });
+
   test('an empty base URL is unavailable', () async {
     final client = HttpLeaderboardSubmitClient(baseUrl: ' ');
     await expectLater(

@@ -43,6 +43,7 @@ import 'package:winklo/data/repositories/level_progress_remote_repository_impl.d
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
 import 'package:winklo/data/repositories/level_play_stats_repository_impl.dart';
 import 'package:winklo/data/repositories/level_world_repository_impl.dart';
+import 'package:winklo/data/repositories/pending_level_clear_repository_impl.dart';
 import 'package:winklo/data/repositories/notification_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_hint_quota_repository_impl.dart';
 import 'package:winklo/data/repositories/play_mode_record_repository_impl.dart';
@@ -76,6 +77,7 @@ import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/league_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
+import 'package:winklo/domain/repositories/pending_level_clear_repository.dart';
 import 'package:winklo/domain/repositories/notification_repository.dart';
 import 'package:winklo/domain/repositories/play_mode_record_repository.dart';
 import 'package:winklo/domain/play_mode_hints.dart';
@@ -497,6 +499,10 @@ List<SingleChildWidget> buildRepositoryProviders({
             ? FirestoreLevelWorldsSource(FirebaseFirestore.instance)
             : null,
       ),
+    ),
+    RepositoryProvider<PendingLevelClearRepository>(
+      create: (context) =>
+          PendingLevelClearRepositoryImpl(context.read<SharedPreferences>()),
     ),
     RepositoryProvider<RecordLevelClear>(
       create: (context) => RecordLevelClear(
