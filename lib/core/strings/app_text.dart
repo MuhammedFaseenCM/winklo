@@ -593,6 +593,13 @@ abstract interface class AppText {
   String levelNodeLocked(int number);
   String levelNumber(int number);
   String get levelReplay;
+
+  /// A cleared level's sheet, when the Levels board doesn't have it yet.
+  String get levelSheetNotOnBoard;
+
+  /// Semantics label of the Levels tab's star total, which opens the Levels
+  /// leaderboard.
+  String get levelsStarsToBoard;
   String levelStarsLabel(int stars, int maxStars);
   String get levelAllDone;
 

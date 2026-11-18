@@ -6,6 +6,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/firebase/firebase_bootstrap.dart';
+import '../../core/firebase/firestore_read.dart';
 import '../../core/strings/app_strings.dart';
 import '../../domain/entities/leaderboard_entry.dart';
 import '../../domain/entities/leaderboard_period.dart';
@@ -919,6 +920,28 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     return posted
         ? LevelClearSubmitOutcome.sent
         : LevelClearSubmitOutcome.unavailable;
+  }
+
+  @override
+  Future<Set<String>?> myBoardLevelIds(String gameId) async {
+    if (!_isReleaseRoot) return null;
+    final db = _db;
+    final auth = _firebaseAuth;
+    final uid = auth?.currentUser?.uid;
+    if (db == null || uid == null) return null;
+    try {
+      _assertGameId(gameId);
+      final snap = await getDocPreferringServer(
+        db.collection(_root).doc(gameId).collection('level_records').doc(uid),
+      );
+      // The account may have switched during the read.
+      if (auth?.currentUser?.uid != uid) return null;
+      final levels = snap.data()?['levels'];
+      return levels is Map ? {for (final id in levels.keys) '$id'} : {};
+    } catch (e) {
+      debugPrint('Leaderboard level records read failed: $e');
+      return null;
+    }
   }
 
   Future<void> _writeImproveOnly(

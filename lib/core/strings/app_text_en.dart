@@ -1650,6 +1650,12 @@ final class AppTextEn implements AppText {
   String get levelReplay => 'Replay';
 
   @override
+  String get levelSheetNotOnBoard => 'Not on the board yet · replay to count';
+
+  @override
+  String get levelsStarsToBoard => 'Open the Levels leaderboard';
+
+  @override
   String levelStarsLabel(int stars, int maxStars) =>
       '$stars of $maxStars stars';
 

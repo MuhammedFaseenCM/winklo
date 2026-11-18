@@ -112,4 +112,10 @@ abstract class LeaderboardRepository {
     required LeaderboardProof proof,
     required String expectedUid,
   });
+
+  /// The ids of the levels the signed-in player's Levels board entry holds
+  /// (`level_records/{uid}`), read server-first with a cache fallback. Null
+  /// when it can't be known: signed out, a debug root, Firebase not ready or
+  /// the read failed.
+  Future<Set<String>?> myBoardLevelIds(String gameId);
 }

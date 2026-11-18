@@ -32,6 +32,7 @@ void main() {
     String id, {
     LevelMap? from,
     double textScale = 1,
+    Set<String>? boardLevelIds,
   }) async {
     final m = from ?? map;
     final visited = <String>[];
@@ -42,7 +43,11 @@ void main() {
           builder: (context, _) => Scaffold(
             body: Builder(
               builder: (context) => TextButton(
-                onPressed: () => showLevelSheet(context, m.node(id)!),
+                onPressed: () => showLevelSheet(
+                  context,
+                  m.node(id)!,
+                  boardLevelIds: boardLevelIds,
+                ),
                 child: const Text('open'),
               ),
             ),
@@ -115,6 +120,30 @@ void main() {
     await openSheet(tester, 'zip_1_01', from: noTarget);
     expect(find.text('Clear the board'), findsOneWidget);
     expect(find.textContaining('or less'), findsNothing);
+  });
+
+  group('the not-on-the-board line', () {
+    final line = find.text('Not on the board yet · replay to count');
+
+    testWidgets('shows for a cleared level the board lacks', (tester) async {
+      await openSheet(tester, 'zip_1_01', boardLevelIds: {'zip_1_02'});
+      expect(line, findsOneWidget);
+    });
+
+    testWidgets('is absent for a level the board holds', (tester) async {
+      await openSheet(tester, 'zip_1_01', boardLevelIds: {'zip_1_01'});
+      expect(line, findsNothing);
+    });
+
+    testWidgets('is absent for an uncleared level', (tester) async {
+      await openSheet(tester, 'zip_1_02', boardLevelIds: <String>{});
+      expect(line, findsNothing);
+    });
+
+    testWidgets('is absent when the board is unknown', (tester) async {
+      await openSheet(tester, 'zip_1_01');
+      expect(line, findsNothing);
+    });
   });
 
   testWidgets('large text opens without an exception', (tester) async {

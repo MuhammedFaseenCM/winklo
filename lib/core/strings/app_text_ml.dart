@@ -1719,6 +1719,13 @@ final class AppTextMl implements AppText {
   String get levelReplay => 'വീണ്ടും കളിക്കുക';
 
   @override
+  String get levelSheetNotOnBoard =>
+      'ബോർഡിൽ ഇതുവരെ ഇല്ല · എണ്ണാൻ വീണ്ടും കളിക്കുക';
+
+  @override
+  String get levelsStarsToBoard => 'ലെവൽ ലീഡർബോർഡ് തുറക്കുക';
+
+  @override
   String levelStarsLabel(int stars, int maxStars) =>
       '$maxStars-ൽ $stars നക്ഷത്രം';
 

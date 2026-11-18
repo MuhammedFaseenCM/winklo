@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_icons.dart';
@@ -8,6 +9,7 @@ import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/logic/level_map.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../../domain/repositories/leaderboard_repository.dart';
 import '../../../domain/repositories/level_progress_repository.dart';
 import '../../../domain/repositories/level_world_repository.dart';
 import '../cubit/level_map_cubit.dart';
@@ -32,6 +34,7 @@ class LevelsScreen extends StatelessWidget {
       create: (context) => LevelMapCubit(
         worlds: context.read<LevelWorldRepository>(),
         progress: context.read<LevelProgressRepository>(),
+        leaderboard: context.read<LeaderboardRepository>(),
       )..load(),
       child: _LevelsView(openLevelId: openLevelId),
     );
@@ -93,7 +96,11 @@ class _LevelsViewState extends State<_LevelsView> {
       }
       if (open == null) return;
       if (open.playable) {
-        showLevelSheet(context, open);
+        showLevelSheet(
+          context,
+          open,
+          boardLevelIds: context.read<LevelMapCubit>().state.boardLevelIds,
+        );
       } else {
         _showLocked(map);
       }
@@ -102,7 +109,11 @@ class _LevelsViewState extends State<_LevelsView> {
 
   void _onTap(LevelMap map, LevelMapNode node) {
     if (node.playable) {
-      showLevelSheet(context, node);
+      showLevelSheet(
+        context,
+        node,
+        boardLevelIds: context.read<LevelMapCubit>().state.boardLevelIds,
+      );
     } else {
       _showLocked(map);
     }
@@ -294,7 +305,7 @@ class _Header extends StatelessWidget {
                 ),
               ),
               if (stars != null && maxStars != null)
-                _Chip(icon: AppIcons.star, text: '$stars / $maxStars'),
+                _StarsLink(text: '$stars / $maxStars'),
             ],
           ),
           const SizedBox(height: 10),
@@ -317,11 +328,52 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// The star total as a button: it opens the Levels leaderboard.
+class _StarsLink extends StatelessWidget {
+  const _StarsLink({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: AppStrings.levelsStarsToBoard,
+      excludeSemantics: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(99),
+        onTap: () => context.go('/leaderboard?game=zip&board=levels'),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+          child: Center(
+            widthFactor: 1,
+            child: _Chip(
+              icon: AppIcons.star,
+              text: text,
+              trailing: const AppIcon(
+                AppIcons.chevronRight,
+                size: 14,
+                color: ZipColors.star,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Chip extends StatelessWidget {
-  const _Chip({required this.text, this.icon, this.selected = false});
+  const _Chip({
+    required this.text,
+    this.icon,
+    this.trailing,
+    this.selected = false,
+  });
 
   final String text;
   final IconData? icon;
+  final Widget? trailing;
   final bool selected;
 
   @override
@@ -349,6 +401,7 @@ class _Chip extends StatelessWidget {
                   : (icon != null ? ZipColors.star : ZipColors.inkSoft),
             ),
           ),
+          if (trailing != null) ...[const SizedBox(width: 2), trailing!],
         ],
       ),
     );

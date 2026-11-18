@@ -288,4 +288,43 @@ void main() {
     await expectLater(send(repo()), throwsA(isA<Failure>()));
     verifyNeverSent();
   });
+
+  group('myBoardLevelIds', () {
+    void stubRecords(Map<String, dynamic>? data) {
+      when(() => docRef.get(any())).thenAnswer((_) async => snapshot);
+      when(() => snapshot.data()).thenReturn(data);
+    }
+
+    test('reads the level ids of level_records/{uid}', () async {
+      stubRecords({
+        'levels': {
+          'w1_l1': {'stars': 3, 'bestSeconds': 10},
+          'w1_l2': {'stars': 2, 'bestSeconds': 20},
+        },
+      });
+      expect(await repo().myBoardLevelIds('zip'), {'w1_l1', 'w1_l2'});
+      verify(() => firestore.collection('leaderboards')).called(1);
+    });
+
+    test('a missing record holds no levels', () async {
+      stubRecords(null);
+      expect(await repo().myBoardLevelIds('zip'), isEmpty);
+    });
+
+    test('is null on a debug root', () async {
+      stubRecords({'levels': <String, dynamic>{}});
+      expect(await repo(debug: true).myBoardLevelIds('zip'), isNull);
+    });
+
+    test('is null when signed out', () async {
+      stubRecords({'levels': <String, dynamic>{}});
+      when(() => auth.currentUser).thenReturn(null);
+      expect(await repo().myBoardLevelIds('zip'), isNull);
+    });
+
+    test('is null when the read fails', () async {
+      when(() => docRef.get(any())).thenThrow(Exception('offline'));
+      expect(await repo().myBoardLevelIds('zip'), isNull);
+    });
+  });
 }

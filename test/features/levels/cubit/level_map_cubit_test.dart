@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
+import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
 import 'package:winklo/features/levels/cubit/level_map_cubit.dart';
 
@@ -20,6 +22,8 @@ class _Worlds implements LevelWorldRepository {
     return v;
   }
 }
+
+class _MockLeaderboard extends Mock implements LeaderboardRepository {}
 
 void main() {
   late _Worlds worlds;
@@ -117,5 +121,65 @@ void main() {
     await cubit.close();
     await progress.record('zip', 'zip_1_01', stars: 3, seconds: 10);
     await pumpEventQueue();
+  });
+
+  group('board level ids', () {
+    late _MockLeaderboard leaderboard;
+
+    setUp(() {
+      leaderboard = _MockLeaderboard();
+      worlds.value = LevelCatalog([levelWorld(1, 2)]);
+    });
+
+    LevelMapCubit withBoard() => LevelMapCubit(
+      worlds: worlds,
+      progress: progress,
+      leaderboard: leaderboard,
+    );
+
+    test('loads once per load', () async {
+      when(
+        () => leaderboard.myBoardLevelIds('zip'),
+      ).thenAnswer((_) async => {'zip_1_01'});
+      final cubit = withBoard();
+      await cubit.load();
+      expect(cubit.state.boardLevelIds, {'zip_1_01'});
+      verify(() => leaderboard.myBoardLevelIds('zip')).called(1);
+      await cubit.close();
+    });
+
+    test('a failure leaves them unknown and the map still shows', () async {
+      when(
+        () => leaderboard.myBoardLevelIds('zip'),
+      ).thenThrow(Exception('offline'));
+      final cubit = withBoard();
+      await cubit.load();
+      expect(cubit.state.status, LevelMapStatus.ready);
+      expect(cubit.state.boardLevelIds, isNull);
+      await cubit.close();
+    });
+
+    test('are reloaded after a clear changes the progress', () async {
+      var ids = <String>{};
+      when(
+        () => leaderboard.myBoardLevelIds('zip'),
+      ).thenAnswer((_) async => ids);
+      final cubit = withBoard();
+      await cubit.load();
+      expect(cubit.state.boardLevelIds, isEmpty);
+      ids = {'zip_1_01'};
+      await progress.record('zip', 'zip_1_01', stars: 3, seconds: 10);
+      await pumpEventQueue();
+      expect(cubit.state.boardLevelIds, {'zip_1_01'});
+      verify(() => leaderboard.myBoardLevelIds('zip')).called(2);
+      await cubit.close();
+    });
+
+    test('no repository means no ids', () async {
+      final cubit = build();
+      await cubit.load();
+      expect(cubit.state.boardLevelIds, isNull);
+      await cubit.close();
+    });
   });
 }
