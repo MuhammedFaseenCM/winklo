@@ -42,9 +42,14 @@ describe('parseLevelClearBody', () => {
   });
 
   it('refuses a time that is not a whole number', () => {
-    for (const timeSeconds of [4.5, '42', NaN, 0, null]) {
+    for (const timeSeconds of [4.5, '42', NaN, null]) {
       expect(parseLevelClearBody({ ...body, timeSeconds })).toBeNull();
     }
+  });
+
+  it('leaves the time range to the handler', () => {
+    expect(parseLevelClearBody({ ...body, timeSeconds: 0 })?.timeSeconds).toBe(0);
+    expect(parseLevelClearBody({ ...body, timeSeconds: 86_401 })?.timeSeconds).toBe(86_401);
   });
 
   it('refuses hints that are not a boolean', () => {

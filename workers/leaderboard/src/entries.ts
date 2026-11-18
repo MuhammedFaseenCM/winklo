@@ -32,7 +32,7 @@ function preconditionFor(existing: StoredDoc | null): Precondition {
   return existing ? { updateTime: existing.updateTime } : { exists: false };
 }
 
-function identityFields(identity: Identity | null): Record<string, unknown> {
+export function identityFields(identity: Identity | null): Record<string, unknown> {
   if (!identity) return {};
   return {
     displayName: identity.displayName,

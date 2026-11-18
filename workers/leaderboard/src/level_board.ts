@@ -4,7 +4,7 @@
  */
 
 import { cleanIdentity, type Identity } from './identity';
-import { LEVEL_GAMES, MAX_SECONDS, type LevelGameId } from './limits';
+import { LEVEL_GAMES, type LevelGameId } from './limits';
 import { parseZipPuzzle, type ZipPuzzle } from './proofs';
 
 export { LEVEL_GAMES, type LevelGameId };
@@ -21,8 +21,6 @@ export type LevelClear = {
 
 export type LevelRecord = { stars: number; bestSeconds: number };
 
-const LEVEL_ID_PATTERN = /^zip_(\d+)_(\d+)$/;
-
 function isLevelGame(value: unknown): value is LevelGameId {
   return typeof value === 'string' && (LEVEL_GAMES as readonly string[]).includes(value);
 }
@@ -33,13 +31,13 @@ export function parseLevelClearBody(body: unknown): LevelClear | null {
   const b = body as Record<string, unknown>;
   if (!isLevelGame(b.gameId)) return null;
   if (typeof b.levelId !== 'string') return null;
-  const match = LEVEL_ID_PATTERN.exec(b.levelId);
+  const match = new RegExp(`^${b.gameId}_(\\d+)_(\\d+)$`).exec(b.levelId);
   if (!match) return null;
   const worldOrder = Number(match[1]);
   if (!Number.isSafeInteger(worldOrder)) return null;
+  // Any whole number parses; the handler answers too_fast / too_slow for the range.
   const seconds = b.timeSeconds;
   if (typeof seconds !== 'number' || !Number.isInteger(seconds)) return null;
-  if (seconds < 1 || seconds > MAX_SECONDS) return null;
   if (typeof b.usedHints !== 'boolean') return null;
   if (b.displayName !== undefined && b.displayName !== null && typeof b.displayName !== 'string') {
     return null;

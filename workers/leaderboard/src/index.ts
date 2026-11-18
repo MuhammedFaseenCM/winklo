@@ -2,7 +2,8 @@ import { errors } from 'jose';
 
 import { verifyFirebaseIdToken } from './firebase_auth';
 import { getGoogleAccessToken, parseServiceAccountJson } from './google_auth';
-import { handleSubmit } from './submit';
+import { handleLevelClear } from './level_submit';
+import { handleSubmit, type SubmitDeps } from './submit';
 
 export interface Env {
   FIREBASE_PROJECT_ID: string;
@@ -46,6 +47,18 @@ function json(body: unknown, status = 200): Response {
   return Response.json(body, { status });
 }
 
+type PostHandler = (
+  deps: SubmitDeps,
+  uid: string,
+  body: unknown,
+) => Promise<{ status: number; body: unknown }>;
+
+/** The authenticated POST routes; both share the token, size and JSON handling in `route`. */
+const POST_HANDLERS: Record<string, PostHandler | undefined> = {
+  '/v1/submit': handleSubmit,
+  '/v1/level-clear': handleLevelClear,
+};
+
 /** The Worker, with the token check injectable for tests. */
 export async function route(
   request: Request,
@@ -56,9 +69,8 @@ export async function route(
   if (request.method === 'GET' && pathname === '/v1/health') {
     return json({ ok: true });
   }
-  if (request.method !== 'POST' || pathname !== '/v1/submit') {
-    return new Response('Not found', { status: 404 });
-  }
+  const handler = request.method === 'POST' ? POST_HANDLERS[pathname] : undefined;
+  if (!handler) return new Response('Not found', { status: 404 });
 
   const token = parseBearer(request);
   if (!token) return json({ error: 'unauthorized' }, 401);
@@ -86,7 +98,7 @@ export async function route(
     return json({ error: 'misconfigured' }, 500);
   }
 
-  const result = await handleSubmit(
+  const result = await handler(
     {
       projectId: env.FIREBASE_PROJECT_ID,
       getAccessToken: () =>
