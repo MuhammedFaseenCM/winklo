@@ -67,12 +67,11 @@ describe('daily boards (phase 1)', () => {
     );
   });
 
+  // The minimum is 1 second for every game (`minLeaderboardSeconds`).
   it('refuse a time under the game minimum', async () => {
-    await assertFails(setDoc(doc(db('u1'), daily('zip', today)), entry(2)));
-    await assertFails(setDoc(doc(db('u1'), daily('sudoku', today)), entry(14)));
-    await assertFails(
-      setDoc(doc(db('u1'), daily('path_words', today)), entry(14)),
-    );
+    for (const game of ['zip', 'sudoku', 'path_words']) {
+      await assertFails(setDoc(doc(db('u1'), daily(game, today)), entry(0)));
+    }
   });
 
   it('refuse a day id that is not yyyy-MM-dd or not a real day', async () => {
