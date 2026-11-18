@@ -17,6 +17,7 @@ import '../../../data/clients/remote_config_client.dart';
 import '../../../domain/entities/leaderboard_entry.dart';
 import '../../../domain/entities/leaderboard_period.dart';
 import '../../../domain/game_ids.dart';
+import '../../../domain/leaderboard_limits.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/repositories/league_repository.dart';
 import '../../../domain/usecases/watch_leaderboard.dart';
@@ -386,12 +387,14 @@ class _LeaderboardViewState extends State<_LeaderboardView>
   }
 
   /// The Levels board's join/replay line: signed in, not on the board, and
-  /// not looking at a league.
+  /// not looking at a league. Not when the board is full: only its top
+  /// [leaderboardDailyLimit] are read, so the player may be ranked below.
   bool _showsLevelsNote(LeaderboardState state, AuthState auth, bool onBoard) =>
       state.period == LeaderboardPeriod.levels &&
       state.leagueId == null &&
       auth.user != null &&
-      !onBoard;
+      !onBoard &&
+      state.entries.length < leaderboardDailyLimit;
 
   /// The empty board's message when there's nothing to play for on a past day.
   String? _quietEmptyMessage(LeaderboardState state) {

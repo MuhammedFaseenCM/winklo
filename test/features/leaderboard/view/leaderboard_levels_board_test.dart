@@ -12,6 +12,7 @@ import 'package:winklo/domain/entities/leaderboard_entry.dart';
 import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/entities/level_progress.dart';
 import 'package:winklo/domain/game_ids.dart';
+import 'package:winklo/domain/leaderboard_limits.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
@@ -223,6 +224,30 @@ void main() {
       await openWithOthers(tester, localStars: 2);
       expect(find.text(AppStrings.leaderboardLevelsReplay), findsOneWidget);
       expect(find.text(AppStrings.leaderboardLevelsJoin), findsNothing);
+    });
+
+    testWidgets('gets no line when the board is full (may rank below it)', (
+      tester,
+    ) async {
+      await pump(tester);
+      await showLevels(tester);
+      board.add([
+        for (var i = 1; i <= leaderboardDailyLimit; i++)
+          _entry(i, stars: 200 - i),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.byType(LeaderboardLevelsNote), findsNothing);
+    });
+
+    testWidgets('gets the line on a board one short of full', (tester) async {
+      await pump(tester);
+      await showLevels(tester);
+      board.add([
+        for (var i = 1; i < leaderboardDailyLimit; i++)
+          _entry(i, stars: 200 - i),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.byType(LeaderboardLevelsNote), findsOneWidget);
     });
 
     testWidgets('still gets the join line without a progress provider', (
