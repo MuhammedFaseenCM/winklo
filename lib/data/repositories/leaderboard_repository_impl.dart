@@ -57,6 +57,19 @@ const weeklyLeaderboardFields = {
   'updatedAt',
 };
 
+/// Every field on a levels row (`leaderboards/{gameId}/levels/{uid}`). Only
+/// the leaderboard Worker writes them (`LEVEL_BOARD_FIELDS` in
+/// workers/leaderboard/src/limits.ts); `test/firestore` pins both.
+const levelBoardFields = {
+  'stars',
+  'levelsCleared',
+  'timeSeconds',
+  'displayName',
+  'photoUrl',
+  'avatarId',
+  'updatedAt',
+};
+
 /// Merge payload for one improve-only leaderboard write: `currentStreak`
 /// always; time + clean-run flags only when [timeImproved]; identity when
 /// known.
@@ -165,6 +178,57 @@ List<LeaderboardEntry> mapWeeklyLeaderboardRows(
             : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
         rank: rank,
         daysCleared: days,
+      ),
+    );
+  }
+  return entries;
+}
+
+/// Maps levels rows (`leaderboards/{gameId}/levels/{uid}`, already ordered by
+/// stars descending, levels cleared ascending, total best time, `updatedAt`)
+/// to ranked entries whose [LeaderboardEntry.timeSeconds] is the total of the
+/// best times. Equal stars, levels and time share a dense rank. Identity
+/// fields may be absent (a first clear without a name).
+List<LeaderboardEntry> mapLevelsLeaderboardRows(
+  Iterable<({String id, Map<String, dynamic> data})> rows,
+) {
+  final entries = <LeaderboardEntry>[];
+  var rank = 0;
+  (int, int, int)? previous;
+  for (final row in rows) {
+    final data = row.data;
+    final stars = data['stars'];
+    final levels = data['levelsCleared'];
+    final total = data['timeSeconds'];
+    if (stars is! int ||
+        stars < 0 ||
+        levels is! int ||
+        levels <= 0 ||
+        total is! int ||
+        total <= 0) {
+      continue;
+    }
+    final updatedAtRaw = data['updatedAt'];
+    final name = data['displayName'];
+    final photo = data['photoUrl'];
+    final avatar = data['avatarId'];
+    if (previous != (stars, levels, total)) rank += 1;
+    previous = (stars, levels, total);
+    entries.add(
+      LeaderboardEntry(
+        uid: row.id,
+        displayName: name is String && name.trim().isNotEmpty
+            ? name.trim()
+            : AppStrings.playerFallbackName,
+        photoUrl: photo is String && photo.isNotEmpty ? photo : null,
+        avatarId: avatar is String && avatar.isNotEmpty ? avatar : null,
+        timeSeconds: total,
+        updatedAt: updatedAtRaw is Timestamp
+            ? updatedAtRaw.toDate()
+            : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        rank: rank,
+        stars: stars,
+        levelsCleared: levels,
       ),
     );
   }
@@ -400,6 +464,8 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
             .collection('weekly')
             .doc(isoWeekIdForDayId(day))
             .collection('entries');
+      case LeaderboardPeriod.levels:
+        return gameRef.collection('levels');
     }
   }
 
@@ -408,9 +474,11 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     QuerySnapshot<Map<String, dynamic>> snap,
   ) {
     final rows = snap.docs.map((d) => (id: d.id, data: d.data()));
-    return period == LeaderboardPeriod.weekly
-        ? mapWeeklyLeaderboardRows(rows)
-        : mapLeaderboardRows(rows);
+    return switch (period) {
+      LeaderboardPeriod.weekly => mapWeeklyLeaderboardRows(rows),
+      LeaderboardPeriod.levels => mapLevelsLeaderboardRows(rows),
+      _ => mapLeaderboardRows(rows),
+    };
   }
 
   @override
@@ -430,6 +498,24 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     if (period == LeaderboardPeriod.weekly) {
       if (!_isReleaseRoot) return Stream.value(const []);
       return _watchWeeklyFromDaily(db: db, gameId: gameId, dayId: dayId);
+    }
+
+    // The Worker writes the levels board on the release root only.
+    if (period == LeaderboardPeriod.levels) {
+      if (!_isReleaseRoot) return Stream.value(const []);
+      return _boardCollection(
+            db: db,
+            gameId: gameId,
+            period: period,
+            dayId: dayId,
+          )
+          .orderBy('stars', descending: true)
+          .orderBy('levelsCleared')
+          .orderBy('timeSeconds')
+          .orderBy('updatedAt')
+          .limit(leaderboardDailyLimit)
+          .snapshots()
+          .map((snap) => _mapRows(period, snap));
     }
 
     // Daily path uses a subcollection under the day doc so queries stay flat.
@@ -470,6 +556,9 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         dayId: dayId,
         memberUids: uids,
       );
+    }
+    if (period == LeaderboardPeriod.levels && !_isReleaseRoot) {
+      return Stream.value(const []);
     }
     // A league has at most 30 members, the most `whereIn` takes; the board is
     // ranked here with the server boards' rules.

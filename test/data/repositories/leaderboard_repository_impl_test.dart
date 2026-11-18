@@ -1,3 +1,8 @@
+// Mocks of the sealed Firestore reference types, as mocktail needs them.
+// ignore_for_file: subtype_of_sealed_class
+
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +13,19 @@ import 'package:winklo/domain/entities/leaderboard_period.dart';
 import 'package:winklo/domain/failures.dart';
 
 class _MockFirestore extends Mock implements FirebaseFirestore {}
+
+class _MockCollection extends Mock
+    implements CollectionReference<Map<String, dynamic>> {}
+
+class _MockDoc extends Mock
+    implements DocumentReference<Map<String, dynamic>> {}
+
+class _MockQuery extends Mock implements Query<Map<String, dynamic>> {}
+
+class _MockSnap extends Mock implements QuerySnapshot<Map<String, dynamic>> {}
+
+class _MockDocSnap extends Mock
+    implements QueryDocumentSnapshot<Map<String, dynamic>> {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
@@ -136,6 +154,178 @@ void main() {
       );
       expect(identity, isNotNull);
       expect(identity!.avatarId, 'preset_03');
+    });
+  });
+
+  group('mapLevelsLeaderboardRows', () {
+    test('reads stars, levels and total time with dense ranks', () {
+      final entries = mapLevelsLeaderboardRows([
+        (
+          id: 'a',
+          data: {
+            'stars': 12,
+            'levelsCleared': 6,
+            'timeSeconds': 99,
+            'displayName': 'Ada',
+            'photoUrl': 'https://x/p.png',
+            'avatarId': 'preset_03',
+            'updatedAt': Timestamp.fromDate(DateTime.utc(2026, 10, 15)),
+          },
+        ),
+        (id: 'b', data: {'stars': 12, 'levelsCleared': 6, 'timeSeconds': 99}),
+        (id: 'c', data: {'stars': 9, 'levelsCleared': 3, 'timeSeconds': 60}),
+      ]);
+      expect(entries.map((e) => e.rank), [1, 1, 2]);
+      final first = entries.first;
+      expect(first.stars, 12);
+      expect(first.levelsCleared, 6);
+      expect(first.timeSeconds, 99);
+      expect(first.displayName, 'Ada');
+      expect(first.photoUrl, 'https://x/p.png');
+      expect(first.avatarId, 'preset_03');
+      expect(first.updatedAt.toUtc(), DateTime.utc(2026, 10, 15));
+    });
+
+    test('a row without identity falls back and does not crash', () {
+      final entry = mapLevelsLeaderboardRows([
+        (id: 'b', data: {'stars': 3, 'levelsCleared': 1, 'timeSeconds': 20}),
+      ]).single;
+      expect(entry.displayName, 'Player');
+      expect(entry.photoUrl, isNull);
+      expect(entry.avatarId, isNull);
+      expect(entry.updatedAt.millisecondsSinceEpoch, 0);
+    });
+
+    test('skips rows without stars, levels or a total', () {
+      final entries = mapLevelsLeaderboardRows([
+        (id: 'a', data: {'levelsCleared': 1, 'timeSeconds': 10}),
+        (id: 'b', data: {'stars': 3, 'levelsCleared': 0, 'timeSeconds': 10}),
+        (id: 'c', data: {'stars': '3', 'levelsCleared': 1, 'timeSeconds': 10}),
+        (id: 'd', data: {'stars': 0, 'levelsCleared': 1, 'timeSeconds': 30}),
+      ]);
+      expect(entries.map((e) => e.uid), ['d']);
+    });
+  });
+
+  group('LeaderboardRepositoryImpl levels board', () {
+    late _MockFirestore firestore;
+    late _MockCollection collection;
+    late _MockQuery query;
+    late _MockSnap snap;
+    late bool wasReady;
+
+    _MockDocSnap row(String id, Map<String, dynamic> data) {
+      final doc = _MockDocSnap();
+      when(() => doc.id).thenReturn(id);
+      when(doc.data).thenReturn(data);
+      return doc;
+    }
+
+    setUpAll(() {
+      registerFallbackValue(FieldPath.documentId);
+    });
+
+    setUp(() {
+      wasReady = FirebaseBootstrap.isReady;
+      FirebaseBootstrap.isReady = true;
+      firestore = _MockFirestore();
+      collection = _MockCollection();
+      query = _MockQuery();
+      snap = _MockSnap();
+      final doc = _MockDoc();
+      when(() => firestore.collection(any())).thenReturn(collection);
+      when(() => collection.doc(any())).thenReturn(doc);
+      when(() => doc.collection(any())).thenReturn(collection);
+      when(
+        () => collection.orderBy(
+          any<Object>(),
+          descending: any(named: 'descending'),
+        ),
+      ).thenReturn(query);
+      when(
+        () =>
+            query.orderBy(any<Object>(), descending: any(named: 'descending')),
+      ).thenReturn(query);
+      when(() => query.limit(any())).thenReturn(query);
+      when(() => query.snapshots()).thenAnswer((_) => Stream.value(snap));
+      when(
+        () => collection.where(any<Object>(), whereIn: any(named: 'whereIn')),
+      ).thenReturn(query);
+    });
+
+    tearDown(() => FirebaseBootstrap.isReady = wasReady);
+
+    LeaderboardRepositoryImpl repo({bool debug = false}) =>
+        LeaderboardRepositoryImpl(
+          firestore: firestore,
+          auth: _MockFirebaseAuth(),
+          isDebugMode: debug,
+        );
+
+    test('watchBoard queries the levels collection in board order', () async {
+      final docs = [
+        row('a', {'stars': 9, 'levelsCleared': 3, 'timeSeconds': 60}),
+      ];
+      when(() => snap.docs).thenReturn(docs);
+
+      final entries = await repo()
+          .watchBoard(gameId: 'zip', period: LeaderboardPeriod.levels)
+          .first;
+
+      expect(entries.single.uid, 'a');
+      expect(entries.single.stars, 9);
+      expect(entries.single.levelsCleared, 3);
+      verifyInOrder([
+        () => firestore.collection('leaderboards'),
+        () => collection.doc('zip'),
+        () => collection.orderBy('stars', descending: true),
+        () => query.orderBy('levelsCleared', descending: false),
+        () => query.orderBy('timeSeconds', descending: false),
+        () => query.orderBy('updatedAt', descending: false),
+        () => query.limit(50),
+      ]);
+    });
+
+    test('watchBoard on a debug root is empty and reads nothing', () async {
+      final entries = await repo(
+        debug: true,
+      ).watchBoard(gameId: 'zip', period: LeaderboardPeriod.levels).first;
+      expect(entries, isEmpty);
+      verifyNever(() => query.snapshots());
+    });
+
+    test('watchMembersBoard ranks the members rows on the phone', () async {
+      final docs = [
+        row('a', {'stars': 9, 'levelsCleared': 3, 'timeSeconds': 60}),
+        row('b', {'stars': 9, 'levelsCleared': 5, 'timeSeconds': 40}),
+        row('c', {'stars': 12, 'levelsCleared': 6, 'timeSeconds': 99}),
+      ];
+      when(() => snap.docs).thenReturn(docs);
+
+      final entries = await repo()
+          .watchMembersBoard(
+            gameId: 'zip',
+            period: LeaderboardPeriod.levels,
+            memberUids: const ['a', 'b', 'c'],
+          )
+          .first;
+
+      expect(entries.map((e) => e.uid), ['c', 'a', 'b']);
+      expect(entries.map((e) => e.rank), [1, 2, 3]);
+      verify(
+        () => collection.where(any<Object>(), whereIn: ['a', 'b', 'c']),
+      ).called(1);
+    });
+
+    test('watchMembersBoard on a debug root is empty', () async {
+      final entries = await repo(debug: true)
+          .watchMembersBoard(
+            gameId: 'zip',
+            period: LeaderboardPeriod.levels,
+            memberUids: const ['a'],
+          )
+          .first;
+      expect(entries, isEmpty);
     });
   });
 

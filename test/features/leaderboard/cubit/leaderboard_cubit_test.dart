@@ -91,6 +91,35 @@ void main() {
   );
 
   blocTest<LeaderboardCubit, LeaderboardState>(
+    'selectBoard(levels) resubscribes to the levels board',
+    build: buildCubit,
+    act: (cubit) {
+      cubit.selectBoard(LeaderboardPeriod.levels);
+      boardController.add([entry]);
+    },
+    expect: () => [
+      const LeaderboardState(
+        period: LeaderboardPeriod.levels,
+        status: LeaderboardStatus.loading,
+      ),
+      LeaderboardState(
+        period: LeaderboardPeriod.levels,
+        status: LeaderboardStatus.ready,
+        entries: [entry],
+      ),
+    ],
+    verify: (_) {
+      verify(
+        () => watch(
+          gameId: GameIds.zip,
+          period: LeaderboardPeriod.levels,
+          dayId: any(named: 'dayId'),
+        ),
+      ).called(1);
+    },
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
     'selectGame switches to path words',
     build: buildCubit,
     act: (cubit) => cubit.selectGame(GameIds.pathWords),

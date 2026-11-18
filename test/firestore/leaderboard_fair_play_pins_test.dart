@@ -108,6 +108,9 @@ void main() {
     expect(quoted(tsConst(limits, 'WEEKLY_FIELDS', '[', ']')), {
       ...weeklyLeaderboardFields,
     });
+    expect(quoted(tsConst(limits, 'LEVEL_BOARD_FIELDS', '[', ']')), {
+      ...levelBoardFields,
+    });
   });
 
   test('the Worker cleans identity like the app', () {

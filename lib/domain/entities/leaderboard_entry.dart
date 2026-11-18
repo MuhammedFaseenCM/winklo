@@ -11,6 +11,8 @@ class LeaderboardEntry {
     this.hadMistakes,
     this.currentStreak,
     this.daysCleared,
+    this.stars,
+    this.levelsCleared,
   });
 
   final String uid;
@@ -37,6 +39,11 @@ class LeaderboardEntry {
   /// week's total.
   final int? daysCleared;
 
+  /// Levels board only: stars earned and levels cleared. [timeSeconds] is then
+  /// the sum of the best times.
+  final int? stars;
+  final int? levelsCleared;
+
   /// This entry at another place on the board.
   LeaderboardEntry withRank(int rank) => LeaderboardEntry(
     uid: uid,
@@ -50,5 +57,7 @@ class LeaderboardEntry {
     hadMistakes: hadMistakes,
     currentStreak: currentStreak,
     daysCleared: daysCleared,
+    stars: stars,
+    levelsCleared: levelsCleared,
   );
 }

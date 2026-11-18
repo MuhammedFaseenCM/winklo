@@ -50,6 +50,7 @@ class LeaderboardTableHeader extends StatelessWidget {
       LeaderboardPeriod.daily => AppStrings.leaderboardColumnTime,
       LeaderboardPeriod.weekly => AppStrings.leaderboardColumnTotal,
       LeaderboardPeriod.allTime => AppStrings.leaderboardColumnBest,
+      LeaderboardPeriod.levels => AppStrings.leaderboardColumnTotal,
     };
     return Container(
       height: leaderboardTableHeaderHeight,

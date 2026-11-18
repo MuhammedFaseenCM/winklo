@@ -489,6 +489,7 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                             LeaderboardPeriod.daily => AppIcons.today,
                             LeaderboardPeriod.weekly => AppIcons.week,
                             LeaderboardPeriod.allTime => AppIcons.medal,
+                            LeaderboardPeriod.levels => AppIcons.star,
                           },
                           boardLabel: leaderboardBoardLabel(
                             period: state.period,

@@ -6,13 +6,17 @@ import '../../../domain/game_ids.dart';
 const int leaderboardPodiumSize = 3;
 
 /// Seconds [entry] is behind [ahead], or null when there's nothing to show:
-/// a tie, or the weekly board, which ranks by days cleared before time.
+/// a tie, or the weekly and levels boards, which rank by days or stars
+/// cleared before time.
 int? leaderboardGapSeconds({
   required LeaderboardEntry entry,
   required LeaderboardEntry ahead,
   required LeaderboardPeriod period,
 }) {
-  if (period == LeaderboardPeriod.weekly) return null;
+  if (period == LeaderboardPeriod.weekly ||
+      period == LeaderboardPeriod.levels) {
+    return null;
+  }
   final gap = entry.timeSeconds - ahead.timeSeconds;
   return gap > 0 ? gap : null;
 }
