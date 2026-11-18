@@ -418,6 +418,23 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Levels board: stars, levels cleared and total time per player. Only
+    // the leaderboard Worker writes the scores; the owner may refresh the
+    // identity fields on an existing row.
+    match /leaderboards/{gameId}/levels/{uid} {
+      allow read: if validGame(gameId);
+      allow update: if isOwner(uid)
+        && validGame(gameId)
+        && profileOnlyLeaderboardUpdate(false);
+      allow create, delete: if false;
+    }
+
+    // A player's private level bests: read by the owner, written by the Worker.
+    match /leaderboards/{gameId}/level_records/{uid} {
+      allow read: if isOwner(uid) && validGame(gameId);
+      allow write: if false;
+    }
+
     // Twin used by debug builds (`kDebugMode`) so demo seeds / local
     // submits never touch production `leaderboards`.
     match /leaderboards_debug/{gameId}/all_time/{uid} {

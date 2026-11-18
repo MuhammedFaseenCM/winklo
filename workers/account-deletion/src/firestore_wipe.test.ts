@@ -239,6 +239,20 @@ describe('wipeUserFirestore', () => {
     expect(fake.listUrls.some((u) => u.includes('leaderboards_debug/zip/weekly'))).toBe(false);
   });
 
+  it('deletes the levels board row and records for every game, on the release root only', async () => {
+    const fake = fakeFirestore({});
+
+    await wipeUserFirestore({ projectId: 'p', accessToken: 't', uid: 'u1' });
+
+    for (const game of ['zip', 'path_words', 'sudoku']) {
+      expect(fake.deleted).toContain(`${DOCS}/leaderboards/${game}/levels/u1`);
+      expect(fake.deleted).toContain(`${DOCS}/leaderboards/${game}/level_records/u1`);
+    }
+    expect(
+      fake.deleted.some((n) => n.includes('leaderboards_debug') && n.includes('level')),
+    ).toBe(false);
+  });
+
   it('deletes the leagues the user owns, with their codes, and leaves the others', async () => {
     const fake = fakeFirestore({
       leagues: [

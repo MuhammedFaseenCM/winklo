@@ -16,6 +16,9 @@ const LEADERBOARD_ROOTS = ['leaderboards', 'leaderboards_debug'] as const;
 /** Only the leaderboard Worker writes weekly entries, and only on the release root. */
 const WEEKLY_ROOTS = ['leaderboards'] as const;
 
+/** Only the leaderboard Worker writes the levels board and records, on the release root only. */
+const LEVELS_ROOTS = ['leaderboards'] as const;
+
 /** Top-level collections whose docs name their owner in a `uid` field. */
 export const UID_FIELD_COLLECTIONS = ['issue_reports', 'client_errors'] as const;
 
@@ -69,6 +72,24 @@ export function weeklyEntryPath(
   uid: string,
 ): string {
   return `${documentsBase(projectId)}/${root}/${game}/weekly/${weekId}/entries/${uid}`;
+}
+
+export function levelsBoardPath(
+  projectId: string,
+  root: LeaderboardRoot,
+  game: string,
+  uid: string,
+): string {
+  return `${documentsBase(projectId)}/${root}/${game}/levels/${uid}`;
+}
+
+export function levelRecordsPath(
+  projectId: string,
+  root: LeaderboardRoot,
+  game: string,
+  uid: string,
+): string {
+  return `${documentsBase(projectId)}/${root}/${game}/level_records/${uid}`;
 }
 
 export function leagueCodePath(projectId: string, code: string): string {
@@ -309,6 +330,13 @@ export async function collectUserDocNames(opts: {
           weeklyEntryPath(projectId, root, game, docIdFromResourceName(week), uid),
         );
       }
+    }
+  }
+
+  for (const root of LEVELS_ROOTS) {
+    for (const game of LEADERBOARD_GAMES) {
+      names.add(levelsBoardPath(projectId, root, game, uid));
+      names.add(levelRecordsPath(projectId, root, game, uid));
     }
   }
 

@@ -7,6 +7,7 @@ import {
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
+  deleteDoc,
   doc,
   getDoc,
   serverTimestamp,
@@ -165,6 +166,75 @@ describe('weekly boards', () => {
         updatedAt: serverTimestamp(),
       }),
     );
+  });
+});
+
+describe('levels boards', () => {
+  const levels = 'leaderboards/zip/levels/u1';
+  const records = 'leaderboards/zip/level_records/u1';
+  const row = {
+    stars: 12,
+    levelsCleared: 5,
+    timeSeconds: 300,
+    displayName: 'Ada',
+    updatedAt: serverTimestamp(),
+  };
+
+  it('rows are readable by any signed-in player', async () => {
+    await seed(levels, { ...row, updatedAt: new Date() });
+    await assertSucceeds(getDoc(doc(db('u2'), levels)));
+  });
+
+  it('owner cannot create or update score fields', async () => {
+    await assertFails(setDoc(doc(db('u1'), levels), row));
+    await seed(levels, { ...row, updatedAt: new Date() });
+    for (const field of ['stars', 'levelsCleared', 'timeSeconds']) {
+      await assertFails(
+        updateDoc(doc(db('u1'), levels), { [field]: 1, updatedAt: serverTimestamp() }),
+      );
+    }
+    await assertFails(setDoc(doc(db('u2'), levels), row));
+  });
+
+  it('owner can refresh name, photo and avatar on an existing row', async () => {
+    await seed(levels, { ...row, updatedAt: new Date() });
+    await assertSucceeds(
+      updateDoc(doc(db('u1'), levels), { displayName: 'Grace', avatarId: 'a1' }),
+    );
+    await assertFails(updateDoc(doc(db('u2'), levels), { displayName: 'Grace' }));
+  });
+
+  it('owner cannot add a currentStreak to a row', async () => {
+    await seed(levels, { ...row, updatedAt: new Date() });
+    await assertFails(updateDoc(doc(db('u1'), levels), { currentStreak: 3 }));
+  });
+
+  it('rows cannot be deleted', async () => {
+    await seed(levels, { ...row, updatedAt: new Date() });
+    await assertFails(deleteDoc(doc(db('u1'), levels)));
+  });
+
+  it('rejects a game outside the valid ones', async () => {
+    const path = 'leaderboards/bogus/levels/u1';
+    await seed(path, { ...row, updatedAt: new Date() });
+    await assertFails(getDoc(doc(db('u1'), path)));
+    await assertFails(updateDoc(doc(db('u1'), path), { displayName: 'Grace' }));
+    await seed('leaderboards/bogus/level_records/u1', { levels: {} });
+    await assertFails(getDoc(doc(db('u1'), 'leaderboards/bogus/level_records/u1')));
+  });
+
+  it('records are readable by their owner only', async () => {
+    await seed(records, { levels: { l1: { stars: 3 } }, updatedAt: new Date() });
+    await assertSucceeds(getDoc(doc(db('u1'), records)));
+    await assertFails(getDoc(doc(db('u2'), records)));
+    await assertFails(getDoc(doc(db(null), records)));
+  });
+
+  it('records take no client writes, not even from the owner', async () => {
+    await assertFails(setDoc(doc(db('u1'), records), { levels: {} }));
+    await seed(records, { levels: {}, updatedAt: new Date() });
+    await assertFails(updateDoc(doc(db('u1'), records), { levels: { l1: 1 } }));
+    await assertFails(deleteDoc(doc(db('u1'), records)));
   });
 });
 
