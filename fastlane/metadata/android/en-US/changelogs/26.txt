@@ -1,0 +1,5 @@
+What's new
+
+• Zip Levels: play through themed worlds on a map and earn up to three stars on each level
+• Levels leaderboard: rank by stars on the Board tab
+• Fixes and improvements
