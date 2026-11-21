@@ -67,3 +67,6 @@ firestore/rules_test/node_modules/
 **/.wrangler/
 
 tools/package-lock.json
+
+# Claude Code local state (worktrees, local settings)
+.claude/
