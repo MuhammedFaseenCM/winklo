@@ -17,7 +17,7 @@
   - 15 path taps, one every 4 steps, volumes rotating 0.55/0.8/0.65/0.9
   - success at 10.733 s
   - "clear" pops on "move." and on the logo
-- Music: "Curiositys Arrival" (`assets/music/CREDIT.md`). It is `<audio id="music">` on its own lane (4), runs 0–19.8 s, and fades in over 0.2 s and out over 1.5 s.
+- Music: "Curiositys Arrival" (`assets/music/CREDIT.md`). It is `<audio id="music">` on its own lane (4), runs 0–19.8 s at volume 0.78, and fades in over 0.2 s and out over 1.5 s.
 - Level changes from B, made to hit the targets for this reel:
   - Music volume is 0.78, against 0.72 in A and B. At 0.72 the mix measured −16.2 LUFS.
   - Taps get an extra ×0.72 gain. At full gain the 0.9 taps peaked at −1.2 dBTP.

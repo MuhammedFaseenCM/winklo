@@ -8,7 +8,7 @@
 - The hook text carries over into the solve scene and stays until 2.6 s, so a 9-word hook gets about 2.6 s to read. The ribbon starts at 2.15 s underneath it.
 - Total length is 16.6 s. The lockup lands at 14.35 s and holds about 2.2 s.
 - Music bed: "Curiositys Arrival" by Steven Booth (CC BY 3.0), a 32 s excerpt (`assets/music/CREDIT.md`). It is `<audio id="music">` on its own lane (4), runs 0–16.6 s at volume 0.72, and fades in over 0.2 s and out over 1.5 s. This matches video B.
-- Sfx are Kenney CC0 and play over the bed. Success is ×0.62, the chip "clear" ×0.7 and the logo "clear" 0.45. One tick at 0.93 s when the ring lands on "1". 15 tap ticks, one every 4 steps, with volume rotating between 0.55, 0.8, 0.65 and 0.9. Success on the solve (10.03 s), "clear" as the pop on the rank chip (10.47 s, peak at about 10.63 s) and on the logo (14.22 s). Two quiet taps as the Path Words and Sudoku slots land.
+- Sfx are Kenney CC0 and play over the bed. Sfx data-volumes: success 0.62, chip "clear" 0.49, logo "clear" 0.45. One tick at 0.93 s when the ring lands on "1". 15 tap ticks, one every 4 steps, with volume rotating between 0.55, 0.8, 0.65 and 0.9. Success on the solve (10.03 s), "clear" as the pop on the rank chip (10.47 s, peak at about 10.63 s) and on the logo (14.22 s). Two quiet taps as the Path Words and Sudoku slots land.
 - `tools/build.mjs` generates every HTML file from `../shared/zip-puzzle.json`. Running it again overwrites edits made in Studio.
 
 ## Measured vs looked at

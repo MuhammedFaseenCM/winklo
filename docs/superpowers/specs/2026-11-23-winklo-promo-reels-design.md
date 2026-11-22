@@ -16,7 +16,7 @@ Play Store listing.
 - Free tools only: HyperFrames (Apache-2.0) + local ffmpeg.
 - Brand: bg ink #0F172A, cards #243044, walls #1E293B, ember #FF6B2C (Zip line, CTA), sky #38BDF8,
   teal success #2DD4BF, star #FBBF24, number #FB7185. Font: Lexend. Logo: assets/branding/app_icon.png.
-- Audio: app's own Kenney CC0 sfx (tap / success / clear) — no music licensing needed.
+- Audio: app's own Kenney CC0 sfx (tap / success / clear) plus a music bed, "Curiositys Arrival" by Steven Booth (CC BY 3.0). Credit it in every post caption; see marketing/videos/shared/assets/music/CREDIT.md.
 - Every word and every board inside the band y=168–1330px; below 1330 only decoration; no text under the
   right-hand action rail. Frame 0 is the hook (never black, never a logo). Nothing read under 28px.
 - Lexend isn't bundled with HyperFrames: ship Lexend (OFL, Google Fonts) as a file in assets/fonts with @font-face.
