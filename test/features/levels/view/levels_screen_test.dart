@@ -486,6 +486,29 @@ void main() {
       expect(pref.writes, ['path_words']);
     });
 
+    testWidgets('a consumed open= id does not reopen after switching back', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        LevelCatalog([levelWorld(1, 3)]),
+        pathWords: animals,
+        open: 'path_words_1_01',
+      );
+      expect(find.text('Play'), findsOneWidget);
+      Navigator.of(tester.element(find.text('Play'))).pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Play'), findsNothing);
+      await tester.tap(find.text(AppStrings.zipTitle));
+      await tester.pumpAndSettle();
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsWidgets);
+      expect(find.text('Play'), findsNothing);
+      await tester.tap(find.text(AppStrings.pathWordsTab));
+      await tester.pumpAndSettle();
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Animals')), findsWidgets);
+      expect(find.text('Play'), findsNothing);
+    });
+
     testWidgets('a zip open= id beats a stored Path Words choice', (
       tester,
     ) async {

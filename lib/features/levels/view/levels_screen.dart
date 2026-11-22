@@ -42,9 +42,14 @@ class LevelsScreen extends StatefulWidget {
 class _LevelsScreenState extends State<LevelsScreen> {
   late String _game;
 
+  /// [LevelsScreen.openLevelId] until the player switches game: switching
+  /// back must not reopen a sheet that was already shown.
+  String? _openLevelId;
+
   @override
   void initState() {
     super.initState();
+    _openLevelId = widget.openLevelId;
     final preference = context.read<LevelsGamePreferenceRepository>();
     final opened = _gameOf(widget.openLevelId);
     _game = opened ?? preference.read();
@@ -63,12 +68,15 @@ class _LevelsScreenState extends State<LevelsScreen> {
   void _select(String game) {
     if (game == _game) return;
     unawaited(context.read<LevelsGamePreferenceRepository>().write(game));
-    setState(() => _game = game);
+    setState(() {
+      _game = game;
+      _openLevelId = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final openLevelId = widget.openLevelId;
+    final openLevelId = _openLevelId;
     return BlocProvider(
       // A fresh cubit, scroll position and placement for each game.
       key: ValueKey(_game),
