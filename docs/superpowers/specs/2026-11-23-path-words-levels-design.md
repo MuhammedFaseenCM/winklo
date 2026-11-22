@@ -129,7 +129,7 @@ This is the same collection and the same rules as Zip: published worlds are publ
 - `save` validates Path Words boards with `validatePathWordsLevel`. Zip keeps its own check.
 - A new route, `POST /v1/levels/path_words/generate`, takes `{order, categoryId, count}` and returns boards for the admin editor. Generation runs on the server, the way the daily auto-puzzle does.
 - A new route, `GET /v1/levels/path_words/categories`, lists category ids and names for the admin's picker.
-- **The publish lock still applies.** A published world's boards can't be changed. Only `targetSeconds` stays editable, exactly as for Zip.
+- **The publish lock.** For Zip today, a published world keeps its level ids, but its boards can still be edited. For Path Words, the lock is stricter: a published world's boards (letters and targets) can't change, and only `targetSeconds` stays editable. Zip's behaviour doesn't change.
 
 ## Admin page (winklo-admin SPA)
 
