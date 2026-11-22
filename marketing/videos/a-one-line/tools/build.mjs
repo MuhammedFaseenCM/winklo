@@ -297,28 +297,33 @@ const payoff = scene(
     tl.set({}, {}, 1.99);`,
 );
 
-// ---------- cta (12–15s) ----------
-// Path Words: 5x5, the word DAILY traced in sky.
-const PW = ["WORDS", "PLAYE", "DAINT", "STLYR", "MINKO"];
+// ---------- cta (12–16.6s) ----------
+// All three games side by side under "3 free puzzles. Every day.", then the logo.
+// Path Words: 4x4, the word DAILY traced in sky.
+const PW = ["WORD", "DAIL", "PENY", "MINK"];
 const PW_WORD = [
-  [2, 0],
-  [2, 1],
-  [2, 2],
-  [3, 2],
-  [3, 3],
+  [1, 0],
+  [1, 1],
+  [1, 2],
+  [1, 3],
+  [2, 3],
 ];
-const PWC = 136;
+const PWN = 4;
+const PWC = 168;
 const PWG = 12;
 const pwPos = (r, c) => [c * (PWC + PWG), r * (PWC + PWG)];
 const pwInWord = new Set(PW_WORD.map(([r, c]) => `${r},${c}`));
-const pwTiles = [];
-for (let r = 0; r < 5; r++)
-  for (let c = 0; c < 5; c++) {
+const pwRects = [];
+const pwTexts = [];
+for (let r = 0; r < PWN; r++)
+  for (let c = 0; c < PWN; c++) {
     const [x, y] = pwPos(r, c);
     const on = pwInWord.has(`${r},${c}`);
-    pwTiles.push(
-      `<rect ${on ? `class="pw-hit" ` : ""}x="${x}" y="${y}" width="${PWC}" height="${PWC}" rx="20" fill="${C.paper}" stroke="${C.sky}" stroke-width="0"/>`,
-      `<text ${on ? `class="pw-hitl" ` : ""}x="${x + PWC / 2}" y="${y + PWC / 2}" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="700" font-size="60" fill="${C.onInk}">${PW[r][c]}</text>`,
+    pwRects.push(
+      `<rect ${on ? `class="pw-hit" ` : ""}x="${x}" y="${y}" width="${PWC}" height="${PWC}" rx="24" fill="${C.paper}" stroke="${C.sky}" stroke-width="0"/>`,
+    );
+    pwTexts.push(
+      `<text x="${x + PWC / 2}" y="${y + PWC / 2}" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="700" font-size="88" fill="${C.onInk}">${PW[r][c]}</text>`,
     );
   }
 const pwPts = PW_WORD.map(([r, c]) => {
@@ -326,12 +331,12 @@ const pwPts = PW_WORD.map(([r, c]) => {
   return `${x + PWC / 2},${y + PWC / 2}`;
 }).join(" ");
 const pwLen = (PW_WORD.length - 1) * (PWC + PWG);
-const PWSIZE = 5 * PWC + 4 * PWG; // 728
+const PWSIZE = PWN * PWC + (PWN - 1) * PWG; // 708
 
 // Sudoku 6x6, 2x3 boxes (valid solution)
 const SD = ["123456", "456123", "231564", "564231", "312645", "645312"];
 const GIVEN = ["1.3..6", ".5.1.3", "2..5.4", "5.4..1", ".1.6.5", "6..3.2"];
-const LAST = new Set(["3,4", "4,4", "5,1"]); // pop in during the flash
+const LAST = new Set(["3,4", "4,4", "5,1"]); // pop in as the card lands
 const SC = 112;
 const SG = 4;
 const sdX = (c) => c * (SC + SG) + (c >= 3 ? 12 : 0);
@@ -345,26 +350,30 @@ for (let r = 0; r < 6; r++)
     const last = LAST.has(`${r},${c}`);
     sdCells.push(
       `<rect x="${sdX(c)}" y="${sdY(r)}" width="${SC}" height="${SC}" rx="12" fill="${given ? C.paper : "#134E4A"}"/>`,
-      `<text ${last ? `class="sd-last" ` : ""}x="${sdX(c) + SC / 2}" y="${sdY(r) + SC / 2}" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="${given ? 700 : 600}" font-size="56" fill="${given ? C.onInk : C.teal}">${SD[r][c]}</text>`,
+      `<text ${last ? `class="sd-last" ` : ""}x="${sdX(c) + SC / 2}" y="${sdY(r) + SC / 2}" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="${given ? 700 : 600}" font-size="60" fill="${given ? C.onInk : C.teal}">${SD[r][c]}</text>`,
     );
   }
 
-const CARD_W = 760;
-const CARD_H = 840;
-const CARD_X = (W - CARD_W) / 2;
-const CARD_Y = 460;
+// Three slots in a row, all inside y 168–1330.
+const SLOT = 316;
+const SLOT_GAP = 26;
+const SLOT_X = [0, 1, 2].map((i) => 40 + i * (SLOT + SLOT_GAP)); // 40, 382, 724
+const SLOT_Y = 600;
+const MINI_PAD = 16;
+const ZIP_SCALE = SLOT / BOARD;
 const cta = scene(
   "cta",
   `${BOARD_CSS("cta-zip")}
       .cta-line { position: absolute; left: 40px; right: 40px; text-align: center; font-size: 88px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; opacity: 0; }
       #cta-l1 { top: 196px; }
       #cta-l2 { top: 300px; color: ${C.ember}; }
-      .cta-card { position: absolute; left: ${CARD_X}px; top: ${CARD_Y}px; width: ${CARD_W}px; height: ${CARD_H}px; border-radius: 32px; background: ${C.wall}; border: 2px solid ${C.outline}; opacity: 0; }
-      .cta-card h3 { position: absolute; left: 0; right: 0; top: 26px; text-align: center; font-size: 46px; font-weight: 700; margin: 0; }
-      .cta-card svg { position: absolute; left: ${(CARD_W - PWSIZE) / 2}px; top: 96px; }
-      #cta-pw h3 { color: ${C.sky}; }
-      #cta-sd h3 { color: ${C.teal}; }
-      #cta-sd svg { left: ${(CARD_W - SDW) / 2}px; top: ${96 + (PWSIZE - SDH) / 2}px; }
+      .cta-slot { position: absolute; top: ${SLOT_Y}px; width: ${SLOT}px; height: ${SLOT + 90}px; opacity: 0; }
+      .cta-mini { position: absolute; left: 0; top: 0; width: ${SLOT}px; height: ${SLOT}px; border-radius: 18px; background: ${C.wall}; border: 2px solid ${C.outline}; filter: drop-shadow(0 6px 0 rgba(0,0,0,0.35)); }
+      .cta-mini svg { position: absolute; left: ${MINI_PAD - 2}px; top: ${MINI_PAD - 2}px; width: ${SLOT - MINI_PAD * 2}px; height: ${SLOT - MINI_PAD * 2}px; }
+      .cta-label { position: absolute; left: -20px; right: -20px; top: ${SLOT + 26}px; text-align: center; font-size: 40px; font-weight: 700; line-height: 1; }
+      #cta-s1 { left: ${SLOT_X[0]}px; } #cta-s1 .cta-label { color: ${C.ember}; }
+      #cta-s2 { left: ${SLOT_X[1]}px; } #cta-s2 .cta-label { color: ${C.sky}; }
+      #cta-s3 { left: ${SLOT_X[2]}px; } #cta-s3 .cta-label { color: ${C.teal}; }
       #cta-logo { position: absolute; left: 0; right: 0; top: 520px; height: 680px; opacity: 0; }
       #cta-icon { position: absolute; left: 50%; top: 0; width: 320px; height: 320px; margin-left: -160px; }
       #cta-name { position: absolute; left: 0; right: 0; top: 350px; text-align: center; font-size: 132px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
@@ -372,19 +381,26 @@ const cta = scene(
         display: flex; align-items: center; justify-content: center; font-size: 52px; font-weight: 700; }`,
   `<div id="cta-l1" class="cta-line" data-var-text="ctaLine1">3 free puzzles.</div>
       <div id="cta-l2" class="cta-line" data-var-text="ctaLine2">Every day.</div>
-      <div id="cta-zip">${boardSvg("cta", { drawn: true })}</div>
-      <div id="cta-pw" class="cta-card"><h3>Path Words</h3>
-        <svg viewBox="0 0 ${PWSIZE} ${PWSIZE}" width="${PWSIZE}" height="${PWSIZE}" xmlns="http://www.w3.org/2000/svg">
-          ${pwTiles.filter((t) => t.startsWith("<rect")).join("\n          ")}
-          <polyline id="cta-pw-trace" points="${pwPts}" fill="none" stroke="${C.sky}" stroke-opacity="0.55" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${pwLen} ${pwLen + 10}" stroke-dashoffset="${pwLen}"/>
-          ${pwTiles.filter((t) => t.startsWith("<text")).join("\n          ")}
-        </svg>
+      <div id="cta-s1" class="cta-slot"><div class="cta-label">Zip</div></div>
+      <div id="cta-s2" class="cta-slot">
+        <div class="cta-mini" data-layout-ignore>
+          <svg viewBox="0 0 ${PWSIZE} ${PWSIZE}" xmlns="http://www.w3.org/2000/svg">
+            ${pwRects.join("\n            ")}
+            <polyline id="cta-pw-trace" points="${pwPts}" fill="none" stroke="${C.sky}" stroke-opacity="0.6" stroke-width="44" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${pwLen} ${pwLen + 10}" stroke-dashoffset="${pwLen}"/>
+            ${pwTexts.join("\n            ")}
+          </svg>
+        </div>
+        <div class="cta-label">Path Words</div>
       </div>
-      <div id="cta-sd" class="cta-card"><h3>Sudoku</h3>
-        <svg viewBox="0 0 ${SDW} ${SDH}" width="${SDW}" height="${SDH}" xmlns="http://www.w3.org/2000/svg">
-          ${sdCells.join("\n          ")}
-        </svg>
+      <div id="cta-s3" class="cta-slot">
+        <div class="cta-mini" data-layout-ignore>
+          <svg viewBox="0 0 ${SDW} ${SDH}" xmlns="http://www.w3.org/2000/svg">
+            ${sdCells.join("\n            ")}
+          </svg>
+        </div>
+        <div class="cta-label">Sudoku</div>
       </div>
+      <div id="cta-zip" data-layout-ignore>${boardSvg("cta", { drawn: true })}</div>
       <div id="cta-logo">
         <img id="cta-icon" src="assets/app_icon.png" alt="Winklo" />
         <div id="cta-name" data-var-text="brandName">Winklo</div>
@@ -394,21 +410,26 @@ const cta = scene(
     // Copy: the claim, in two beats; holds to the end.
     tl.fromTo("#cta-l1", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power4.out" }, 0.04);
     tl.fromTo("#cta-l2", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power4.out" }, 0.5);
-    // Zip -> Path Words -> Sudoku: horizontal whips, one card each.
-    tl.fromTo("#cta-zip", { x: 0, opacity: 1, filter: "blur(0px)" }, { x: -1000, opacity: 0, filter: "blur(10px)", duration: 0.26, ease: "power3.in" }, 0);
-    tl.fromTo("#cta-pw", { x: 900, opacity: 0, filter: "blur(10px)" }, { x: 0, opacity: 1, filter: "blur(0px)", duration: 0.3, ease: "expo.out" }, 0.18);
-    tl.fromTo("#cta-pw .pw-hit", { attr: { fill: "${C.paper}", "stroke-width": 0 } }, { attr: { fill: "${C.skySoft}", "stroke-width": 4 }, duration: 0.12, stagger: 0.05 }, 0.3);
-    tl.fromTo("#cta-pw-trace", { attr: { "stroke-dashoffset": ${pwLen} } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.3, ease: "power2.inOut" }, 0.3);
-    tl.to("#cta-pw", { x: -1000, opacity: 0, filter: "blur(10px)", duration: 0.24, ease: "power3.in" }, 0.72);
-    tl.fromTo("#cta-sd", { x: 900, opacity: 0, filter: "blur(10px)" }, { x: 0, opacity: 1, filter: "blur(0px)", duration: 0.3, ease: "expo.out" }, 0.88);
-    tl.fromTo("#cta-sd .sd-last", { opacity: 0, attr: { "font-size": 24 } }, { opacity: 1, attr: { "font-size": 56 }, duration: 0.22, ease: "back.out(2)", stagger: 0.07 }, 0.98);
-    tl.to("#cta-sd", { scale: 0.85, opacity: 0, filter: "blur(10px)", duration: 0.2, ease: "power3.in" }, 1.36);
-    // Logo lockup lands and holds (>= 1.5 s).
-    tl.fromTo("#cta-logo", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "power2.out" }, 1.38);
-    tl.fromTo("#cta-icon", { scale: 0.7, filter: "blur(10px)" }, { scale: 1, filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 1.38);
-    tl.fromTo("#cta-name", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 1.46);
-    tl.fromTo("#cta-pill", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, 1.55);
-    tl.set({}, {}, 3.59);`,
+    // Carry across: the solved Zip board shrinks into the first slot.
+    tl.fromTo("#cta-zip", { x: 0, y: 0, scale: 1, transformOrigin: "0px 0px" },
+      { x: ${SLOT_X[0] - BX}, y: ${SLOT_Y - BY}, scale: ${fx(ZIP_SCALE * 10000) / 10000}, transformOrigin: "0px 0px", duration: 0.5, ease: "power3.inOut" }, 0);
+    // Slots land in a stagger, each with its game's name.
+    tl.fromTo("#cta-s1", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" }, 0.35);
+    tl.fromTo("#cta-s2", { opacity: 0, y: 60, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.4, ease: "expo.out" }, 0.3);
+    tl.fromTo("#cta-s3", { opacity: 0, y: 60, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.4, ease: "expo.out" }, 0.45);
+    // Each game acts once: a word traces, the last Sudoku digits pop in.
+    tl.fromTo("#cta-s2 .pw-hit", { attr: { fill: "${C.paper}", "stroke-width": 0 } }, { attr: { fill: "${C.skySoft}", "stroke-width": 6 }, duration: 0.12, stagger: 0.07 }, 0.6);
+    tl.fromTo("#cta-pw-trace", { attr: { "stroke-dashoffset": ${pwLen} } }, { attr: { "stroke-dashoffset": 0 }, duration: 0.4, ease: "power2.inOut" }, 0.6);
+    tl.fromTo("#cta-s3 .sd-last", { opacity: 0, attr: { "font-size": 24 } }, { opacity: 1, attr: { "font-size": 60 }, duration: 0.22, ease: "back.out(2)", stagger: 0.1 }, 0.8);
+    // All three together until 2.05 s, then they clear for the logo.
+    tl.to("#cta-zip", { opacity: 0, filter: "blur(10px)", duration: 0.2, ease: "power3.in" }, 2.05);
+    tl.to(["#cta-s1", "#cta-s2", "#cta-s3"], { opacity: 0, y: -30, filter: "blur(10px)", duration: 0.2, ease: "power3.in", stagger: 0.04 }, 2.05);
+    // Logo lockup lands and holds (>= 2 s).
+    tl.fromTo("#cta-logo", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "power2.out" }, 2.35);
+    tl.fromTo("#cta-icon", { scale: 0.7, filter: "blur(10px)" }, { scale: 1, filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 2.35);
+    tl.fromTo("#cta-name", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 2.43);
+    tl.fromTo("#cta-pill", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, 2.52);
+    tl.set({}, {}, 4.59);`,
 );
 
 // ---------- index ----------
@@ -419,6 +440,8 @@ const vars = [
 ];
 const audio = [];
 let ai = 0;
+// hook: one quiet tick as the ring lands on "1" (0.9 s), so the open is not silent
+audio.push(`<audio id="sfx-hook" class="clip" src="assets/sfx/tap.ogg" data-start="0.93" data-duration="0.01" data-track-index="2" data-volume="0.7"></audio>`);
 for (const t of taps) {
   audio.push(
     `<audio id="sfx-tap-${++ai}" class="clip" src="assets/sfx/tap.ogg" data-start="${t.t}" data-duration="0.01" data-track-index="2" data-volume="${t.v}"></audio>`,
@@ -428,10 +451,10 @@ audio.push(
   `<audio id="sfx-success" class="clip" src="assets/sfx/success.ogg" data-start="10.03" data-duration="0.55" data-track-index="2" data-volume="1"></audio>`,
   // clear peaks at 0.166 s: chip lands at 10.6 -> start 10.6 + 0.033 - 0.166
   `<audio id="sfx-chip" class="clip" src="assets/sfx/clear.ogg" data-start="10.47" data-duration="0.5" data-track-index="3" data-volume="0.7"></audio>`,
-  `<audio id="sfx-card-1" class="clip" src="assets/sfx/tap.ogg" data-start="12.21" data-duration="0.01" data-track-index="2" data-volume="0.6"></audio>`,
-  `<audio id="sfx-card-2" class="clip" src="assets/sfx/tap.ogg" data-start="12.91" data-duration="0.01" data-track-index="2" data-volume="0.6"></audio>`,
-  // logo lands at 13.38 -> pop (clear peaks at 0.166 s)
-  `<audio id="sfx-logo" class="clip" src="assets/sfx/clear.ogg" data-start="13.25" data-duration="0.5" data-track-index="2" data-volume="0.85"></audio>`,
+  `<audio id="sfx-card-1" class="clip" src="assets/sfx/tap.ogg" data-start="12.33" data-duration="0.01" data-track-index="2" data-volume="0.6"></audio>`,
+  `<audio id="sfx-card-2" class="clip" src="assets/sfx/tap.ogg" data-start="12.48" data-duration="0.01" data-track-index="2" data-volume="0.5"></audio>`,
+  // logo lands at 14.35 -> pop (clear peaks at 0.166 s)
+  `<audio id="sfx-logo" class="clip" src="assets/sfx/clear.ogg" data-start="14.22" data-duration="0.5" data-track-index="2" data-volume="0.85"></audio>`,
 );
 
 const index = `<!doctype html>
@@ -449,11 +472,11 @@ const index = `<!doctype html>
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="15.6" data-width="${W}" data-height="${H}">
+    <div id="root" data-composition-id="main" data-start="0" data-duration="16.6" data-width="${W}" data-height="${H}">
       <div id="hook" data-composition-id="hook" data-composition-src="compositions/hook.html" data-start="0" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="${W}" data-height="${H}"></div>
       <div id="solve" data-composition-id="solve" data-composition-src="compositions/solve.html" data-start="2" data-duration="8" data-track-index="1" data-track-kind="graphics" data-width="${W}" data-height="${H}"></div>
       <div id="payoff" data-composition-id="payoff" data-composition-src="compositions/payoff.html" data-start="10" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="${W}" data-height="${H}"></div>
-      <div id="cta" data-composition-id="cta" data-composition-src="compositions/cta.html" data-start="12" data-duration="3.6" data-track-index="1" data-track-kind="graphics" data-width="${W}" data-height="${H}"></div>
+      <div id="cta" data-composition-id="cta" data-composition-src="compositions/cta.html" data-start="12" data-duration="4.6" data-track-index="1" data-track-kind="graphics" data-width="${W}" data-height="${H}"></div>
       ${audio.join("\n      ")}
     </div>
     <script>
