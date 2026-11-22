@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" data-composition-variables='[{"id":"hookLine1","type":"string","label":"Hook line 1","default":"Today&#39;s Zip."},{"id":"hookLine2","type":"string","label":"Hook line 2 (ember)","default":"Beat my time."}]'>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #0F172A; }
+      #root { width: 100%; height: 100%; position: relative; background: #0F172A; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="19.8" data-width="1080" data-height="1920">
+      <div id="hook" data-composition-id="hook" data-composition-src="compositions/hook.html" data-start="0" data-duration="1.6" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="solve" data-composition-id="solve" data-composition-src="compositions/solve.html" data-start="1.6" data-duration="10.6" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="move" data-composition-id="move" data-composition-src="compositions/move.html" data-start="12.2" data-duration="3" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="cta" data-composition-id="cta" data-composition-src="compositions/cta.html" data-start="15.2" data-duration="4.6" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <audio id="sfx-hook" class="clip" src="assets/sfx/tap.ogg" data-start="0.83" data-duration="0.01" data-track-index="2" data-volume="0.504"></audio>
+      <audio id="sfx-tap-1" class="clip" src="assets/sfx/tap.ogg" data-start="2.806" data-duration="0.01" data-track-index="2" data-volume="0.396"></audio>
+      <audio id="sfx-tap-2" class="clip" src="assets/sfx/tap.ogg" data-start="3.461" data-duration="0.01" data-track-index="2" data-volume="0.576"></audio>
+      <audio id="sfx-tap-3" class="clip" src="assets/sfx/tap.ogg" data-start="4.025" data-duration="0.01" data-track-index="2" data-volume="0.468"></audio>
+      <audio id="sfx-tap-4" class="clip" src="assets/sfx/tap.ogg" data-start="4.539" data-duration="0.01" data-track-index="2" data-volume="0.648"></audio>
+      <audio id="sfx-tap-5" class="clip" src="assets/sfx/tap.ogg" data-start="5.021" data-duration="0.01" data-track-index="2" data-volume="0.396"></audio>
+      <audio id="sfx-tap-6" class="clip" src="assets/sfx/tap.ogg" data-start="5.485" data-duration="0.01" data-track-index="2" data-volume="0.576"></audio>
+      <audio id="sfx-tap-7" class="clip" src="assets/sfx/tap.ogg" data-start="5.937" data-duration="0.01" data-track-index="2" data-volume="0.468"></audio>
+      <audio id="sfx-tap-8" class="clip" src="assets/sfx/tap.ogg" data-start="6.384" data-duration="0.01" data-track-index="2" data-volume="0.648"></audio>
+      <audio id="sfx-tap-9" class="clip" src="assets/sfx/tap.ogg" data-start="6.832" data-duration="0.01" data-track-index="2" data-volume="0.396"></audio>
+      <audio id="sfx-tap-10" class="clip" src="assets/sfx/tap.ogg" data-start="7.286" data-duration="0.01" data-track-index="2" data-volume="0.576"></audio>
+      <audio id="sfx-tap-11" class="clip" src="assets/sfx/tap.ogg" data-start="7.753" data-duration="0.01" data-track-index="2" data-volume="0.468"></audio>
+      <audio id="sfx-tap-12" class="clip" src="assets/sfx/tap.ogg" data-start="8.242" data-duration="0.01" data-track-index="2" data-volume="0.648"></audio>
+      <audio id="sfx-tap-13" class="clip" src="assets/sfx/tap.ogg" data-start="8.766" data-duration="0.01" data-track-index="2" data-volume="0.396"></audio>
+      <audio id="sfx-tap-14" class="clip" src="assets/sfx/tap.ogg" data-start="9.348" data-duration="0.01" data-track-index="2" data-volume="0.576"></audio>
+      <audio id="sfx-tap-15" class="clip" src="assets/sfx/tap.ogg" data-start="10.038" data-duration="0.01" data-track-index="2" data-volume="0.468"></audio>
+      <audio id="sfx-success" class="clip" src="assets/sfx/success.ogg" data-start="10.733" data-duration="0.55" data-track-index="2" data-volume="0.62"></audio>
+      <audio id="sfx-move-pop" class="clip" src="assets/sfx/clear.ogg" data-start="12.727" data-duration="0.5" data-track-index="2" data-volume="0.42"></audio>
+      <audio id="sfx-logo" class="clip" src="assets/sfx/clear.ogg" data-start="15.254" data-duration="0.5" data-track-index="2" data-volume="0.595"></audio>
+      <audio id="music" class="clip" src="assets/music/curiositys-arrival.mp3" data-start="0" data-duration="19.8" data-track-index="4" data-volume="0.78" data-fade-in="0.2" data-fade-out="1.5"></audio>
+    </div>
+    <script>
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

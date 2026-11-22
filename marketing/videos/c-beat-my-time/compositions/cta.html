@@ -1,0 +1,31 @@
+<template>
+  <style>
+      @font-face { font-family: Lexend; src: url('assets/fonts/Lexend-Variable.ttf'); font-weight: 100 900; }
+      #root { position: absolute; inset: 0; overflow: hidden; font-family: Lexend, sans-serif; color: #F8FAFC;
+        background: radial-gradient(1200px 900px at 50% 42%, #16213A 0%, #0F172A 70%); }
+      #cta-logo { position: absolute; left: 0; right: 0; top: 360px; height: 800px; opacity: 0; }
+      #cta-icon { position: absolute; left: 50%; top: 0; width: 320px; height: 320px; margin-left: -160px; }
+      #cta-name { position: absolute; left: 0; right: 0; top: 350px; text-align: center; font-size: 132px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+      #cta-pill { position: absolute; left: 50%; top: 528px; width: 520px; margin-left: -260px; height: 96px; border-radius: 48px; background: #FF6B2C; color: #0F172A;
+        display: flex; align-items: center; justify-content: center; font-size: 52px; font-weight: 700; }
+      #cta-sub { position: absolute; left: 40px; right: 40px; top: 1060px; text-align: center; font-size: 60px; font-weight: 600; letter-spacing: -0.01em; line-height: 1; color: #F8FAFC; opacity: 0; }
+  </style>
+  <div id="root" data-composition-id="cta" data-width="1080" data-height="1920">
+      <div id="cta-logo">
+        <img id="cta-icon" src="assets/app_icon.png" alt="Winklo" />
+        <div id="cta-name" data-var-text="brandName">Winklo</div>
+        <div id="cta-pill" data-var-text="ctaPill">Free on Android</div>
+      </div>
+      <div id="cta-sub" data-var-text="ctaSub">New puzzle at midnight</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#cta-logo", { opacity: 0.3 }, { opacity: 1, duration: 0.12, ease: "power2.out" }, 0);
+    tl.fromTo("#cta-icon", { scale: 0.7, filter: "blur(10px)" }, { scale: 1, filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 0);
+    tl.fromTo("#cta-name", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.12);
+    tl.fromTo("#cta-pill", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, 0.2);
+    tl.fromTo("#cta-sub", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.5);
+    tl.set({}, {}, 4.59);
+    window.__timelines["cta"] = tl;
+  </script>
+</template>
