@@ -24,7 +24,7 @@ class PendingLevelClearRepositoryImpl implements PendingLevelClearRepository {
       if (decoded is! List) return [];
       return [
         for (final item in decoded)
-          ?PendingLevelClear.fromJson(item),
+          ?PendingLevelClear.fromJson(item, game: game),
       ];
     } catch (_) {
       return [];

@@ -62,7 +62,7 @@ class SubmitLevelClear {
     required int stars,
     required int timeSeconds,
     required bool usedHints,
-    required ZipLeaderboardProof proof,
+    required LeaderboardProof proof,
     bool improved = false,
   }) async {
     try {

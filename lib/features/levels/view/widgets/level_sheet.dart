@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/play_mode_route.dart';
 import '../../../../core/strings/app_strings.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -191,7 +192,11 @@ class LevelSheet extends StatelessWidget {
                   // on its way out, so a pop would take the page beneath it.
                   if (!context.mounted || route?.isCurrent != true) return;
                   navigator.pop();
-                  router.push(PlayMode.level(slot.entry.id).location('/zip'));
+                  router.push(
+                    PlayMode.level(
+                      slot.entry.id,
+                    ).location(gameRoute(slot.world.game)),
+                  );
                 },
               ),
             ],

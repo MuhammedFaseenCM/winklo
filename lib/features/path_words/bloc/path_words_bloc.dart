@@ -16,6 +16,8 @@ import '../../../domain/entities/path_words_clear_summary.dart';
 import '../../../domain/entities/path_words_puzzle.dart';
 import '../../../domain/game_ids.dart';
 import '../../../domain/hint_penalty.dart';
+import '../../../domain/logic/level_catalog.dart';
+import '../../../domain/logic/level_map.dart';
 import '../../../domain/logic/run_rollover.dart';
 import '../../../domain/path_words/path_words_generator.dart';
 import '../../../domain/play_mode.dart';
@@ -26,6 +28,9 @@ import '../../../domain/path_words/path_words_scoring.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/hint_quota_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/level_play_stats_repository.dart';
+import '../../../domain/repositories/level_progress_repository.dart';
+import '../../../domain/repositories/level_world_repository.dart';
 import '../../../domain/repositories/play_mode_record_repository.dart';
 import '../../../domain/repositories/word_list_repository.dart';
 import '../../../domain/streak_calculator.dart';
@@ -34,7 +39,9 @@ import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
+import '../../../domain/usecases/record_level_clear.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
+import '../../../domain/usecases/submit_level_clear.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../results/results_args.dart';
 import 'path_words_event.dart';
@@ -61,12 +68,21 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     this.wordList,
     this.mode = PlayMode.daily,
     this.modeRecords,
+    this.levelWorlds,
+    this.recordLevelClear,
+    this.submitLevelClear,
+    this.levelProgress,
+    this.recordLevelPlay,
     this.practiceWords,
     PathWordsPuzzle Function(int seed, List<String> words)? practicePuzzle,
     int Function()? newPracticeSeed,
   }) : assert(
-         mode == PlayMode.daily || modeRecords != null,
+         mode.isDaily || mode.isLevel || modeRecords != null,
          'Archive and practice runs keep their bests in modeRecords',
+       ),
+       assert(
+         !mode.isLevel || (levelWorlds != null && recordLevelClear != null),
+         'Level runs need levelWorlds and recordLevelClear',
        ),
        practicePuzzle =
            practicePuzzle ??
@@ -115,6 +131,44 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
 
   /// Bests of archive and practice runs; required for those modes.
   final PlayModeRecordRepository? modeRecords;
+
+  /// Where level runs find their board; required for level runs.
+  final LevelWorldRepository? levelWorlds;
+
+  /// Keeps a level clear's stars; required for level runs.
+  final RecordLevelClear? recordLevelClear;
+
+  /// Sends a level clear to the Levels board; null sends nothing. Never
+  /// awaited: the network must not hold up the results.
+  final SubmitLevelClear? submitLevelClear;
+
+  /// The player's level progress, so a locked level can't be played (a
+  /// link can name any published level). Null skips the check.
+  final LevelProgressRepository? levelProgress;
+
+  /// Counts level starts, clears and hints for the admin; null records
+  /// nothing. Never awaited: a counter must not hold up play.
+  final Future<void> Function({
+    required String game,
+    required String levelId,
+    required LevelPlayEvent event,
+  })?
+  recordLevelPlay;
+
+  void _countPlay(LevelPlayEvent event) {
+    final slot = _levelSlot;
+    final record = recordLevelPlay;
+    if (!mode.isLevel || slot == null || record == null) return;
+    unawaited(
+      record(game: GameIds.pathWords, levelId: slot.entry.id, event: event),
+    );
+  }
+
+  /// The level on screen and where it sits on the map; null outside level
+  /// runs and until the board has loaded. Set before the ready state is
+  /// emitted.
+  LevelSlot? get levelSlot => _levelSlot;
+  LevelSlot? _levelSlot;
 
   /// Practice words; the bundled list from [wordList] by default.
   final Future<List<String>> Function()? practiceWords;
@@ -644,6 +698,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           usedHintsThisRun: true,
         ),
       );
+      _countPlay(LevelPlayEvent.hint);
       await analytics.logHintUsed(
         gameId: GameIds.pathWords,
         hintsUsed: spent.hintsUsed,
@@ -676,6 +731,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
         usedHintsThisRun: true,
       ),
     );
+    _countPlay(LevelPlayEvent.hint);
     await analytics.logHintUsed(
       gameId: GameIds.pathWords,
       hintsUsed: spent.hintsUsed,
@@ -916,6 +972,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     final runId = mode.runId(dailyPlayId: '');
     _playId = runId;
     _clock = null;
+    _levelSlot = null;
     final today = _now();
     final day = mode.day ?? DateTime(today.year, today.month, today.day);
     emit(
@@ -944,6 +1001,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       ),
     );
 
+    var lockedLevel = false;
     try {
       if (freshPractice) {
         await inProgressRuns.clear(gameId: GameIds.pathWords, playId: runId);
@@ -961,6 +1019,26 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           day: day,
           period: PlayPeriod.daily,
         );
+      } else if (mode.isLevel) {
+        final catalog = await levelWorlds!.catalog(GameIds.pathWords);
+        final slot = catalog.slot(mode.levelId!);
+        if (slot == null) {
+          // A level that no longer exists can't be resumed either. Being
+          // offline (LevelsUnavailable) keeps the draft for later.
+          await inProgressRuns.clear(gameId: GameIds.pathWords, playId: runId);
+          throw StateError('No level ${mode.levelId}');
+        }
+        final progress = levelProgress;
+        if (progress != null &&
+            !LevelMap.build(
+              catalog,
+              progress.progress(GameIds.pathWords),
+            ).isPlayable(slot.entry.id)) {
+          lockedLevel = true;
+          throw StateError('Level ${mode.levelId} is locked');
+        }
+        puzzle = slot.entry.pathWordsPuzzle;
+        _levelSlot = slot;
       } else {
         final saved = draft?.board['seed'];
         final seed = saved is num ? saved.toInt() : _newPracticeSeed();
@@ -1010,6 +1088,7 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           bonusWords: restored?.bonusWords ?? const [],
         ),
       );
+      if (draft == null) _countPlay(LevelPlayEvent.start);
       // Keep the practice seed, so leaving and coming back finds this board.
       if (draft == null && mode.isPractice) await _persistDraft();
       await analytics.logGameStarted(
@@ -1022,14 +1101,19 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
       emit(
         state.copyWith(
           status: PathWordsStatus.failed,
-          errorMessage: AppStrings.pathWordsFailed,
+          errorMessage: lockedLevel
+              ? AppStrings.levelLockedMessage
+              : mode.isLevel
+              ? AppStrings.levelFailed
+              : AppStrings.pathWordsFailed,
         ),
       );
     }
   }
 
-  /// Finishes an archive or practice run: a local best, no score, streak,
-  /// leaderboard or daily best.
+  /// Finishes an archive, practice or level run: a local best (stars in the
+  /// level progress for a level), no score, streak, leaderboard or daily
+  /// best.
   Future<void> _finishOffDaily(Emitter<PathWordsState> emit) async {
     final now = _now();
     final clock = _clock ?? PlayRunClock.restore(elapsedMs: state.elapsedMs);
@@ -1054,6 +1138,11 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     await _wait(celebrationDuration);
     if (emit.isDone) return;
     emit(state.copyWith(status: PathWordsStatus.submitting));
+
+    if (mode.isLevel) {
+      await _finishLevel(emit, elapsed: elapsed, points: points, runId: runId);
+      return;
+    }
 
     final records = modeRecords!;
     final best = await records.recordTime(
@@ -1098,6 +1187,92 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
             againLocation: mode.isPractice
                 ? PlayMode.practice.location('/path-words')
                 : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A level clear: stars into the level progress, then Results with the
+  /// goals and the next level. No score, streak, leaderboard or local best.
+  Future<void> _finishLevel(
+    Emitter<PathWordsState> emit, {
+    required int elapsed,
+    required int points,
+    required String runId,
+  }) async {
+    final slot = _levelSlot!;
+    final puzzle = state.puzzle!;
+    final usedHints = state.usedHintsThisRun;
+    final clear = await recordLevelClear!(
+      game: GameIds.pathWords,
+      slot: slot,
+      usedHints: usedHints,
+      seconds: elapsed,
+    );
+    _countPlay(LevelPlayEvent.clear);
+    final submit = submitLevelClear;
+    if (submit != null) {
+      unawaited(
+        submit(
+          game: GameIds.pathWords,
+          levelId: slot.entry.id,
+          stars: clear.runStars,
+          timeSeconds: elapsed,
+          usedHints: usedHints,
+          proof: PathWordsLeaderboardProof.fromRun(
+            puzzle: puzzle,
+            completedTargetIds: state.completedTargetIds,
+            placedPaths: state.placedPaths,
+          ),
+          improved: clear.improved,
+        ),
+      );
+    }
+    await analytics.logGameCompleted(
+      gameId: GameIds.pathWords,
+      points: points,
+      timeSeconds: elapsed,
+      dayId: runId,
+      usedHints: usedHints,
+    );
+    if (emit.isDone) return;
+
+    emit(
+      state.copyWith(
+        improved: clear.improved,
+        status: PathWordsStatus.navigating,
+        resultsExtra: ResultsArgs(
+          title: AppStrings.levelClearedTitle(slot.number),
+          subtitle: '',
+          timeSeconds: elapsed,
+          improved: clear.improved,
+          points: points,
+          gameId: GameIds.pathWords,
+          usedHints: usedHints,
+          hadMistakes: false,
+          hintPenaltySeconds: 0,
+          pathWords: _clearSummary(),
+          local: LocalResultInfo(
+            kind: LocalResultKind.level,
+            label: AppStrings.levelRunLabel(
+              slot.number,
+              AppStrings.levelWorldDisplayName(slot.world),
+            ),
+            bestSeconds: clear.current.bestSeconds,
+            againLocation: mode.location('/path-words'),
+            level: LevelResultInfo(
+              runStars: clear.runStars,
+              bestStars: clear.current.stars,
+              previousStars: clear.previous?.stars,
+              usedHints: usedHints,
+              targetSeconds: slot.entry.targetSeconds,
+              nextLevelId: slot.nextId,
+              nextWorldName: slot.nextWorld == null
+                  ? null
+                  : AppStrings.levelWorldDisplayName(slot.nextWorld!),
+              game: GameIds.pathWords,
+            ),
           ),
         ),
       ),
