@@ -44,6 +44,7 @@ void main() {
         'leaderboards/zip/levels/u1',
         'leaderboards/path_words/all_time/u1',
         'leaderboards/path_words/daily/2026-11-18/entries/u1',
+        'leaderboards/path_words/levels/u1',
         'leaderboards/sudoku/all_time/u1',
         'leaderboards/sudoku/daily/2026-11-18/entries/u1',
       ],

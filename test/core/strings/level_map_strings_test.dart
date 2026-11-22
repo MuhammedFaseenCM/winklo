@@ -10,7 +10,7 @@ void main() {
       'Levels need a connection the first time.',
     );
     expect(AppStrings.levelsComingSoon, 'Levels are coming soon.');
-    expect(AppStrings.levelWorldTitle(2, 'metro'), 'World 2 · Metro');
+    expect(AppStrings.levelWorldTitle(2, 'Metro'), 'World 2 · Metro');
     expect(AppStrings.levelWorldLocked(20), 'Clear Level 20 to open');
     expect(AppStrings.levelLocked(5), 'Clear Level 5 first');
     expect(AppStrings.levelLockedMessage, 'This level is still locked.');

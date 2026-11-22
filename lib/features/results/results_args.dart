@@ -1,6 +1,7 @@
 import '../../domain/entities/leaderboard_period.dart';
 import '../../domain/entities/leaderboard_proof.dart';
 import '../../domain/entities/path_words_clear_summary.dart';
+import '../../domain/game_ids.dart';
 
 class ResultsArgs {
   const ResultsArgs({
@@ -117,7 +118,8 @@ class LevelResultInfo {
     this.previousStars,
     this.targetSeconds,
     this.nextLevelId,
-    this.nextWorldTheme,
+    this.nextWorldName,
+    this.game = GameIds.zip,
   });
 
   /// Stars this run earned.
@@ -139,8 +141,11 @@ class LevelResultInfo {
   /// on the map.
   final String? nextLevelId;
 
-  /// The next world's theme when the next level starts a new world.
-  final String? nextWorldTheme;
+  /// The next world's display name when the next level starts a new world.
+  final String? nextWorldName;
+
+  /// The game the level belongs to.
+  final String game;
 
   /// The run used no hints.
   bool get noHintsEarned => !usedHints;
@@ -156,5 +161,5 @@ class LevelResultInfo {
   bool get moreStars => previousStars != null && bestStars > previousStars!;
 
   /// The next level starts a new world.
-  bool get opensNewWorld => nextWorldTheme != null;
+  bool get opensNewWorld => nextWorldName != null;
 }

@@ -176,7 +176,10 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
   String? _levelLabel() {
     final slot = _bloc.levelSlot;
     if (slot == null) return null;
-    return AppStrings.levelRunLabel(slot.number, slot.world.theme);
+    return AppStrings.levelRunLabel(
+      slot.number,
+      AppStrings.levelWorldDisplayName(slot.world),
+    );
   }
 
   @override

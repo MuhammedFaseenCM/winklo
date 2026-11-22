@@ -149,7 +149,7 @@ void main() {
           usedHints: false,
           targetSeconds: 30,
           nextLevelId: 'zip_2_01',
-          nextWorldTheme: 'metro',
+          nextWorldName: 'Metro',
         ),
       ),
     );

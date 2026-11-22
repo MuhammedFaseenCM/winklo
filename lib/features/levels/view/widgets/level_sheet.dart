@@ -15,7 +15,7 @@ import '../../../auth/view/ensure_signed_in_for_play.dart';
 /// [entry]'s board size, "5 × 5", as the sheet and a locked world's label
 /// show it; null when the size is unknown.
 String? levelBoardSize(LevelEntry entry) {
-  final size = entry.zipLevelSize;
+  final size = entry.boardSize;
   return size > 0 ? '$size × $size' : null;
 }
 
@@ -103,7 +103,7 @@ class LevelSheet extends StatelessWidget {
                         Text(
                           AppStrings.levelWorldTitle(
                             slot.world.order,
-                            slot.world.theme,
+                            AppStrings.levelWorldDisplayName(slot.world),
                           ),
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: ZipColors.sky,

@@ -192,7 +192,7 @@ void main() {
     await pump(tester, LevelCatalog([levelWorld(1, 3), metroOfSize(5)]));
     expect(find.text('World 2 · Metro · 5 × 5'), findsOneWidget);
     // An open world doesn't.
-    expect(find.text(AppStrings.levelWorldTitle(1, 'ink')), findsOneWidget);
+    expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsOneWidget);
   });
 
   testWidgets('a locked world of unknown size says no size', (tester) async {
@@ -341,7 +341,12 @@ void main() {
         final label = tester.getRect(
           find
               .ancestor(
-                of: find.textContaining(AppStrings.levelWorldTitle(2, 'metro')),
+                of: find.textContaining(
+                  AppStrings.levelWorldTitle(
+                    2,
+                    AppStrings.levelWorldName('metro'),
+                  ),
+                ),
                 matching: find.byType(Container),
               )
               .first,
@@ -384,7 +389,7 @@ void main() {
       expect(viewport(tester).bottom, 844);
       expect(nodeRect(tester, 1).bottom, lessThanOrEqualTo(top - 8));
       final label = tester.getRect(
-        find.text(AppStrings.levelWorldTitle(1, 'ink')),
+        find.text(AppStrings.levelWorldTitle(1, 'Ink')),
       );
       expect(label.bottom, lessThanOrEqualTo(top));
     });

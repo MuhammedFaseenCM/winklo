@@ -425,7 +425,10 @@ class _WorldLabel extends StatelessWidget {
     // A locked world also says how big its boards get (its first level's).
     final first = world.world.levels.firstOrNull;
     final title = [
-      AppStrings.levelWorldTitle(world.world.order, world.world.theme),
+      AppStrings.levelWorldTitle(
+        world.world.order,
+        AppStrings.levelWorldDisplayName(world.world),
+      ),
       if (!world.open && first != null) ?levelBoardSize(first),
     ].join(' · ');
     return Container(

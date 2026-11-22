@@ -112,7 +112,7 @@ class LevelResultsView extends StatelessWidget {
               if (next != null)
                 ZipPrimaryButton(
                   label: level.opensNewWorld
-                      ? AppStrings.levelOpenWorld(level.nextWorldTheme!)
+                      ? AppStrings.levelOpenWorld(level.nextWorldName!)
                       : AppStrings.levelNext,
                   icon: AppIcons.play,
                   onPressed: () async {
