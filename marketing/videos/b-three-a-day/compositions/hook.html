@@ -9,11 +9,11 @@
       #hook-l3 { color: #2DD4BF; }
       .hook-mini { position: absolute; left: 120px; top: 480px; width: 840px; height: 840px; }
       .hook-mini svg { display: block; }
-      .hook-label { position: absolute; top: 1032px; width: 356px; text-align: center; font-size: 40px; font-weight: 700; line-height: 1; }
-      #hook-lab1 { left: 20px; color: #FF6B2C; }
-      #hook-lab2 { left: 362px; color: #38BDF8; }
-      #hook-lab3 { left: 704px; color: #2DD4BF; }
-      #hook-ring { position: absolute; left: 30px; top: 680px; width: 336px; height: 336px; border-radius: 22px; border: 5px solid #FF6B2C; opacity: 0; }
+      .hook-label { position: absolute; top: 1168px; width: 440px; text-align: center; font-size: 46px; font-weight: 700; line-height: 1; }
+      #hook-lab1 { left: 320px; color: #FF6B2C; }
+      #hook-lab2 { left: 4px; color: #38BDF8; }
+      #hook-lab3 { left: 636px; color: #2DD4BF; }
+      #hook-ring { position: absolute; left: 330px; top: 650px; width: 420px; height: 420px; border-radius: 22px; border: 5px solid #FF6B2C; opacity: 0; }
   </style>
   <div id="root" data-composition-id="hook" data-width="1080" data-height="1920">
       <div id="hook-text">
@@ -192,16 +192,16 @@
   <script>
     const tl = gsap.timeline({ paused: true });
     // Frame 0 is the whole hook: three lines + the three boards, already on screen.
-    const slot = (x) => ({ x: x - 120, y: 210, scale: 0.37619, transformOrigin: "0px 0px" });
+    const slot = (i) => ({ x: [340,24,656][i] - 120, y: [660,712,712][i] - 480, rotation: [0,-6,6][i], scale: 0.47618999999999995, transformOrigin: "0px 0px" });
     // One-shot cue: a ring picks Zip, the first of the three.
     tl.fromTo("#hook-ring", { opacity: 0, scale: 1.15 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 0.9);
     tl.to("#hook-ring", { opacity: 0, duration: 0.15, ease: "power2.in" }, 1.45);
     // Out: the copy and the other two boards clear; Zip grows into the stage.
     tl.to("#hook-text span", { opacity: 0, filter: "blur(8px)", duration: 0.18, ease: "power2.in", stagger: 0.05 }, 1.45);
     tl.to(["#hook-lab1", "#hook-lab2", "#hook-lab3"], { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 1.45);
-    tl.fromTo("#hook-m2", { ...slot(382), opacity: 1, filter: "blur(0px)" }, { y: 290, opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 1.5);
-    tl.fromTo("#hook-m3", { ...slot(724), opacity: 1, filter: "blur(0px)" }, { x: 724, opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 1.5);
-    tl.fromTo("#hook-m1", slot(40), { x: 0, y: 0, scale: 1, transformOrigin: "0px 0px", duration: 0.62, ease: "power3.inOut" }, 1.55);
+    tl.fromTo("#hook-m2", { ...slot(1), opacity: 1, filter: "blur(0px)" }, { x: -236, opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 1.5);
+    tl.fromTo("#hook-m3", { ...slot(2), opacity: 1, filter: "blur(0px)" }, { x: 676, opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 1.5);
+    tl.fromTo("#hook-m1", slot(0), { x: 0, y: 0, rotation: 0, scale: 1, transformOrigin: "0px 0px", duration: 0.62, ease: "power3.inOut" }, 1.55);
     tl.set({}, {}, 2.19);
     window.__timelines["hook"] = tl;
   </script>

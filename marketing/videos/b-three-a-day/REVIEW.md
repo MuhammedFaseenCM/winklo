@@ -1,10 +1,10 @@
 # REVIEW — Video B "3 puzzles a day"
 
-1080×1920, 30 fps, 25.8 s. Output: `../out/winklo-b-three-a-day.mp4` (2.9 MB).
+1080×1920, 30 fps, 25.8 s. Output: `../out/winklo-b-three-a-day.mp4` (3.1 MB).
 
 ## Creative calls
 - Beats: hook 0–2.2 s · Zip 2.2–7.4 · Path Words 7.4–12.8 · Sudoku 12.8–18.2 · features 18.2–23.3 · CTA 23.3–25.8.
-- Hook. Frame 0 already shows "3 puzzles. / Every day. / Free." in white, ember and teal, with the three empty boards labelled underneath. At 0.9 s a ring picks Zip, with a tick. At 1.55 s the Zip mini-board grows into the full stage (carry across) while the other two clear.
+- Hook. Frame 0 already shows "3 puzzles. / Every day. / Free." in white, ember and teal, with the three empty boards (400 px each) dealt underneath like a hand of cards: Zip in front in the centre, Path Words and Sudoku tilted ±6° behind it, labels at y 1168. At 0.9 s a ring picks Zip, with a tick. At 1.55 s the Zip mini-board grows into the full stage (carry across) while the other two clear.
 - Each game gets a "PUZZLE n OF 3" kicker plus its name in that game's colour (ember, sky, teal, as in video A). The boards are 840 px at y 480–1320.
 - Zip uses the board, walls and real ribbon gradient copied from video A, and `zip-puzzle.json` unchanged. The ribbon draws all 63 steps in 3.65 s, then a teal flash, a ring and a "Solved" chip.
 - Path Words copies `path_words_game.dart`. Cells with no letter get the ink 72% wash and there are grid lines. Path cells are inset 10% with an 18% radius and the `_fillColor` of sky (#1A7CA7) with a white 18% stroke. A white start ring sits on P. PUZZLE (P-U-Z ↓Z ↓L-E) grows cell by cell from the side the trace enters. On "found" the letters pop, the board gets a teal glow and a "✓ PUZZLE" chip lands. I used sky (palette index 1) rather than rose (index 0) so Path Words stays sky across the family.
@@ -40,8 +40,18 @@
 - `container_overflow` (info): the Sudoku board starts 700 px off to the right for the whip. This is intended.
 - The hook's mini-boards are `data-layout-ignore`. Their glyphs are pictures of boards, not copy. The game names under them are 40 px.
 
+## Fix round 1
+- Feature visuals scaled about 1.35× and centred in y 470–1330:
+  - leaderboard card 920 px wide with 140 px rows
+  - flame 460×540, the count at 310 px, 120 px week dots
+  - hint card 920×440 with a 300 px button and a 200 px clock, plus a 460×200 "+10s" badge with 132 px type
+- The leaderboard card now lands as one piece with rows 1, 2 and 4 already in it. Only "#3 You" pops in.
+- The hint beat is now one sequence: the button is pressed and the bulb lights up, then the clock jumps 0:47→0:57 in rose, then the big "+10s" badge drops in under the card.
+- I narrowed the cards to 920 px (x 80–1000) so the times stay off the right-rail edge as much as possible.
+- Hook mini-boards: about 1.27× larger and fanned. They now reach y≈1215, against ≈1060 before.
+
 ## Weakest shot
-The feature beats. Each card sits between about 560 and 1100 px, which leaves about 230 px of empty band below it. The leaderboard card spends its first 0.3 s half-filled while its rows stagger in. With more time I'd make each feature visual bigger, or carry one object through all three, such as the leaderboard row turning into the streak count.
+The hook's fanned boards. The Zip card covers the inner columns of Path Words and Sudoku, so those two read mainly through their visible edges and labels. The feature beats now fill the band.
 
 ## Not built
 Storyline C ("Beat my time") is a separate task.

@@ -341,10 +341,14 @@ const sfx = []; // { id, src, t, v, d }
 // =====================================================================
 // hook (0–2.2s): "3 puzzles. / Every day. / Free." over the three boards
 // =====================================================================
-const SLOT = 316;
-const SLOT_GAP = 26;
-const SLOT_X = [0, 1, 2].map((i) => 40 + i * (SLOT + SLOT_GAP)); // 40, 382, 724
-const SLOT_Y = 690;
+// Three boards dealt like a hand of cards: Zip in front, centre; Path Words
+// and Sudoku tilted behind it. 400 px each (1.27x the old 316 px row).
+const SLOT = 400;
+const SLOT_X = [340, 24, 656]; // Zip, Path Words, Sudoku
+const SLOT_YS = [660, 712, 712];
+const SLOT_ROT = [0, -6, 6];
+const SLOT_Y = SLOT_YS[0];
+const LABEL_Y = 1168;
 const MSCALE = SLOT / BOARD;
 const ms = fx(MSCALE * 10000) / 10000;
 const hook = scene(
@@ -355,7 +359,7 @@ const hook = scene(
       #hook-l3 { color: ${C.teal}; }
       .hook-mini { position: absolute; left: ${BX}px; top: ${BY}px; width: ${BOARD}px; height: ${BOARD}px; }
       .hook-mini svg { display: block; }
-      .hook-label { position: absolute; top: ${SLOT_Y + SLOT + 26}px; width: ${SLOT + 40}px; text-align: center; font-size: 40px; font-weight: 700; line-height: 1; }
+      .hook-label { position: absolute; top: ${LABEL_Y}px; width: ${SLOT + 40}px; text-align: center; font-size: 46px; font-weight: 700; line-height: 1; }
       #hook-lab1 { left: ${SLOT_X[0] - 20}px; color: ${C.ember}; }
       #hook-lab2 { left: ${SLOT_X[1] - 20}px; color: ${C.sky}; }
       #hook-lab3 { left: ${SLOT_X[2] - 20}px; color: ${C.teal}; }
@@ -374,16 +378,16 @@ const hook = scene(
       <div id="hook-lab3" class="hook-label">Sudoku</div>`,
   `    const tl = gsap.timeline({ paused: true });
     // Frame 0 is the whole hook: three lines + the three boards, already on screen.
-    const slot = (x) => ({ x: x - ${BX}, y: ${SLOT_Y - BY}, scale: ${ms}, transformOrigin: "0px 0px" });
+    const slot = (i) => ({ x: [${SLOT_X}][i] - ${BX}, y: [${SLOT_YS}][i] - ${BY}, rotation: [${SLOT_ROT}][i], scale: ${ms}, transformOrigin: "0px 0px" });
     // One-shot cue: a ring picks Zip, the first of the three.
     tl.fromTo("#hook-ring", { opacity: 0, scale: 1.15 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 0.9);
     tl.to("#hook-ring", { opacity: 0, duration: 0.15, ease: "power2.in" }, 1.45);
     // Out: the copy and the other two boards clear; Zip grows into the stage.
     tl.to("#hook-text span", { opacity: 0, filter: "blur(8px)", duration: 0.18, ease: "power2.in", stagger: 0.05 }, 1.45);
     tl.to(["#hook-lab1", "#hook-lab2", "#hook-lab3"], { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 1.45);
-    tl.fromTo("#hook-m2", { ...slot(${SLOT_X[1]}), opacity: 1, filter: "blur(0px)" }, { y: ${SLOT_Y - BY + 80}, opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 1.5);
-    tl.fromTo("#hook-m3", { ...slot(${SLOT_X[2]}), opacity: 1, filter: "blur(0px)" }, { x: ${SLOT_X[2] - BX + 120}, opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 1.5);
-    tl.fromTo("#hook-m1", slot(${SLOT_X[0]}), { x: 0, y: 0, scale: 1, transformOrigin: "0px 0px", duration: 0.62, ease: "power3.inOut" }, 1.55);
+    tl.fromTo("#hook-m2", { ...slot(1), opacity: 1, filter: "blur(0px)" }, { x: ${SLOT_X[1] - BX - 140}, opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 1.5);
+    tl.fromTo("#hook-m3", { ...slot(2), opacity: 1, filter: "blur(0px)" }, { x: ${SLOT_X[2] - BX + 140}, opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 1.5);
+    tl.fromTo("#hook-m1", slot(0), { x: 0, y: 0, rotation: 0, scale: 1, transformOrigin: "0px 0px", duration: 0.62, ease: "power3.inOut" }, 1.55);
     tl.set({}, {}, 2.19);`,
 );
 sfx.push({ id: "hook", src: "tap", t: 0.93, v: 0.7 });
@@ -608,35 +612,38 @@ const rows = [
   ["3", "You", "0:47", true],
   ["4", "Leo", "0:52", false],
 ];
+// Visual zone: y 470..1330 (below the two-line headline); each visual is
+// centred in it at ~1.35x the first cut.
+const BULB_FILL = `<path fill="${C.star}" d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/>`;
 const features = scene(
   "features",
   `.feat-head { position: absolute; left: 40px; right: 40px; top: 230px; text-align: center; font-size: 100px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.04; opacity: 0; }
       .feat-head span { display: block; }
       #feat-h1 .acc { color: ${C.sky}; } #feat-h2 .acc { color: ${C.star}; } #feat-h3 .acc { color: ${C.teal}; }
       #feat-h3 { font-size: 92px; }
-      .feat-vis { position: absolute; left: 0; right: 0; top: 560px; height: 680px; opacity: 0; }
-      #feat-board { position: absolute; left: 140px; width: 800px; top: 40px; border-radius: 28px; background: ${C.wall}; border: 2px solid ${C.outline}; padding: 26px 28px; }
-      #feat-board .cap { font-size: 32px; font-weight: 600; color: ${C.inkSoft}; letter-spacing: 0.14em; margin: 0 0 18px 8px; line-height: 1; }
-      .lb-row { display: flex; align-items: center; height: 104px; padding: 0 26px; border-radius: 20px; margin-top: 12px; background: ${C.paper}; font-size: 44px; font-weight: 700; }
-      .lb-row .rk { width: 70px; color: ${C.inkSoft}; }
+      .feat-vis { position: absolute; left: 0; right: 0; top: 470px; height: 860px; opacity: 0; }
+      #feat-board { position: absolute; left: 80px; width: 920px; top: 51px; border-radius: 34px; background: ${C.wall}; border: 2px solid ${C.outline}; padding: 34px 36px; }
+      #feat-board .cap { font-size: 42px; font-weight: 600; color: ${C.inkSoft}; letter-spacing: 0.14em; margin: 0 0 8px 10px; line-height: 1; }
+      .lb-row { display: flex; align-items: center; height: 140px; padding: 0 36px; border-radius: 26px; margin-top: 16px; background: ${C.paper}; font-size: 58px; font-weight: 700; }
+      .lb-row .rk { width: 96px; color: ${C.inkSoft}; display: flex; align-items: center; }
       .lb-row .nm { flex: 1; }
       .lb-row .tm { font-variant-numeric: tabular-nums; }
-      .lb-row.me { background: #3A241C; border: 3px solid ${C.ember}; }
-      .lb-row.me .rk { color: ${C.star}; }
-      .lb-row.me svg { width: 40px; height: 40px; margin-right: 14px; }
-      #feat-flame { position: absolute; left: 200px; top: 80px; width: 340px; height: 400px; }
-      #feat-days { position: absolute; left: 560px; top: 110px; width: 360px; font-size: 230px; font-weight: 800; line-height: 1; color: ${C.onInk}; font-variant-numeric: tabular-nums; }
-      #feat-dayslab { position: absolute; left: 566px; top: 360px; font-size: 48px; font-weight: 700; color: ${C.star}; line-height: 1; }
-      #feat-week { position: absolute; left: 150px; top: 540px; width: 780px; display: flex; justify-content: space-between; }
-      #feat-week i { display: block; width: 92px; height: 92px; border-radius: 46px; background: ${C.star}; }
-      #feat-week i.off { background: ${C.paper}; border: 3px solid ${C.outline}; }
-      #feat-hint { position: absolute; left: 160px; top: 90px; width: 760px; height: 300px; border-radius: 28px; background: ${C.wall}; border: 2px solid ${C.outline}; }
-      #feat-btn { position: absolute; left: 50px; top: 50px; width: 200px; height: 200px; border-radius: 100px; background: ${C.paper}; border: 4px solid ${C.star}; display: flex; align-items: center; justify-content: center; }
-      #feat-btn svg { width: 110px; height: 110px; }
-      #feat-clock { position: absolute; left: 300px; top: 70px; font-size: 150px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
-      #feat-cliplab { position: absolute; left: 306px; top: 228px; font-size: 34px; font-weight: 600; color: ${C.inkSoft}; letter-spacing: 0.12em; line-height: 1; }
-      #feat-chip { position: absolute; left: 700px; top: 36px; width: 260px; height: 110px; border-radius: 55px; background: ${C.number}; color: ${C.ink};
-        display: flex; align-items: center; justify-content: center; font-size: 64px; font-weight: 800; opacity: 0; }`,
+      .lb-row.me { background: #3A241C; border: 4px solid ${C.ember}; }
+      .lb-row.me svg { width: 56px; height: 56px; }
+      #feat-flame { position: absolute; left: 100px; top: 65px; width: 460px; height: 540px; }
+      #feat-days { position: absolute; left: 590px; top: 155px; width: 460px; font-size: 310px; font-weight: 800; line-height: 1; color: ${C.onInk}; font-variant-numeric: tabular-nums; }
+      #feat-dayslab { position: absolute; left: 600px; top: 485px; font-size: 64px; font-weight: 700; color: ${C.star}; line-height: 1; }
+      #feat-week { position: absolute; left: 60px; top: 675px; width: 960px; display: flex; justify-content: space-between; }
+      #feat-week i { display: block; width: 120px; height: 120px; border-radius: 60px; background: ${C.star}; }
+      #feat-week i.off { background: ${C.paper}; border: 4px solid ${C.outline}; }
+      #feat-hint { position: absolute; left: 80px; top: 40px; width: 920px; height: 440px; border-radius: 34px; background: ${C.wall}; border: 2px solid ${C.outline}; }
+      #feat-btn { position: absolute; left: 44px; top: 70px; width: 300px; height: 300px; border-radius: 150px; background: ${C.paper}; border: 6px solid ${C.star}; }
+      #feat-btn svg { position: absolute; left: 60px; top: 60px; width: 168px; height: 168px; }
+      #feat-bulb-on { opacity: 0; }
+      #feat-clock { position: absolute; left: 390px; top: 110px; font-size: 200px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+      #feat-cliplab { position: absolute; left: 398px; top: 345px; font-size: 44px; font-weight: 600; color: ${C.inkSoft}; letter-spacing: 0.12em; line-height: 1; }
+      #feat-chip { position: absolute; left: 310px; top: 560px; width: 460px; height: 200px; border-radius: 100px; background: ${C.number}; color: ${C.ink};
+        display: flex; align-items: center; justify-content: center; font-size: 132px; font-weight: 800; letter-spacing: -0.02em; opacity: 0; }`,
   `<div id="feat-h1" class="feat-head"><span>Daily</span><span class="acc">leaderboard</span></div>
       <div id="feat-v1" class="feat-vis">
         <div id="feat-board">
@@ -659,7 +666,7 @@ const features = scene(
       <div id="feat-h3" class="feat-head"><span>Hints cost time,</span><span class="acc">not lockouts</span></div>
       <div id="feat-v3" class="feat-vis">
         <div id="feat-hint">
-          <div id="feat-btn"><svg viewBox="0 0 24 24">${BULB}</svg></div>
+          <div id="feat-btn"><svg viewBox="0 0 24 24"><g id="feat-bulb-on">${BULB_FILL}</g>${BULB}</svg></div>
           <div id="feat-clock">0:47</div>
           <div id="feat-cliplab">YOUR TIME</div>
         </div>
@@ -672,40 +679,40 @@ const features = scene(
       tl.to(head + " span", { opacity: 0, filter: "blur(8px)", duration: 0.13, ease: "power2.in", stagger: 0.03 }, at);
       tl.to(vis, { opacity: 0, y: -24, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, at);
     };
-    // 1. Daily leaderboard: the card lands, "You" row pops.
+    // 1. Daily leaderboard: the card lands whole (rows 1, 2, 4 in it); only "You" pops in.
     showHead("#feat-h1", ${fx(F[0].at + 0.05)});
-    tl.fromTo("#feat-v1", { opacity: 0, y: 80 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out" }, ${F[0].at + 0.1});
-    tl.fromTo(["#feat-row1", "#feat-row2", "#feat-row4"], { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.3, ease: "expo.out", stagger: 0.06 }, ${F[0].at + 0.18});
-    tl.fromTo("#feat-row3", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.7)" }, ${F[0].at + 0.45});
+    tl.fromTo("#feat-v1", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out" }, ${fx(F[0].at + 0.05)});
+    tl.fromTo("#feat-row3", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.7)" }, ${fx(F[0].at + 0.4)});
     outBeat("#feat-h1", "#feat-v1", ${F[0].out});
     // 2. Keep your streak: flame lights, the count rolls 11 -> 12, the week fills.
     showHead("#feat-h2", ${F[1].at});
     tl.set("#feat-v2", { opacity: 1 }, ${F[1].at});
-    tl.fromTo("#feat-flame", { scale: 0.4, opacity: 0, transformOrigin: "50% 90%" }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.6)" }, ${F[1].at + 0.05});
-    tl.fromTo(["#feat-days", "#feat-dayslab"], { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power4.out", stagger: 0.06 }, ${F[1].at + 0.12});
+    tl.fromTo("#feat-flame", { scale: 0.4, opacity: 0, transformOrigin: "50% 90%" }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.6)" }, ${fx(F[1].at + 0.05)});
+    tl.fromTo(["#feat-days", "#feat-dayslab"], { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power4.out", stagger: 0.06 }, ${fx(F[1].at + 0.12)});
     tl.set("#feat-days", { textContent: "11" }, ${F[1].at});
     tl.set("#feat-days", { textContent: "12" }, ${fx(F[1].at + 0.55)});
     tl.fromTo("#feat-days", { scale: 1 }, { scale: 1.12, duration: 0.1, ease: "power2.out", transformOrigin: "0% 50%" }, ${fx(F[1].at + 0.55)});
     tl.to("#feat-days", { scale: 1, duration: 0.35, ease: "power2.out" }, ${fx(F[1].at + 0.65)});
-    tl.fromTo("#feat-week i", { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.25, ease: "back.out(2)", stagger: 0.05 }, ${F[1].at + 0.2});
+    tl.fromTo("#feat-week i", { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.25, ease: "back.out(2)", stagger: 0.05 }, ${fx(F[1].at + 0.2)});
     outBeat("#feat-h2", "#feat-v2", ${fx(F[2].at - 0.12)});
-    // 3. Hints cost time: tap the hint, "+10s" pops, the clock jumps 0:47 -> 0:57.
+    // 3. Hints cost time: tap the hint (bulb lights), the clock jumps 0:47 -> 0:57, a big "+10s" lands.
     showHead("#feat-h3", ${F[2].at});
-    tl.fromTo("#feat-v3", { opacity: 0, y: 80 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out" }, ${fx(F[2].at + 0.05)});
-    tl.fromTo("#feat-btn", { scale: 1 }, { scale: 0.88, duration: 0.08, ease: "power2.in" }, ${fx(F[2].at + 0.6)});
-    tl.to("#feat-btn", { scale: 1, duration: 0.3, ease: "back.out(2)" }, ${fx(F[2].at + 0.68)});
-    tl.fromTo("#feat-chip", { opacity: 0, scale: 0.5, y: 30 }, { opacity: 1, scale: 1, y: 0, duration: 0.45, ease: "back.out(1.8)" }, ${fx(F[2].at + 0.68)});
+    tl.fromTo("#feat-v3", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out" }, ${fx(F[2].at + 0.05)});
+    tl.fromTo("#feat-btn", { scale: 1 }, { scale: 0.88, duration: 0.08, ease: "power2.in" }, ${fx(F[2].at + 0.5)});
+    tl.to("#feat-btn", { scale: 1, duration: 0.3, ease: "back.out(2)" }, ${fx(F[2].at + 0.58)});
+    tl.fromTo("#feat-bulb-on", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "power2.out" }, ${fx(F[2].at + 0.58)});
     tl.set("#feat-clock", { textContent: "0:47", color: "${C.onInk}" }, ${F[2].at});
-    tl.set("#feat-clock", { textContent: "0:57" }, ${fx(F[2].at + 0.85)});
-    tl.fromTo("#feat-clock", { color: "${C.number}" }, { color: "${C.onInk}", duration: 0.6, ease: "power2.out" }, ${fx(F[2].at + 0.85)});
+    tl.set("#feat-clock", { textContent: "0:57" }, ${fx(F[2].at + 0.78)});
+    tl.fromTo("#feat-clock", { color: "${C.number}", scale: 1.1, transformOrigin: "0% 50%" }, { color: "${C.onInk}", scale: 1, duration: 0.6, ease: "power2.out" }, ${fx(F[2].at + 0.78)});
+    tl.fromTo("#feat-chip", { opacity: 0, scale: 0.4, y: -120 }, { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(1.6)" }, ${fx(F[2].at + 0.9)});
     outBeat("#feat-h3", "#feat-v3", ${F[2].out});
     tl.set({}, {}, ${fx(T.features[1] - 0.01)});`,
 );
-// pops: "You" row, streak count, +10s chip (clear peaks at 0.166 s)
-sfx.push({ id: "feat-pop-1", src: "clear", t: fx(T.features[0] + F[0].at + 0.45 + 0.2 - 0.166), v: 0.6, d: 0.5 });
+// pops: "You" row, streak count, +10s badge (clear peaks at 0.166 s)
+sfx.push({ id: "feat-pop-1", src: "clear", t: fx(T.features[0] + F[0].at + 0.4 + 0.2 - 0.166), v: 0.6, d: 0.5 });
 sfx.push({ id: "feat-pop-2", src: "clear", t: fx(T.features[0] + F[1].at + 0.55 + 0.033 - 0.166), v: 0.6, d: 0.5 });
-sfx.push({ id: "feat-pop-3", src: "clear", t: fx(T.features[0] + F[2].at + 0.68 + 0.2 - 0.166), v: 0.65, d: 0.5 });
-sfx.push({ id: "feat-hint-tap", src: "tap", t: fx(T.features[0] + F[2].at + 0.6 + 0.033), v: 0.8 });
+sfx.push({ id: "feat-pop-3", src: "clear", t: fx(T.features[0] + F[2].at + 0.9 + 0.22 - 0.166), v: 0.7, d: 0.5 });
+sfx.push({ id: "feat-hint-tap", src: "tap", t: fx(T.features[0] + F[2].at + 0.5 + 0.033), v: 0.8 });
 
 // =====================================================================
 // cta (23.3–25.8s): logo lockup, held >= 2 s
