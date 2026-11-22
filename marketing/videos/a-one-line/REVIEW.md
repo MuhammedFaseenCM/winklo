@@ -7,12 +7,13 @@
 - The board copies the app's own painter (`lib/features/zip/game/zip_game.dart`): #1E293B board, #475569 outline, cells as #243044 rounded tiles, near-white wall bars, #FB7185 numbers that turn white with an ink outline once the line reaches them. The ribbon uses the app's real gradient (`ZipPathRibbon`: ember → gold → rose → orchid every 4 cells), which starts on ember #FF6B2C. That's a deliberate change from "solid ember" so the video matches the app.
 - The hook text carries over into the solve scene and stays until 2.6 s, so a 9-word hook gets about 2.6 s to read. The ribbon starts at 2.15 s underneath it.
 - Total length is 16.6 s. The lockup lands at 14.35 s and holds about 2.2 s.
-- Sound: Kenney CC0 sfx only, no music (no free source configured). One quiet tick at 0.93 s when the ring lands on "1". 15 tap ticks, one every 4 steps, with volume rotating between 0.55, 0.8, 0.65 and 0.9. Success on the solve (10.03 s), "clear" as the pop on the rank chip (10.47 s, peak at about 10.63 s) and on the logo (14.22 s). Two quiet taps as the Path Words and Sudoku slots land.
+- Music bed: "Curiositys Arrival" by Steven Booth (CC BY 3.0), a 32 s excerpt (`assets/music/CREDIT.md`). It is `<audio id="music">` on its own lane (4), runs 0–16.6 s at volume 0.72, and fades in over 0.2 s and out over 1.5 s. This matches video B.
+- Sfx are Kenney CC0 and play over the bed. Success is ×0.62, the chip "clear" ×0.7 and the logo "clear" 0.45. One tick at 0.93 s when the ring lands on "1". 15 tap ticks, one every 4 steps, with volume rotating between 0.55, 0.8, 0.65 and 0.9. Success on the solve (10.03 s), "clear" as the pop on the rank chip (10.47 s, peak at about 10.63 s) and on the logo (14.22 s). Two quiet taps as the Path Words and Sudoku slots land.
 - `tools/build.mjs` generates every HTML file from `../shared/zip-puzzle.json`. Running it again overwrites edits made in Studio.
 
 ## Measured vs looked at
 - `check --json`: 0 errors. Snapshot review sheets (beats, 3 seams, phone) looked at. Five frames pulled from the MP4 and looked at.
-- `audio --json` on the MP4: sound present, onsets at the tick, solve, chip, card and logo times, −12.9 LUFS integrated, true peak −1.0 dBTP. **I measured the sound but never heard it.**
+- `audio --json` on the MP4 (with music): −16.1 LUFS integrated, true peak −1.1 dBTP, no clipping, no silence. From the envelope, success sits about 5 dB over the bed and the chip about 8 dB. The 10 ms taps can't be measured reliably against a percussive bed. **I measured the sound but never heard it.**
 
 ## P0s fixed in review
 - The Path Words trace was drawn over the letters and hid them. It now sits between the tiles and the letters.
@@ -29,3 +30,7 @@ The three-games row. The boards are small (316 px each, held to the canvas width
 
 ## Not built
 Storylines B ("3 puzzles a day") and C ("Beat my time") are separate tasks.
+
+## Credits
+Music: "Curiositys Arrival" by Steven Booth (CC BY 3.0). This credit must go in the caption wherever the reel is posted.
+Sfx: Kenney Interface Sounds (CC0).

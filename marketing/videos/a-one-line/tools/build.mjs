@@ -441,20 +441,27 @@ const vars = [
 const audio = [];
 let ai = 0;
 // hook: one quiet tick as the ring lands on "1" (0.9 s), so the open is not silent
-audio.push(`<audio id="sfx-hook" class="clip" src="assets/sfx/tap.ogg" data-start="0.93" data-duration="0.01" data-track-index="2" data-volume="0.7"></audio>`);
+audio.push(`<audio id="sfx-hook" class="clip" src="assets/sfx/tap.ogg" data-start="0.93" data-duration="0.01" data-track-index="2" data-volume="1"></audio>`);
 for (const t of taps) {
   audio.push(
     `<audio id="sfx-tap-${++ai}" class="clip" src="assets/sfx/tap.ogg" data-start="${t.t}" data-duration="0.01" data-track-index="2" data-volume="${t.v}"></audio>`,
   );
 }
 audio.push(
-  `<audio id="sfx-success" class="clip" src="assets/sfx/success.ogg" data-start="10.03" data-duration="0.55" data-track-index="2" data-volume="1"></audio>`,
+  `<audio id="sfx-success" class="clip" src="assets/sfx/success.ogg" data-start="10.03" data-duration="0.55" data-track-index="2" data-volume="0.62"></audio>`,
   // clear peaks at 0.166 s: chip lands at 10.6 -> start 10.6 + 0.033 - 0.166
-  `<audio id="sfx-chip" class="clip" src="assets/sfx/clear.ogg" data-start="10.47" data-duration="0.5" data-track-index="3" data-volume="0.7"></audio>`,
-  `<audio id="sfx-card-1" class="clip" src="assets/sfx/tap.ogg" data-start="12.33" data-duration="0.01" data-track-index="2" data-volume="0.6"></audio>`,
-  `<audio id="sfx-card-2" class="clip" src="assets/sfx/tap.ogg" data-start="12.48" data-duration="0.01" data-track-index="2" data-volume="0.5"></audio>`,
+  `<audio id="sfx-chip" class="clip" src="assets/sfx/clear.ogg" data-start="10.47" data-duration="0.5" data-track-index="3" data-volume="0.49"></audio>`,
+  `<audio id="sfx-card-1" class="clip" src="assets/sfx/tap.ogg" data-start="12.33" data-duration="0.01" data-track-index="2" data-volume="0.9"></audio>`,
+  `<audio id="sfx-card-2" class="clip" src="assets/sfx/tap.ogg" data-start="12.48" data-duration="0.01" data-track-index="2" data-volume="0.8"></audio>`,
   // logo lands at 14.35 -> pop (clear peaks at 0.166 s)
-  `<audio id="sfx-logo" class="clip" src="assets/sfx/clear.ogg" data-start="14.22" data-duration="0.5" data-track-index="2" data-volume="0.85"></audio>`,
+  `<audio id="sfx-logo" class="clip" src="assets/sfx/clear.ogg" data-start="14.22" data-duration="0.5" data-track-index="2" data-volume="0.45"></audio>`,
+);
+
+// Music bed: "Curiositys Arrival" by Steven Booth (CC BY 3.0), a 32 s excerpt
+// (assets/music/CREDIT.md). Own lane; levels match video B (bed ~0.72, success x0.62, clear x0.7).
+const MUSIC_VOL = 0.72;
+audio.push(
+  `<audio id="music" class="clip" src="assets/music/curiositys-arrival.mp3" data-start="0" data-duration="16.6" data-track-index="4" data-volume="${MUSIC_VOL}" data-fade-in="0.2" data-fade-out="1.5"></audio>`,
 );
 
 const index = `<!doctype html>
