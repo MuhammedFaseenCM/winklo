@@ -112,7 +112,7 @@ class LevelResultsView extends StatelessWidget {
               if (next != null)
                 ZipPrimaryButton(
                   label: level.opensNewWorld
-                      ? AppStrings.levelOpenWorld(level.nextWorldTheme!)
+                      ? AppStrings.levelOpenWorld(level.nextWorldName!)
                       : AppStrings.levelNext,
                   icon: AppIcons.play,
                   onPressed: () async {
@@ -125,7 +125,7 @@ class LevelResultsView extends StatelessWidget {
                     // Back from it lands on the map. The player is signed
                     // in (they just played) and the clear unlocked it.
                     context.pushReplacement(
-                      PlayMode.level(next).location('/zip'),
+                      PlayMode.level(next).location(gameRoute(level.game)),
                     );
                   },
                 )

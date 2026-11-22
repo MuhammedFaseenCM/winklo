@@ -436,7 +436,7 @@ void main() {
     final done = await finish(bloc);
     final level = done.resultsExtra!.local!.level!;
     expect(level.nextLevelId, 'zip_2_01');
-    expect(level.nextWorldTheme, 'metro');
+    expect(level.nextWorldName, 'Metro');
     await bloc.close();
   });
 

@@ -770,7 +770,10 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
           hintPenaltySeconds: 0,
           local: LocalResultInfo(
             kind: LocalResultKind.level,
-            label: AppStrings.levelRunLabel(slot.number, slot.world.theme),
+            label: AppStrings.levelRunLabel(
+              slot.number,
+              AppStrings.levelWorldDisplayName(slot.world),
+            ),
             bestSeconds: clear.current.bestSeconds,
             againLocation: mode.location('/zip'),
             level: LevelResultInfo(
@@ -780,7 +783,9 @@ class ZipBloc extends Bloc<ZipEvent, ZipState> {
               usedHints: usedHints,
               targetSeconds: slot.entry.targetSeconds,
               nextLevelId: nextId,
-              nextWorldTheme: slot.nextWorld?.theme,
+              nextWorldName: slot.nextWorld == null
+                  ? null
+                  : AppStrings.levelWorldDisplayName(slot.nextWorld!),
             ),
           ),
         ),

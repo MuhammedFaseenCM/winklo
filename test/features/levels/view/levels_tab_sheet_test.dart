@@ -17,7 +17,9 @@ import 'package:winklo/domain/repositories/app_update_repository.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
+import 'package:winklo/data/repositories/levels_game_preference_repository_impl.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
+import 'package:winklo/domain/repositories/levels_game_preference_repository.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
@@ -157,6 +159,11 @@ void main() {
       MultiRepositoryProvider(
         providers: [
           RepositoryProvider<LevelWorldRepository>.value(value: _Worlds()),
+          RepositoryProvider<LevelsGamePreferenceRepository>.value(
+            value: LevelsGamePreferenceRepositoryImpl(
+              await SharedPreferences.getInstance(),
+            ),
+          ),
           RepositoryProvider<LevelProgressRepository>.value(value: progress),
           RepositoryProvider<AuthRepository>.value(value: auth),
           RepositoryProvider<LeaderboardRepository>.value(

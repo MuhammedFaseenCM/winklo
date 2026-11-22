@@ -396,6 +396,55 @@ void main() {
       expect(store.pending('u1', 'zip'), isEmpty);
     });
 
+    test(
+      'a Path Words resend starting during a Zip resend still sends',
+      () async {
+        await store.keep(
+          'u1',
+          'path_words',
+          const PendingLevelClear(
+            levelId: 'path_words_1_01',
+            stars: 2,
+            timeSeconds: 20,
+            usedHints: false,
+            proof: PathWordsLeaderboardProof([
+              PathWordsProofStroke(
+                targetId: 't0',
+                cells: [Cell(0, 0), Cell(0, 1)],
+              ),
+            ]),
+          ),
+        );
+        final release = Completer<void>();
+        final sent = <String>[];
+        stubSubmit((inv) async {
+          sent.add(inv.namedArguments[#levelId] as String);
+          if (inv.namedArguments[#gameId] == 'zip') await release.future;
+          return LevelClearSubmitOutcome.sent;
+        });
+        final zip = submit.resendPending('zip');
+        await pumpEventQueue();
+        await submit.resendPending('path_words');
+        expect(sent, contains('path_words_1_01'));
+        expect(store.pending('u1', 'path_words'), isEmpty);
+        release.complete();
+        await zip;
+      },
+    );
+
+    test('a second call for the same game shares the running resend', () async {
+      final release = Completer<void>();
+      stubSubmit((inv) async {
+        await release.future;
+        return LevelClearSubmitOutcome.sent;
+      });
+      final first = submit.resendPending('zip');
+      final second = submit.resendPending('zip');
+      expect(identical(first, second), isTrue);
+      release.complete();
+      await first;
+    });
+
     test('sends one after another, not together', () async {
       var inFlight = 0;
       var maxInFlight = 0;

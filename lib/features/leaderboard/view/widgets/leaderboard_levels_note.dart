@@ -5,15 +5,17 @@ import '../../../../core/strings/app_strings.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_icon.dart';
-import '../../../../domain/game_ids.dart';
 import '../../../../domain/repositories/level_progress_repository.dart';
 import 'leaderboard_table.dart';
 
 /// The Levels board's pinned line for a signed-in player who isn't on it:
 /// "Clear a level to join", or, with stars already earned on this device,
-/// "Replay a level to count your stars".
+/// "Replay a level to count your stars". The local stars are those of
+/// [gameId], the game whose Levels board is showing.
 class LeaderboardLevelsNote extends StatelessWidget {
-  const LeaderboardLevelsNote({super.key});
+  const LeaderboardLevelsNote({required this.gameId, super.key});
+
+  final String gameId;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +23,7 @@ class LeaderboardLevelsNote extends StatelessWidget {
     final hasLocalStars =
         (context
                 .read<LevelProgressRepository?>()
-                ?.progress(GameIds.zip)
+                ?.progress(gameId)
                 .totalStars ??
             0) >
         0;

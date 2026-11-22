@@ -54,6 +54,13 @@ void main() {
           ),
         ),
         GoRoute(
+          path: '/path-words',
+          builder: (_, state) {
+            visited.add(state.uri.toString());
+            return const SizedBox();
+          },
+        ),
+        GoRoute(
           path: '/zip',
           builder: (_, state) {
             visited.add(state.uri.toString());
@@ -105,6 +112,18 @@ void main() {
     await tester.tap(find.text('Replay'));
     await tester.pumpAndSettle();
     expect(visited, ['/zip?mode=level&level=zip_1_01']);
+  });
+
+  testWidgets('Play on a Path Words level opens its game', (tester) async {
+    final pathWords = LevelMap.build(
+      LevelCatalog([pathWordsWorld(1, 2)]),
+      const LevelProgress({}),
+    );
+    final visited = await openSheet(tester, 'path_words_1_01', from: pathWords);
+    expect(find.text('3 × 3'), findsOneWidget);
+    await tester.tap(find.text('Play'));
+    await tester.pumpAndSettle();
+    expect(visited, ['/path-words?mode=level&level=path_words_1_01']);
   });
 
   testWidgets('the current level says Play', (tester) async {

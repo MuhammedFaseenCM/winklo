@@ -71,6 +71,38 @@ void main() {
     });
   });
 
+  group('Levels links', () {
+    test('a Path Words level link is let through', () {
+      expect(
+        playModeRedirect(
+          Uri.parse('/path-words?mode=level&level=path_words_1_01'),
+          gameId: GameIds.pathWords,
+          now: now,
+        ),
+        isNull,
+      );
+    });
+
+    test("another game's level is sent to the Levels tab", () {
+      expect(
+        playModeRedirect(
+          Uri.parse('/path-words?mode=level&level=zip_1_01'),
+          gameId: GameIds.pathWords,
+          now: now,
+        ),
+        '/levels',
+      );
+    });
+
+    test('the board location follows the game', () {
+      expect(
+        levelsBoardLocationFor('path_words'),
+        '/leaderboard?game=path_words&board=levels',
+      );
+      expect(levelsBoardLocation, levelsBoardLocationFor('zip'));
+    });
+  });
+
   test('the hub and the archive have routes', () {
     final auth = _MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);

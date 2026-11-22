@@ -286,6 +286,24 @@ void main() {
       ]);
     });
 
+    test('watchBoard reads the Path Words levels collection', () async {
+      final docs = [
+        row('a', {'stars': 4, 'levelsCleared': 2, 'timeSeconds': 50}),
+      ];
+      when(() => snap.docs).thenReturn(docs);
+
+      final entries = await repo()
+          .watchBoard(gameId: 'path_words', period: LeaderboardPeriod.levels)
+          .first;
+
+      expect(entries.single.stars, 4);
+      verifyInOrder([
+        () => firestore.collection('leaderboards'),
+        () => collection.doc('path_words'),
+        () => collection.orderBy('stars', descending: true),
+      ]);
+    });
+
     test('watchBoard on a debug root is empty and reads nothing', () async {
       final entries = await repo(
         debug: true,

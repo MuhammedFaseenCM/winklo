@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/dev_flags.dart';
 import '../../../core/haptics/haptics_service.dart';
+import '../../../core/router/play_mode_route.dart';
 import '../../../core/sfx/sfx_service.dart';
 import '../../../core/strings/app_strings.dart';
 import '../../../core/theme/app_icons.dart';
@@ -15,6 +16,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/dev_run_timer_label.dart';
 import '../../../core/widgets/game_rule_tip_banner.dart';
+import '../../../core/widgets/level_goals.dart';
 import '../../../core/widgets/play_mode_strip.dart';
 import '../../../core/widgets/weekend_special_badge.dart';
 import '../../../core/widgets/zip_ui.dart';
@@ -23,13 +25,18 @@ import '../../../domain/play_mode.dart';
 import '../../../domain/path_words/path_words_rules.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/in_progress_run_repository.dart';
+import '../../../domain/repositories/level_progress_repository.dart';
+import '../../../domain/repositories/level_world_repository.dart';
 import '../../../domain/repositories/word_list_repository.dart';
 import '../../../domain/usecases/generate_daily_path_words.dart';
 import '../../../domain/usecases/get_best_points.dart';
 import '../../../domain/usecases/get_best_time_seconds.dart';
 import '../../../domain/usecases/is_new_personal_best.dart';
 import '../../../domain/usecases/record_daily_clear.dart';
+import '../../../domain/usecases/record_level_clear.dart';
+import '../../../domain/usecases/record_level_play.dart';
 import '../../../domain/usecases/submit_leaderboard_time.dart';
+import '../../../domain/usecases/submit_level_clear.dart';
 import '../../../domain/usecases/submit_score.dart';
 import '../../../core/widgets/cleared_summary/cleared_summary_card.dart';
 import '../../../core/router/pop_or_go_home.dart';
@@ -192,11 +199,37 @@ class _PathWordsScreenState extends State<PathWordsScreen>
           wordList: context.read<WordListRepository?>(),
           mode: widget.mode,
           modeRecords: context.modeRecordsFor(widget.mode),
+          levelWorlds: widget.mode.isLevel
+              ? context.read<LevelWorldRepository>()
+              : null,
+          recordLevelClear: widget.mode.isLevel
+              ? context.read<RecordLevelClear>()
+              : null,
+          submitLevelClear: widget.mode.isLevel
+              ? context.read<SubmitLevelClear>()
+              : null,
+          levelProgress: widget.mode.isLevel
+              ? context.read<LevelProgressRepository>()
+              : null,
+          recordLevelPlay: widget.mode.isLevel
+              ? context.read<RecordLevelPlay>().call
+              : null,
         );
 
     if (widget.autoStart) {
       _bloc.add(PathWordsEvent.started(date: widget.date));
     }
+  }
+
+  /// "Level 7 · Animals" once a level's board has loaded; the target lives
+  /// in the star goals under it.
+  String? _levelLabel() {
+    final slot = _bloc.levelSlot;
+    if (slot == null) return null;
+    return AppStrings.levelRunLabel(
+      slot.number,
+      AppStrings.levelWorldDisplayName(slot.world),
+    );
   }
 
   @override
@@ -323,12 +356,24 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                       ),
                       PlayModeStrip(
                         mode: widget.mode,
+                        levelLabel: _levelLabel(),
                         onNewBoard:
                             isReadyToPlay ||
                                 state.status == PathWordsStatus.failed
                             ? () => _bloc.add(const PathWordsEvent.newBoard())
                             : null,
                       ),
+                      if (_bloc.levelSlot case final slot?
+                          when state.status != PathWordsStatus.loading &&
+                              state.status != PathWordsStatus.failed &&
+                              !isReview)
+                        LevelGoalsBar(
+                          targetSeconds: slot.entry.targetSeconds,
+                          usedHints: state.usedHintsThisRun,
+                          elapsedMs: state.elapsedMs,
+                          resumedAt: state.resumedAt,
+                          cleared: finished,
+                        ),
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -357,6 +402,7 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                                 borderRadius:
                                                     BorderRadius.circular(24),
                                                 child: _BoardPane(
+                                                  isLevel: widget.mode.isLevel,
                                                   game: game,
                                                   status: state.status,
                                                   errorMessage:
@@ -500,12 +546,14 @@ class _PathWordsScreenState extends State<PathWordsScreen>
 
 class _BoardPane extends StatelessWidget {
   const _BoardPane({
+    required this.isLevel,
     required this.game,
     required this.status,
     required this.errorMessage,
     required this.onRetry,
   });
 
+  final bool isLevel;
   final PathWordsGame? game;
   final PathWordsStatus status;
   final String? errorMessage;
@@ -542,12 +590,24 @@ class _BoardPane extends StatelessWidget {
                   ).textTheme.bodySmall?.copyWith(color: ZipColors.inkSoft),
                 ),
               ],
-              const SizedBox(height: 14),
-              FilledButton.icon(
-                onPressed: onRetry,
-                icon: const AppIcon(AppIcons.refresh),
-                label: Text(AppStrings.retry),
-              ),
+              // A locked level stays locked: Retry would only fail again.
+              if (errorMessage != AppStrings.levelLockedMessage) ...[
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const AppIcon(AppIcons.refresh),
+                  label: Text(AppStrings.retry),
+                ),
+              ],
+              if (isLevel) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () =>
+                      context.go(levelsLocation, extra: levelsVisitToken()),
+                  icon: const AppIcon(AppIcons.levels),
+                  label: Text(AppStrings.levelBackToMap),
+                ),
+              ],
             ],
           ),
         ),

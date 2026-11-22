@@ -70,7 +70,7 @@ void main() {
       previousStars: 2,
       usedHints: false,
       nextLevelId: 'zip_2_01',
-      nextWorldTheme: 'metro',
+      nextWorldName: 'Metro',
     );
     expect(info.moreStars, isTrue);
     expect(info.opensNewWorld, isTrue);

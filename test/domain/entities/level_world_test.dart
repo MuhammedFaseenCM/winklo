@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:winklo/domain/entities/cell.dart';
 import 'package:winklo/domain/entities/level_world.dart';
 
 import '../../helpers/level_fixtures.dart';
@@ -116,5 +117,51 @@ void main() {
       }),
       throwsFormatException,
     );
+  });
+
+  test('a world reads its title, or "" when missing', () {
+    final json = levelWorldJson(1, 1)..['title'] = 'Animals';
+    expect(LevelWorld.fromJson('path_words_1', json).title, 'Animals');
+    expect(LevelWorld.fromJson('zip_1', levelWorldJson(1, 1)).title, '');
+  });
+
+  test('boardSize reads the size, or 0 when missing', () {
+    expect(LevelEntry.fromJson({'id': 'a', 'size': 4}).boardSize, 4);
+    expect(LevelEntry.fromJson({'id': 'a'}).boardSize, 0);
+  });
+
+  test('a Path Words level parses its letters, targets and definitions', () {
+    final entry = LevelEntry.fromJson({
+      'id': 'path_words_1_01',
+      'size': 3,
+      'letters': ['c', 'a', 't', '', '', '', '', '', ''],
+      'targets': [
+        {
+          'id': 't1',
+          'word': 'cat',
+          'start': {'row': 0, 'col': 0},
+          'path': [
+            {'row': 0, 'col': 0},
+            {'row': 0, 'col': 1},
+            {'row': 0, 'col': 2},
+          ],
+          'colorIndex': 1,
+        },
+      ],
+      'definitions': {'cat': 'A pet'},
+      'targetSeconds': 40,
+    });
+    final puzzle = entry.pathWordsPuzzle;
+    expect(puzzle.id, 'path_words_1_01');
+    expect(puzzle.size, 3);
+    expect(puzzle.letters.take(3), ['c', 'a', 't']);
+    expect(puzzle.targets.single.start, const Cell(0, 0));
+    expect(puzzle.targets.single.path.last, const Cell(0, 2));
+    expect(puzzle.definitions['cat'], 'A pet');
+  });
+
+  test('a Path Words level without letters throws', () {
+    final entry = LevelEntry.fromJson({'id': 'a', 'size': 3});
+    expect(() => entry.pathWordsPuzzle, throwsA(anything));
   });
 }

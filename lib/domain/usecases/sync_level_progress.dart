@@ -11,7 +11,7 @@ import 'report_client_error.dart';
 
 /// Reconciles this device's level progress with the account's copy.
 ///
-/// Per game: read the remote doc, merge (most stars, fastest time), keep the
+/// Per [levelGameIds] game: read the remote doc, merge (most stars, fastest time), keep the
 /// result locally, and write it back only when the remote copy differs. A
 /// push-only run ([pull] false) skips games with nothing new to push. The
 /// merge can't conflict; two devices converge on each one's next full sync (a
@@ -32,9 +32,6 @@ class SyncLevelProgress {
     this.reportCooldown = const Duration(minutes: 10),
   }) : _isRemoteAvailable = isRemoteAvailable ?? _always,
        _now = now ?? DateTime.now;
-
-  /// Games with Levels.
-  static const gameIds = [GameIds.zip];
 
   static const failureCode = 'level_progress_sync_failed';
 
@@ -109,7 +106,7 @@ class SyncLevelProgress {
     if (!_isRemoteAvailable()) return;
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
-    for (final game in gameIds) {
+    for (final game in levelGameIds) {
       try {
         if (!await _syncGame(uid, game, pull: pull)) return;
       } catch (error, stack) {

@@ -52,6 +52,7 @@ final mapVisits = <(Uri, Object?)>[];
 
 /// Where the routed view last went to a board.
 final zipVisits = <Uri>[];
+final pathWordsVisits = <Uri>[];
 
 Future<MockAnalyticsRepository> pumpRouted(
   WidgetTester tester,
@@ -62,6 +63,7 @@ Future<MockAnalyticsRepository> pumpRouted(
   stubAnalytics(analytics);
   mapVisits.clear();
   zipVisits.clear();
+  pathWordsVisits.clear();
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -72,6 +74,13 @@ Future<MockAnalyticsRepository> pumpRouted(
         path: '/zip',
         builder: (_, state) {
           zipVisits.add(state.uri);
+          return const Text('board');
+        },
+      ),
+      GoRoute(
+        path: '/path-words',
+        builder: (_, state) {
+          pathWordsVisits.add(state.uri);
           return const Text('board');
         },
       ),
@@ -149,7 +158,7 @@ void main() {
           usedHints: false,
           targetSeconds: 30,
           nextLevelId: 'zip_2_01',
-          nextWorldTheme: 'metro',
+          nextWorldName: 'Metro',
         ),
       ),
     );
@@ -256,6 +265,31 @@ void main() {
     verify(
       () => analytics.logResultsAction(gameId: 'zip', action: 'next_level'),
     ).called(1);
+  });
+
+  testWidgets('Next level of a Path Words level opens its own board', (
+    tester,
+  ) async {
+    await pumpRouted(
+      tester,
+      args(
+        level: const LevelResultInfo(
+          runStars: 3,
+          bestStars: 3,
+          usedHints: false,
+          targetSeconds: 30,
+          nextLevelId: 'path_words_1_08',
+          game: 'path_words',
+        ),
+      ),
+    );
+    await tester.tap(find.text('Next level'));
+    await tester.pumpAndSettle();
+    expect(
+      pathWordsVisits.last.toString(),
+      '/path-words?mode=level&level=path_words_1_08',
+    );
+    expect(zipVisits, isEmpty);
   });
 
   testWidgets('Map goes to the map', (tester) async {

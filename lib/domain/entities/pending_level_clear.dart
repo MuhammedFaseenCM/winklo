@@ -17,7 +17,7 @@ class PendingLevelClear {
   final int stars;
   final int timeSeconds;
   final bool usedHints;
-  final ZipLeaderboardProof proof;
+  final LeaderboardProof proof;
 
   /// More stars wins, then a lower time. An equal clear is not better.
   bool betterThan(PendingLevelClear other) {
@@ -33,19 +33,23 @@ class PendingLevelClear {
     'proof': proof.toJson(),
   };
 
-  /// Null when [json] isn't a saved clear.
-  static PendingLevelClear? fromJson(Object? json) {
+  /// Null when [json] isn't a saved clear of [game] (its proof is a [game]
+  /// proof).
+  static PendingLevelClear? fromJson(
+    Object? json, {
+    String game = GameIds.zip,
+  }) {
     if (json is! Map) return null;
     final levelId = json['levelId'];
     final stars = json['stars'];
     final time = json['timeSeconds'];
     final hints = json['usedHints'];
-    final proof = LeaderboardProof.fromJson(GameIds.zip, json['proof']);
+    final proof = LeaderboardProof.fromJson(game, json['proof']);
     if (levelId is! String ||
         stars is! int ||
         time is! int ||
         hints is! bool ||
-        proof is! ZipLeaderboardProof) {
+        proof == null) {
       return null;
     }
     return PendingLevelClear(

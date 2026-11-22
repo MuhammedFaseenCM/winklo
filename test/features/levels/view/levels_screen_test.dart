@@ -8,13 +8,19 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
+import 'package:winklo/data/repositories/levels_game_preference_repository_impl.dart';
+import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/level_world.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
 import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
+import 'package:winklo/domain/repositories/levels_game_preference_repository.dart';
+import 'package:winklo/domain/usecases/sign_in_with_google.dart';
+import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_level_clear.dart';
+import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/features/dashboard/view/widgets/floating_nav_dock.dart';
 import 'package:winklo/features/levels/view/levels_screen.dart';
 import 'package:winklo/features/levels/view/widgets/level_avatar_pin.dart';
@@ -26,14 +32,32 @@ class _MockAuth extends Mock implements AuthRepository {}
 
 class _MockLeaderboard extends Mock implements LeaderboardRepository {}
 
+class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
+
+class _MockSignOut extends Mock implements SignOut {}
+
 class _MockSubmitLevelClear extends Mock implements SubmitLevelClear {}
 
+class _Pref implements LevelsGamePreferenceRepository {
+  _Pref([this.game = 'zip']);
+  String game;
+  final writes = <String>[];
+  @override
+  String read() => game;
+  @override
+  Future<void> write(String gameId) async {
+    game = gameId;
+    writes.add(gameId);
+  }
+}
+
 class _Worlds implements LevelWorldRepository {
-  _Worlds(this.value);
+  _Worlds(this.value, [this.pathWords]);
   final LevelCatalog? value;
+  final LevelCatalog? pathWords;
   @override
   Future<LevelCatalog> catalog(String game, {bool refresh = false}) async {
-    final v = value;
+    final v = game == 'path_words' ? pathWords : value;
     if (v == null) throw const LevelsUnavailable('offline');
     return v;
   }
@@ -46,6 +70,8 @@ void main() {
   late _MockSubmitLevelClear submit;
   late StreamController<String> accepted;
   late List<String> visited;
+  late List<Object?> visitedExtras;
+  late _Pref pref;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -63,7 +89,10 @@ void main() {
     addTearDown(accepted.close);
     when(() => submit.accepted).thenAnswer((_) => accepted.stream);
     visited = [];
+    visitedExtras = [];
+    pref = _Pref();
     when(() => auth.currentUser).thenReturn(null);
+    when(() => auth.authStateChanges()).thenAnswer((_) => const Stream.empty());
   });
 
   Future<void> pump(
@@ -71,6 +100,7 @@ void main() {
     LevelCatalog? catalog, {
     String? open,
     bool dock = false,
+    LevelCatalog? pathWords,
   }) async {
     final router = GoRouter(
       routes: [
@@ -92,9 +122,17 @@ void main() {
         ),
         GoRoute(path: '/zip', builder: (_, _) => const Text('zip screen')),
         GoRoute(
+          path: '/path-words',
+          builder: (_, state) {
+            visited.add(state.uri.toString());
+            return const Text('path words screen');
+          },
+        ),
+        GoRoute(
           path: '/leaderboard',
           builder: (_, state) {
             visited.add(state.uri.toString());
+            visitedExtras.add(state.extra);
             return const Text('board screen');
           },
         ),
@@ -104,14 +142,22 @@ void main() {
       MultiRepositoryProvider(
         providers: [
           RepositoryProvider<LevelWorldRepository>.value(
-            value: _Worlds(catalog),
+            value: _Worlds(catalog, pathWords),
           ),
+          RepositoryProvider<LevelsGamePreferenceRepository>.value(value: pref),
           RepositoryProvider<LevelProgressRepository>.value(value: progress),
           RepositoryProvider<AuthRepository>.value(value: auth),
           RepositoryProvider<LeaderboardRepository>.value(value: leaderboard),
           RepositoryProvider<SubmitLevelClear>.value(value: submit),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: BlocProvider(
+          create: (_) => AuthCubit(
+            authRepository: auth,
+            signInWithGoogle: _MockSignInWithGoogle(),
+            signOut: _MockSignOut(),
+          ),
+          child: MaterialApp.router(routerConfig: router),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -192,7 +238,7 @@ void main() {
     await pump(tester, LevelCatalog([levelWorld(1, 3), metroOfSize(5)]));
     expect(find.text('World 2 · Metro · 5 × 5'), findsOneWidget);
     // An open world doesn't.
-    expect(find.text(AppStrings.levelWorldTitle(1, 'ink')), findsOneWidget);
+    expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsOneWidget);
   });
 
   testWidgets('a locked world of unknown size says no size', (tester) async {
@@ -341,7 +387,12 @@ void main() {
         final label = tester.getRect(
           find
               .ancestor(
-                of: find.textContaining(AppStrings.levelWorldTitle(2, 'metro')),
+                of: find.textContaining(
+                  AppStrings.levelWorldTitle(
+                    2,
+                    AppStrings.levelWorldName('metro'),
+                  ),
+                ),
                 matching: find.byType(Container),
               )
               .first,
@@ -359,6 +410,147 @@ void main() {
       },
     );
   }
+
+  group('the game switcher', () {
+    final animals = LevelCatalog([pathWordsWorld(1, 3)]);
+
+    testWidgets('Path Words shows its map and is remembered', (tester) async {
+      await pump(tester, LevelCatalog([levelWorld(1, 3)]), pathWords: animals);
+      expect(find.text('Sudoku · Soon'), findsOneWidget);
+      await tester.tap(find.text('Sudoku · Soon'));
+      await tester.pumpAndSettle();
+      expect(pref.writes, isEmpty);
+      await tester.tap(find.text(AppStrings.pathWordsTab));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(AppStrings.levelWorldTitle(1, 'Animals')),
+        findsOneWidget,
+      );
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsNothing);
+      expect(pref.writes, ['path_words']);
+    });
+
+    testWidgets('opens on the remembered game', (tester) async {
+      pref = _Pref('path_words');
+      await pump(tester, LevelCatalog([levelWorld(1, 3)]), pathWords: animals);
+      expect(
+        find.text(AppStrings.levelWorldTitle(1, 'Animals')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the star link follows the game', (tester) async {
+      pref = _Pref('path_words');
+      await progress.record(
+        'path_words',
+        'path_words_1_01',
+        stars: 2,
+        seconds: 10,
+      );
+      await pump(tester, LevelCatalog([levelWorld(1, 3)]), pathWords: animals);
+      await tester.tap(find.text('2 / 9'));
+      await tester.pumpAndSettle();
+      expect(visited, ['/leaderboard?game=path_words&board=levels']);
+      expect(visitedExtras, [isA<int>()]);
+    });
+
+    testWidgets('each game has its own stars', (tester) async {
+      await progress.record('zip', 'zip_1_01', stars: 3, seconds: 10);
+      await progress.record(
+        'path_words',
+        'path_words_1_01',
+        stars: 1,
+        seconds: 10,
+      );
+      await pump(tester, LevelCatalog([levelWorld(1, 3)]), pathWords: animals);
+      expect(find.text('3 / 9'), findsOneWidget);
+      await tester.tap(find.text(AppStrings.pathWordsTab));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 9'), findsOneWidget);
+      await tester.tap(find.text(AppStrings.zipTitle));
+      await tester.pumpAndSettle();
+      expect(find.text('3 / 9'), findsOneWidget);
+    });
+
+    testWidgets('an open= id picks its game and opens its sheet', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        LevelCatalog([levelWorld(1, 3)]),
+        pathWords: animals,
+        open: 'path_words_1_01',
+      );
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Animals')), findsWidgets);
+      expect(find.text('Play'), findsOneWidget);
+      expect(pref.writes, ['path_words']);
+    });
+
+    testWidgets('a consumed open= id does not reopen after switching back', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        LevelCatalog([levelWorld(1, 3)]),
+        pathWords: animals,
+        open: 'path_words_1_01',
+      );
+      expect(find.text('Play'), findsOneWidget);
+      Navigator.of(tester.element(find.text('Play'))).pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Play'), findsNothing);
+      await tester.tap(find.text(AppStrings.zipTitle));
+      await tester.pumpAndSettle();
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsWidgets);
+      expect(find.text('Play'), findsNothing);
+      await tester.tap(find.text(AppStrings.pathWordsTab));
+      await tester.pumpAndSettle();
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Animals')), findsWidgets);
+      expect(find.text('Play'), findsNothing);
+    });
+
+    testWidgets('a zip open= id beats a stored Path Words choice', (
+      tester,
+    ) async {
+      pref = _Pref('path_words');
+      await pump(
+        tester,
+        LevelCatalog([levelWorld(1, 3)]),
+        pathWords: animals,
+        open: 'zip_1_01',
+      );
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsWidgets);
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Animals')), findsNothing);
+      expect(find.text('Play'), findsOneWidget);
+      expect(pref.writes, ['zip']);
+    });
+
+    testWidgets('a stored game without Levels opens Zip', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'levels_selected_game': 'sudoku',
+      });
+      pref = _Pref(
+        LevelsGamePreferenceRepositoryImpl(
+          await SharedPreferences.getInstance(),
+        ).read(),
+      );
+      await pump(tester, LevelCatalog([levelWorld(1, 3)]), pathWords: animals);
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsOneWidget);
+    });
+
+    testWidgets('a Path Words level plays in Path Words', (tester) async {
+      pref = _Pref('path_words');
+      const user = AppUser(uid: 'u1', displayName: 'Ada');
+      when(() => auth.currentUser).thenReturn(user);
+      when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(user));
+      await pump(tester, LevelCatalog([levelWorld(1, 3)]), pathWords: animals);
+      await tester.tap(find.bySemanticsLabel(RegExp('Level 1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Play'));
+      await tester.pumpAndSettle();
+      expect(visited, ['/path-words?mode=level&level=path_words_1_01']);
+    });
+  });
 
   group('under the shell dock', () {
     double dockTop(WidgetTester tester) =>
@@ -384,7 +576,7 @@ void main() {
       expect(viewport(tester).bottom, 844);
       expect(nodeRect(tester, 1).bottom, lessThanOrEqualTo(top - 8));
       final label = tester.getRect(
-        find.text(AppStrings.levelWorldTitle(1, 'ink')),
+        find.text(AppStrings.levelWorldTitle(1, 'Ink')),
       );
       expect(label.bottom, lessThanOrEqualTo(top));
     });

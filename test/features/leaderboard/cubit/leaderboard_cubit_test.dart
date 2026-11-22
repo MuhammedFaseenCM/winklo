@@ -133,6 +133,50 @@ void main() {
   );
 
   blocTest<LeaderboardCubit, LeaderboardState>(
+    'Path Words keeps the Levels board when selected from Zip Levels',
+    build: buildCubit,
+    seed: () => const LeaderboardState(period: LeaderboardPeriod.levels),
+    act: (cubit) => cubit.selectGame(GameIds.pathWords),
+    expect: () => [
+      const LeaderboardState(
+        gameId: GameIds.pathWords,
+        period: LeaderboardPeriod.levels,
+        status: LeaderboardStatus.loading,
+      ),
+    ],
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
+    'leaving Path Words on the Levels board falls back to the daily board',
+    build: buildCubit,
+    seed: () => const LeaderboardState(
+      gameId: GameIds.pathWords,
+      period: LeaderboardPeriod.levels,
+    ),
+    act: (cubit) => cubit.selectGame(GameIds.sudoku),
+    expect: () => [
+      const LeaderboardState(
+        gameId: GameIds.sudoku,
+        status: LeaderboardStatus.loading,
+      ),
+    ],
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
+    'Path Words can select the Levels board',
+    build: () => LeaderboardCubit(
+      watchLeaderboard: watch,
+      authRepository: auth,
+      initialGameId: GameIds.pathWords,
+    ),
+    act: (cubit) => cubit.selectBoard(LeaderboardPeriod.levels),
+    verify: (cubit) {
+      expect(cubit.state.period, LeaderboardPeriod.levels);
+      expect(cubit.state.gameId, GameIds.pathWords);
+    },
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
     'the Levels board is not selectable on a game without levels',
     build: () => LeaderboardCubit(
       watchLeaderboard: watch,

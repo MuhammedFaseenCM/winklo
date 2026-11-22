@@ -1,3 +1,4 @@
+import 'path_words_puzzle.dart';
 import 'zip_level.dart';
 
 /// One world of a game's Levels (`level_worlds/{game}_{order}`): its look
@@ -9,6 +10,7 @@ class LevelWorld {
     required this.order,
     required this.theme,
     required this.levels,
+    this.title = '',
   });
 
   /// The doc id, `zip_1`.
@@ -22,6 +24,10 @@ class LevelWorld {
   /// plain backdrop for anything else.
   final String theme;
   final List<LevelEntry> levels;
+
+  /// The world's display name (Path Words: the category, "Animals"); empty
+  /// when the CMS left it out.
+  final String title;
 
   /// Throws [FormatException] when the doc isn't a world.
   factory LevelWorld.fromJson(String id, Map<String, dynamic> json) {
@@ -42,6 +48,7 @@ class LevelWorld {
       game: _string(json['game']),
       order: order.toInt(),
       theme: _string(json['theme']),
+      title: _string(json['title']),
       levels: List.unmodifiable(levels),
     );
   }
@@ -66,8 +73,13 @@ class LevelEntry {
   /// catch broadly.
   ZipLevel get zipLevel => ZipLevel.fromJson(board, id: id);
 
+  /// Throws on a malformed board (no letters, bad targets); callers catch
+  /// broadly.
+  PathWordsPuzzle get pathWordsPuzzle =>
+      PathWordsPuzzle.fromJson(board, id: id);
+
   /// The board's size from its JSON, without parsing the whole board.
-  int get zipLevelSize => (board['size'] as num?)?.toInt() ?? 0;
+  int get boardSize => (board['size'] as num?)?.toInt() ?? 0;
 
   /// Throws [FormatException] when [raw] isn't a level with an id.
   factory LevelEntry.fromJson(Object? raw) {

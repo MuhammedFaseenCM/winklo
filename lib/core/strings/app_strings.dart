@@ -1,3 +1,5 @@
+import '../../domain/entities/level_world.dart';
+import '../../domain/game_ids.dart';
 import '../../domain/habit/weekly_recap.dart';
 import 'app_text.dart';
 import 'app_text_en.dart';
@@ -634,9 +636,16 @@ abstract final class AppStrings {
   static String get levelsTitle => _t.levelsTitle;
   static String levelWorldName(String theme) => _t.levelWorldName(theme);
 
-  /// "Level 27 · Metro", from the world's [theme].
-  static String levelRunLabel(int number, String theme) =>
-      _t.levelRunLabel(number, _t.levelWorldName(theme));
+  /// What the map and runs call [world]: Path Words' category title, else
+  /// the theme's name.
+  static String levelWorldDisplayName(LevelWorld world) =>
+      world.game == GameIds.pathWords && world.title.isNotEmpty
+      ? world.title
+      : _t.levelWorldName(world.theme);
+
+  /// "Level 27 · Metro", from the world's display [worldName].
+  static String levelRunLabel(int number, String worldName) =>
+      _t.levelRunLabel(number, worldName);
   static String levelClearedTitle(int number) => _t.levelClearedTitle(number);
   static String get levelFailed => _t.levelFailed;
   static String get levelHintCostsStar => _t.levelHintCostsStar;
@@ -651,18 +660,18 @@ abstract final class AppStrings {
   static String get levelNewBestTime => _t.levelNewBestTime;
   static String get levelNext => _t.levelNext;
 
-  /// "Open Metro", from the next world's [theme].
-  static String levelOpenWorld(String theme) =>
-      _t.levelOpenWorld(_t.levelWorldName(theme));
+  /// "Open Metro", from the next world's display [worldName].
+  static String levelOpenWorld(String worldName) =>
+      _t.levelOpenWorld(worldName);
   static String levelGoalEarned(String goal) => _t.levelGoalEarned(goal);
   static String levelGoalMissed(String goal) => _t.levelGoalMissed(goal);
   static String get levelsSoon => _t.levelsSoon;
   static String get levelsNeedConnection => _t.levelsNeedConnection;
   static String get levelsComingSoon => _t.levelsComingSoon;
 
-  /// "World 2 · Metro", from the world's [theme].
-  static String levelWorldTitle(int order, String theme) =>
-      _t.levelWorldTitle(order, _t.levelWorldName(theme));
+  /// "World 2 · Metro", from the world's display [worldName].
+  static String levelWorldTitle(int order, String worldName) =>
+      _t.levelWorldTitle(order, worldName);
   static String levelWorldLocked(int lastLevel) =>
       _t.levelWorldLocked(lastLevel);
   static String levelLocked(int number) => _t.levelLocked(number);

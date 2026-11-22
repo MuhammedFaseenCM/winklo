@@ -63,7 +63,30 @@ void main() {
     final again = PendingLevelClearRepositoryImpl(prefs).pending('u', 'zip');
     expect(again.map((c) => c.levelId), ['l1', 'l2']);
     expect(again.first.usedHints, isTrue);
-    expect(again.first.proof.path, const [Cell(0, 0), Cell(0, 1)]);
+    expect((again.first.proof as ZipLeaderboardProof).path, const [
+      Cell(0, 0),
+      Cell(0, 1),
+    ]);
+  });
+
+  test('a Path Words clear keeps its strokes', () async {
+    const clear = PendingLevelClear(
+      levelId: 'p1',
+      stars: 2,
+      timeSeconds: 40,
+      usedHints: false,
+      proof: PathWordsLeaderboardProof([
+        PathWordsProofStroke(targetId: 't0', cells: [Cell(0, 0), Cell(0, 1)]),
+      ]),
+    );
+    await repo.keep('u', 'path_words', clear);
+
+    final again = PendingLevelClearRepositoryImpl(
+      prefs,
+    ).pending('u', 'path_words');
+    final proof = again.single.proof as PathWordsLeaderboardProof;
+    expect(proof.strokes.single.targetId, 't0');
+    expect(proof.strokes.single.cells, const [Cell(0, 0), Cell(0, 1)]);
   });
 
   test('is per account and per game', () async {

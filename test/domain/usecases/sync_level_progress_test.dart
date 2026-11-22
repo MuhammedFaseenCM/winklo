@@ -21,6 +21,7 @@ class _MockAuth extends Mock implements AuthRepository {}
 class _MemoryRemote implements LevelProgressRemoteRepository {
   final docs = <String, Object?>{};
   int fetches = 0;
+  final gameFetches = <String, int>{};
   int saves = 0;
   void Function()? onFetch;
   Future<void> Function()? onFetchAsync;
@@ -30,6 +31,7 @@ class _MemoryRemote implements LevelProgressRemoteRepository {
   @override
   Future<Object?> fetch(String uid, String game) async {
     fetches++;
+    gameFetches[game] = (gameFetches[game] ?? 0) + 1;
     onFetch?.call();
     await onFetchAsync?.call();
     final error = fetchError;
@@ -176,6 +178,55 @@ void main() {
     expect(remote.saves, 0);
   });
 
+  test('a pull restores Path Words progress next to Zip', () async {
+    remote.docs['u1/path_words'] = {
+      'path_words_1_01': {'stars': 3, 'bestSeconds': 50},
+    };
+    remote.docs['u1/zip'] = {
+      'zip_1_01': {'stars': 2, 'bestSeconds': 20},
+    };
+    await sync(pull: true);
+    expect(
+      local.progress('path_words')['path_words_1_01'],
+      const LevelRecord(stars: 3, bestSeconds: 50),
+    );
+    expect(local.progress('zip').isCleared('zip_1_01'), isTrue);
+    expect(local.progress('path_words').isCleared('zip_1_01'), isFalse);
+    expect(remote.saves, 0);
+  });
+
+  test('a push-only run pushes a new Path Words clear alone', () async {
+    await local.record('path_words', 'path_words_1_01', stars: 2, seconds: 30);
+    await sync(pull: false);
+    expect(remote.fetches, 1);
+    expect(remote.saves, 1);
+    expect(
+      LevelProgress.parse(
+        remote.docs['u1/path_words'],
+      ).progress.isCleared('path_words_1_01'),
+      isTrue,
+    );
+    expect(remote.docs.containsKey('u1/zip'), isFalse);
+    expect(local.needsPush('path_words'), isFalse);
+  });
+
+  test('a pull merges Path Words and writes the result back', () async {
+    remote.docs['u1/path_words'] = {
+      'path_words_1_01': {'stars': 1, 'bestSeconds': 90},
+    };
+    await local.record('path_words', 'path_words_1_01', stars: 3, seconds: 40);
+    await local.record('path_words', 'path_words_1_02', stars: 2, seconds: 60);
+    await sync(pull: true);
+    final saved = LevelProgress.parse(remote.docs['u1/path_words']).progress;
+    expect(
+      saved['path_words_1_01'],
+      const LevelRecord(stars: 3, bestSeconds: 40),
+    );
+    expect(saved.isCleared('path_words_1_02'), isTrue);
+    expect(saved.sameAs(local.progress('path_words')), isTrue);
+    expect(local.needsPush('path_words'), isFalse);
+  });
+
   group('failures', () {
     late _MockReport report;
     late DateTime now;
@@ -232,11 +283,11 @@ void main() {
     await pumpEventQueue();
     final second = sync(pull: false);
     await pumpEventQueue();
-    expect(remote.fetches, 1);
+    expect(remote.gameFetches['zip'], 1);
     gate.complete();
     await first;
     await second;
-    expect(remote.fetches, 2);
+    expect(remote.gameFetches['zip'], 2);
   });
 
   test('a queued pull reruns after a push-only run', () async {
@@ -246,9 +297,9 @@ void main() {
     final first = sync(pull: false);
     final second = sync(pull: true);
     await pumpEventQueue();
-    expect(remote.fetches, 1);
+    expect(remote.gameFetches['zip'], 1);
     gate.complete();
     await Future.wait([first, second]);
-    expect(remote.fetches, 2);
+    expect(remote.gameFetches['zip'], 2);
   });
 }

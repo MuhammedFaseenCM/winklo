@@ -12,6 +12,10 @@ const levelsLocation = '/levels';
 /// earlier visit's board was changed since.
 const levelsBoardLocation = '/leaderboard?game=${GameIds.zip}&board=levels';
 
+/// [gameId]'s Levels leaderboard; go there as [levelsBoardLocation] is.
+String levelsBoardLocationFor(String gameId) =>
+    '/leaderboard?game=$gameId&board=levels';
+
 /// The Levels tab with [levelId]'s sheet open.
 String levelsOpenLocation(String levelId) => '$levelsLocation?open=$levelId';
 

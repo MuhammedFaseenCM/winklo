@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -8,11 +10,13 @@ import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/zip_ui.dart';
+import '../../../domain/game_ids.dart';
 import '../../../domain/logic/level_map.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/repositories/leaderboard_repository.dart';
 import '../../../domain/repositories/level_progress_repository.dart';
 import '../../../domain/repositories/level_world_repository.dart';
+import '../../../domain/repositories/levels_game_preference_repository.dart';
 import '../../../domain/usecases/submit_level_clear.dart';
 import '../cubit/level_map_cubit.dart';
 import '../logic/level_map_layout.dart';
@@ -22,31 +26,87 @@ import 'widgets/level_path_painter.dart';
 import 'widgets/level_sheet.dart';
 import 'widgets/world_backdrop_painter.dart';
 
-/// The Levels tab: Zip's levels on a winding map. [openLevelId] (from
-/// `/levels?open=…`, e.g. Results' Next level) opens that level's sheet
+/// The Levels tab: one game's levels on a winding map, switched in the
+/// header (the choice is remembered). [openLevelId] (from `/levels?open=…`,
+/// e.g. Results' Next level) picks its game and opens that level's sheet
 /// once the map is loaded.
-class LevelsScreen extends StatelessWidget {
+class LevelsScreen extends StatefulWidget {
   const LevelsScreen({super.key, this.openLevelId});
 
   final String? openLevelId;
 
   @override
+  State<LevelsScreen> createState() => _LevelsScreenState();
+}
+
+class _LevelsScreenState extends State<LevelsScreen> {
+  late String _game;
+
+  /// [LevelsScreen.openLevelId] until the player switches game: switching
+  /// back must not reopen a sheet that was already shown.
+  String? _openLevelId;
+
+  @override
+  void initState() {
+    super.initState();
+    _openLevelId = widget.openLevelId;
+    final preference = context.read<LevelsGamePreferenceRepository>();
+    final opened = _gameOf(widget.openLevelId);
+    _game = opened ?? preference.read();
+    if (opened != null) unawaited(preference.write(opened));
+  }
+
+  /// The game a level id belongs to (`path_words_1_01`), if any.
+  static String? _gameOf(String? levelId) {
+    if (levelId == null) return null;
+    for (final game in levelGameIds) {
+      if (levelId.startsWith('${game}_')) return game;
+    }
+    return null;
+  }
+
+  void _select(String game) {
+    if (game == _game) return;
+    unawaited(context.read<LevelsGamePreferenceRepository>().write(game));
+    setState(() {
+      _game = game;
+      _openLevelId = null;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final openLevelId = _openLevelId;
     return BlocProvider(
+      // A fresh cubit, scroll position and placement for each game.
+      key: ValueKey(_game),
       create: (context) => LevelMapCubit(
         worlds: context.read<LevelWorldRepository>(),
         progress: context.read<LevelProgressRepository>(),
         leaderboard: context.read<LeaderboardRepository>(),
         submitLevelClear: context.read<SubmitLevelClear>(),
+        game: _game,
       )..load(),
-      child: _LevelsView(openLevelId: openLevelId),
+      child: _LevelsView(
+        game: _game,
+        onSelectGame: _select,
+        openLevelId: openLevelId != null && _gameOf(openLevelId) == _game
+            ? openLevelId
+            : null,
+      ),
     );
   }
 }
 
 class _LevelsView extends StatefulWidget {
-  const _LevelsView({this.openLevelId});
+  const _LevelsView({
+    required this.game,
+    required this.onSelectGame,
+    this.openLevelId,
+  });
 
+  final String game;
+  final ValueChanged<String> onSelectGame;
   final String? openLevelId;
 
   @override
@@ -147,7 +207,12 @@ class _LevelsViewState extends State<_LevelsView> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Header(stars: map?.stars, maxStars: map?.maxStars),
+                  _Header(
+                    game: widget.game,
+                    onSelectGame: widget.onSelectGame,
+                    stars: map?.stars,
+                    maxStars: map?.maxStars,
+                  ),
                   Expanded(
                     child: switch (state.status) {
                       LevelMapStatus.ready => _map(context, map!),
@@ -284,8 +349,15 @@ class _LevelsViewState extends State<_LevelsView> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({this.stars, this.maxStars});
+  const _Header({
+    required this.game,
+    required this.onSelectGame,
+    this.stars,
+    this.maxStars,
+  });
 
+  final String game;
+  final ValueChanged<String> onSelectGame;
   final int? stars;
   final int? maxStars;
 
@@ -308,7 +380,7 @@ class _Header extends StatelessWidget {
                 ),
               ),
               if (stars != null && maxStars != null)
-                _StarsLink(text: '$stars / $maxStars'),
+                _StarsLink(game: game, text: '$stars / $maxStars'),
             ],
           ),
           const SizedBox(height: 10),
@@ -316,9 +388,15 @@ class _Header extends StatelessWidget {
             spacing: 6,
             runSpacing: 6,
             children: [
-              _Chip(text: AppStrings.zipTitle, selected: true),
-              _Chip(
-                text: '${AppStrings.pathWordsTab} · ${AppStrings.levelsSoon}',
+              _GameChip(
+                text: AppStrings.zipTitle,
+                selected: game == GameIds.zip,
+                onTap: () => onSelectGame(GameIds.zip),
+              ),
+              _GameChip(
+                text: AppStrings.pathWordsTab,
+                selected: game == GameIds.pathWords,
+                onTap: () => onSelectGame(GameIds.pathWords),
               ),
               _Chip(
                 text: '${AppStrings.sudokuTitle} · ${AppStrings.levelsSoon}',
@@ -333,8 +411,9 @@ class _Header extends StatelessWidget {
 
 /// The star total as a button: it opens the Levels leaderboard.
 class _StarsLink extends StatelessWidget {
-  const _StarsLink({required this.text});
+  const _StarsLink({required this.game, required this.text});
 
+  final String game;
   final String text;
 
   @override
@@ -345,7 +424,8 @@ class _StarsLink extends StatelessWidget {
       excludeSemantics: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(99),
-        onTap: () => context.go(levelsBoardLocation, extra: levelsVisitToken()),
+        onTap: () =>
+            context.go(levelsBoardLocationFor(game), extra: levelsVisitToken()),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
           child: Center(
@@ -359,6 +439,41 @@ class _StarsLink extends StatelessWidget {
                 color: ZipColors.star,
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A game's chip in the switcher: a button that's selected when it's the
+/// game on show.
+class _GameChip extends StatelessWidget {
+  const _GameChip({
+    required this.text,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String text;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      excludeSemantics: true,
+      label: text,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(99),
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Center(
+            widthFactor: 1,
+            child: _Chip(text: text, selected: selected),
           ),
         ),
       ),
@@ -425,7 +540,10 @@ class _WorldLabel extends StatelessWidget {
     // A locked world also says how big its boards get (its first level's).
     final first = world.world.levels.firstOrNull;
     final title = [
-      AppStrings.levelWorldTitle(world.world.order, world.world.theme),
+      AppStrings.levelWorldTitle(
+        world.world.order,
+        AppStrings.levelWorldDisplayName(world.world),
+      ),
       if (!world.open && first != null) ?levelBoardSize(first),
     ].join(' · ');
     return Container(
