@@ -58,3 +58,12 @@ Same steps as Task 2 in `marketing/videos/b-three-a-day/`; beats per spec sectio
 ### Task 4: Video C "Beat my time" (~20s)
 
 Same steps in `marketing/videos/c-beat-my-time/`; reuses the shared Zip puzzle with a large running clock that stops exactly at 0:47 on the solve frame. Render `out/winklo-c-beat-my-time.mp4`.
+
+### Task 5: Video D "Brain meter" (~30s) — added 2026-11-23
+
+**Spec:** `docs/superpowers/specs/2026-11-23-winklo-brain-meter-ad-design.md` (binding; beats 1–7).
+**Files:** Create `marketing/videos/d-brain-meter/` (same structure as A–C, `tools/build.mjs` generates compositions). Uses `shared/zip-puzzle.json`, `shared/assets/{fonts,app_icon.png,sfx,music}`, `shared/assets/badges/google-play-badge.png`.
+
+- [ ] The two fail moves are generated from the puzzle data and proven illegal in build.mjs (fail #1: a step that crosses a listed wall; fail #2: reaching number k+1's… out of order — a path prefix that lands on a number before its predecessor); build throws if either becomes legal.
+- [ ] Beats and timings per spec; frame 0 = hook; last frame matches the hook so the reel loops.
+- [ ] `check --json` 0 errors; snapshot review P0s fixed; render `marketing/videos/out/winklo-d-brain-meter.mp4`; ffprobe + `audio --json` (−16..−14 LUFS, ≤ −1.5 dBTP); REVIEW.md with music credit; commit.
