@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winklo/core/strings/app_strings.dart';
 import 'package:winklo/data/repositories/level_progress_repository_impl.dart';
+import 'package:winklo/data/repositories/levels_game_preference_repository_impl.dart';
 import 'package:winklo/domain/entities/app_user.dart';
 import 'package:winklo/domain/entities/level_world.dart';
 import 'package:winklo/domain/logic/level_catalog.dart';
@@ -69,6 +70,7 @@ void main() {
   late _MockSubmitLevelClear submit;
   late StreamController<String> accepted;
   late List<String> visited;
+  late List<Object?> visitedExtras;
   late _Pref pref;
 
   setUp(() async {
@@ -87,6 +89,7 @@ void main() {
     addTearDown(accepted.close);
     when(() => submit.accepted).thenAnswer((_) => accepted.stream);
     visited = [];
+    visitedExtras = [];
     pref = _Pref();
     when(() => auth.currentUser).thenReturn(null);
     when(() => auth.authStateChanges()).thenAnswer((_) => const Stream.empty());
@@ -129,6 +132,7 @@ void main() {
           path: '/leaderboard',
           builder: (_, state) {
             visited.add(state.uri.toString());
+            visitedExtras.add(state.extra);
             return const Text('board screen');
           },
         ),
@@ -447,6 +451,7 @@ void main() {
       await tester.tap(find.text('2 / 9'));
       await tester.pumpAndSettle();
       expect(visited, ['/leaderboard?game=path_words&board=levels']);
+      expect(visitedExtras, [isA<int>()]);
     });
 
     testWidgets('each game has its own stars', (tester) async {
@@ -479,6 +484,35 @@ void main() {
       expect(find.text(AppStrings.levelWorldTitle(1, 'Animals')), findsWidgets);
       expect(find.text('Play'), findsOneWidget);
       expect(pref.writes, ['path_words']);
+    });
+
+    testWidgets('a zip open= id beats a stored Path Words choice', (
+      tester,
+    ) async {
+      pref = _Pref('path_words');
+      await pump(
+        tester,
+        LevelCatalog([levelWorld(1, 3)]),
+        pathWords: animals,
+        open: 'zip_1_01',
+      );
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsWidgets);
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Animals')), findsNothing);
+      expect(find.text('Play'), findsOneWidget);
+      expect(pref.writes, ['zip']);
+    });
+
+    testWidgets('a stored game without Levels opens Zip', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'levels_selected_game': 'sudoku',
+      });
+      pref = _Pref(
+        LevelsGamePreferenceRepositoryImpl(
+          await SharedPreferences.getInstance(),
+        ).read(),
+      );
+      await pump(tester, LevelCatalog([levelWorld(1, 3)]), pathWords: animals);
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsOneWidget);
     });
 
     testWidgets('a Path Words level plays in Path Words', (tester) async {
