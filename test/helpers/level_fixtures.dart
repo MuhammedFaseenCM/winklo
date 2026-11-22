@@ -48,3 +48,25 @@ LevelWorld levelWorld(
   'zip_$order',
   levelWorldJson(order, count, theme: theme, targetSeconds: targetSeconds),
 );
+
+String pathWordsLevelId(int world, int n) =>
+    'path_words_${world}_${n.toString().padLeft(2, '0')}';
+
+/// A Path Words world: its theme is a category id and its title the
+/// category's display name. Level boards only carry what the map reads.
+LevelWorld pathWordsWorld(
+  int order,
+  int count, {
+  String theme = 'animals',
+  String title = 'Animals',
+}) => LevelWorld.fromJson('path_words_$order', {
+  'game': 'path_words',
+  'order': order,
+  'published': true,
+  'theme': theme,
+  'title': title,
+  'levels': [
+    for (var n = 1; n <= count; n++)
+      {'id': pathWordsLevelId(order, n), 'size': 3, 'targetSeconds': 30},
+  ],
+});
