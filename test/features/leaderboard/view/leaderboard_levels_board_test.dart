@@ -52,6 +52,7 @@ void main() {
   late _MockWatchLeaderboard watch;
   late StreamController<List<LeaderboardEntry>> board;
   late List<LeaderboardPeriod> periods;
+  late List<String> games;
 
   setUpAll(() => registerFallbackValue(LeaderboardPeriod.daily));
 
@@ -60,6 +61,7 @@ void main() {
     watch = _MockWatchLeaderboard();
     board = StreamController<List<LeaderboardEntry>>.broadcast();
     periods = [];
+    games = [];
     when(() => auth.currentUser).thenReturn(_user);
     when(
       () => auth.authStateChanges(),
@@ -72,6 +74,7 @@ void main() {
       ),
     ).thenAnswer((invocation) {
       periods.add(invocation.namedArguments[#period] as LeaderboardPeriod);
+      games.add(invocation.namedArguments[#gameId] as String);
       return board.stream;
     });
   });
@@ -288,6 +291,80 @@ void main() {
       await openEmpty(tester);
       expect(find.text(AppStrings.leaderboardLevelsJoin), findsOneWidget);
       expect(find.text(AppStrings.leaderboardLevelsReplay), findsNothing);
+    });
+  });
+
+  group('Path Words', () {
+    testWidgets('/leaderboard?game=path_words&board=levels opens its Levels', (
+      tester,
+    ) async {
+      await pump(tester, location: '/leaderboard?game=path_words&board=levels');
+      await settle(tester);
+      expect(games.last, GameIds.pathWords);
+      expect(periods.last, LeaderboardPeriod.levels);
+      expect(find.text(AppStrings.leaderboardBoardLevels), findsOneWidget);
+    });
+
+    testWidgets('offers Levels on the Board tab', (tester) async {
+      final router = await pump(tester);
+      router.go('/leaderboard?game=path_words');
+      await settle(tester);
+      await showLevels(tester);
+      expect(games.last, GameIds.pathWords);
+      expect(periods.last, LeaderboardPeriod.levels);
+    });
+
+    testWidgets('an empty board reads this game\'s local stars', (
+      tester,
+    ) async {
+      final mock = _MockLevelProgress();
+      when(() => mock.progress(GameIds.zip)).thenReturn(LevelProgress.empty);
+      when(() => mock.progress(GameIds.pathWords)).thenReturn(
+        LevelProgress({'l1': LevelRecord(stars: 2, bestSeconds: 30)}),
+      );
+      await pump(
+        tester,
+        location: '/leaderboard?game=path_words&board=levels',
+        progress: mock,
+      );
+      board.add(const []);
+      await tester.pumpAndSettle();
+      expect(find.text(AppStrings.leaderboardLevelsReplay), findsOneWidget);
+      expect(find.text(AppStrings.leaderboardLevelsJoin), findsNothing);
+    });
+
+    testWidgets('Zip stars do not count on the Path Words board', (
+      tester,
+    ) async {
+      final mock = _MockLevelProgress();
+      when(() => mock.progress(GameIds.zip)).thenReturn(
+        LevelProgress({'l1': LevelRecord(stars: 3, bestSeconds: 30)}),
+      );
+      when(
+        () => mock.progress(GameIds.pathWords),
+      ).thenReturn(LevelProgress.empty);
+      await pump(
+        tester,
+        location: '/leaderboard?game=path_words&board=levels',
+        progress: mock,
+      );
+      board.add(const []);
+      await tester.pumpAndSettle();
+      expect(find.text(AppStrings.leaderboardLevelsJoin), findsOneWidget);
+      expect(find.text(AppStrings.leaderboardLevelsReplay), findsNothing);
+    });
+
+    testWidgets('switching to Sudoku returns to the daily board', (
+      tester,
+    ) async {
+      final router = await pump(
+        tester,
+        location: '/leaderboard?game=path_words&board=levels',
+      );
+      router.go('/leaderboard?game=sudoku');
+      await settle(tester);
+      expect(games.last, GameIds.sudoku);
+      expect(periods.last, LeaderboardPeriod.daily);
     });
   });
 

@@ -66,7 +66,8 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
         gameId != GameIds.sudoku) {
       return;
     }
-    // Levels is a Zip-only board; other games go back to the daily one.
+    // Levels exists only for [levelGameIds] games; others go back to the
+    // daily board.
     final dropLevels =
         state.period == LeaderboardPeriod.levels &&
         !levelGameIds.contains(gameId);

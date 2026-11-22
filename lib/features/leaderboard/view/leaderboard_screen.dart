@@ -700,7 +700,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                         false,
                                       )) ...[
                                         const SizedBox(height: 20),
-                                        const LeaderboardLevelsNote(),
+                                        LeaderboardLevelsNote(
+                                          gameId: state.gameId,
+                                        ),
                                       ],
                                     ],
                                   ),
@@ -820,8 +822,9 @@ class _LeaderboardViewState extends State<_LeaderboardView>
                                               12,
                                               bottomGap,
                                             ),
-                                            child:
-                                                const LeaderboardLevelsNote(),
+                                            child: LeaderboardLevelsNote(
+                                              gameId: state.gameId,
+                                            ),
                                           ),
                                       ],
                                     ),
