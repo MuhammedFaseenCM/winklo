@@ -1,16 +1,17 @@
 # Winklo promo reels
 
-Three vertical promo reels for the Winklo app, built with HyperFrames.
+Four vertical promo reels for the Winklo app, built with HyperFrames.
 
 | Reel | MP4 |
 | --- | --- |
 | A, one line | `out/winklo-a-one-line.mp4` |
 | B, three a day | `out/winklo-b-three-a-day.mp4` |
 | C, beat my time | `out/winklo-c-beat-my-time.mp4` |
+| D, brain meter | `out/winklo-d-brain-meter.mp4` |
 
 ## Rebuild
 
-In each project folder (`a-one-line`, `b-three-a-day`, `c-beat-my-time`):
+In each project folder (`a-one-line`, `b-three-a-day`, `c-beat-my-time`, `d-brain-meter`):
 
 1. `node tools/build.mjs` regenerates the HTML files.
 2. Render with the HyperFrames CLI. The CLI needs Node 22 or newer.
