@@ -364,13 +364,38 @@ describe('handleLevelClear for path_words', () => {
   });
 
   it('refuses a stroke reusing another target cell', async () => {
-    fakeFirestore(pwWorld());
+    // "ca" can also be spelled down (0,0)->(1,0), but (1,0) is the start of
+    // "ax"; "ax" has a second route on row 2, so the strokes never overlap.
+    const reuse = {
+      ...pwLevel,
+      letters: ['c', 'a', 'z', 'a', 'x', 'q', 'a', 'x', 'q'],
+      targets: [
+        { id: 'a', word: 'ca', start: { row: 0, col: 0 }, path: cells([[0, 0], [0, 1]]), colorIndex: 0 },
+        { id: 'b', word: 'ax', start: { row: 1, col: 0 }, path: cells([[1, 0], [1, 1]]), colorIndex: 1 },
+      ],
+    };
+    const world = (): Record<string, StoredFake> => ({
+      [PW_WORLD]: { fields: encodeFields({ published: true, levels: [reuse] }), updateTime: 'W' },
+    });
+    const otherRoute = { targetId: 'b', cells: [[2, 0], [2, 1]] };
+
+    fakeFirestore(world());
     const res = await handleLevelClear(
       deps,
       'u1',
-      pwBody([stored[0], { targetId: 'b', cells: [[0, 2], [1, 2]] }]),
+      pwBody([{ targetId: 'a', cells: [[0, 0], [1, 0]] }, otherRoute]),
     );
     expect(res).toEqual({ status: 422, body: { error: 'bad_proof' } });
+
+    // Control: the same "ax" route with "ca" on its stored path is fine, so
+    // the refusal above is the cell reuse alone.
+    fakeFirestore(world());
+    const ok = await handleLevelClear(
+      deps,
+      'u1',
+      pwBody([{ targetId: 'a', cells: [[0, 0], [0, 1]] }, otherRoute]),
+    );
+    expect(ok).toEqual({ status: 200, body: { accepted: true, improved: true } });
   });
 
   it('answers not_live for a missing level', async () => {
