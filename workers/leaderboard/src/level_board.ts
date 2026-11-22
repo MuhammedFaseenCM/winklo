@@ -5,7 +5,12 @@
 
 import { cleanIdentity, type Identity } from './identity';
 import { LEVEL_GAMES, type LevelGameId } from './limits';
-import { parseZipPuzzle, type ZipPuzzle } from './proofs';
+import {
+  parsePathWordsPuzzle,
+  parseZipPuzzle,
+  type PathWordsPuzzle,
+  type ZipPuzzle,
+} from './proofs';
 
 export { LEVEL_GAMES, type LevelGameId };
 
@@ -18,6 +23,11 @@ export type LevelClear = {
   proof: unknown;
   identity: Identity | null;
 };
+
+/** A parsed level, tagged by game so the right proof check runs. */
+export type LevelPuzzle =
+  | { game: 'zip'; puzzle: ZipPuzzle }
+  | { game: 'path_words'; puzzle: PathWordsPuzzle };
 
 export type LevelRecord = { stars: number; bestSeconds: number };
 
@@ -60,7 +70,8 @@ export function parseLevelClearBody(body: unknown): LevelClear | null {
 export function findLevel(
   worldDoc: Record<string, unknown> | null,
   levelId: string,
-): { puzzle: ZipPuzzle; targetSeconds: number | null } | null {
+  game: LevelGameId,
+): { level: LevelPuzzle; targetSeconds: number | null } | null {
   if (!worldDoc || worldDoc.published !== true) return null;
   const levels = worldDoc.levels;
   if (!Array.isArray(levels)) return null;
@@ -69,10 +80,17 @@ export function findLevel(
       !!l && typeof l === 'object' && !Array.isArray(l) && (l as { id?: unknown }).id === levelId,
   );
   if (!level) return null;
-  const puzzle = parseZipPuzzle(level);
-  if (!puzzle) return null;
+  let parsed: LevelPuzzle | null = null;
+  if (game === 'zip') {
+    const puzzle = parseZipPuzzle(level);
+    if (puzzle) parsed = { game, puzzle };
+  } else {
+    const puzzle = parsePathWordsPuzzle(level);
+    if (puzzle) parsed = { game, puzzle };
+  }
+  if (!parsed) return null;
   const target = level.targetSeconds;
-  return { puzzle, targetSeconds: typeof target === 'number' ? target : null };
+  return { level: parsed, targetSeconds: typeof target === 'number' ? target : null };
 }
 
 function isValidRecord(value: unknown): value is LevelRecord {

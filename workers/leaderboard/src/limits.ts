@@ -62,7 +62,7 @@ export const WEEKLY_FIELDS = [
 ] as const;
 
 /** Games with a Levels board (`leaderboards/{gameId}/levels/{uid}`). */
-export const LEVEL_GAMES = ['zip'] as const;
+export const LEVEL_GAMES = ['zip', 'path_words'] as const;
 
 export type LevelGameId = (typeof LEVEL_GAMES)[number];
 

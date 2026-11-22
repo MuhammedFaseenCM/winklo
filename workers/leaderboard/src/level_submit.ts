@@ -1,5 +1,5 @@
 /**
- * `POST /v1/level-clear`: checks one Zip level clear and writes the player's
+ * `POST /v1/level-clear`: checks one Zip or Path Words level clear and writes the player's
  * stars board.
  *
  * Checks, in order: the body's shape (`bad_request`), the time range
@@ -29,7 +29,7 @@ import {
 } from './level_board';
 import { starsFor } from './level_stars';
 import { LEADERBOARD_ROOT, MAX_SECONDS, MIN_SECONDS } from './limits';
-import { checkZipProof } from './proofs';
+import { checkPathWordsProof, checkZipProof } from './proofs';
 import type { SubmitDeps } from './submit';
 
 export type LevelClearErrorCode =
@@ -91,12 +91,16 @@ export async function handleLevelClear(
       names: [worldName, recordsName, rowName],
     });
 
-    const level = findLevel(docs.get(worldName)?.data ?? null, parsed.levelId);
-    if (!level) return fail(422, 'not_live');
-    if (!checkZipProof(level.puzzle, parsed.proof)) return fail(422, 'bad_proof');
+    const found = findLevel(docs.get(worldName)?.data ?? null, parsed.levelId, parsed.gameId);
+    if (!found) return fail(422, 'not_live');
+    const proofOk =
+      found.level.game === 'zip'
+        ? checkZipProof(found.level.puzzle, parsed.proof)
+        : checkPathWordsProof(found.level.puzzle, parsed.proof);
+    if (!proofOk) return fail(422, 'bad_proof');
 
     const run: LevelRecord = {
-      stars: starsFor(parsed.usedHints, parsed.timeSeconds, level.targetSeconds),
+      stars: starsFor(parsed.usedHints, parsed.timeSeconds, found.targetSeconds),
       bestSeconds: parsed.timeSeconds,
     };
 

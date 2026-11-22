@@ -295,3 +295,87 @@ describe('handleLevelClear', () => {
     log.mockRestore();
   });
 });
+
+describe('handleLevelClear for path_words', () => {
+  const PW_WORLD = `${DOCS}/level_worlds/path_words_1`;
+  const PW_RECORDS = `${DOCS}/leaderboards/path_words/level_records/u1`;
+  const PW_ROW = `${DOCS}/leaderboards/path_words/levels/u1`;
+  const cells = (list: number[][]) => list.map(([row, col]) => ({ row, col }));
+  // Blank centre cell at (1,1).
+  const pwLevel = {
+    id: 'path_words_1_01',
+    size: 3,
+    letters: ['c', 'a', 't', 'd', '', 'z', 'o', 'x', 'y'],
+    targets: [
+      { id: 'a', word: 'cat', start: { row: 0, col: 0 }, path: cells([[0, 0], [0, 1], [0, 2]]), colorIndex: 0 },
+      { id: 'b', word: 'dox', start: { row: 1, col: 0 }, path: cells([[1, 0], [2, 0], [2, 1]]), colorIndex: 1 },
+    ],
+    definitions: {},
+    targetSeconds: 30,
+  };
+  const pwWorld = (): Record<string, StoredFake> => ({
+    [PW_WORLD]: { fields: encodeFields({ published: true, levels: [pwLevel] }), updateTime: 'W' },
+  });
+  const pwBody = (strokes: unknown, extra: Record<string, unknown> = {}) => ({
+    gameId: 'path_words',
+    levelId: 'path_words_1_01',
+    timeSeconds: 12,
+    usedHints: false,
+    proof: { strokes },
+    ...extra,
+  });
+  const stored = [
+    { targetId: 'a', cells: [[0, 0], [0, 1], [0, 2]] },
+    { targetId: 'b', cells: [[1, 0], [2, 0], [2, 1]] },
+  ];
+
+  it('accepts the stored paths and writes the board row', async () => {
+    const fake = fakeFirestore(pwWorld());
+    const res = await handleLevelClear(deps, 'u1', pwBody(stored));
+    expect(res).toEqual({ status: 200, body: { accepted: true, improved: true } });
+    expect(fake.gets).toEqual([[PW_WORLD, PW_RECORDS, PW_ROW]]);
+    const [records, row] = fake.commits[0].writes as Write[];
+    expect(records.update.name).toBe(PW_RECORDS);
+    expect(row.update.name).toBe(PW_ROW);
+    expect(row.update.fields).toMatchObject({ stars: { integerValue: '3' } });
+  });
+
+  it('accepts a different adjacent route that stays off the other words', async () => {
+    const alt = {
+      ...pwLevel,
+      letters: ['c', 'a', 't', 'a', 'a', 'z', 'o', 'x', 'y'],
+      targets: [
+        { id: 'a', word: 'ca', start: { row: 0, col: 0 }, path: cells([[0, 0], [0, 1]]), colorIndex: 0 },
+        { id: 'b', word: 'oxy', start: { row: 2, col: 0 }, path: cells([[2, 0], [2, 1], [2, 2]]), colorIndex: 1 },
+      ],
+    };
+    fakeFirestore({
+      [PW_WORLD]: { fields: encodeFields({ published: true, levels: [alt] }), updateTime: 'W' },
+    });
+    const res = await handleLevelClear(
+      deps,
+      'u1',
+      pwBody([
+        { targetId: 'a', cells: [[0, 0], [1, 0]] },
+        { targetId: 'b', cells: [[2, 0], [2, 1], [2, 2]] },
+      ]),
+    );
+    expect(res).toEqual({ status: 200, body: { accepted: true, improved: true } });
+  });
+
+  it('refuses a stroke reusing another target cell', async () => {
+    fakeFirestore(pwWorld());
+    const res = await handleLevelClear(
+      deps,
+      'u1',
+      pwBody([stored[0], { targetId: 'b', cells: [[0, 2], [1, 2]] }]),
+    );
+    expect(res).toEqual({ status: 422, body: { error: 'bad_proof' } });
+  });
+
+  it('answers not_live for a missing level', async () => {
+    fakeFirestore({});
+    const res = await handleLevelClear(deps, 'u1', pwBody(stored));
+    expect(res).toEqual({ status: 422, body: { error: 'not_live' } });
+  });
+});

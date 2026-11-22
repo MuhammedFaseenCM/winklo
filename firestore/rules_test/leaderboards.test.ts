@@ -237,6 +237,45 @@ describe('levels boards', () => {
   });
 });
 
+describe('path_words levels boards', () => {
+  const levels = 'leaderboards/path_words/levels/u1';
+  const records = 'leaderboards/path_words/level_records/u1';
+  const row = {
+    stars: 12,
+    levelsCleared: 5,
+    timeSeconds: 300,
+    displayName: 'Ada',
+    updatedAt: serverTimestamp(),
+  };
+
+  it('rows are readable signed out', async () => {
+    await seed(levels, { ...row, updatedAt: new Date() });
+    await assertSucceeds(getDoc(doc(db(null), levels)));
+    await assertSucceeds(getDoc(doc(db('u2'), levels)));
+  });
+
+  it('owner can refresh a profile field but not stars', async () => {
+    await seed(levels, { ...row, updatedAt: new Date() });
+    await assertSucceeds(updateDoc(doc(db('u1'), levels), { displayName: 'Grace' }));
+    await assertFails(
+      updateDoc(doc(db('u1'), levels), { stars: 99, updatedAt: serverTimestamp() }),
+    );
+  });
+
+  it('rows cannot be created or deleted by clients', async () => {
+    await assertFails(setDoc(doc(db('u1'), levels), row));
+    await seed(levels, { ...row, updatedAt: new Date() });
+    await assertFails(deleteDoc(doc(db('u1'), levels)));
+  });
+
+  it('records are readable by their owner only', async () => {
+    await seed(records, { levels: { l1: { stars: 3 } }, updatedAt: new Date() });
+    await assertSucceeds(getDoc(doc(db('u1'), records)));
+    await assertFails(getDoc(doc(db('u2'), records)));
+    await assertFails(getDoc(doc(db(null), records)));
+  });
+});
+
 describe('daily puzzles', () => {
   const compact = (offset: number) => utcDayId(offset).replace(/-/g, '');
 

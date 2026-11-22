@@ -69,25 +69,25 @@ describe('findLevel', () => {
   };
 
   it('returns the puzzle and target for a published level', () => {
-    const found = findLevel(world, 'zip_1_01');
+    const found = findLevel(world, 'zip_1_01', 'zip');
     expect(found?.targetSeconds).toBe(30);
-    expect(found?.puzzle.size).toBe(zip.size);
+    expect(found?.level.puzzle.size).toBe(zip.size);
   });
 
   it('turns a missing target into null', () => {
     const noTarget = { published: true, levels: [{ id: 'zip_1_01', ...zip }] };
-    expect(findLevel(noTarget, 'zip_1_01')?.targetSeconds).toBeNull();
+    expect(findLevel(noTarget, 'zip_1_01', 'zip')?.targetSeconds).toBeNull();
   });
 
   it('is null for an unpublished world, a missing level and a missing doc', () => {
-    expect(findLevel({ ...world, published: false }, 'zip_1_01')).toBeNull();
-    expect(findLevel(world, 'zip_1_02')).toBeNull();
-    expect(findLevel(null, 'zip_1_01')).toBeNull();
+    expect(findLevel({ ...world, published: false }, 'zip_1_01', 'zip')).toBeNull();
+    expect(findLevel(world, 'zip_1_02', 'zip')).toBeNull();
+    expect(findLevel(null, 'zip_1_01', 'zip')).toBeNull();
   });
 
   it('is null when the board does not parse', () => {
     const broken = { published: true, levels: [{ id: 'zip_1_01', size: 'x' }] };
-    expect(findLevel(broken, 'zip_1_01')).toBeNull();
+    expect(findLevel(broken, 'zip_1_01', 'zip')).toBeNull();
   });
 });
 
@@ -153,5 +153,35 @@ describe('levelBoardTotals', () => {
       levelsCleared: 0,
       timeSeconds: 0,
     });
+  });
+});
+
+describe('findLevel for path_words', () => {
+  const pw = {
+    id: 'path_words_1_01',
+    size: 3,
+    letters: ['c', 'a', 't', 'd', '', 'g', 'o', 'x', 'y'],
+    targets: [
+      { id: 't1', word: 'cat', start: { row: 0, col: 0 }, path: [{ row: 0, col: 0 }, { row: 0, col: 1 }, { row: 0, col: 2 }], colorIndex: 0 },
+    ],
+    definitions: {},
+    targetSeconds: 40,
+  };
+  const world = { published: true, levels: [pw] };
+
+  it('parses a Path Words level', () => {
+    const found = findLevel(world, 'path_words_1_01', 'path_words');
+    expect(found?.level.game).toBe('path_words');
+    expect(found?.level.puzzle.size).toBe(3);
+    expect(found?.targetSeconds).toBe(40);
+  });
+
+  it('returns null for an unpublished world', () => {
+    expect(findLevel({ ...world, published: false }, 'path_words_1_01', 'path_words')).toBeNull();
+  });
+
+  it('returns null for a Zip-shaped level under path_words', () => {
+    const w = { published: true, levels: [{ id: 'path_words_1_01', ...zip }] };
+    expect(findLevel(w, 'path_words_1_01', 'path_words')).toBeNull();
   });
 });
