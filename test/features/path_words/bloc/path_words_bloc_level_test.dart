@@ -391,6 +391,17 @@ void main() {
       await bloc.close();
     });
 
+    test("the clear summary names the world's category", () async {
+      final bloc = build('path_words_2_01');
+      bloc.add(const PathWordsEvent.started());
+      await ready(bloc);
+      final done = await solve(bloc);
+      final summary = done.resultsExtra!.pathWords!;
+      expect(summary.theme, 'Foods');
+      expect(summary.words, ['ab', 'cd']);
+      await bloc.close();
+    });
+
     test("a world's last level names the next world", () async {
       final bloc = build('path_words_1_02');
       bloc.add(const PathWordsEvent.started());

@@ -1252,7 +1252,9 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
           usedHints: usedHints,
           hadMistakes: false,
           hintPenaltySeconds: 0,
-          pathWords: _clearSummary(),
+          pathWords: _clearSummary(
+            theme: AppStrings.levelWorldDisplayName(slot.world),
+          ),
           local: LocalResultInfo(
             kind: LocalResultKind.level,
             label: AppStrings.levelRunLabel(
@@ -1279,11 +1281,13 @@ class PathWordsBloc extends Bloc<PathWordsEvent, PathWordsState> {
     );
   }
 
-  PathWordsClearSummary? _clearSummary() {
+  /// [theme] overrides the puzzle's: a level board has none of its own, so
+  /// a level clear passes its world's name (the category).
+  PathWordsClearSummary? _clearSummary({String? theme}) {
     final puzzle = state.puzzle;
     if (puzzle == null) return null;
     return PathWordsClearSummary(
-      theme: puzzle.theme,
+      theme: theme ?? puzzle.theme,
       words: [
         for (final target in PathWordsRules.orderedTargets(puzzle)) target.word,
       ],
