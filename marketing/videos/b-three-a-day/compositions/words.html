@@ -1,0 +1,66 @@
+<template>
+  <style>
+      @font-face { font-family: Lexend; src: url('assets/fonts/Lexend-Variable.ttf'); font-weight: 100 900; }
+      #root { position: absolute; inset: 0; overflow: hidden; font-family: Lexend, sans-serif; color: #F8FAFC;
+        background: radial-gradient(1200px 900px at 50% 42%, #16213A 0%, #0F172A 70%); }
+      
+      #words-kicker { position: absolute; left: 0; right: 0; top: 196px; text-align: center; font-size: 36px; font-weight: 600; letter-spacing: 0.18em; color: #94A3B8; line-height: 1; }
+      #words-title { position: absolute; left: 0; right: 0; top: 246px; text-align: center; font-size: 104px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; color: #38BDF8; }
+      #words-board { position: absolute; left: 120px; top: 480px; width: 840px; height: 840px; }
+      #words-board svg { display: block; filter: drop-shadow(0 8px 0 rgba(0,0,0,0.35)); }
+      #words-chip { position: absolute; left: 50%; top: 384px; width: 340px; margin-left: -170px; height: 76px; border-radius: 38px; background: #1E293B; border: 3px solid #38BDF8;
+        display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 44px; font-weight: 800; letter-spacing: 0.06em; color: #38BDF8; opacity: 0; }
+      #words-chip svg { width: 36px; height: 36px; }
+  </style>
+  <div id="root" data-composition-id="words" data-width="1080" data-height="1920">
+      <div id="words-kicker">PUZZLE 2 OF 3</div>
+      <div id="words-title" data-var-text="wordsName">Path Words</div>
+      <div id="words-chip"><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5 11-11" fill="none" stroke="#38BDF8" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-var-text="foundWord">PUZZLE</span></div>
+      <div id="words-board"><svg id="words-svg" viewBox="0 0 840 840" width="840" height="840" xmlns="http://www.w3.org/2000/svg">
+        <defs><clipPath id="words-clip"><rect width="840" height="840" rx="22"/></clipPath></defs>
+        <rect width="840" height="840" rx="22" fill="#1E293B"/>
+        <g clip-path="url(#words-clip)"><rect x="140" y="0" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="280" y="0" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="420" y="0" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="560" y="0" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="560" y="140" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="140" y="280" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="280" y="280" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="560" y="280" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="140" y="420" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="280" y="420" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="700" y="420" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="140" y="560" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="280" y="560" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="420" y="560" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="560" y="560" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="700" y="560" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="0" y="700" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="140" y="700" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/><rect x="700" y="700" width="140" height="140" fill="#0F172A" fill-opacity="0.72"/></g>
+        <g><line x1="140" y1="0" x2="140" y2="840" stroke="#334155" stroke-width="2"/><line x1="0" y1="140" x2="840" y2="140" stroke="#334155" stroke-width="2"/><line x1="280" y1="0" x2="280" y2="840" stroke="#334155" stroke-width="2"/><line x1="0" y1="280" x2="840" y2="280" stroke="#334155" stroke-width="2"/><line x1="420" y1="0" x2="420" y2="840" stroke="#334155" stroke-width="2"/><line x1="0" y1="420" x2="840" y2="420" stroke="#334155" stroke-width="2"/><line x1="560" y1="0" x2="560" y2="840" stroke="#334155" stroke-width="2"/><line x1="0" y1="560" x2="840" y2="560" stroke="#334155" stroke-width="2"/><line x1="700" y1="0" x2="700" y2="840" stroke="#334155" stroke-width="2"/><line x1="0" y1="700" x2="840" y2="700" stroke="#334155" stroke-width="2"/></g>
+        <rect width="840" height="840" rx="22" fill="none" stroke="#475569" stroke-width="2"/>
+        <g id="words-cells"><rect data-cell="0" x="154" y="154" width="112" height="112" rx="25.2" fill="#1a7ca7" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="4.2" opacity="0"/><rect data-cell="1" x="294" y="154" width="112" height="112" rx="25.2" fill="#1a7ca7" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="4.2" opacity="0"/><rect data-cell="2" x="434" y="154" width="112" height="112" rx="25.2" fill="#1a7ca7" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="4.2" opacity="0"/><rect data-cell="3" x="434" y="294" width="112" height="112" rx="25.2" fill="#1a7ca7" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="4.2" opacity="0"/><rect data-cell="4" x="434" y="434" width="112" height="112" rx="25.2" fill="#1a7ca7" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="4.2" opacity="0"/><rect data-cell="5" x="574" y="434" width="112" height="112" rx="25.2" fill="#1a7ca7" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="4.2" opacity="0"/></g>
+        <g id="words-ring" opacity="0">
+          <circle cx="210" cy="210" r="47.6" fill="none" stroke="#FFFFFF" stroke-opacity="0.92" stroke-width="9.8"/>
+          <circle cx="210" cy="210" r="47.6" fill="none" stroke="#38BDF8" stroke-opacity="0.55" stroke-width="4.9"/>
+        </g>
+        <rect id="words-glow" x="2.5" y="2.5" width="835" height="835" rx="20" fill="none" stroke="#2DD4BF" stroke-width="7" opacity="0"/>
+        <g id="words-letters"><text x="70" y="70" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">D</text><text x="770" y="70" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">W</text><text x="70" y="210" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">A</text><text data-pw="0" x="210" y="210" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">P</text><text data-pw="1" x="350" y="210" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">U</text><text data-pw="2" x="490" y="210" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">Z</text><text x="770" y="210" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">I</text><text x="70" y="350" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">I</text><text data-pw="3" x="490" y="350" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">Z</text><text x="770" y="350" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">N</text><text x="70" y="490" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">L</text><text data-pw="4" x="490" y="490" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">L</text><text data-pw="5" x="630" y="490" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">E</text><text x="70" y="630" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">Y</text><text x="350" y="770" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">F</text><text x="490" y="770" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">U</text><text x="630" y="770" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="56" letter-spacing="0.4" fill="#F8FAFC">N</text></g>
+      </svg></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Blur swap in: the board sharpens on the stage Zip left.
+    tl.fromTo("#words-board", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 0);
+    tl.fromTo("#words-kicker", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.16, ease: "power4.out" }, 0.04);
+    tl.fromTo("#words-title", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.11);
+    // Start ring lands on P, then the trace grows cell by cell.
+    tl.fromTo("#words-ring", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" }, 0.55);
+    tl.fromTo('#words-cells [data-cell="0"]', { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "power2.out" }, 0.65);
+    tl.set('#words-cells [data-cell="1"]', { opacity: 1 }, 0.95);
+    tl.fromTo('#words-cells [data-cell="1"]', { attr: {"x":294,"width":0} }, { attr: {"x":294,"width":112}, duration: 0.24, ease: "power2.out" }, 0.95);
+    tl.set('#words-cells [data-cell="2"]', { opacity: 1 }, 1.25);
+    tl.fromTo('#words-cells [data-cell="2"]', { attr: {"x":434,"width":0} }, { attr: {"x":434,"width":112}, duration: 0.24, ease: "power2.out" }, 1.25);
+    tl.set('#words-cells [data-cell="3"]', { opacity: 1 }, 1.55);
+    tl.fromTo('#words-cells [data-cell="3"]', { attr: {"y":294,"height":0} }, { attr: {"y":294,"height":112}, duration: 0.24, ease: "power2.out" }, 1.55);
+    tl.set('#words-cells [data-cell="4"]', { opacity: 1 }, 1.85);
+    tl.fromTo('#words-cells [data-cell="4"]', { attr: {"y":434,"height":0} }, { attr: {"y":434,"height":112}, duration: 0.24, ease: "power2.out" }, 1.85);
+    tl.set('#words-cells [data-cell="5"]', { opacity: 1 }, 2.15);
+    tl.fromTo('#words-cells [data-cell="5"]', { attr: {"x":574,"width":0} }, { attr: {"x":574,"width":112}, duration: 0.24, ease: "power2.out" }, 2.15);
+    // Found: letters pop, the board glows teal, the word lands in its chip.
+    tl.to("#words-letters [data-pw]", { attr: { "font-size": 70 }, duration: 0.12, ease: "power2.out", stagger: 0.04 }, 2.4);
+    tl.to("#words-letters [data-pw]", { attr: { "font-size": 56 }, duration: 0.3, ease: "power2.out", stagger: 0.04 }, 2.52);
+    tl.to("#words-ring", { opacity: 0, duration: 0.15 }, 2.4);
+    tl.fromTo("#words-glow", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power2.out" }, 2.4);
+    tl.fromTo("#words-chip", { opacity: 0, scale: 0.6, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.45, ease: "back.out(1.7)" }, 2.6);
+    // Out: a whip to the left; Sudoku arrives from the right.
+    tl.to(["#words-kicker", "#words-title"], { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in", stagger: 0.03 }, 5.02);
+    tl.to("#words-chip", { opacity: 0, filter: "blur(8px)", duration: 0.14, ease: "power2.in" }, 5.02);
+    tl.to("#words-board", { x: -700, opacity: 0, filter: "blur(14px)", duration: 0.3, ease: "power3.in" }, 5.11);
+    tl.set({}, {}, 5.39);
+    window.__timelines["words"] = tl;
+  </script>
+</template>
