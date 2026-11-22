@@ -38,7 +38,7 @@ class SubmitLevelClear {
   final ReportClientError? _reportClientError;
 
   Future<void> _tail = Future<void>.value();
-  Future<void>? _resending;
+  final Map<String, Future<void>> _resending = {};
   final _accepted = StreamController<String>.broadcast();
 
   /// The level id of each clear the Worker took (from [call] and
@@ -87,14 +87,18 @@ class SubmitLevelClear {
   /// account and the write would land on the wrong one) and at the first
   /// clear the Worker can't be reached for (the rest would fail too).
   ///
-  /// One resend runs at a time: a call made while one is running (a timed-out
+  /// One resend runs at a time per game: a call made while one is running (a timed-out
   /// sync pass leaves its loop going) gets that run's future instead of
   /// starting a second loop that would post the same clears again.
   Future<void> resendPending(String game) {
-    final running = _resending;
+    final running = _resending[game];
     if (running != null) return running;
-    final run = _resend(game).whenComplete(() => _resending = null);
-    return _resending = run;
+    // A block body: whenComplete waits for a returned future, and `remove`
+    // returns this very run.
+    final run = _resend(game).whenComplete(() {
+      _resending.remove(game);
+    });
+    return _resending[game] = run;
   }
 
   Future<void> _resend(String game) async {

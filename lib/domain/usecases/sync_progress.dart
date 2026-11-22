@@ -265,17 +265,19 @@ class _Run {
       // Level clears the Worker hadn't taken. The account guard and timeout
       // are the daily boards': it is the same Worker.
       final levels = _s._submitLevelClear;
-      if (levels != null && !_leaderboardStalled) {
-        await _attempt(() async {
-          try {
-            await levels
-                .resendPending(GameIds.zip)
-                .timeout(_s.leaderboardTimeout);
-          } on TimeoutException {
-            _leaderboardStalled = true;
-            rethrow;
-          }
-        });
+      // One game after another: a timeout stalls the rest.
+      if (levels != null) {
+        for (final gameId in levelGameIds) {
+          if (_leaderboardStalled) break;
+          await _attempt(() async {
+            try {
+              await levels.resendPending(gameId).timeout(_s.leaderboardTimeout);
+            } on TimeoutException {
+              _leaderboardStalled = true;
+              rethrow;
+            }
+          });
+        }
       }
       // Skipped after a failure above (likely offline): it retries on the
       // next full sync instead of holding this one.

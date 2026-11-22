@@ -1920,7 +1920,7 @@ void main() {
       when(() => levels.resendPending(any())).thenAnswer((_) async {});
     });
 
-    test('a pass resends the pending Zip clears once, after the daily '
+    test('a pass resends each game\'s pending clears once, after the daily '
         'boards', () async {
       final order = <String>[];
       when(
@@ -1949,7 +1949,8 @@ void main() {
 
       expect(result.failures, 0);
       verify(() => levels.resendPending('zip')).called(1);
-      expect(order, ['daily', 'levels']);
+      verify(() => levels.resendPending('path_words')).called(1);
+      expect(order, ['daily', 'levels', 'levels']);
     });
 
     test('signed out resends nothing', () async {
@@ -2005,6 +2006,22 @@ void main() {
         verifyNever(() => clientErrors.report(any()));
       },
     );
+
+    test('a timeout on the first game stops the next one', () async {
+      when(() => levels.resendPending(any())).thenAnswer((_) async {
+        await Future<void>.delayed(const Duration(days: 1));
+      });
+      await build(
+        initial: {'progress_owner_uid': _uid},
+        leaderboardTimeout: const Duration(milliseconds: 10),
+        submitLevelClear: levels,
+      );
+
+      await sync();
+
+      verify(() => levels.resendPending('zip')).called(1);
+      verifyNever(() => levels.resendPending('path_words'));
+    });
 
     test('a stalled daily board skips the resend', () async {
       when(
