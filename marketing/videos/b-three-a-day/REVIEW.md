@@ -1,6 +1,6 @@
 # REVIEW — Video B "3 puzzles a day"
 
-1080×1920, 30 fps, 25.8 s. Output: `../out/winklo-b-three-a-day.mp4` (3.1 MB).
+1080×1920, 30 fps, 25.8 s. Output: `../out/winklo-b-three-a-day.mp4` (3.6 MB).
 
 ## Creative calls
 - Beats: hook 0–2.2 s · Zip 2.2–7.4 · Path Words 7.4–12.8 · Sudoku 12.8–18.2 · features 18.2–23.3 · CTA 23.3–25.8.
@@ -15,7 +15,8 @@
   - "Hints cost time, / not lockouts": the hint button is tapped, a "+10s" chip pops and the clock jumps 0:47→0:57. This matches `domain/hint_penalty.dart`, where the first hint costs +10 s and there is no cap.
 - CTA: the real `app_icon.png`, "Winklo" and an ember "Free on Android" pill, with "3 puzzles. Every day." echoing the hook. It lands at about 23.4 s and holds 2.4 s.
 - Transitions: carry across (hook→Zip), blur swap (Zip→Path Words), horizontal whip (Path Words→Sudoku), zoom out and fall away (Sudoku→features), blur swap (features→CTA).
-- Sound is Kenney CC0 sfx only, with no music:
+- Music bed: "Curiositys Arrival" by Steven Booth (CC BY 3.0), a 32 s excerpt that opens on its strong section (`assets/music/CREDIT.md`). It is `<audio id="music">` on its own lane (4), runs 0–25.8 s at volume 0.72 (the bed sits around −17 LUFS), and fades in over 0.2 s and out over 1.5 s.
+- Sfx are Kenney CC0 and play over the bed. Solves are trimmed ×0.62 and "clear" pops ×0.7; taps are as placed:
   - a tick at 0.93 s
   - 7 Zip taps
   - a tap for each traced Path Words cell
@@ -28,7 +29,7 @@
 - `check --json`: 0 errors.
 - Snapshot review sheets looked at: beats, 5 seams and phone width. So were extra snapshots at 6.6, 9.0, 16.4, 19.4, 21, 22, 22.7 and 25.5 s, plus 8 frames pulled from the MP4 (`review-frames/`, git-ignored).
 - ffprobe: 1080×1920, 30/1 fps, 25.80 s, with audio.
-- `audio --json`: −12.4 LUFS integrated, true peak −1.2 dBTP, no clipping. The first onset is at 0.93 s and the onsets line up with the taps, solves and pops. **I measured the sound but never heard it.**
+- `audio --json` (with music): −15.8 LUFS integrated, true peak −1.0 dBTP, no clipping. Sound is present the whole length; the only silence is the last 0.28 s, where the fade-out ends. Estimated from the envelope, the sfx peaks sit a median of about 4 dB over the bed. That estimate is rough: the bed is percussive and the taps are 10 ms clicks. **I measured the sound but never heard it.**
 
 ## Fixes from review
 - P0: the Sudoku wash selectors broke the scene script (nested double quotes). They now use single quotes.
@@ -55,3 +56,7 @@ The hook's fanned boards. The Zip card covers the inner columns of Path Words an
 
 ## Not built
 Storyline C ("Beat my time") is a separate task.
+
+## Credits
+Music: "Curiositys Arrival" by Steven Booth (CC BY 3.0). This credit must go in the caption wherever the reel is posted.
+Sfx: Kenney Interface Sounds (CC0).

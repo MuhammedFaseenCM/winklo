@@ -750,6 +750,9 @@ const vars = [
   ["hookLine2", "Hook line 2 (ember)", "Every day."],
   ["hookLine3", "Hook line 3 (teal)", "Free."],
 ];
+const MUSIC_VOL = 0.72;
+// Per-sound trim over the bed: taps as placed; solves and pops pulled down ~3-4 dB.
+const SFX_GAIN = { tap: 1, success: 0.62, clear: 0.7 };
 // Lanes: taps on lane 2; any clip that overlaps a lane-2 clip goes on lane 3.
 sfx.sort((a, b) => a.t - b.t);
 const laneEnd = { 2: -1, 3: -1 };
@@ -757,8 +760,14 @@ const audio = sfx.map((s) => {
   const d = s.d ?? 0.01;
   const lane = laneEnd[2] <= s.t ? 2 : 3;
   laneEnd[lane] = s.t + d;
-  return `<audio id="sfx-${s.id}" class="clip" src="assets/sfx/${s.src}.ogg" data-start="${s.t}" data-duration="${d}" data-track-index="${lane}" data-volume="${s.v}"></audio>`;
+  return `<audio id="sfx-${s.id}" class="clip" src="assets/sfx/${s.src}.ogg" data-start="${s.t}" data-duration="${d}" data-track-index="${lane}" data-volume="${fx(s.v * SFX_GAIN[s.src])}"></audio>`;
 });
+// Music bed: "Curiositys Arrival" by Steven Booth (CC BY 3.0), a 32 s excerpt
+// that opens on its strong section (assets/music/CREDIT.md). Own lane; the sfx
+// sit ~3-6 dB over it. MUSIC_VOL / SFX_GAIN set from `audio --json` on the render.
+audio.push(
+  `<audio id="music" class="clip" src="assets/music/curiositys-arrival.mp3" data-start="0" data-duration="${TOTAL}" data-track-index="4" data-volume="${MUSIC_VOL}" data-fade-in="0.2" data-fade-out="1.5"></audio>`,
+);
 const host = (id, [start, dur]) =>
   `<div id="${id}" data-composition-id="${id}" data-composition-src="compositions/${id}.html" data-start="${start}" data-duration="${dur}" data-track-index="1" data-track-kind="graphics" data-width="${W}" data-height="${H}"></div>`;
 
