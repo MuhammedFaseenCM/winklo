@@ -139,6 +139,21 @@ Started from `master` at `1deaba5`; not merged and not uploaded, with no version
 
 - [ ] Optional, for players on older builds: upload `tools/static-assets/avatars/preset_*.png` with the loop in `tools/static-assets/README.md`. Older builds then show critters for `preset_01`–`06` once their image cache expires, and initials for the new ids.
 
+### Ready to merge: `feat/path-words-levels`
+
+Path Words gets a level mode: 20-level worlds, stars per level, a map on the Levels tab and a Path Words Levels board. The winklo-admin half is the branch `feat/path-words-levels`, not merged. In order:
+
+- [ ] Deploy the leaderboard Worker: `cd workers/leaderboard && npm run deploy`. It now accepts Path Words level clears.
+- [ ] Deploy the Firestore rules and indexes: `firebase deploy --only firestore:rules,firestore:indexes`. The rules are unchanged, but this keeps the deploy in step.
+- [ ] winklo-admin: merge `feat/path-words-levels` into `main`, which deploys admin-api and the SPA.
+- [ ] Publish World 1 (Animals) and World 2 (Food) with the script: `node tools/publish-path-words-world.mjs --order 1 --category animals`, then `node tools/publish-path-words-world.mjs --order 2 --category food`. See [Publish a Path Words world](https://github.com/MuhammedFaseenCM/winklo-admin#publish-a-path-words-world) in winklo-admin's README.
+- [ ] Try it on a device:
+  - switch to Path Words on the Levels tab;
+  - clear a level;
+  - check that the stars appear on the Path Words Levels board;
+  - check that Zip is unchanged.
+- [ ] Merge into `master`, then bump the version and build.
+
 ### Ready to merge: `feat/landing-live-data`
 
 Started from `feat/roadmap-batch` at `9545081`, because its copy describes 1.1.0 (leagues, archive and practice, badges, the widget, Malayalam); merge it with or after that branch. The spec is `docs/superpowers/specs/2026-10-16-landing-live-data-design.md`.
