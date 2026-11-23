@@ -130,7 +130,7 @@ class LevelThemePalette {
     'food' => const LevelThemePalette(
       base: Color(0xFF3A1517),
       baseEnd: Color(0xFF2E1012),
-      motif: Color(0x26FDE8D0),
+      motif: Color(0x17FDE8D0),
       path: Color(0xFFFDE68A),
       pathWidth: 6,
       dots: Color(0xFF8C6466),
