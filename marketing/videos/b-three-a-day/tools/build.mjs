@@ -4,7 +4,7 @@
 // Usage: node tools/build.mjs   (run from the project dir)
 //
 // The Zip puzzle is copied into this project (tools/zip-puzzle.json, from
-// ../shared/zip-puzzle.json) so the project stands alone.
+// ../shared/zip-puzzle-b.json) so the project stands alone.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

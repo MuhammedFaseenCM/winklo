@@ -4,7 +4,7 @@
 // Usage: node tools/build.mjs   (run from the project dir)
 //
 // The Zip puzzle is copied into this project (tools/zip-puzzle.json, from
-// ../shared/zip-puzzle.json, unchanged) so the project stands alone.
+// ../shared/zip-puzzle-c.json) so the project stands alone.
 // Board, ribbon, type, CTA lockup and sfx levels are copied from videos A and B.
 import fs from "node:fs";
 import path from "node:path";
