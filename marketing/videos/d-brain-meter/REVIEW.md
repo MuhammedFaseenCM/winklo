@@ -101,3 +101,20 @@ The install beat. The badge is 560 px on a dark, mostly empty frame. The hand ta
 Music: "Curiositys Arrival" by Steven Booth (CC BY 3.0). This credit must go in the caption wherever the reel is posted.
 Sfx: Kenney Interface Sounds (CC0).
 Google Play and the Google Play logo are trademarks of Google LLC. The badge is used unmodified, per Google's badge guidelines.
+
+## Fix round 1
+- Badge never covered. The hand now taps just outside the badge's bottom-right corner (+34, +30 px), with a small ember press ring. The badge stays unmodified at 560 px, with no press scale. Checked on frames 630, 648 and 660 and on a `snapshot --range 19,30` sheet.
+- Install beat:
+  - The app icon now sits on a lighter rounded backing tile (#2A3A57, 336 px) with a thin light ring and a soft ember glow, so the tile edge reads.
+  - The stack (tile, bar, badge, pill) is computed and centred inside y 168–1330 (tile top 245, pill bottom 1253). The build throws if it leaves the band.
+- Phone beat:
+  - The mini board is now 600 px and fills the screen width, so its numbers render at 30 px.
+  - A 60 px in-game clock counts 0:00→0:47 with the line and turns teal on the solve.
+  - An app tab bar (three tiles, Zip lit) fills the bottom of the screen. It is decoration, below 1330.
+  - The fingers are stacked, touching, and overlap the bezel by 54 px. The palm shows past the right edge, so the fingers connect to it.
+- Re-measured:
+  - `check --json` is ok with 0 errors. The new cross-fade overlap on `#ph-clock` is marked `data-layout-allow-overlap`.
+  - ffprobe: 1080×1920, 30 fps, 30.000 s, 6.75 MB.
+  - `audio --json`: −15.9 LUFS, −2.1 dBTP.
+  - First-vs-last-frame SSIM: 0.9965.
+- Weakest shot now: the install beat's hand tap is still staged, though it no longer hides anything.

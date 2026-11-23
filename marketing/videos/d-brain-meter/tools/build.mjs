@@ -662,15 +662,29 @@ sfx.push({ id: "genius-pop", src: "clear", t: fx(GENIUS_POP + 0.12 + 0.033 - 0.1
 // install (19.0–23.4 s): app icon, search bar types "Winklo", Play badge
 // =====================================================================
 const BADGE_W = 560; // >= 380; 646x250 source, uniform scale only (height auto)
-const BADGE_TOP = 800;
+// Stack (icon tile 336, bar 140, badge 217, pill 96 + gaps 70/80/70 = 1009 px),
+// centred in the 168..1330 band.
+const TILE = 336;
+const BADGE_H = (BADGE_W * 250) / 646; // 216.7, the source aspect
+const STACK_H = TILE + 70 + 140 + 80 + BADGE_H + 70 + 96;
+const TILE_TOP = Math.round(168 + (1330 - 168 - STACK_H) / 2);
+const BAR_TOP = TILE_TOP + TILE + 70;
+const BADGE_TOP = BAR_TOP + 140 + 80;
+const PILL_TOP = Math.round(BADGE_TOP + BADGE_H + 70);
+if (TILE_TOP < 168 || PILL_TOP + 96 > 1330) throw new Error("install stack outside the band");
+// The badge tap lands just outside its bottom-right corner, so the badge is never covered.
+const BADGE_TAP = [(W + BADGE_W) / 2 + 34, Math.round(BADGE_TOP + BADGE_H + 30)];
 const TYPE_T0 = 0.55;
 const TYPE_DT = 0.12;
 const WORD = "Winklo";
 const BADGE_T = TYPE_T0 + WORD.length * TYPE_DT + 0.3; // badge lands
 const install = scene(
   "install",
-  `#inst-icon { position: absolute; left: 390px; top: 196px; width: 300px; height: 300px; opacity: 0.3; }
-      #inst-bar { position: absolute; left: 90px; top: 584px; width: 900px; height: 140px; border-radius: 70px; background: ${C.onInk};
+  `#inst-tile { position: absolute; left: ${(W - TILE) / 2}px; top: ${TILE_TOP}px; width: ${TILE}px; height: ${TILE}px; opacity: 0.3; }
+      #inst-glow { position: absolute; inset: 0; border-radius: 88px; background: #2A3A57;
+        box-shadow: 0 0 0 4px rgba(248,250,252,0.7), 0 0 90px 10px rgba(255,107,44,0.45); }
+      #inst-icon { position: absolute; left: 18px; top: 18px; width: 300px; height: 300px; }
+      #inst-bar { position: absolute; left: 90px; top: ${BAR_TOP}px; width: 900px; height: 140px; border-radius: 70px; background: ${C.onInk};
         box-shadow: 0 10px 0 rgba(0,0,0,0.35); opacity: 0; }
       #inst-mag { position: absolute; left: 44px; top: 38px; width: 64px; height: 64px; }
       #inst-ph { position: absolute; left: 132px; top: 0; height: 140px; display: flex; align-items: center; font-size: 56px; font-weight: 500; color: ${C.inkSoft}; }
@@ -679,11 +693,12 @@ const install = scene(
       #inst-caret { display: inline-block; width: 6px; height: 72px; margin-left: 6px; border-radius: 3px; background: ${C.ember}; }
       #inst-badge { position: absolute; left: ${(W - BADGE_W) / 2}px; top: ${BADGE_TOP}px; width: ${BADGE_W}px; opacity: 0; }
       #inst-badge img { display: block; width: ${BADGE_W}px; height: auto; }
-      #inst-pill { position: absolute; left: 280px; top: 1100px; width: 520px; height: 96px; border-radius: 48px; background: ${C.ember}; color: ${C.ink};
+      #inst-ring { position: absolute; left: ${BADGE_TAP[0] - 40}px; top: ${BADGE_TAP[1] - 40}px; width: 80px; height: 80px; border-radius: 50%; border: 5px solid ${C.ember}; opacity: 0; }
+      #inst-pill { position: absolute; left: 280px; top: ${PILL_TOP}px; width: 520px; height: 96px; border-radius: 48px; background: ${C.ember}; color: ${C.ink};
         display: flex; align-items: center; justify-content: center; font-size: 52px; font-weight: 700; opacity: 0; }
       #inst-hand { position: absolute; left: 0; top: 0; width: ${HAND_W}px; height: ${HAND_H}px; transform-origin: ${HAND_TIP[0]}px ${HAND_TIP[1]}px; }
       #inst-hand svg { display: block; filter: drop-shadow(0 10px 8px rgba(0,0,0,0.35)); }`,
-  `<img id="inst-icon" src="assets/app_icon.png" alt="Winklo" />
+  `<div id="inst-tile"><div id="inst-glow"></div><img id="inst-icon" src="assets/app_icon.png" alt="Winklo" /></div>
       <div id="inst-bar">
         <svg id="inst-mag" viewBox="0 0 64 64"><circle cx="27" cy="27" r="18" fill="none" stroke="${C.outline}" stroke-width="7"/><path d="M40 40 L56 56" stroke="${C.outline}" stroke-width="8" stroke-linecap="round"/></svg>
         <div id="inst-ph">Search apps</div>
@@ -691,15 +706,16 @@ const install = scene(
       </div>
       <div id="inst-badge"><img src="assets/badges/google-play-badge.png" alt="Get it on Google Play" /></div>
       <div id="inst-pill">Free on Android</div>
+      <div id="inst-ring"></div>
       <div id="inst-hand" data-layout-allow-overflow>${handSvg("inst-handsvg")}</div>`,
   `    const tl = gsap.timeline({ paused: true });
     const TIP = ${JSON.stringify(HAND_TIP)};
     const at = (x, y) => ({ x: x - TIP[0], y: y - TIP[1] });
     // Icon blurs in (starts at 30% so the seam never shows an empty frame), bar follows.
-    tl.fromTo("#inst-icon", { opacity: 0.3, scale: 0.7, filter: "blur(10px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 0);
+    tl.fromTo("#inst-tile", { opacity: 0.3, scale: 0.7, filter: "blur(10px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 0.5, ease: "expo.out" }, 0);
     tl.fromTo("#inst-bar", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.4, ease: "expo.out" }, 0.08);
     // The hand comes in and taps the bar.
-    tl.fromTo("#inst-hand", { ...at(1060, 1500), scale: 1.07 }, { ...at(850, 676), scale: 1.07, duration: 0.42, ease: "power3.out" }, 0.0);
+    tl.fromTo("#inst-hand", { ...at(1060, 1500), scale: 1.07 }, { ...at(850, ${BAR_TOP + 92}), scale: 1.07, duration: 0.42, ease: "power3.out" }, 0.0);
     tl.to("#inst-hand", { scale: 0.94, duration: 0.07, ease: "power2.in" }, 0.42);
     tl.to("#inst-hand", { scale: 1.07, duration: 0.12, ease: "power2.out" }, 0.49);
     tl.to("#inst-bar", { scale: 0.98, duration: 0.07, yoyo: true, repeat: 1, ease: "power2.inOut" }, 0.42);
@@ -708,15 +724,16 @@ const install = scene(
     ${[...WORD].map((_, i) => `tl.set("#inst-c${i}", { fontSize: "68px" }, ${fx(TYPE_T0 + i * TYPE_DT)});`).join("\n    ")}
     tl.set("#inst-caret", { opacity: 0 }, ${fx(BADGE_T)});
     // The hand moves to where the badge lands, the badge pops in and is tapped.
-    tl.to("#inst-hand", { ...at(640, ${BADGE_TOP + 150}), duration: 0.45, ease: "power3.inOut" }, ${fx(BADGE_T - 0.25)});
+    tl.to("#inst-hand", { ...at(${BADGE_TAP[0]}, ${BADGE_TAP[1]}), duration: 0.45, ease: "power3.inOut" }, ${fx(BADGE_T - 0.25)});
     tl.fromTo("#inst-badge", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.6)" }, ${fx(BADGE_T)});
     tl.fromTo("#inst-pill", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.5)" }, ${fx(BADGE_T + 0.25)});
     tl.to("#inst-hand", { scale: 0.94, duration: 0.07, ease: "power2.in" }, ${fx(BADGE_T + 0.55)});
-    tl.to("#inst-badge", { scale: 0.97, duration: 0.07, yoyo: true, repeat: 1, ease: "power2.inOut" }, ${fx(BADGE_T + 0.55)});
+    tl.fromTo("#inst-ring", { opacity: 0, scale: 1.8 }, { opacity: 1, scale: 1, duration: 0.3, ease: "expo.out" }, ${fx(BADGE_T + 0.6)});
+    tl.to("#inst-ring", { opacity: 0, duration: 0.2, ease: "power2.in" }, ${fx(BADGE_T + 1.15)});
     tl.to("#inst-hand", { scale: 1.07, duration: 0.12, ease: "power2.out" }, ${fx(BADGE_T + 0.62)});
     tl.to("#inst-hand", { ...at(1120, 1700), opacity: 0, duration: 0.5, ease: "power3.in" }, ${fx(BADGE_T + 1.1)});
     // Out: blur swap into the phone.
-    tl.to(["#inst-icon", "#inst-bar", "#inst-badge", "#inst-pill"], { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in", stagger: 0.02 }, ${fx(T.install[1] - 0.24)});
+    tl.to(["#inst-tile", "#inst-bar", "#inst-badge", "#inst-pill"], { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in", stagger: 0.02 }, ${fx(T.install[1] - 0.24)});
     tl.set({}, {}, ${fx(T.install[1] - 0.01)});`,
 );
 sfx.push({ id: "bar-tap", src: "tap", t: fx(T.install[0] + 0.42 + 0.07 + 0.0), v: 0.7 });
@@ -729,10 +746,10 @@ sfx.push({ id: "badge-tap", src: "tap", t: fx(T.install[0] + BADGE_T + 0.62), v:
 // phone (23.4–30.0 s): a phone in a hand playing Zip; "Free daily puzzles";
 // the last 0.7 s cross-fades into the hook frame so the reel loops.
 // =====================================================================
-const PH = { x: 210, y: 330, w: 660, h: 1240 };
-const MINI = 560; // numbers render at 28 px
-const MINI_X = (W - MINI) / 2; // 260
-const MINI_Y = 470;
+const PH = { x: 210, y: 300, w: 660, h: 1320 };
+const MINI = 600; // fills the 616 px screen; numbers render at 30 px
+const MINI_X = (W - MINI) / 2; // 240
+const MINI_Y = 520;
 const PH_DRAW0 = 0.9;
 const PH_HIT = snap(T.phone[0] + 3.9) - T.phone[0];
 const LOOP_FADE = [T.phone[1] - 0.8, T.phone[1] - 0.1]; // 29.2 -> 29.9 abs
@@ -753,21 +770,24 @@ const phone = scene(
           </defs>
           <g id="ph-sway">
             <!-- palm behind the phone, wrist and cuff below it -->
-            <rect x="140" y="1240" width="700" height="720" rx="170" ${SKIN}/>
+            <rect x="140" y="1240" width="770" height="720" rx="170" ${SKIN}/>
             <rect x="330" y="1800" width="440" height="160" rx="30" fill="${C.ember}" stroke="${C.ink}" stroke-width="8"/>
             <!-- the phone -->
             <rect x="${PH.x}" y="${PH.y}" width="${PH.w}" height="${PH.h}" rx="84" fill="#0B1120" stroke="${C.outline}" stroke-width="5"/>
             <rect x="${PH.x + 22}" y="${PH.y + 22}" width="${PH.w - 44}" height="${PH.h - 44}" rx="64" fill="url(#ph-scr)"/>
             <rect x="${W / 2 - 75}" y="${PH.y + 40}" width="150" height="36" rx="18" fill="#0B1120"/>
-            <text x="${W / 2}" y="${MINI_Y - 34}" text-anchor="middle" font-family="Lexend" font-weight="600" font-size="32" letter-spacing="5" fill="${C.inkSoft}">TODAY'S ZIP</text>
+            <text x="${W / 2}" y="${PH.y + 116}" text-anchor="middle" font-family="Lexend" font-weight="600" font-size="30" letter-spacing="5" fill="${C.inkSoft}">TODAY'S ZIP</text>
+            <text id="ph-clock" data-layout-allow-overlap x="${W / 2}" y="${MINI_Y - 28}" text-anchor="middle" font-family="Lexend" font-weight="700" font-size="60" fill="${C.onInk}" style="font-variant-numeric: tabular-nums">0:00</text>
             ${zipSvg("ph", [{ name: "S", cells: P }], { size: MINI, x: MINI_X, y: MINI_Y })}
             <rect id="ph-flash" x="${MINI_X}" y="${MINI_Y}" width="${MINI}" height="${MINI}" rx="16" fill="${C.teal}" opacity="0"/>
             <g id="ph-chip" opacity="0">
               <rect x="${W / 2 - 130}" y="${MINI_Y + MINI + 50}" width="260" height="76" rx="38" fill="${C.teal}"/>
               <text x="${W / 2}" y="${MINI_Y + MINI + 88}" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="700" font-size="40" fill="${C.ink}">Solved</text>
             </g>
-            <!-- fingers wrap the right edge, the thumb the left -->
-            ${[0, 1, 2, 3].map((k) => `<rect x="${PH.x + PH.w - 34}" y="${960 + k * 112}" width="${110 - k * 6}" height="92" rx="46" ${SKIN}/>`).join("\n            ")}
+            <!-- app tab bar (decoration, below the band): three game tiles, Zip lit -->
+            ${[-1, 0, 1].map((k) => `<rect x="${W / 2 + k * 150 - 45}" y="${PH.y + PH.h - 170}" width="90" height="90" rx="24" fill="${k === 0 ? C.ember : C.paper}" opacity="${k === 0 ? 1 : 0.9}"/>`).join("")}
+            <!-- fingers wrap the right edge over the bezel, stacked and touching; the thumb the left -->
+            ${[3, 2, 1, 0].map((k) => `<rect x="${PH.x + PH.w - 54}" y="${1010 + k * 94}" width="${126 - k * 8}" height="100" rx="50" ${SKIN}/>`).join("\n            ")}
             <rect x="122" y="1277" width="260" height="96" rx="48" transform="rotate(-50.8 252 1325)" ${SKIN}/>
             <path d="M300 1262 q14 -14 30 -4" stroke="#D9895F" stroke-width="5" fill="none" stroke-linecap="round" transform="rotate(0)"/>
           </g>
@@ -789,7 +809,7 @@ ${brainRuntime("loop")}
     const idxOf = new Map(PATH.map((c, k) => [c[0] + "," + c[1], k]));
     const tip = document.getElementById("ph-tip"), tipGlow = document.getElementById("ph-tipglow"), tipDot = document.getElementById("ph-tipdot");
     const sway = document.getElementById("ph-sway"), flash = document.getElementById("ph-flash"), chip = document.getElementById("ph-chip");
-    const loop = document.getElementById("loop");
+    const loop = document.getElementById("loop"), clock = document.getElementById("ph-clock");
     const STOPS = ${JSON.stringify(STOPS.map(hex))};
     const clamp = (v) => Math.max(0, Math.min(1, v));
     const easeS = (u) => { u = clamp(u); return 0.5 * u + 0.5 * u * u * (3 - 2 * u); };
@@ -819,7 +839,11 @@ ${brainRuntime("loop")}
         n.setAttribute("fill", on ? "${C.onInk}" : "${C.number}");
         n.setAttribute("stroke-width", on ? "8" : "0");
       }
+      // the in-game clock counts with the line, 0:00 -> 0:47, teal on the solve
+      const secs = Math.floor((47 * p) / (PATH.length - 1) + 1e-9);
+      clock.textContent = "0:" + String(secs).padStart(2, "0");
       const h = t - ${fx(PH_HIT)};
+      clock.setAttribute("fill", h >= 0 ? "${C.teal}" : "${C.onInk}");
       flash.setAttribute("opacity", h >= 0 ? String(0.5 * Math.pow(1 - clamp(h / 0.6), 2)) : "0");
       chip.setAttribute("opacity", h >= 0 ? String(out4((h - 0.1) / 0.25)) : "0");
       // held in a hand: a slow, small sway

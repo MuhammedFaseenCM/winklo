@@ -38,14 +38,15 @@
           </defs>
           <g id="ph-sway">
             <!-- palm behind the phone, wrist and cuff below it -->
-            <rect x="140" y="1240" width="700" height="720" rx="170" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
+            <rect x="140" y="1240" width="770" height="720" rx="170" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
             <rect x="330" y="1800" width="440" height="160" rx="30" fill="#FF6B2C" stroke="#0F172A" stroke-width="8"/>
             <!-- the phone -->
-            <rect x="210" y="330" width="660" height="1240" rx="84" fill="#0B1120" stroke="#475569" stroke-width="5"/>
-            <rect x="232" y="352" width="616" height="1196" rx="64" fill="url(#ph-scr)"/>
-            <rect x="465" y="370" width="150" height="36" rx="18" fill="#0B1120"/>
-            <text x="540" y="436" text-anchor="middle" font-family="Lexend" font-weight="600" font-size="32" letter-spacing="5" fill="#94A3B8">TODAY'S ZIP</text>
-            <svg id="ph-svg" x="260" y="470" viewBox="0 0 780 780" width="560" height="560" xmlns="http://www.w3.org/2000/svg">
+            <rect x="210" y="300" width="660" height="1320" rx="84" fill="#0B1120" stroke="#475569" stroke-width="5"/>
+            <rect x="232" y="322" width="616" height="1276" rx="64" fill="url(#ph-scr)"/>
+            <rect x="465" y="340" width="150" height="36" rx="18" fill="#0B1120"/>
+            <text x="540" y="416" text-anchor="middle" font-family="Lexend" font-weight="600" font-size="30" letter-spacing="5" fill="#94A3B8">TODAY'S ZIP</text>
+            <text id="ph-clock" data-layout-allow-overlap x="540" y="492" text-anchor="middle" font-family="Lexend" font-weight="700" font-size="60" fill="#F8FAFC" style="font-variant-numeric: tabular-nums">0:00</text>
+            <svg id="ph-svg" x="240" y="520" viewBox="0 0 780 780" width="600" height="600" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <filter id="ph-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="14"/></filter>
           <linearGradient id="ph-S-g0" gradientUnits="userSpaceOnUse" x1="243.75" y1="146.25" x2="243.75" y2="48.75"><stop offset="0" stop-color="#FF6B2C"/><stop offset="1" stop-color="#ff8230"/></linearGradient>
@@ -122,16 +123,18 @@
         <g id="ph-walls"><line data-wall="0" x1="292.5" y1="113.1" x2="292.5" y2="179.4" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/><line data-wall="1" x1="390" y1="308.1" x2="390" y2="374.4" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/><line data-wall="2" x1="585" y1="405.6" x2="585" y2="471.9" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/><line data-wall="3" x1="292.5" y1="698.1" x2="292.5" y2="764.4" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/><line data-wall="4" x1="585" y1="113.1" x2="585" y2="179.4" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/></g>
         <g id="ph-nums"><text data-num="1" data-cell="1,2" x="243.75" y="146.25" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">1</text><text data-num="2" data-cell="3,1" x="146.25" y="341.25" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">2</text><text data-num="3" data-cell="7,2" x="243.75" y="731.25" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">3</text><text data-num="4" data-cell="4,4" x="438.75" y="438.75" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">4</text><text data-num="5" data-cell="7,4" x="438.75" y="731.25" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">5</text><text data-num="6" data-cell="4,6" x="633.75" y="438.75" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">6</text><text data-num="7" data-cell="0,5" x="536.25" y="48.75" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">7</text><text data-num="8" data-cell="1,5" x="536.25" y="146.25" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">8</text></g>
       </svg>
-            <rect id="ph-flash" x="260" y="470" width="560" height="560" rx="16" fill="#2DD4BF" opacity="0"/>
+            <rect id="ph-flash" x="240" y="520" width="600" height="600" rx="16" fill="#2DD4BF" opacity="0"/>
             <g id="ph-chip" opacity="0">
-              <rect x="410" y="1080" width="260" height="76" rx="38" fill="#2DD4BF"/>
-              <text x="540" y="1118" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="700" font-size="40" fill="#0F172A">Solved</text>
+              <rect x="410" y="1170" width="260" height="76" rx="38" fill="#2DD4BF"/>
+              <text x="540" y="1208" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="700" font-size="40" fill="#0F172A">Solved</text>
             </g>
-            <!-- fingers wrap the right edge, the thumb the left -->
-            <rect x="836" y="960" width="110" height="92" rx="46" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
-            <rect x="836" y="1072" width="104" height="92" rx="46" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
-            <rect x="836" y="1184" width="98" height="92" rx="46" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
-            <rect x="836" y="1296" width="92" height="92" rx="46" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
+            <!-- app tab bar (decoration, below the band): three game tiles, Zip lit -->
+            <rect x="345" y="1450" width="90" height="90" rx="24" fill="#243044" opacity="0.9"/><rect x="495" y="1450" width="90" height="90" rx="24" fill="#FF6B2C" opacity="1"/><rect x="645" y="1450" width="90" height="90" rx="24" fill="#243044" opacity="0.9"/>
+            <!-- fingers wrap the right edge over the bezel, stacked and touching; the thumb the left -->
+            <rect x="816" y="1292" width="102" height="100" rx="50" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
+            <rect x="816" y="1198" width="110" height="100" rx="50" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
+            <rect x="816" y="1104" width="118" height="100" rx="50" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
+            <rect x="816" y="1010" width="126" height="100" rx="50" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
             <rect x="122" y="1277" width="260" height="96" rx="48" transform="rotate(-50.8 252 1325)" fill="#FFC9A3" stroke="#D9895F" stroke-width="6"/>
             <path d="M300 1262 q14 -14 30 -4" stroke="#D9895F" stroke-width="5" fill="none" stroke-linecap="round" transform="rotate(0)"/>
           </g>
@@ -469,7 +472,7 @@
     const idxOf = new Map(PATH.map((c, k) => [c[0] + "," + c[1], k]));
     const tip = document.getElementById("ph-tip"), tipGlow = document.getElementById("ph-tipglow"), tipDot = document.getElementById("ph-tipdot");
     const sway = document.getElementById("ph-sway"), flash = document.getElementById("ph-flash"), chip = document.getElementById("ph-chip");
-    const loop = document.getElementById("loop");
+    const loop = document.getElementById("loop"), clock = document.getElementById("ph-clock");
     const STOPS = [[255,107,44],[255,197,61],[255,77,109],[232,121,249]];
     const clamp = (v) => Math.max(0, Math.min(1, v));
     const easeS = (u) => { u = clamp(u); return 0.5 * u + 0.5 * u * u * (3 - 2 * u); };
@@ -499,7 +502,11 @@
         n.setAttribute("fill", on ? "#F8FAFC" : "#FB7185");
         n.setAttribute("stroke-width", on ? "8" : "0");
       }
+      // the in-game clock counts with the line, 0:00 -> 0:47, teal on the solve
+      const secs = Math.floor((47 * p) / (PATH.length - 1) + 1e-9);
+      clock.textContent = "0:" + String(secs).padStart(2, "0");
       const h = t - 3.889;
+      clock.setAttribute("fill", h >= 0 ? "#2DD4BF" : "#F8FAFC");
       flash.setAttribute("opacity", h >= 0 ? String(0.5 * Math.pow(1 - clamp(h / 0.6), 2)) : "0");
       chip.setAttribute("opacity", h >= 0 ? String(out4((h - 0.1) / 0.25)) : "0");
       // held in a hand: a slow, small sway
