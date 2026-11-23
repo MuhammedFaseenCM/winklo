@@ -66,7 +66,9 @@ class LevelGoalTile extends StatelessWidget {
     );
     final text = Text(
       label,
-      maxLines: 2,
+      maxLines: compact && MediaQuery.textScalerOf(context).scale(10) <= 13
+          ? 1
+          : 2,
       overflow: TextOverflow.ellipsis,
       textAlign: compact ? TextAlign.start : TextAlign.center,
       style:
@@ -100,7 +102,19 @@ class LevelGoalTile extends StatelessWidget {
           children: [
             star,
             const SizedBox(width: 6),
-            Expanded(child: text),
+            // One line beside its siblings: a long label shrinks a little
+            // rather than wrapping alone. At large text sizes it wraps
+            // instead, so it stays readable (the bar keeps the tiles one
+            // height).
+            Expanded(
+              child: MediaQuery.textScalerOf(context).scale(10) > 13
+                  ? text
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: text,
+                    ),
+            ),
           ],
         ),
       );

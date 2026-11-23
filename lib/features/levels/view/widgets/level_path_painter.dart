@@ -2,10 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
 
-import '../../../../core/theme/app_theme.dart';
 import '../../../../domain/logic/level_map.dart';
 import '../../logic/level_map_layout.dart';
-import 'ink_palette.dart';
+import 'level_theme_palette.dart';
 
 /// The line through the levels: drawn in the world's material up to the
 /// current level (rice-paper white on ink-stone, a sky route on Metro), and
@@ -33,23 +32,15 @@ class LevelPathPainter extends CustomPainter {
         if (band.rect.bottom < top || band.rect.top > bottom) continue;
         canvas.save();
         canvas.clipRect(band.rect);
-        final theme = band.world.world.theme;
+        final palette = LevelThemePalette.of(band.world.world.theme);
         if (reached) {
           canvas.drawPath(
             segment,
             Paint()
               ..style = PaintingStyle.stroke
               ..strokeCap = StrokeCap.round
-              ..strokeWidth = switch (theme) {
-                'ink' => 8,
-                'metro' => 7,
-                _ => 6,
-              }
-              ..color = switch (theme) {
-                'ink' => InkPalette.rice,
-                'metro' => ZipColors.sky,
-                _ => ZipColors.onInk.withValues(alpha: 0.6),
-              },
+              ..strokeWidth = palette.pathWidth
+              ..color = palette.path,
           );
         } else {
           final dots = Path();
@@ -67,7 +58,7 @@ class LevelPathPainter extends CustomPainter {
               ..style = PaintingStyle.stroke
               ..strokeCap = StrokeCap.round
               ..strokeWidth = 1.6
-              ..color = theme == 'ink' ? InkPalette.pencil : ZipColors.outline,
+              ..color = palette.dots,
           );
         }
         canvas.restore();

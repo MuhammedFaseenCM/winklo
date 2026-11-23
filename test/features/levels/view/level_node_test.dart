@@ -116,4 +116,27 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    "on a gradient ground the marks sit on a dark pill, not a wrong-coloured patch",
+    (tester) async {
+      final animals = LevelMap.build(
+        LevelCatalog([pathWordsWorld(1, 2)]),
+        const LevelProgress({
+          'path_words_1_01': LevelRecord(stars: 2, bestSeconds: 20),
+        }),
+      );
+      await pump(
+        tester,
+        LevelNode(node: animals.node('path_words_1_01')!, onTap: () {}),
+      );
+      final backing = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: find.byType(LevelNode),
+          matching: find.byType(DecoratedBox),
+        ),
+      );
+      expect((backing.decoration as BoxDecoration).color, levelMarksPill);
+    },
+  );
 }

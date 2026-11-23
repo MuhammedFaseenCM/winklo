@@ -1684,6 +1684,8 @@ final class AppTextMl implements AppText {
 
   @override
   String get levelsSoon => 'ഉടൻ';
+  @override
+  String get levelsSudokuSoon => 'സുഡോക്കു ലെവലുകൾ ഉടൻ വരുന്നു';
 
   @override
   String get levelsNeedConnection =>

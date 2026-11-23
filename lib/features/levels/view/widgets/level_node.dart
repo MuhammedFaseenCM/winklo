@@ -8,7 +8,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../domain/logic/level_map.dart';
 import 'ink_palette.dart';
-import 'world_backdrop_painter.dart';
+import 'level_theme_palette.dart';
 
 /// One level on the map, drawn in its world's material: a brushed ensō on
 /// Ink, a station on Metro. Cleared levels show their stars as marks
@@ -39,12 +39,8 @@ class LevelNode extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = node.slot.world.theme;
     final locked = node.state == LevelNodeState.locked;
-    final numberColor = switch ((theme, node.state)) {
-      ('ink', LevelNodeState.locked) => InkPalette.pencilLight,
-      ('ink', _) => InkPalette.rice,
-      (_, LevelNodeState.locked) => ZipColors.inkSoft,
-      _ => ZipColors.ink,
-    };
+    final palette = LevelThemePalette.of(theme);
+    final numberColor = locked ? palette.lockedNumber : palette.number;
     return Semantics(
       button: true,
       label: _label,
@@ -119,12 +115,16 @@ class LevelNode extends StatelessWidget {
   }
 }
 
-/// The ground of a world's backdrop (see [WorldBackdropPainter]).
-Color _ground(String theme) => switch (theme) {
-  'ink' => InkPalette.stone,
-  'metro' => WorldBackdropPainter.metroNight,
-  _ => ZipColors.ink,
-};
+/// What a cleared level's star marks sit on, so the line running past them
+/// doesn't cross them: a patch of the world's ground on a flat ground, and
+/// on a gradient (where no one colour matches everywhere) [levelMarksPill].
+Color _ground(String theme) {
+  final palette = LevelThemePalette.of(theme);
+  return palette.baseEnd == null ? palette.base : levelMarksPill;
+}
+
+/// A dark translucent pill under the star marks on a gradient ground.
+const levelMarksPill = Color(0x66000000);
 
 class _NodePainter extends CustomPainter {
   _NodePainter({required this.theme, required this.state});
@@ -172,8 +172,9 @@ class _NodePainter extends CustomPainter {
       }
       return;
     }
+    final accent = LevelThemePalette.of(theme).nodeFill;
     final fill = switch (state) {
-      LevelNodeState.done => ZipColors.sky,
+      LevelNodeState.done => accent,
       LevelNodeState.current => ZipColors.onInk,
       LevelNodeState.locked => ZipColors.paper,
     };
@@ -184,9 +185,7 @@ class _NodePainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = state == LevelNodeState.current ? 3 : 1.5
-        ..color = state == LevelNodeState.locked
-            ? ZipColors.outline
-            : ZipColors.sky,
+        ..color = state == LevelNodeState.locked ? ZipColors.outline : accent,
     );
   }
 
@@ -226,7 +225,7 @@ class _StarMarksPainter extends CustomPainter {
           paint,
         );
       } else {
-        paint.color = ZipColors.sky;
+        paint.color = LevelThemePalette.of(theme).nodeFill;
         canvas.drawCircle(Offset(cx, 4), 2.6, paint);
       }
     }
