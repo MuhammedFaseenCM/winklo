@@ -532,6 +532,7 @@ final Map<String, String Function(AppText)> _members = {
   'levelGoalEarned': (t) => t.levelGoalEarned('No hints'),
   'levelGoalMissed': (t) => t.levelGoalMissed('No hints'),
   'levelsSoon': (t) => t.levelsSoon,
+  'levelsSudokuSoon': (t) => t.levelsSudokuSoon,
   'levelsNeedConnection': (t) => t.levelsNeedConnection,
   'levelsComingSoon': (t) => t.levelsComingSoon,
   'levelWorldTitle': (t) => t.levelWorldTitle(2, 'Metro'),
