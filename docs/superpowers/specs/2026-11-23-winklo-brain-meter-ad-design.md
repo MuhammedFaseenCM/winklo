@@ -37,3 +37,16 @@ rules (crossing a wall; number out of order), and the solve is the validated pat
 ## Approaches considered
 - Phone-in-hand mockup for the live-action beat (chosen by user) vs user-filmed clip vs skipping it.
 - ~30 s (chosen) vs matching the reference's 48 s.
+
+## Revision 2026-11-23 (user feedback)
+- Every reel gets its own Zip puzzle: A keeps `shared/zip-puzzle.json`; B, C, D use new validated
+  puzzles `shared/zip-puzzle-b.json`, `-c.json`, `-d.json` (visibly different path shape, number
+  positions and walls; no two share a wall set or numbered-cell set).
+- Video D beats 2–4 become one attempt per meter level, and only Genius draws the correct path:
+  - Sleepy attempt: wrong early — crosses a wall → red, reset.
+  - Warming up attempt: further — reaches a number out of order → red, reset.
+  - Sharp attempt: almost — fills most of the board then dead-ends (no legal next cell, cells
+    left unvisited, highlighted) → red, reset.
+  - Genius attempt: the full correct solve → teal flash, "Genius!".
+  The meter jumps to each level *before* its attempt (the label "Sleepy…/Sharp…" visibly owns the
+  try); wrong tries never climb past their level. Total length stays ≤ 32 s.

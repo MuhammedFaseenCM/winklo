@@ -67,3 +67,12 @@ Same steps in `marketing/videos/c-beat-my-time/`; reuses the shared Zip puzzle w
 - [ ] The two fail moves are generated from the puzzle data and proven illegal in build.mjs (fail #1: a step that crosses a listed wall; fail #2: reaching number k+1's… out of order — a path prefix that lands on a number before its predecessor); build throws if either becomes legal.
 - [ ] Beats and timings per spec; frame 0 = hook; last frame matches the hook so the reel loops.
 - [ ] `check --json` 0 errors; snapshot review P0s fixed; render `marketing/videos/out/winklo-d-brain-meter.mp4`; ffprobe + `audio --json` (−16..−14 LUFS, ≤ −1.5 dBTP); REVIEW.md with music credit; commit.
+
+### Task 6: Three new validated puzzles (B, C, D) — added 2026-11-23
+- [ ] Author `marketing/videos/shared/zip-puzzle-{b,c,d}.json` (same schema as zip-puzzle.json). Each passes `validate-zip.mjs`; add them to `shared/test/run.sh`. Add a test script `shared/test/distinct.mjs` that fails if any two of the four puzzles share an identical path, identical numbered-cell set, or identical wall set. Commit.
+
+### Task 7: Re-point B and C to their puzzles
+- [ ] B uses zip-puzzle-b.json, C uses zip-puzzle-c.json (copy into each project's tools/). Rebuild, `check --json` 0 errors, re-render, ffprobe + audio, look at frames (C: clock still lands on 0:47 at path end). Commit.
+
+### Task 8: Video D on zip-puzzle-d.json with per-level wrong attempts
+- [ ] Per the spec's "Revision" section: Sleepy (wall) / Warming up (number order) / Sharp (dead end) wrong attempts generated from the puzzle and proven wrong in build.mjs (throw otherwise; the dead end must have no legal next cell and leave ≥ 4 cells unvisited); Genius draws the validated path. Rebuild, check, render, ffprobe + audio, loop SSIM, frames. Commit.
