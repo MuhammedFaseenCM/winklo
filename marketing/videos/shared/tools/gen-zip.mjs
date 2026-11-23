@@ -2,7 +2,7 @@
 // Deterministic generator for promo Zip puzzles B, C, D.
 // Usage: node tools/gen-zip.mjs   (writes zip-puzzle-{b,c,d}.json next to validate-zip.mjs)
 // Paths are fixed shapes; numbers and walls are picked by a seeded PRNG.
-// Seeds: B=11, C=7, D=3 (D also searched upward until the wrong-attempt checks pass).
+// Seeds: see the seed values printed on each run (D also searched upward until the wrong-attempt checks pass).
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,23 +16,33 @@ function rng(seed) { // mulberry32
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
-// B: long vertical sweeps (column snake), starting bottom-left.
-function pathB() {
-  const p = [];
-  for (let c = 0; c < N; c++) for (let i = 0; i < N; i++) p.push([c % 2 === 0 ? N - 1 - i : i, c]);
-  return p;
+// B and C: twisty Hamiltonian paths found by seeded "backbite" moves starting from a snake,
+// accepted only when turns >= 28, no straight run > 4 cells, and the flow is clearly
+// vertical (B) or horizontal (C). The seed is searched upward from the base seed.
+function shapeStats(p) {
+  const d = p.slice(1).map((c, i) => [c[0] - p[i][0], c[1] - p[i][1]]);
+  let turns = 0, run = 2, maxRun = 2, vert = 0;
+  d.forEach((x, i) => { if (x[1] === 0) vert++; if (!i) return;
+    if (x[0] !== d[i - 1][0] || x[1] !== d[i - 1][1]) { turns++; run = 2; } else maxRun = Math.max(maxRun, ++run); });
+  return { turns, maxRun, vert };
 }
-// C: clockwise spiral from top-right corner inward.
-function pathC() {
-  const p = []; let [t, b, l, r] = [0, N - 1, 0, N - 1];
-  while (t <= b && l <= r) {
-    for (let c = r; c >= l; c--) p.push([t, c]); t++;       // west along top
-    for (let q = t; q <= b; q++) p.push([q, l]); l++;       // south along left
-    if (t <= b) { for (let c = l; c <= r; c++) p.push([b, c]); b--; }
-    if (l <= r) { for (let q = b; q >= t; q--) p.push([q, r]); r--; }
+function twisty(vertical, baseSeed) {
+  for (let seed = baseSeed; ; seed++) {
+    const rand = rng(seed);
+    let p = [];
+    for (let a = 0; a < N; a++) for (let b = 0; b < N; b++) { const x = a % 2 ? N - 1 - b : b; p.push(vertical ? [x, a] : [a, x]); }
+    for (let it = 0; it < 4000; it++) {
+      if (rand() < 0.5) p.reverse();
+      const t = p[63], j = p.findIndex((c) => Math.abs(c[0] - t[0]) + Math.abs(c[1] - t[1]) === 1 && c !== p[62]);
+      const nb = []; p.forEach((c, i) => { if (i < 62 && Math.abs(c[0] - t[0]) + Math.abs(c[1] - t[1]) === 1) nb.push(i); });
+      if (!nb.length) continue; const k = nb[Math.floor(rand() * nb.length)];
+      p = p.slice(0, k + 1).concat(p.slice(k + 1).reverse());
+    }
+    const s = shapeStats(p);
+    if (s.turns >= 28 && s.maxRun <= 4 && (vertical ? s.vert >= 38 : s.vert <= 25)) { console.log(`${vertical ? 'B' : 'C'} path seed: ${seed}`); return { p, seed }; }
   }
-  return p;
 }
+
 // D: blocky zig-zags: 2x2 blocks visited in a snake over the 4x4 block grid;
 // inside each block the 4 cells go round in a U/loop, chosen by backtracking so the path stays connected.
 function pathD() {
@@ -100,7 +110,8 @@ function okD(p) {
   return p.numbers.some((x, k) => k < 6 && pos[k + 1] >= 20 && pos[k + 1] <= 35 && md(p.numbers[k + 1], p.numbers[k + 2]) <= 4);
 }
 
-const out = { b: decorate(pathB(), 11), c: decorate(pathC(), 7) };
+const tb = twisty(true, 1), tc = twisty(false, 1);
+const out = { b: decorate(tb.p, 11), c: decorate(tc.p, 7) };
 let s = 3, d;
 for (;; s++) { d = decorate(pathD(), s, { earlyWall: true }); if (okD(d)) break; }
 out.d = d; console.log(`D seed used: ${s}`);
