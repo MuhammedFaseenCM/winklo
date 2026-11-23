@@ -17,45 +17,78 @@ void paintThemeBackdrop(
   required bool open,
   int seed = 0,
 }) {
+  final palette = LevelThemePalette.of(theme);
   if (!open) {
-    _unprinted(canvas, r);
+    // A locked world: its own motif, faint on the app's ground, so it reads
+    // as a preview rather than the world itself. Themes without one show
+    // the transit-line outlines.
+    if (!_hasMotif(theme)) {
+      _unprinted(canvas, r);
+      return;
+    }
+    canvas.drawRect(r, Paint()..color = ZipColors.ink);
+    _motif(canvas, r, theme, _faded(palette.motif), seed, faded: true);
     return;
   }
-  final palette = LevelThemePalette.of(theme);
   switch (theme) {
     case 'ink':
       _ink(canvas, r);
     case 'metro':
       _metro(canvas, r);
-    case 'embroidery':
-      _ground(canvas, r, palette);
-      _embroidery(canvas, r, palette.motif);
-    case 'neon':
-      _ground(canvas, r, palette);
-      _neon(canvas, r);
-    case 'sparkler':
-      _ground(canvas, r, palette);
-      _sparkler(canvas, r, palette.motif, seed);
-    case 'animals':
-      _ground(canvas, r, palette);
-      _pawPrints(canvas, r, palette.motif, seed);
-    case 'food':
-      _ground(canvas, r, palette);
-      _gingham(canvas, r, palette.motif);
-    case 'sports':
-      _ground(canvas, r, palette);
-      _pitch(canvas, r, palette.motif);
-    case 'nature':
-      _ground(canvas, r, palette);
-      _contours(canvas, r, palette.motif, seed);
-    case 'home':
-      _ground(canvas, r, palette);
-      _wallpaper(canvas, r, palette.motif);
-    case 'body':
-      _ground(canvas, r, palette);
-      _cells(canvas, r, palette.motif, seed);
     default:
-      canvas.drawRect(r, Paint()..color = ZipColors.ink);
+      if (!_hasMotif(theme)) {
+        canvas.drawRect(r, Paint()..color = ZipColors.ink);
+        return;
+      }
+      _ground(canvas, r, palette);
+      _motif(canvas, r, theme, palette.motif, seed);
+  }
+}
+
+const _motifThemes = {
+  'embroidery',
+  'neon',
+  'sparkler',
+  'animals',
+  'food',
+  'sports',
+  'nature',
+  'home',
+  'body',
+};
+
+bool _hasMotif(String theme) => _motifThemes.contains(theme);
+
+/// A locked world's motif: about a third as strong as the open one.
+Color _faded(Color motif) => motif.withValues(alpha: motif.a * 0.3);
+
+void _motif(
+  Canvas canvas,
+  Rect r,
+  String theme,
+  Color motif,
+  int seed, {
+  bool faded = false,
+}) {
+  switch (theme) {
+    case 'embroidery':
+      _embroidery(canvas, r, motif);
+    case 'neon':
+      _neon(canvas, r, faded: faded);
+    case 'sparkler':
+      _sparkler(canvas, r, motif, seed);
+    case 'animals':
+      _pawPrints(canvas, r, motif, seed);
+    case 'food':
+      _gingham(canvas, r, motif);
+    case 'sports':
+      _pitch(canvas, r, motif);
+    case 'nature':
+      _contours(canvas, r, motif, seed);
+    case 'home':
+      _wallpaper(canvas, r, motif, withFloor: !faded);
+    case 'body':
+      _cells(canvas, r, motif, seed);
   }
 }
 
@@ -189,7 +222,8 @@ void _embroidery(Canvas canvas, Rect r, Color motif) {
 }
 
 /// Neon: three glowing tubes bending across the band.
-void _neon(Canvas canvas, Rect r) {
+void _neon(Canvas canvas, Rect r, {bool faded = false}) {
+  final strength = faded ? 0.45 : 1.0;
   const tubes = [Color(0xFFE879F9), Color(0xFF22D3EE), Color(0xFFFB7185)];
   final w = r.width;
   for (var k = 0; k < tubes.length; k++) {
@@ -211,10 +245,13 @@ void _neon(Canvas canvas, Rect r) {
     }
     canvas.drawPath(
       path,
-      _stroke(tubes[k].withValues(alpha: 0.28), 9)
+      _stroke(tubes[k].withValues(alpha: 0.28 * strength), 9)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
     );
-    canvas.drawPath(path, _stroke(tubes[k].withValues(alpha: 0.45), 2));
+    canvas.drawPath(
+      path,
+      _stroke(tubes[k].withValues(alpha: 0.45 * strength), 2),
+    );
   }
 }
 
@@ -354,7 +391,7 @@ void _contours(Canvas canvas, Rect r, Color motif, int seed) {
 }
 
 /// Home: a diamond wallpaper lattice over wood-plank flooring at the bottom.
-void _wallpaper(Canvas canvas, Rect r, Color motif) {
+void _wallpaper(Canvas canvas, Rect r, Color motif, {bool withFloor = true}) {
   final paint = _stroke(motif, 1.1);
   const step = 46.0;
   final h = r.height;
@@ -370,6 +407,10 @@ void _wallpaper(Canvas canvas, Rect r, Color motif) {
     for (var x = r.left; x < r.right; x += step) {
       canvas.drawCircle(Offset(x + step / 2, y - step / 2), 1.8, dot);
     }
+  }
+  if (!withFloor) {
+    canvas.restore();
+    return;
   }
   // Three rows of planks along the band's bottom edge.
   const plank = 22.0;

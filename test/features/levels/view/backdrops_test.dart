@@ -50,6 +50,18 @@ int variedRows(Uint8List rgba) {
   return varied;
 }
 
+/// The colour seen most often over a sample grid.
+int mostCommon(Uint8List rgba) {
+  final counts = <int, int>{};
+  for (var y = 0; y < 900; y += 5) {
+    for (var x = 0; x < 360; x += 5) {
+      final c = pixel(rgba, 360, x, y).toARGB32();
+      counts[c] = (counts[c] ?? 0) + 1;
+    }
+  }
+  return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+}
+
 const newThemes = [
   'embroidery',
   'neon',
@@ -109,6 +121,39 @@ void main() {
       expect(variedRows(await render('mystery', open: true)), 0);
     });
   });
+
+  testWidgets('a locked themed world previews its own motif', (tester) async {
+    await tester.runAsync(() async {
+      final unprinted = await render('ink', open: false);
+      for (final theme in newThemes) {
+        final locked = await render(theme, open: false);
+        // Still close to the app's ink ground, so it reads as not open
+        // yet (a faded motif over it, never the world's own colours)...
+        final ground = Color(mostCommon(locked));
+        for (final (got, want) in [
+          (ground.r, ZipColors.ink.r),
+          (ground.g, ZipColors.ink.g),
+          (ground.b, ZipColors.ink.b),
+        ]) {
+          expect((got - want).abs(), lessThan(0.1), reason: theme);
+        }
+        // ...but drawn in its own motif, not the metro outlines.
+        expect(locked, isNot(unprinted), reason: theme);
+        expect(variedRows(locked), greaterThan(10), reason: theme);
+      }
+    });
+  });
+
+  testWidgets(
+    'a locked ink, metro or unknown world keeps the unprinted outlines',
+    (tester) async {
+      await tester.runAsync(() async {
+        final unprinted = await render('mystery', open: false);
+        expect(await render('ink', open: false), unprinted);
+        expect(await render('metro', open: false), unprinted);
+      });
+    },
+  );
 
   testWidgets('painting is deterministic', (tester) async {
     await tester.runAsync(() async {
