@@ -4,10 +4,14 @@
 // Usage: node tools/build.mjs   (run from the project dir)
 //
 // The Zip puzzle is copied into this project (tools/zip-puzzle.json, from
-// ../shared/zip-puzzle.json, unchanged) so the project stands alone.
+// ../shared/zip-puzzle-d.json, unchanged) so the project stands alone. Every
+// Zip board in D (main board, phone mini-board, loop frame) draws this puzzle.
 // Board, ribbon, walls, type, CTA pill, music set-up and sfx levels are copied
-// from videos A-C (C is the closest relative). The two fail moves are computed
-// from the puzzle here and proven illegal; the build throws if either is legal.
+// from videos A-C (C is the closest relative). One attempt per meter level:
+// Sleepy crosses a wall, Warming up reaches a number out of order, Sharp draws a
+// long legal line into a dead end, Genius draws the validated path. The three
+// wrong tries are computed from the puzzle here and proven wrong; the build
+// throws if any claim fails.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -133,6 +137,52 @@ if (!fail2) throw new Error("fail #2: no out-of-order detour found");
   if (!(fail2.cells.length > fail1.cells.length)) throw new Error("fail #2 must get further than fail #1");
 }
 
+// Fail #3 ("Sharp"): follow the true path to step b, then leave it and keep drawing
+// legal moves (walls, no revisits, numbers in order) until the line is boxed in:
+// no neighbour left that is in the grid, unvisited and not walled. Deterministic DFS
+// (neighbours up, down, left, right), latest branch point first, 40..52 moves.
+const FAIL3_MOVES = [40, 52];
+const freeNbrs = (cur, seen) => nbrs(cur).filter((nb) => !seen.has(key(nb)) && !wallSet.has(edge(cur, nb)));
+let fail3 = null;
+for (let b = Math.min(P.length - 2, FAIL3_MOVES[1] - 1); b > fail2.at && !fail3; b--) {
+  const cells = P.slice(0, b + 1);
+  const seen = new Set(cells.map(key));
+  let budget = 200000;
+  const dfs = (last, first) => {
+    if (fail3 || budget-- <= 0) return;
+    const cur = cells[cells.length - 1];
+    const free = freeNbrs(cur, seen);
+    const moves = cells.length - 1;
+    if (free.length === 0) {
+      if (moves >= FAIL3_MOVES[0] && moves <= FAIL3_MOVES[1] && N * N - cells.length >= 4) fail3 = { at: b, cells: [...cells] };
+      return;
+    }
+    if (moves >= FAIL3_MOVES[1]) return;
+    for (const nb of free) {
+      if (first && key(nb) === key(P[b + 1])) continue; // must leave the true path here
+      const n = numAt.get(key(nb));
+      if (n !== undefined && n !== last + 1) continue;
+      seen.add(key(nb));
+      cells.push(nb);
+      dfs(n ?? last, false);
+      cells.pop();
+      seen.delete(key(nb));
+    }
+  };
+  dfs(lastNumIn(cells), true);
+}
+if (!fail3) throw new Error("fail #3: no dead-end prefix found");
+{
+  const c = fail3.cells;
+  if (firstViolation(c) !== null) throw new Error("fail #3 is not a legal line");
+  const seen = new Set(c.map(key));
+  if (freeNbrs(c[c.length - 1], seen).length !== 0) throw new Error("fail #3 has a legal next cell");
+  fail3.unvisited = [];
+  for (let r = 0; r < N; r++) for (let q = 0; q < N; q++) if (!seen.has(key([r, q]))) fail3.unvisited.push(key([r, q]));
+  if (fail3.unvisited.length < 4) throw new Error("fail #3 leaves fewer than 4 cells");
+  if (!(c.length > fail2.cells.length)) throw new Error("fail #3 must get further than fail #2");
+}
+
 // =====================================================================
 // Zip board (copied from videos A-C: lib/features/zip/game/zip_game.dart look)
 // =====================================================================
@@ -155,7 +205,7 @@ const colorAt = (i) => {
 };
 
 // groups: [{ name, cells }] - each is its own set of ribbon segments.
-function zipSvg(prefix, groups, { size = BOARD, x, y } = {}) {
+function zipSvg(prefix, groups, { size = BOARD, x, y, dead = false } = {}) {
   const cells = [];
   for (let r = 0; r < N; r++)
     for (let c = 0; c < N; c++)
@@ -204,7 +254,8 @@ function zipSvg(prefix, groups, { size = BOARD, x, y } = {}) {
           ${grads.join("\n          ")}
         </defs>
         <rect width="${BOARD}" height="${BOARD}" rx="22" fill="${C.wall}" stroke="${C.outline}" stroke-width="2"/>
-        <g>${cells.join("")}</g>
+        <g>${cells.join("")}</g>${dead ? `
+        <g id="${prefix}-dead">${fail3.unvisited.map((k) => { const [r, c] = k.split(",").map(Number); return `<rect data-dcell="${k}" x="${c * CELL + 6}" y="${r * CELL + 6}" width="${CELL - 12}" height="${CELL - 12}" rx="11" fill="${C.red}" fill-opacity="0.16" stroke="${C.red}" stroke-width="6" opacity="0"/>`; }).join("")}</g>` : ""}
         ${segGroups.join("\n        ")}
         <g id="${prefix}-tip" opacity="0">
           <circle id="${prefix}-tipglow" cx="${s[0]}" cy="${s[1]}" r="38" fill="${C.ember}" opacity="0.55" filter="url(#${prefix}-glow)"/>
@@ -298,45 +349,62 @@ ${script}
 }
 
 // Scene slots (absolute seconds)
+const BRAIN_DUR = 20.6;
 const T = {
-  brain: [0, 19.0],
-  install: [19.0, 4.4],
-  phone: [23.4, 6.6],
+  brain: [0, BRAIN_DUR],
+  install: [BRAIN_DUR, 4.4],
+  phone: [fx(BRAIN_DUR + 4.4), 6.6],
 };
-const TOTAL = fx(T.phone[0] + T.phone[1]); // 30.0
+const TOTAL = fx(T.phone[0] + T.phone[1]); // 31.6
+if (TOTAL > 32) throw new Error(`reel too long: ${TOTAL}`);
 const sfx = []; // { id, src, t, v, d }
 
 // =====================================================================
-// brain (0–19 s): hook, fail #1, fail #2, solve -> Genius
+// brain (0–20.6 s): hook, then one attempt per meter level:
+// Sleepy (wall), Warming up (order), Sharp (dead end), Genius (solve)
 // =====================================================================
 // A hit lands 1/3 frame before a frame boundary, so the first frame at or after
 // it shows the hit whatever the float rounding.
 const snap = (t) => (Math.ceil(t * FPS) - 1 / 3) / FPS;
 const HOOK_TAP = 0.5; // hand presses "1"
-// Fail #1
-const A0 = 1.15;
-const dA = 0.14;
+const JUMP = 0.3; // the meter jumps to the attempt's level this long before the hand draws
+const RET = 0.5; // ribbon wipe back to "1"
+const HOLD = 0.55; // red holds before the wipe
+// Sleepy: a few true steps, then across a wall
+const JA = 0.8;
+const A0 = JA + 0.25;
+const dA = 0.13;
 const nA = fail1.cells.length - 1; // legal steps + 1 illegal
 const A_LEGAL_END = A0 + (nA - 1) * dA;
-const A1 = A_LEGAL_END + 0.3; // a beat of hesitation before the bad step
-const HIT1 = snap(A1 + 0.26);
-const R1 = HIT1 + 0.62;
-const RET = 0.6;
-// Fail #2
-const B0 = R1 + RET + 0.55;
-const dB = 0.115;
+const A1 = A_LEGAL_END + 0.22; // a beat of hesitation before the bad step
+const HIT1 = snap(A1 + 0.22);
+const R1 = HIT1 + HOLD;
+// Warming up: further, then onto number k+2 before k+1
+const JB = R1 + RET + 0.06;
+const B0 = JB + JUMP;
+const dB = 0.11;
 const nB = fail2.cells.length - 1;
 const nBLegal = fail2.at; // steps along the true path
 const B_LEGAL_END = B0 + nBLegal * dB;
-const HIT2 = snap(B_LEGAL_END + (nB - nBLegal) * 0.16);
-const R2 = HIT2 + 0.62;
-// Solve
-const S0 = R2 + RET + 0.5;
+const HIT2 = snap(B_LEGAL_END + (nB - nBLegal) * 0.15);
+const R2 = HIT2 + HOLD;
+// Sharp: a long legal line into a dead end; the hand searches, then the stranded cells pulse
+const JC = R2 + RET + 0.07;
+const C0 = JC + JUMP;
+const dC = 0.066;
+const nC = fail3.cells.length - 1;
+const C_DEV = C0 + fail3.at * dC; // the line leaves the true path here
+const C_END = C_DEV + (nC - fail3.at) * 0.14; // the wrong turn is drawn slower, so it reads
+const HITC = snap(C_END + 0.4);
+const RC = HITC + 0.7;
+// Genius: the validated path
+const JS = RC + RET + 0.08;
+const S0 = JS + JUMP;
 const nS = P.length - 1;
-const HIT3 = snap(S0 + 5.6);
+const HIT3 = snap(S0 + 5.5);
 const GENIUS_POP = HIT3 + 0.12;
 const OUT = T.brain[1] - 0.45; // fall away
-if (HIT3 > 17.6 || OUT - GENIUS_POP < 1.0) throw new Error(`brain timing off: HIT3=${HIT3}`);
+if (OUT - GENIUS_POP < 1.0) throw new Error(`brain timing off: HIT3=${HIT3}`);
 
 const easeS = (x) => {
   const u = Math.max(0, Math.min(1, x));
@@ -352,6 +420,7 @@ const invEase = (y) => {
   }
   return (lo + hi) / 2;
 };
+// level: the meter label that owns the try; on: [jump, wipe end] it is highlighted
 const GROUPS = {
   A: {
     cells: fail1.cells,
@@ -361,9 +430,13 @@ const GROUPS = {
       { t0: R1, t1: R1 + RET, p0: nA, p1: 0, e: "inout" },
     ],
     hit: HIT1,
+    wipe: R1,
     red: nA - 1,
     wall: fail1.wall,
     redCell: null,
+    dead: false,
+    level: 0,
+    on: [JA, R1 + RET],
   },
   B: {
     cells: fail2.cells,
@@ -373,20 +446,47 @@ const GROUPS = {
       { t0: R2, t1: R2 + RET, p0: nB, p1: 0, e: "inout" },
     ],
     hit: HIT2,
+    wipe: R2,
     red: nB - 1,
     wall: null,
     redCell: key(fail2.cells[nB]),
+    dead: false,
+    level: 1,
+    on: [JB, R2 + RET],
+  },
+  C: {
+    cells: fail3.cells,
+    kf: [
+      { t0: C0, t1: C_DEV, p0: 0, p1: fail3.at, e: "lin" },
+      { t0: C_DEV, t1: C_END, p0: fail3.at, p1: nC, e: "lin" },
+      { t0: RC, t1: RC + RET, p0: nC, p1: 0, e: "inout" },
+    ],
+    hit: HITC,
+    wipe: RC,
+    search: [C_END, HITC],
+    red: null,
+    wall: null,
+    redCell: null,
+    dead: true,
+    level: 2,
+    on: [JC, RC + RET],
   },
   S: {
     cells: P,
     kf: [{ t0: S0, t1: HIT3, p0: 0, p1: nS, e: "solve" }],
     hit: HIT3,
+    wipe: null,
     red: null,
     wall: null,
     redCell: null,
+    dead: false,
+    level: 3,
+    on: [JS, 99],
   },
 };
-// When the forward draw reaches path index idx (for meter steps and taps).
+const ORDER = ["A", "B", "C", "S"];
+const SWITCH = [JB, JC, JS];
+// When the forward draw reaches path index idx (for taps).
 function reachTime(g, idx) {
   for (const k of g.kf) {
     if (k.p1 <= k.p0 || idx < k.p0 || idx > k.p1) continue;
@@ -395,28 +495,29 @@ function reachTime(g, idx) {
   }
   return null;
 }
-// Meter: 0..1 across the track; labels sit at the quarter centres.
-const M0 = 0.12;
-const M_LOW = 0.03;
-const M_TOP = 0.92;
-const meterKeys = [];
-for (const name of ["A", "B"]) {
-  const g = GROUPS[name];
-  g.cells.forEach((c, i) => {
-    const n = numAt.get(key(c));
-    if (n === 2 || n === 3) {
-      if (i <= g.red) meterKeys.push({ t: fx(reachTime(g, i)), v: n === 2 ? 0.28 : 0.4, d: 0.3, e: "back" });
-    }
-  });
-  meterKeys.push({ t: fx(g.hit + 0.15), v: M_LOW, d: 0.6, e: "inout" });
-}
-P.forEach((c, i) => {
-  const n = numAt.get(key(c));
-  if (n && n >= 2) meterKeys.push({ t: fx(reachTime(GROUPS.S, i)), v: fx(M_LOW + ((n - 1) / 7) * (M_TOP - M_LOW)), d: 0.3, e: "back" });
-});
-meterKeys.sort((a, b) => a.t - b.t);
+// Meter: 0..1 across the track; labels sit at the quarter centres (0.125, 0.375, ...).
+// It jumps to each level before that level's try, never past it on a wrong try,
+// and dips a little after each failure.
+const M0 = 0.03;
+const LEVEL_V = [0.125, 0.375, 0.625, 0.875];
+const DIP = 0.04;
+const meterKeys = [
+  { t: fx(JA), v: LEVEL_V[0], d: 0.3, e: "back" },
+  { t: fx(HIT1 + 0.15), v: LEVEL_V[0] - DIP, d: 0.4, e: "inout" },
+  { t: fx(JB), v: LEVEL_V[1], d: 0.3, e: "back" },
+  { t: fx(HIT2 + 0.15), v: LEVEL_V[1] - DIP, d: 0.4, e: "inout" },
+  { t: fx(JC), v: LEVEL_V[2], d: 0.3, e: "back" },
+  { t: fx(HITC + 0.15), v: LEVEL_V[2] - DIP, d: 0.4, e: "inout" },
+  { t: fx(JS), v: LEVEL_V[3], d: 0.3, e: "back" },
+  { t: fx(HIT3), v: 0.97, d: 0.3, e: "back" },
+];
 for (let i = 1; i < meterKeys.length; i++)
   if (meterKeys[i].t < meterKeys[i - 1].t + meterKeys[i - 1].d - 1e-6) throw new Error("meter keys overlap");
+// A wrong try never climbs past its own level (the quarter [k/4, (k+1)/4)).
+for (const name of ["A", "B", "C"]) {
+  const k = GROUPS[name].level;
+  for (const m of meterKeys) if (m.t >= GROUPS[name].on[0] - 1e-6 && m.t < GROUPS[name].on[1] && !(m.v >= k / 4 && m.v < (k + 1) / 4)) throw new Error(`meter leaves level ${k} during try ${name}`);
+}
 
 // Meter geometry
 const TRACK_X = 110;
@@ -454,7 +555,7 @@ const brainHtml = (p, { genius = true } = {}) => `<div id="${p}-head"${genius ? 
         <div id="${p}-brain">${brainSvg(p)}</div>
       </div>
       <div id="${p}-stage" data-layout-allow-overflow>
-        <div id="${p}-board">${zipSvg(p, Object.entries(GROUPS).map(([name, g]) => ({ name, cells: g.cells })))}</div>
+        <div id="${p}-board">${zipSvg(p, Object.entries(GROUPS).map(([name, g]) => ({ name, cells: g.cells })), { dead: true })}</div>
         <div id="${p}-flash"></div>
         <div id="${p}-ring"></div>
         <div id="${p}-hookring" class="${p}-cring"></div>
@@ -468,8 +569,8 @@ const brainRuntime = (p) => `
     const D = ${JSON.stringify({
       cell: CELL,
       groups: Object.fromEntries(Object.entries(GROUPS).map(([n, g]) => [n, { ...g, hit: fx(g.hit) }])),
-      switchB: fx(B0 - 0.2),
-      switchS: fx(S0 - 0.2),
+      order: ORDER,
+      switches: SWITCH.map(fx),
       hookTap: HOOK_TAP,
       m0: M0,
       meter: meterKeys,
@@ -478,7 +579,8 @@ const brainRuntime = (p) => `
       genius: fx(GENIUS_POP),
       out: fx(OUT),
       tip: HAND_TIP,
-      fails: [fx(HIT1), fx(HIT2)],
+      fails: [fx(HIT1), fx(HIT2), fx(HITC)],
+      shakes: [fx(HIT1), fx(HIT2)],
     })};
     const $ = (id) => document.getElementById("${p}-" + id);
     const STOPS = ${JSON.stringify(STOPS.map(hex))};
@@ -500,11 +602,12 @@ const brainRuntime = (p) => `
       return "rgb(" + a.map((v, j) => Math.round(v + (b[j] - v) * f)).join(",") + ")";
     }
     const G = {};
-    for (const name of ["A", "B", "S"]) {
+    for (const name of D.order) {
       G[name] = Object.assign({}, D.groups[name], { segs: Array.from(document.querySelectorAll("#${p}-rib-" + name + " [data-seg]")) });
     }
     const nums = Array.from(document.querySelectorAll("#${p}-nums [data-num]"));
     const walls = Array.from(document.querySelectorAll("#${p}-walls [data-wall]"));
+    const deadCells = Array.from(document.querySelectorAll("#${p}-dead [data-dcell]"));
     const labs = [0, 1, 2, 3].map((k) => $("lab" + k));
     const tip = $("tip"), tipGlow = $("tipglow"), tipDot = $("tipdot");
     const hand = $("hand"), stage = $("stage"), board = $("board");
@@ -524,7 +627,7 @@ const brainRuntime = (p) => `
     function pressAt(t) {
       let v = 0;
       v = Math.max(v, smooth((t - (D.hookTap - 0.1)) / 0.1) * (1 - smooth((t - (D.hookTap + 0.12)) / 0.15)));
-      for (const name of ["A", "B", "S"]) {
+      for (const name of D.order) {
         const kf = G[name].kf;
         for (const k of kf) v = Math.max(v, smooth((t - (k.t0 - 0.12)) / 0.12) * (1 - smooth((t - k.t1 - 0.05) / 0.15)));
       }
@@ -540,11 +643,13 @@ const brainRuntime = (p) => `
       return v;
     }
     function render(t) {
-      const name = t < D.switchB ? "A" : t < D.switchS ? "B" : "S";
+      let gi = 0;
+      while (gi < D.switches.length && t >= D.switches[gi]) gi++;
+      const name = D.order[gi];
       const g = G[name];
       const p = pAt(g, t);
       const hit = t >= g.hit;
-      for (const other of ["A", "B", "S"]) {
+      for (const other of D.order) {
         const og = G[other];
         for (let i = 0; i < og.segs.length; i++) {
           const f = other === name ? clamp(p - i) : 0;
@@ -559,7 +664,8 @@ const brainRuntime = (p) => `
       const f = p - i;
       const a = centre(g.cells[i]), b = centre(g.cells[Math.min(i + 1, g.cells.length - 1)]);
       const x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f;
-      const red = g.red !== null && hit && p > g.red;
+      const deadOn = g.dead && hit ? out4((t - g.hit) / 0.12) * (1 - smooth((t - g.wipe) / 0.2)) : 0;
+      const red = (g.red !== null && hit && p > g.red) || deadOn > 0.5;
       const col = red ? RED : colorAt(p);
       for (const el of [tipGlow, tipDot]) { el.setAttribute("cx", x); el.setAttribute("cy", y); el.setAttribute("fill", col); }
       tip.setAttribute("opacity", p > 0.05 ? "1" : String(clamp(p / 0.05)));
@@ -582,6 +688,9 @@ const brainRuntime = (p) => `
         redRing.style.opacity = String(out4(h / 0.12) * clamp(p - g.red));
         redRing.style.transform = "translate(" + (c[0] - 46) + "px," + (c[1] - 46) + "px) scale(" + (1 + 0.5 * Math.exp(-10 * h)) + ")";
       } else redRing.style.opacity = "0";
+      // dead end: every stranded cell pulses a red outline until the wipe
+      const pulse = deadOn * (0.7 + 0.3 * Math.cos(2 * Math.PI * 2.5 * Math.max(0, t - g.hit)));
+      for (const d of deadCells) d.setAttribute("opacity", String(pulse));
       // hook ring on "1" as the hand presses it
       const c1 = centre(g.cells[0]);
       const hr = t - D.hookTap;
@@ -589,14 +698,17 @@ const brainRuntime = (p) => `
       hookRing.style.transform = "translate(" + (c1[0] - 46) + "px," + (c1[1] - 46) + "px) scale(" + (hr >= 0 ? 1 + 0.8 * Math.exp(-9 * hr) : 1.8) + ")";
       // board shake on each fail: ~8 px, damped
       let sx = 0;
-      for (const fh of D.fails) { const h = t - fh; if (h >= 0 && h < 0.8) sx += 8 * Math.exp(-6 * h) * Math.sin(2 * Math.PI * 8 * h); }
+      for (const fh of D.shakes) { const h = t - fh; if (h >= 0 && h < 0.8) sx += 8 * Math.exp(-6 * h) * Math.sin(2 * Math.PI * 8 * h); }
       // hand rides the tip; lifts and grows a touch when not pressing
       const lift = 1 - pressAt(t);
       const away = smooth((t - (D.hit3 + 0.2)) / 0.55);
       // on a fail the hand recoils off the bad move so the red reads, then rides the wipe back
       let rec = 0;
-      if (g.red !== null && t >= g.hit) rec = out4((t - g.hit) / 0.18) * (1 - smooth((t - g.kf[2].t0) / 0.25));
-      const hx = x + 10 * lift + 260 * away + 70 * rec, hy = y + 16 * lift + 420 * away + 120 * rec;
+      if (g.wipe !== null && t >= g.hit) rec = out4((t - g.hit) / 0.18) * (1 - smooth((t - g.wipe) / 0.25));
+      // at the dead end the hand hovers, looking for a way on
+      let sw = 0;
+      if (g.search && t >= g.search[0] && t < g.search[1] + 0.1) { const h = t - g.search[0]; sw = 14 * Math.sin(2 * Math.PI * 2.6 * h) * smooth(h / 0.08); }
+      const hx = x + 10 * lift + 260 * away + 70 * rec + sw, hy = y + 16 * lift + 420 * away + 120 * rec;
       hand.style.transform = "translate(" + (hx - D.tip[0]) + "px," + (hy - D.tip[1]) + "px) scale(" + (1 + 0.07 * lift) + ")";
       hand.style.opacity = String(1 - away);
       // solve: teal flash, ring, bump; Genius pop
@@ -626,8 +738,15 @@ const brainRuntime = (p) => `
       brain.style.transform = "translateX(" + (m * D.trackW) + "px) rotate(" + wob + "deg) scale(" + geniusBob + ")";
       smile.setAttribute("opacity", String(1 - sad));
       frown.setAttribute("opacity", String(sad));
+      // the label of the level that owns the try is lit while it draws: ember, red on a fail, teal on Genius
       const act = Math.min(3, Math.floor(m * 4));
-      labs.forEach((l, k) => { l.style.color = k === act ? (k === 3 && h3 >= 0 ? TEAL : WHITE) : SOFT; });
+      const own = t >= g.on[0] && t < g.on[1];
+      labs.forEach((l, k) => {
+        const mine = own && k === g.level;
+        l.style.color = mine ? (k === 3 && h3 >= 0 ? TEAL : g.wipe !== null && hit ? RED : EMBER) : k === act ? (k === 3 && h3 >= 0 ? TEAL : WHITE) : SOFT;
+        const on = own && k === g.level ? smooth((t - g.on[0]) / 0.2) * (1 - smooth((t - g.on[1] + 0.2) / 0.2)) : 0;
+        l.style.transform = "translateY(" + (-6 * on) + "px) scale(" + (1 + 0.12 * on) + ")";
+      });
     }`;
 
 const brain = scene(
@@ -642,11 +761,11 @@ ${brainRuntime("brain")}
     tl.fromTo(state, { t: 0 }, { t: ${T.brain[1]}, duration: ${T.brain[1]}, ease: "none", onUpdate: () => render(state.t) }, 0);`,
 );
 // sfx: hook tap, path taps every 4 steps, rejects, success, Genius pop
-sfx.push({ id: "hook", src: "tap", t: fx(HOOK_TAP + 0.033), v: 0.7 });
+sfx.push({ id: "hook", src: "tap", t: fx(HOOK_TAP + 0.033), v: 0.5 });
 {
   const vols = [0.5, 0.7, 0.6, 0.75];
   let n = 0;
-  for (const [name, last] of [["A", nA - 1], ["B", nB - 1], ["S", nS - 1]]) {
+  for (const [name, last] of [["A", nA - 1], ["B", nB - 1], ["C", nC], ["S", nS - 1]]) {
     for (let k = 4; k <= last; k += 4)
       sfx.push({ id: `tap-${name}${k}`, src: "tap", t: fx(reachTime(GROUPS[name], k) + 0.033), v: vols[n++ % vols.length] });
   }
@@ -654,12 +773,13 @@ sfx.push({ id: "hook", src: "tap", t: fx(HOOK_TAP + 0.033), v: 0.7 });
 // reject peaks 0.017 s in; land its peak one frame after the red frame
 sfx.push({ id: "reject-1", src: "reject", t: fx(HIT1 + 0.033 - 0.017), v: 1, d: 0.53 });
 sfx.push({ id: "reject-2", src: "reject", t: fx(HIT2 + 0.033 - 0.017), v: 1, d: 0.53 });
-sfx.push({ id: "success", src: "success", t: fx(HIT3 + 0.033), v: 1, d: 0.54 });
+sfx.push({ id: "reject-3", src: "reject", t: fx(HITC + 0.033 - 0.017), v: 1, d: 0.53 });
+sfx.push({ id: "success", src: "success", t: fx(HIT3 + 0.033), v: 0.72, d: 0.54 });
 // "clear" peaks at 0.166 s: land on the Genius pop's first overshoot (~0.12 s)
-sfx.push({ id: "genius-pop", src: "clear", t: fx(GENIUS_POP + 0.12 + 0.033 - 0.166), v: 0.75, d: 0.49 });
+sfx.push({ id: "genius-pop", src: "clear", t: fx(GENIUS_POP + 0.12 + 0.033 - 0.166), v: 0.6, d: 0.49 });
 
 // =====================================================================
-// install (19.0–23.4 s): app icon, search bar types "Winklo", Play badge
+// install (20.6–25.0 s): app icon, search bar types "Winklo", Play badge
 // =====================================================================
 const BADGE_W = 560; // >= 380; 646x250 source, uniform scale only (height auto)
 // Stack (icon tile 336, bar 140, badge 217, pill 96 + gaps 70/80/70 = 1009 px),
@@ -743,7 +863,7 @@ sfx.push({ id: "badge-pop", src: "clear", t: fx(T.install[0] + BADGE_T + 0.15 - 
 sfx.push({ id: "badge-tap", src: "tap", t: fx(T.install[0] + BADGE_T + 0.62), v: 0.8 });
 
 // =====================================================================
-// phone (23.4–30.0 s): a phone in a hand playing Zip; "Free daily puzzles";
+// phone (25.0–31.6 s): a phone in a hand playing Zip; "Free daily puzzles";
 // the last 0.7 s cross-fades into the hook frame so the reel loops.
 // =====================================================================
 const PH = { x: 210, y: 300, w: 660, h: 1320 };
@@ -864,7 +984,7 @@ sfx.push({ id: "phone-solve", src: "success", t: fx(T.phone[0] + PH_HIT + 0.033)
 // =====================================================================
 // index
 // =====================================================================
-const MUSIC_VOL = 0.8;
+const MUSIC_VOL = 0.84;
 // Per-sound trim over the bed. Starts from C's levels; trimmed ~1.5 dB (and the bed
 // raised to 0.8) so the mix lands in -16..-14 LUFS with true peak <= -1.5 dBTP.
 const SFX_GAIN = { tap: 0.6, success: 0.55, clear: 0.6, reject: 0.42 };
@@ -916,5 +1036,6 @@ for (const [name, html] of Object.entries({ brain, install, phone }))
   fs.writeFileSync(path.join(root, `compositions/${name}.html`), html);
 console.log(`fail #1: ${fail1.at} true steps, then ${key(fail1.cells[fail1.cells.length - 2])} -> ${key(fail1.cells[fail1.cells.length - 1])} across wall ${fail1.wall}`);
 console.log(`fail #2: ${fail2.at} true steps, then ${fail2.cells.slice(fail2.at + 1).map(key).join(" -> ")} reaches ${fail2.reached} before ${fail2.skipped}`);
-console.log(`hits: ${fx(HIT1)} ${fx(HIT2)} ${fx(HIT3)} (frames ${Math.ceil(HIT1 * FPS)} ${Math.ceil(HIT2 * FPS)} ${Math.ceil(HIT3 * FPS)}); total ${TOTAL}`);
+console.log(`fail #3: ${fail3.at} true steps, then ${fail3.cells.length - 1 - fail3.at} more legal moves to a dead end at ${key(fail3.cells[fail3.cells.length - 1])}; ${fail3.unvisited.length} cells left: ${fail3.unvisited.join(" ")}`);
+console.log(`jumps: ${[JA, JB, JC, JS].map(fx).join(" ")}; hits: ${[HIT1, HIT2, HITC, HIT3].map(fx).join(" ")} (frames ${[HIT1, HIT2, HITC, HIT3].map((h) => Math.ceil(h * FPS)).join(" ")}); total ${TOTAL}`);
 console.log(sfx.map((s) => `${s.id}@${s.t}`).join(" "));

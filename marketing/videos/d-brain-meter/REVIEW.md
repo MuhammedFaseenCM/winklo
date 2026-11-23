@@ -1,9 +1,12 @@
 # REVIEW: Video D "Brain meter"
 
-1080×1920, 30 fps, 30.0 s. Output: `../out/winklo-d-brain-meter.mp4` (6.3 MB).
+1080×1920, 30 fps, 31.6 s. Output: `../out/winklo-d-brain-meter.mp4` (7.1 MB).
+
+> Revision 2026-11-23 (task 8) supersedes the beat and fail descriptions below where they differ;
+> see "Revision 2026-11-23" at the end. Older sections are kept as the history of the reel.
 
 ## Creative calls
-- Beats:
+- Beats (original cut, 30.0 s):
   - brain scene 0–19 s: hook, fail #1, fail #2, solve, Genius
   - install 19.0–23.4 s
   - phone 23.4–30.0 s, with the loop cross-fade at 29.2–29.9 s
@@ -118,3 +121,53 @@ Google Play and the Google Play logo are trademarks of Google LLC. The badge is 
   - `audio --json`: −15.9 LUFS, −2.1 dBTP.
   - First-vs-last-frame SSIM: 0.9965.
 - Weakest shot now: the install beat's hand tap is still staged, though it no longer hides anything.
+
+## Revision 2026-11-23 (task 8): puzzle D, one attempt per meter level
+User ask: a different Zip pattern, wrong tries first to make viewers curious, only "Genius" draws it right.
+
+- Puzzle: `tools/zip-puzzle.json` is now a copy of `../shared/zip-puzzle-d.json`, unchanged. Every Zip render in D uses it: the main board, the phone mini-board and the loop/hook frame (all built by `zipSvg` from the same file).
+- Beats (31.6 s):
+  - brain 0–20.6 s: hook, then Sleepy, Warming up, Sharp and Genius attempts, then "Genius!"
+  - install 20.6–25.0 s and phone 25.0–31.6 s. Both are unchanged; they only moved by +1.6 s. The badge is still never covered, and the lighter icon tile stays. The loop cross-fade runs at 30.8–31.5 s.
+- The meter starts near empty (0.03, the Sleepy quarter). It jumps to each level's centre (0.125, 0.375, 0.625, 0.875) 0.3 s before that level's attempt draws, with a back-ease. That label is lit while the try runs: ember, lifted 6 px and scaled 1.12. It turns red on a failure and teal on Genius. After each failure the meter dips 0.04 and stays inside its own quarter. The build throws if a meter key leaves the level's quarter during its try.
+- Attempts. All are computed from the puzzle in `tools/build.mjs`, and the build throws if any claim fails.
+  1. **Sleepy** (jump 0.80 s, red on frame 84, about 3.0 s in total). The hand draws 10 true steps, through "2", and then crosses wall 1: (1,5)→(1,6). `firstViolation` = wall on the last step. Red segment, red crossed wall and ring, 8 px damped shake, reject.ogg, brain frown and wobble, hand recoil, ribbon wipe.
+  2. **Warming up** (jump 3.90 s, red on frame 193, about 3.6 s). 16 true steps, then (2,5)→(2,4)→(2,3), which lands on "4" before "3". `firstViolation` = order on the last step, and the rest is legal. Same failure treatment, with "4" in red.
+  3. **Sharp** (jump 7.54 s, red on frame 355, about 5.5 s). The DFS leaves the true path at step 48, then makes 3 more legal moves, (7,6)→(7,7)→(6,7), into the bottom-right corner. That is 51 moves in all. The 48 true steps go at 66 ms a step, and the 3 wrong-turn steps go at 140 ms, so the mistake reads.
+     - The search is a deterministic DFS: neighbours in up, down, left, right order, walls respected, numbers in order, latest branch point first, 40–52 moves.
+     - Proofs: `firstViolation` = null; no neighbour of the end cell is in the grid, unvisited and not walled; 12 cells are left (the bottom two rows, cols 0–5, including "7" and "8", ≥ 4 required); and it gets further than fail 2.
+     - The hand hovers and searches for 0.4 s. Then the 12 stranded cells pulse a red outline, the tip goes red, reject plays, the brain frowns, and the ribbon wipes. There is no shake here: the treatment the controller set for this try is the pulse.
+  4. **Genius** (jump 13.10 s, solve 13.40→18.92 s, frame 568). The full validated 63-step path, then the meter tops out at 0.97, with a teal flash, ring, bump, success, and "Genius!" at 19.04 s (held about 1.1 s before the fall-away at 20.15 s).
+- Audio:
+  - taps every 4 steps on each attempt (2 + 4 + 12 + 15)
+  - three rejects
+  - success at 0.72 and the Genius pop at 0.6 (both were 1.0 / 0.75)
+  - hook tap 0.5 (was 0.7)
+  - music 0.84 (was 0.8), with the same 0.2 s fade in and 1.5 s fade out, on its own lane
+  - The credit is unchanged (see Credits).
+
+### Measured vs looked at (revision)
+- `check --json`: ok, **0 errors**. Warnings:
+  - 13 `line_unread`, the loop layer, as before.
+  - 8 `outside_safe_zone`: platform boxes stricter than the y 168–1330 band, as before.
+  - 2 `composition_file_too_large`: generated files.
+  - 1 `contrast_aa_failure`: "4" at 1.76 s while the moving hand passes over it (transient, 1 sample).
+  - 1 `text_occluded` (info): numbers under the "Genius!" pill, intended.
+- `snapshot --review`: I looked at the beat sheet, both seams and the phone sheet, plus extra snapshots at 1.1, 2.82, 3.3, 6.45, 6.9, 11.3, 11.7, 12.0, 13.0, 16.0, 19.2 and 31.55 s. There are no P0s.
+- ffprobe: 1080×1920, 30/1 fps, 31.600 s, 948 frames, with video and audio streams.
+- `audio --json`: the first mix measured −16.1 LUFS and −1.2 dBTP, which fails both limits. It was re-trimmed to **−15.8 LUFS integrated and −1.8 dBTP true peak**, with no clipping. The loudest point is the music at 0.60 s. The only "silence" reported is 31.28–31.6 s, the tail of the music's 1.5 s fade-out, just before the loop restarts.
+- Loop: the SSIM of the first frame against the last is **0.9966** (All).
+- Frames pulled from the MP4 into `review-frames/` (git-ignored) and looked at:
+  - f0: hook
+  - f84, f86, f90: Sleepy wall red
+  - f193, f195, f200: Warming up, "4" red
+  - f355, f358, f366: Sharp, the 12 dead cells red
+  - f480: mid-Genius
+  - f580: Genius!
+  - f690: install
+  - f870: phone solved
+  - f947: last frame, which matches the hook
+- **I measured the sound but never heard it.**
+
+### Weakest shot (revision)
+Sharp's dead end. The wrong turn, (7,6)→(7,7)→(6,7), is now drawn at 140 ms a step, but it comes after 3.2 s of fast drawing. On a phone, a viewer may not see *why* the line is stuck until the 12 red cells pulse. The install beat's staged badge tap is still the second weakest.
