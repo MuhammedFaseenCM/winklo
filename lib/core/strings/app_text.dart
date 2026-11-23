@@ -583,6 +583,7 @@ abstract interface class AppText {
   String levelGoalEarned(String goal);
   String levelGoalMissed(String goal);
   String get levelsSoon;
+  String get levelsSudokuSoon;
   String get levelsNeedConnection;
   String get levelsComingSoon;
   String levelWorldTitle(int order, String worldName);

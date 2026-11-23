@@ -666,6 +666,7 @@ abstract final class AppStrings {
   static String levelGoalEarned(String goal) => _t.levelGoalEarned(goal);
   static String levelGoalMissed(String goal) => _t.levelGoalMissed(goal);
   static String get levelsSoon => _t.levelsSoon;
+  static String get levelsSudokuSoon => _t.levelsSudokuSoon;
   static String get levelsNeedConnection => _t.levelsNeedConnection;
   static String get levelsComingSoon => _t.levelsComingSoon;
 

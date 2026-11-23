@@ -420,7 +420,7 @@ void main() {
       await tester.tap(find.text('Sudoku · Soon'));
       await tester.pumpAndSettle();
       expect(pref.writes, isEmpty);
-      await tester.tap(find.text(AppStrings.pathWordsTab));
+      await tester.tap(find.text(AppStrings.pathWordsTitle));
       await tester.pumpAndSettle();
       expect(
         find.text(AppStrings.levelWorldTitle(1, 'Animals')),
@@ -464,7 +464,7 @@ void main() {
       );
       await pump(tester, LevelCatalog([levelWorld(1, 3)]), pathWords: animals);
       expect(find.text('3 / 9'), findsOneWidget);
-      await tester.tap(find.text(AppStrings.pathWordsTab));
+      await tester.tap(find.text(AppStrings.pathWordsTitle));
       await tester.pumpAndSettle();
       expect(find.text('1 / 9'), findsOneWidget);
       await tester.tap(find.text(AppStrings.zipTitle));
@@ -503,7 +503,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsWidgets);
       expect(find.text('Play'), findsNothing);
-      await tester.tap(find.text(AppStrings.pathWordsTab));
+      await tester.tap(find.text(AppStrings.pathWordsTitle));
       await tester.pumpAndSettle();
       expect(find.text(AppStrings.levelWorldTitle(1, 'Animals')), findsWidgets);
       expect(find.text('Play'), findsNothing);
@@ -589,6 +589,112 @@ void main() {
       await pump(tester, LevelCatalog([levelWorld(1, 30)]), dock: true);
       final visible = (viewport(tester).top + dockTop(tester)) / 2;
       expect(circleOf(tester, 21).dy, closeTo(visible, 1));
+    });
+  });
+
+  group('the header and the switch', () {
+    final zip = LevelCatalog([levelWorld(1, 3)]);
+    final animals = LevelCatalog([pathWordsWorld(1, 3)]);
+    String sudoku() => '${AppStrings.sudokuTitle} · ${AppStrings.levelsSoon}';
+
+    testWidgets('the game chips read Zip and Path Words', (tester) async {
+      await pump(tester, zip, pathWords: animals);
+      expect(find.text(AppStrings.zipTitle), findsOneWidget);
+      expect(find.text(AppStrings.pathWordsTitle), findsOneWidget);
+    });
+
+    testWidgets('the Sudoku chip lines up with the game chips', (tester) async {
+      await pump(tester, zip, pathWords: animals);
+      final zipText = tester.getCenter(find.text(AppStrings.zipTitle));
+      final sudokuText = tester.getCenter(find.text(sudoku()));
+      expect(sudokuText.dy, closeTo(zipText.dy, 0.5));
+    });
+
+    testWidgets('the Sudoku chip is a disabled button that says it is coming', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pump(tester, zip, pathWords: animals);
+      expect(
+        tester.getSemantics(find.bySemanticsLabel(sudoku())),
+        matchesSemantics(
+          label: sudoku(),
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: false,
+          hasTapAction: true,
+        ),
+      );
+      await tester.tap(find.text(sudoku()));
+      await tester.pump();
+      expect(find.text(AppStrings.levelsSudokuSoon), findsOneWidget);
+      expect(pref.writes, isEmpty);
+      handle.dispose();
+    });
+
+    testWidgets('switching slides the map across', (tester) async {
+      await pump(tester, zip, pathWords: animals);
+      await tester.tap(find.text(AppStrings.pathWordsTitle));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(find.byType(SlideTransition), findsWidgets);
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsNothing);
+      expect(
+        find.text(AppStrings.levelWorldTitle(1, 'Animals')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('with reduce motion the switch is instant', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await pump(tester, zip, pathWords: animals);
+      await tester.tap(find.text(AppStrings.pathWordsTitle));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsNothing);
+    });
+
+    testWidgets('rapid switching settles on the last chip', (tester) async {
+      await pump(tester, zip, pathWords: animals);
+      await tester.tap(find.text(AppStrings.pathWordsTitle));
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(find.text(AppStrings.zipTitle), warnIfMissed: false);
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(
+        find.text(AppStrings.pathWordsTitle),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(AppStrings.levelWorldTitle(1, 'Animals')),
+        findsOneWidget,
+      );
+      expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsNothing);
+      expect(pref.writes.last, 'path_words');
+    });
+
+    testWidgets('the chips stay put while the new map loads', (tester) async {
+      await pump(tester, zip, pathWords: animals);
+      final before = tester.getCenter(find.text(AppStrings.zipTitle)).dy;
+      await tester.tap(find.text(AppStrings.pathWordsTitle));
+      await tester.pump();
+      expect(tester.getCenter(find.text(AppStrings.zipTitle)).dy, before);
+    });
+
+    testWidgets('the chips do not overflow at twice the text size', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await pump(tester, zip, pathWords: animals);
+      expect(tester.takeException(), isNull);
     });
   });
 }

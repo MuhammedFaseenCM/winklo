@@ -1617,6 +1617,8 @@ final class AppTextEn implements AppText {
 
   @override
   String get levelsSoon => 'Soon';
+  @override
+  String get levelsSudokuSoon => 'Sudoku levels are coming soon';
 
   @override
   String get levelsNeedConnection => 'Levels need a connection the first time.';

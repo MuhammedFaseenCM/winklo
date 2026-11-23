@@ -42,6 +42,16 @@ class LevelsScreen extends StatefulWidget {
 class _LevelsScreenState extends State<LevelsScreen> {
   late String _game;
 
+  /// The switcher's games in chip order; a switch slides the map the way
+  /// the chips run.
+  static const _order = [GameIds.zip, GameIds.pathWords];
+
+  /// 1 when the new map comes in from the right, -1 from the left.
+  int _direction = 1;
+
+  /// The shown game's star total, reported by its map once it's loaded.
+  ({int stars, int maxStars})? _stars;
+
   /// [LevelsScreen.openLevelId] until the player switches game: switching
   /// back must not reopen a sheet that was already shown.
   String? _openLevelId;
@@ -69,15 +79,35 @@ class _LevelsScreenState extends State<LevelsScreen> {
     if (game == _game) return;
     unawaited(context.read<LevelsGamePreferenceRepository>().write(game));
     setState(() {
+      _direction = _order.indexOf(game) >= _order.indexOf(_game) ? 1 : -1;
       _game = game;
       _openLevelId = null;
+      _stars = null;
     });
+  }
+
+  /// A map's star total; only the shown game's counts (the outgoing map
+  /// can still emit while it slides away).
+  void _onStars(String game, int? stars, int? maxStars) {
+    if (!mounted || game != _game) return;
+    final next = stars == null || maxStars == null
+        ? null
+        : (stars: stars, maxStars: maxStars);
+    if (next == _stars) return;
+    setState(() => _stars = next);
+  }
+
+  void _onSudoku() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(AppStrings.levelsSudokuSoon)));
   }
 
   @override
   Widget build(BuildContext context) {
     final openLevelId = _openLevelId;
-    return BlocProvider(
+    final still = MediaQuery.disableAnimationsOf(context);
+    final map = BlocProvider(
       // A fresh cubit, scroll position and placement for each game.
       key: ValueKey(_game),
       create: (context) => LevelMapCubit(
@@ -89,10 +119,67 @@ class _LevelsScreenState extends State<LevelsScreen> {
       )..load(),
       child: _LevelsView(
         game: _game,
-        onSelectGame: _select,
+        onStars: _onStars,
         openLevelId: openLevelId != null && _gameOf(openLevelId) == _game
             ? openLevelId
             : null,
+      ),
+    );
+    final stars = _stars;
+    return Scaffold(
+      body: ZipAtmosphere(
+        // The map runs under the shell's glass dock (extendBody puts the
+        // dock in padding.bottom); LevelMapLayout keeps its levels above it.
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Header(
+                game: _game,
+                onSelectGame: _select,
+                onSudoku: _onSudoku,
+                stars: stars?.stars,
+                maxStars: stars?.maxStars,
+              ),
+              Expanded(
+                child: ClipRect(
+                  child: AnimatedSwitcher(
+                    duration: still
+                        ? Duration.zero
+                        : const Duration(milliseconds: 300),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeOutCubic,
+                    layoutBuilder: (current, previous) => Stack(
+                      fit: StackFit.expand,
+                      children: [...previous, ?current],
+                    ),
+                    transitionBuilder: (child, animation) {
+                      final incoming = child.key == ValueKey(_game);
+                      // The new map slides in from the side the chip is
+                      // on; the old one leaves the other way.
+                      final from = Offset(
+                        (incoming ? _direction : -_direction) * 0.15,
+                        0,
+                      );
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween(
+                            begin: from,
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: map,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -101,12 +188,12 @@ class _LevelsScreenState extends State<LevelsScreen> {
 class _LevelsView extends StatefulWidget {
   const _LevelsView({
     required this.game,
-    required this.onSelectGame,
+    required this.onStars,
     this.openLevelId,
   });
 
   final String game;
-  final ValueChanged<String> onSelectGame;
+  final void Function(String game, int? stars, int? maxStars) onStars;
   final String? openLevelId;
 
   @override
@@ -195,49 +282,24 @@ class _LevelsViewState extends State<_LevelsView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: ZipAtmosphere(
-        // The map runs under the shell's glass dock (extendBody puts the
-        // dock in padding.bottom); LevelMapLayout keeps its levels above it.
-        child: SafeArea(
-          bottom: false,
-          child: BlocBuilder<LevelMapCubit, LevelMapState>(
-            builder: (context, state) {
-              final map = state.map;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Header(
-                    game: widget.game,
-                    onSelectGame: widget.onSelectGame,
-                    stars: map?.stars,
-                    maxStars: map?.maxStars,
-                  ),
-                  Expanded(
-                    child: switch (state.status) {
-                      LevelMapStatus.ready => _map(context, map!),
-                      // Centred in the part the dock leaves open.
-                      final status => SafeArea(
-                        top: false,
-                        child: switch (status) {
-                          LevelMapStatus.unavailable => _Message(
-                            text: AppStrings.levelsNeedConnection,
-                            onRetry: () => context.read<LevelMapCubit>().load(),
-                          ),
-                          LevelMapStatus.empty => _Message(
-                            text: AppStrings.levelsComingSoon,
-                          ),
-                          _ => const Center(child: CircularProgressIndicator()),
-                        },
-                      ),
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
+    return BlocConsumer<LevelMapCubit, LevelMapState>(
+      listener: (context, state) =>
+          widget.onStars(widget.game, state.map?.stars, state.map?.maxStars),
+      builder: (context, state) => switch (state.status) {
+        LevelMapStatus.ready => _map(context, state.map!),
+        // Centred in the part the dock leaves open.
+        final status => SafeArea(
+          top: false,
+          child: switch (status) {
+            LevelMapStatus.unavailable => _Message(
+              text: AppStrings.levelsNeedConnection,
+              onRetry: () => context.read<LevelMapCubit>().load(),
+            ),
+            LevelMapStatus.empty => _Message(text: AppStrings.levelsComingSoon),
+            _ => const Center(child: CircularProgressIndicator()),
+          },
         ),
-      ),
+      },
     );
   }
 
@@ -352,12 +414,14 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.game,
     required this.onSelectGame,
+    required this.onSudoku,
     this.stars,
     this.maxStars,
   });
 
   final String game;
   final ValueChanged<String> onSelectGame;
+  final VoidCallback onSudoku;
   final int? stars;
   final int? maxStars;
 
@@ -369,24 +433,30 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  AppStrings.levelsTitle,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
+          // As tall as the star link, so the chips don't move up while a
+          // newly shown game's total is still loading.
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppStrings.levelsTitle,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-              if (stars != null && maxStars != null)
-                _StarsLink(game: game, text: '$stars / $maxStars'),
-            ],
+                if (stars != null && maxStars != null)
+                  _StarsLink(game: game, text: '$stars / $maxStars'),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 6,
-            runSpacing: 6,
+            runSpacing: 0,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               _GameChip(
                 text: AppStrings.zipTitle,
@@ -394,12 +464,13 @@ class _Header extends StatelessWidget {
                 onTap: () => onSelectGame(GameIds.zip),
               ),
               _GameChip(
-                text: AppStrings.pathWordsTab,
+                text: AppStrings.pathWordsTitle,
                 selected: game == GameIds.pathWords,
                 onTap: () => onSelectGame(GameIds.pathWords),
               ),
-              _Chip(
+              _SoonChip(
                 text: '${AppStrings.sudokuTitle} · ${AppStrings.levelsSoon}',
+                onTap: onSudoku,
               ),
             ],
           ),
@@ -481,22 +552,68 @@ class _GameChip extends StatelessWidget {
   }
 }
 
+/// A game whose Levels aren't out yet: the game chips' size and line,
+/// dimmed with a lock. Announced as a disabled button; a tap says it's
+/// coming soon.
+class _SoonChip extends StatelessWidget {
+  const _SoonChip({required this.text, required this.onTap});
+
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: false,
+      excludeSemantics: true,
+      label: text,
+      onTap: onTap,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(99),
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Center(
+            widthFactor: 1,
+            child: Opacity(
+              opacity: 0.55,
+              child: _Chip(
+                text: text,
+                icon: AppIcons.lock,
+                iconColor: ZipColors.inkSoft,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.text,
     this.icon,
+    this.iconColor = ZipColors.star,
     this.trailing,
     this.selected = false,
   });
 
   final String text;
   final IconData? icon;
+  final Color iconColor;
   final Widget? trailing;
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    // The selected game's ember fades across as the switch happens.
+    return AnimatedContainer(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: selected ? ZipColors.ember : ZipColors.paper,
@@ -506,7 +623,7 @@ class _Chip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            AppIcon(icon, size: 14, color: ZipColors.star),
+            AppIcon(icon, size: 14, color: iconColor),
             const SizedBox(width: 4),
           ],
           Text(
@@ -516,7 +633,9 @@ class _Chip extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: selected
                   ? ZipColors.onInk
-                  : (icon != null ? ZipColors.star : ZipColors.inkSoft),
+                  : (icon != null && iconColor == ZipColors.star
+                        ? ZipColors.star
+                        : ZipColors.inkSoft),
             ),
           ),
           if (trailing != null) ...[const SizedBox(width: 2), trailing!],
