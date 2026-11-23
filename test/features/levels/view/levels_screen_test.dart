@@ -52,11 +52,15 @@ class _Pref implements LevelsGamePreferenceRepository {
 }
 
 class _Worlds implements LevelWorldRepository {
-  _Worlds(this.value, [this.pathWords]);
+  _Worlds(this.value, [this.pathWords, this.zipGate]);
   final LevelCatalog? value;
   final LevelCatalog? pathWords;
+
+  /// Holds Zip's catalog back until it completes (a slow network).
+  final Completer<void>? zipGate;
   @override
   Future<LevelCatalog> catalog(String game, {bool refresh = false}) async {
+    if (game != 'path_words') await zipGate?.future;
     final v = game == 'path_words' ? pathWords : value;
     if (v == null) throw const LevelsUnavailable('offline');
     return v;
@@ -101,6 +105,8 @@ void main() {
     String? open,
     bool dock = false,
     LevelCatalog? pathWords,
+    Completer<void>? zipGate,
+    bool settle = true,
   }) async {
     final router = GoRouter(
       routes: [
@@ -142,7 +148,7 @@ void main() {
       MultiRepositoryProvider(
         providers: [
           RepositoryProvider<LevelWorldRepository>.value(
-            value: _Worlds(catalog, pathWords),
+            value: _Worlds(catalog, pathWords, zipGate),
           ),
           RepositoryProvider<LevelsGamePreferenceRepository>.value(value: pref),
           RepositoryProvider<LevelProgressRepository>.value(value: progress),
@@ -160,7 +166,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    if (settle) await tester.pumpAndSettle();
   }
 
   testWidgets('shows the map with the current level and stars total', (
@@ -724,6 +730,41 @@ void main() {
       );
       expect(find.text(AppStrings.levelWorldTitle(1, 'Ink')), findsNothing);
       expect(pref.writes.last, 'path_words');
+    });
+
+    testWidgets('a map switched away from never opens its deep-linked sheet', (
+      tester,
+    ) async {
+      final gate = Completer<void>();
+      await pump(
+        tester,
+        zip,
+        pathWords: animals,
+        open: levelId(1, 1),
+        zipGate: gate,
+        settle: false,
+      );
+      await tester.pump();
+      await tester.tap(find.text(AppStrings.pathWordsTitle));
+      await tester.pump(const Duration(milliseconds: 50));
+      // Zip's worlds land while its map is still sliding away.
+      gate.complete();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pumpAndSettle();
+      expect(find.text('Play'), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('the map sliding away takes no taps', (tester) async {
+      await pump(tester, zip, pathWords: animals);
+      final level1 = tester.getCenter(find.bySemanticsLabel(RegExp('Level 1')));
+      await tester.tap(find.text(AppStrings.pathWordsTitle));
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.tapAt(level1);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('World 1 · Ink'), findsNothing);
+      expect(find.text('Play'), findsNothing);
     });
 
     testWidgets('the chips stay put while the new map loads', (tester) async {

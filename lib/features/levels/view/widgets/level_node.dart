@@ -115,8 +115,16 @@ class LevelNode extends StatelessWidget {
   }
 }
 
-/// The ground of a world's backdrop.
-Color _ground(String theme) => LevelThemePalette.of(theme).base;
+/// What a cleared level's star marks sit on, so the line running past them
+/// doesn't cross them: a patch of the world's ground on a flat ground, and
+/// on a gradient (where no one colour matches everywhere) [levelMarksPill].
+Color _ground(String theme) {
+  final palette = LevelThemePalette.of(theme);
+  return palette.baseEnd == null ? palette.base : levelMarksPill;
+}
+
+/// A dark translucent pill under the star marks on a gradient ground.
+const levelMarksPill = Color(0x66000000);
 
 class _NodePainter extends CustomPainter {
   _NodePainter({required this.theme, required this.state});

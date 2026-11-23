@@ -53,6 +53,11 @@ class _LevelsScreenState extends State<LevelsScreen> {
   /// The shown game's star total, reported by its map once it's loaded.
   ({int stars, int maxStars})? _stars;
 
+  /// Which map is the shown one: each map gets the generation it was built
+  /// in, and only the current generation's map may report its stars or
+  /// open a sheet (a map sliding away, even of the same game, can't).
+  int _generation = 0;
+
   /// [LevelsScreen.openLevelId] until the player switches game: switching
   /// back must not reopen a sheet that was already shown.
   String? _openLevelId;
@@ -82,6 +87,7 @@ class _LevelsScreenState extends State<LevelsScreen> {
     setState(() {
       _direction = _order.indexOf(game) >= _order.indexOf(_game) ? 1 : -1;
       _game = game;
+      _generation++;
       _openLevelId = null;
       _stars = null;
     });
@@ -89,8 +95,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
 
   /// A map's star total; only the shown game's counts (the outgoing map
   /// can still emit while it slides away).
-  void _onStars(String game, int? stars, int? maxStars) {
-    if (!mounted || game != _game) return;
+  void _onStars(int generation, int? stars, int? maxStars) {
+    if (!mounted || generation != _generation) return;
     final next = stars == null || maxStars == null
         ? null
         : (stars: stars, maxStars: maxStars);
@@ -108,9 +114,10 @@ class _LevelsScreenState extends State<LevelsScreen> {
   Widget build(BuildContext context) {
     final openLevelId = _openLevelId;
     final still = MediaQuery.disableAnimationsOf(context);
+    final generation = _generation;
     final map = BlocProvider(
       // A fresh cubit, scroll position and placement for each game.
-      key: ValueKey(_game),
+      key: ValueKey((_game, generation)),
       create: (context) => LevelMapCubit(
         worlds: context.read<LevelWorldRepository>(),
         progress: context.read<LevelProgressRepository>(),
@@ -120,7 +127,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
       )..load(),
       child: _LevelsView(
         game: _game,
-        onStars: _onStars,
+        onStars: (stars, maxStars) => _onStars(generation, stars, maxStars),
+        isShown: () => mounted && generation == _generation,
         openLevelId: openLevelId != null && _gameOf(openLevelId) == _game
             ? openLevelId
             : null,
@@ -151,12 +159,24 @@ class _LevelsScreenState extends State<LevelsScreen> {
                         : const Duration(milliseconds: 300),
                     switchInCurve: Curves.easeOutCubic,
                     switchOutCurve: Curves.easeOutCubic,
+                    // The map sliding away takes no taps. Every child gets
+                    // the same wrapper (keyed by the switcher's own key for
+                    // it), so going from shown to leaving doesn't rebuild
+                    // its state.
                     layoutBuilder: (current, previous) => Stack(
                       fit: StackFit.expand,
-                      children: [...previous, ?current],
+                      children: [
+                        for (final child in [...previous, ?current])
+                          IgnorePointer(
+                            key: child.key,
+                            ignoring: !identical(child, current),
+                            child: child,
+                          ),
+                      ],
                     ),
                     transitionBuilder: (child, animation) {
-                      final incoming = child.key == ValueKey(_game);
+                      final incoming =
+                          child.key == ValueKey((_game, _generation));
                       // The new map slides in from the side the chip is
                       // on; the old one leaves the other way.
                       final from = Offset(
@@ -190,11 +210,15 @@ class _LevelsView extends StatefulWidget {
   const _LevelsView({
     required this.game,
     required this.onStars,
+    required this.isShown,
     this.openLevelId,
   });
 
   final String game;
-  final void Function(String game, int? stars, int? maxStars) onStars;
+  final void Function(int? stars, int? maxStars) onStars;
+
+  /// False once another map has replaced this one (it's sliding away).
+  final bool Function() isShown;
   final String? openLevelId;
 
   @override
@@ -236,7 +260,8 @@ class _LevelsViewState extends State<_LevelsView> {
         : null;
     final focusId = open != null ? widget.openLevelId! : currentId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      // A map sliding away neither scrolls nor opens a sheet.
+      if (!mounted || !widget.isShown()) return;
       final center = focusId == null ? null : layout.centers[focusId];
       if (center != null && _scroll.hasClients) {
         var offset =
@@ -286,6 +311,7 @@ class _LevelsViewState extends State<_LevelsView> {
   }
 
   void _onTap(LevelMap map, LevelMapNode node) {
+    if (!widget.isShown()) return;
     if (node.playable) {
       showLevelSheet(
         context,
@@ -312,7 +338,7 @@ class _LevelsViewState extends State<_LevelsView> {
   Widget build(BuildContext context) {
     return BlocConsumer<LevelMapCubit, LevelMapState>(
       listener: (context, state) =>
-          widget.onStars(widget.game, state.map?.stars, state.map?.maxStars),
+          widget.onStars(state.map?.stars, state.map?.maxStars),
       builder: (context, state) => switch (state.status) {
         LevelMapStatus.ready => _map(context, state.map!),
         // Centred in the part the dock leaves open.
