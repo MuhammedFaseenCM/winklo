@@ -1,0 +1,269 @@
+<template>
+  <style>
+      @font-face { font-family: Lexend; src: url('assets/fonts/Lexend-Variable.ttf'); font-weight: 100 900; }
+      #root { position: absolute; inset: 0; overflow: hidden; font-family: Lexend, sans-serif; color: #F8FAFC;
+        background: radial-gradient(1200px 900px at 50% 42%, #16213A 0%, #0F172A 70%); }
+      
+      .hook-text { position: absolute; left: 40px; right: 40px; top: 180px; text-align: center; line-height: 1; font-weight: 700; letter-spacing: -0.02em; }
+      .hook-text .l1 { display: block; font-size: 66px; }
+      .hook-text .l2 { display: block; font-size: 112px; font-weight: 800; color: #FF6B2C; margin-top: 8px; }
+      
+      #solve-clock { position: absolute; left: 0; right: 0; top: 266px; height: 220px; text-align: center; font-size: 220px; font-weight: 700; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap; transform-origin: 50% 50%; }
+      #solve-clock .cd { display: inline-block; width: 0.62em; text-align: center; }
+      #solve-clock .cc { display: inline-block; width: 0.3em; text-align: center; position: relative; top: -0.06em; }
+      #solve-board { position: absolute; left: 150px; top: 540px; width: 780px; height: 780px; }
+      #solve-board svg { display: block; filter: drop-shadow(0 8px 0 rgba(0,0,0,0.35)); }
+      #solve-kicker { position: absolute; left: 0; right: 0; top: 196px; text-align: center; font-size: 36px; font-weight: 600; letter-spacing: 0.18em; line-height: 1; color: #94A3B8; }
+      #solve-solved { position: absolute; left: 0; right: 0; top: 196px; text-align: center; font-size: 36px; font-weight: 600; letter-spacing: 0.18em; line-height: 1; color: #2DD4BF; }
+      #solve-kicker, #solve-solved { opacity: 0; }
+      #solve-flash { position: absolute; left: 150px; top: 540px; width: 780px; height: 780px; border-radius: 22px; background: #2DD4BF; opacity: 0; }
+      #solve-ring { position: absolute; left: 144px; top: 534px; width: 792px; height: 792px; border-radius: 26px; border: 6px solid #2DD4BF; }
+      #solve-ring { opacity: 0; }
+  </style>
+  <div id="root" data-composition-id="solve" data-width="1080" data-height="1920">
+      <div id="solve-text" class="hook-text">
+        <span class="l1" data-var-text="hookLine1">Today's Zip.</span>
+        <span class="l2" data-var-text="hookLine2">Beat my time.</span>
+      </div>
+      <div id="solve-kicker" data-layout-allow-overlap data-var-text="kicker">TODAY'S ZIP</div>
+      <div id="solve-solved" data-var-text="solvedWord">SOLVED</div>
+      <div id="solve-clock" class="clock" data-layout-allow-overflow><span class="cd" id="solve-m">0</span><span class="cc">:</span><span class="cd" id="solve-s1">0</span><span class="cd" id="solve-s2">0</span></div>
+      <div id="solve-board"><svg id="solve-svg" viewBox="0 0 780 780" width="780" height="780" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="solve-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="14"/></filter>
+          <linearGradient id="solve-g0" gradientUnits="userSpaceOnUse" x1="536.25" y1="341.25" x2="438.75" y2="341.25"><stop offset="0" stop-color="#FF6B2C"/><stop offset="1" stop-color="#ff8230"/></linearGradient>
+          <linearGradient id="solve-g1" gradientUnits="userSpaceOnUse" x1="438.75" y1="341.25" x2="341.25" y2="341.25"><stop offset="0" stop-color="#ff8230"/><stop offset="1" stop-color="#ff9835"/></linearGradient>
+          <linearGradient id="solve-g2" gradientUnits="userSpaceOnUse" x1="341.25" y1="341.25" x2="341.25" y2="438.75"><stop offset="0" stop-color="#ff9835"/><stop offset="1" stop-color="#ffaf39"/></linearGradient>
+          <linearGradient id="solve-g3" gradientUnits="userSpaceOnUse" x1="341.25" y1="438.75" x2="438.75" y2="438.75"><stop offset="0" stop-color="#ffaf39"/><stop offset="1" stop-color="#ffc53d"/></linearGradient>
+          <linearGradient id="solve-g4" gradientUnits="userSpaceOnUse" x1="438.75" y1="438.75" x2="536.25" y2="438.75"><stop offset="0" stop-color="#ffc53d"/><stop offset="1" stop-color="#ffa749"/></linearGradient>
+          <linearGradient id="solve-g5" gradientUnits="userSpaceOnUse" x1="536.25" y1="438.75" x2="536.25" y2="536.25"><stop offset="0" stop-color="#ffa749"/><stop offset="1" stop-color="#ff8955"/></linearGradient>
+          <linearGradient id="solve-g6" gradientUnits="userSpaceOnUse" x1="536.25" y1="536.25" x2="536.25" y2="633.75"><stop offset="0" stop-color="#ff8955"/><stop offset="1" stop-color="#ff6b61"/></linearGradient>
+          <linearGradient id="solve-g7" gradientUnits="userSpaceOnUse" x1="536.25" y1="633.75" x2="633.75" y2="633.75"><stop offset="0" stop-color="#ff6b61"/><stop offset="1" stop-color="#ff4d6d"/></linearGradient>
+          <linearGradient id="solve-g8" gradientUnits="userSpaceOnUse" x1="633.75" y1="633.75" x2="731.25" y2="633.75"><stop offset="0" stop-color="#ff4d6d"/><stop offset="1" stop-color="#f95890"/></linearGradient>
+          <linearGradient id="solve-g9" gradientUnits="userSpaceOnUse" x1="731.25" y1="633.75" x2="731.25" y2="731.25"><stop offset="0" stop-color="#f95890"/><stop offset="1" stop-color="#f463b3"/></linearGradient>
+          <linearGradient id="solve-g10" gradientUnits="userSpaceOnUse" x1="731.25" y1="731.25" x2="633.75" y2="731.25"><stop offset="0" stop-color="#f463b3"/><stop offset="1" stop-color="#ee6ed6"/></linearGradient>
+          <linearGradient id="solve-g11" gradientUnits="userSpaceOnUse" x1="633.75" y1="731.25" x2="536.25" y2="731.25"><stop offset="0" stop-color="#ee6ed6"/><stop offset="1" stop-color="#e879f9"/></linearGradient>
+          <linearGradient id="solve-g12" gradientUnits="userSpaceOnUse" x1="536.25" y1="731.25" x2="438.75" y2="731.25"><stop offset="0" stop-color="#e879f9"/><stop offset="1" stop-color="#ee76c6"/></linearGradient>
+          <linearGradient id="solve-g13" gradientUnits="userSpaceOnUse" x1="438.75" y1="731.25" x2="438.75" y2="633.75"><stop offset="0" stop-color="#ee76c6"/><stop offset="1" stop-color="#f47293"/></linearGradient>
+          <linearGradient id="solve-g14" gradientUnits="userSpaceOnUse" x1="438.75" y1="633.75" x2="438.75" y2="536.25"><stop offset="0" stop-color="#f47293"/><stop offset="1" stop-color="#f96f5f"/></linearGradient>
+          <linearGradient id="solve-g15" gradientUnits="userSpaceOnUse" x1="438.75" y1="536.25" x2="341.25" y2="536.25"><stop offset="0" stop-color="#f96f5f"/><stop offset="1" stop-color="#ff6b2c"/></linearGradient>
+          <linearGradient id="solve-g16" gradientUnits="userSpaceOnUse" x1="341.25" y1="536.25" x2="243.75" y2="536.25"><stop offset="0" stop-color="#ff6b2c"/><stop offset="1" stop-color="#ff8230"/></linearGradient>
+          <linearGradient id="solve-g17" gradientUnits="userSpaceOnUse" x1="243.75" y1="536.25" x2="146.25" y2="536.25"><stop offset="0" stop-color="#ff8230"/><stop offset="1" stop-color="#ff9835"/></linearGradient>
+          <linearGradient id="solve-g18" gradientUnits="userSpaceOnUse" x1="146.25" y1="536.25" x2="146.25" y2="633.75"><stop offset="0" stop-color="#ff9835"/><stop offset="1" stop-color="#ffaf39"/></linearGradient>
+          <linearGradient id="solve-g19" gradientUnits="userSpaceOnUse" x1="146.25" y1="633.75" x2="243.75" y2="633.75"><stop offset="0" stop-color="#ffaf39"/><stop offset="1" stop-color="#ffc53d"/></linearGradient>
+          <linearGradient id="solve-g20" gradientUnits="userSpaceOnUse" x1="243.75" y1="633.75" x2="341.25" y2="633.75"><stop offset="0" stop-color="#ffc53d"/><stop offset="1" stop-color="#ffa749"/></linearGradient>
+          <linearGradient id="solve-g21" gradientUnits="userSpaceOnUse" x1="341.25" y1="633.75" x2="341.25" y2="731.25"><stop offset="0" stop-color="#ffa749"/><stop offset="1" stop-color="#ff8955"/></linearGradient>
+          <linearGradient id="solve-g22" gradientUnits="userSpaceOnUse" x1="341.25" y1="731.25" x2="243.75" y2="731.25"><stop offset="0" stop-color="#ff8955"/><stop offset="1" stop-color="#ff6b61"/></linearGradient>
+          <linearGradient id="solve-g23" gradientUnits="userSpaceOnUse" x1="243.75" y1="731.25" x2="146.25" y2="731.25"><stop offset="0" stop-color="#ff6b61"/><stop offset="1" stop-color="#ff4d6d"/></linearGradient>
+          <linearGradient id="solve-g24" gradientUnits="userSpaceOnUse" x1="146.25" y1="731.25" x2="48.75" y2="731.25"><stop offset="0" stop-color="#ff4d6d"/><stop offset="1" stop-color="#f95890"/></linearGradient>
+          <linearGradient id="solve-g25" gradientUnits="userSpaceOnUse" x1="48.75" y1="731.25" x2="48.75" y2="633.75"><stop offset="0" stop-color="#f95890"/><stop offset="1" stop-color="#f463b3"/></linearGradient>
+          <linearGradient id="solve-g26" gradientUnits="userSpaceOnUse" x1="48.75" y1="633.75" x2="48.75" y2="536.25"><stop offset="0" stop-color="#f463b3"/><stop offset="1" stop-color="#ee6ed6"/></linearGradient>
+          <linearGradient id="solve-g27" gradientUnits="userSpaceOnUse" x1="48.75" y1="536.25" x2="48.75" y2="438.75"><stop offset="0" stop-color="#ee6ed6"/><stop offset="1" stop-color="#e879f9"/></linearGradient>
+          <linearGradient id="solve-g28" gradientUnits="userSpaceOnUse" x1="48.75" y1="438.75" x2="146.25" y2="438.75"><stop offset="0" stop-color="#e879f9"/><stop offset="1" stop-color="#ee76c6"/></linearGradient>
+          <linearGradient id="solve-g29" gradientUnits="userSpaceOnUse" x1="146.25" y1="438.75" x2="243.75" y2="438.75"><stop offset="0" stop-color="#ee76c6"/><stop offset="1" stop-color="#f47293"/></linearGradient>
+          <linearGradient id="solve-g30" gradientUnits="userSpaceOnUse" x1="243.75" y1="438.75" x2="243.75" y2="341.25"><stop offset="0" stop-color="#f47293"/><stop offset="1" stop-color="#f96f5f"/></linearGradient>
+          <linearGradient id="solve-g31" gradientUnits="userSpaceOnUse" x1="243.75" y1="341.25" x2="146.25" y2="341.25"><stop offset="0" stop-color="#f96f5f"/><stop offset="1" stop-color="#ff6b2c"/></linearGradient>
+          <linearGradient id="solve-g32" gradientUnits="userSpaceOnUse" x1="146.25" y1="341.25" x2="48.75" y2="341.25"><stop offset="0" stop-color="#ff6b2c"/><stop offset="1" stop-color="#ff8230"/></linearGradient>
+          <linearGradient id="solve-g33" gradientUnits="userSpaceOnUse" x1="48.75" y1="341.25" x2="48.75" y2="243.75"><stop offset="0" stop-color="#ff8230"/><stop offset="1" stop-color="#ff9835"/></linearGradient>
+          <linearGradient id="solve-g34" gradientUnits="userSpaceOnUse" x1="48.75" y1="243.75" x2="146.25" y2="243.75"><stop offset="0" stop-color="#ff9835"/><stop offset="1" stop-color="#ffaf39"/></linearGradient>
+          <linearGradient id="solve-g35" gradientUnits="userSpaceOnUse" x1="146.25" y1="243.75" x2="243.75" y2="243.75"><stop offset="0" stop-color="#ffaf39"/><stop offset="1" stop-color="#ffc53d"/></linearGradient>
+          <linearGradient id="solve-g36" gradientUnits="userSpaceOnUse" x1="243.75" y1="243.75" x2="243.75" y2="146.25"><stop offset="0" stop-color="#ffc53d"/><stop offset="1" stop-color="#ffa749"/></linearGradient>
+          <linearGradient id="solve-g37" gradientUnits="userSpaceOnUse" x1="243.75" y1="146.25" x2="146.25" y2="146.25"><stop offset="0" stop-color="#ffa749"/><stop offset="1" stop-color="#ff8955"/></linearGradient>
+          <linearGradient id="solve-g38" gradientUnits="userSpaceOnUse" x1="146.25" y1="146.25" x2="48.75" y2="146.25"><stop offset="0" stop-color="#ff8955"/><stop offset="1" stop-color="#ff6b61"/></linearGradient>
+          <linearGradient id="solve-g39" gradientUnits="userSpaceOnUse" x1="48.75" y1="146.25" x2="48.75" y2="48.75"><stop offset="0" stop-color="#ff6b61"/><stop offset="1" stop-color="#ff4d6d"/></linearGradient>
+          <linearGradient id="solve-g40" gradientUnits="userSpaceOnUse" x1="48.75" y1="48.75" x2="146.25" y2="48.75"><stop offset="0" stop-color="#ff4d6d"/><stop offset="1" stop-color="#f95890"/></linearGradient>
+          <linearGradient id="solve-g41" gradientUnits="userSpaceOnUse" x1="146.25" y1="48.75" x2="243.75" y2="48.75"><stop offset="0" stop-color="#f95890"/><stop offset="1" stop-color="#f463b3"/></linearGradient>
+          <linearGradient id="solve-g42" gradientUnits="userSpaceOnUse" x1="243.75" y1="48.75" x2="341.25" y2="48.75"><stop offset="0" stop-color="#f463b3"/><stop offset="1" stop-color="#ee6ed6"/></linearGradient>
+          <linearGradient id="solve-g43" gradientUnits="userSpaceOnUse" x1="341.25" y1="48.75" x2="341.25" y2="146.25"><stop offset="0" stop-color="#ee6ed6"/><stop offset="1" stop-color="#e879f9"/></linearGradient>
+          <linearGradient id="solve-g44" gradientUnits="userSpaceOnUse" x1="341.25" y1="146.25" x2="341.25" y2="243.75"><stop offset="0" stop-color="#e879f9"/><stop offset="1" stop-color="#ee76c6"/></linearGradient>
+          <linearGradient id="solve-g45" gradientUnits="userSpaceOnUse" x1="341.25" y1="243.75" x2="438.75" y2="243.75"><stop offset="0" stop-color="#ee76c6"/><stop offset="1" stop-color="#f47293"/></linearGradient>
+          <linearGradient id="solve-g46" gradientUnits="userSpaceOnUse" x1="438.75" y1="243.75" x2="536.25" y2="243.75"><stop offset="0" stop-color="#f47293"/><stop offset="1" stop-color="#f96f5f"/></linearGradient>
+          <linearGradient id="solve-g47" gradientUnits="userSpaceOnUse" x1="536.25" y1="243.75" x2="536.25" y2="146.25"><stop offset="0" stop-color="#f96f5f"/><stop offset="1" stop-color="#ff6b2c"/></linearGradient>
+          <linearGradient id="solve-g48" gradientUnits="userSpaceOnUse" x1="536.25" y1="146.25" x2="438.75" y2="146.25"><stop offset="0" stop-color="#ff6b2c"/><stop offset="1" stop-color="#ff8230"/></linearGradient>
+          <linearGradient id="solve-g49" gradientUnits="userSpaceOnUse" x1="438.75" y1="146.25" x2="438.75" y2="48.75"><stop offset="0" stop-color="#ff8230"/><stop offset="1" stop-color="#ff9835"/></linearGradient>
+          <linearGradient id="solve-g50" gradientUnits="userSpaceOnUse" x1="438.75" y1="48.75" x2="536.25" y2="48.75"><stop offset="0" stop-color="#ff9835"/><stop offset="1" stop-color="#ffaf39"/></linearGradient>
+          <linearGradient id="solve-g51" gradientUnits="userSpaceOnUse" x1="536.25" y1="48.75" x2="633.75" y2="48.75"><stop offset="0" stop-color="#ffaf39"/><stop offset="1" stop-color="#ffc53d"/></linearGradient>
+          <linearGradient id="solve-g52" gradientUnits="userSpaceOnUse" x1="633.75" y1="48.75" x2="731.25" y2="48.75"><stop offset="0" stop-color="#ffc53d"/><stop offset="1" stop-color="#ffa749"/></linearGradient>
+          <linearGradient id="solve-g53" gradientUnits="userSpaceOnUse" x1="731.25" y1="48.75" x2="731.25" y2="146.25"><stop offset="0" stop-color="#ffa749"/><stop offset="1" stop-color="#ff8955"/></linearGradient>
+          <linearGradient id="solve-g54" gradientUnits="userSpaceOnUse" x1="731.25" y1="146.25" x2="633.75" y2="146.25"><stop offset="0" stop-color="#ff8955"/><stop offset="1" stop-color="#ff6b61"/></linearGradient>
+          <linearGradient id="solve-g55" gradientUnits="userSpaceOnUse" x1="633.75" y1="146.25" x2="633.75" y2="243.75"><stop offset="0" stop-color="#ff6b61"/><stop offset="1" stop-color="#ff4d6d"/></linearGradient>
+          <linearGradient id="solve-g56" gradientUnits="userSpaceOnUse" x1="633.75" y1="243.75" x2="731.25" y2="243.75"><stop offset="0" stop-color="#ff4d6d"/><stop offset="1" stop-color="#f95890"/></linearGradient>
+          <linearGradient id="solve-g57" gradientUnits="userSpaceOnUse" x1="731.25" y1="243.75" x2="731.25" y2="341.25"><stop offset="0" stop-color="#f95890"/><stop offset="1" stop-color="#f463b3"/></linearGradient>
+          <linearGradient id="solve-g58" gradientUnits="userSpaceOnUse" x1="731.25" y1="341.25" x2="633.75" y2="341.25"><stop offset="0" stop-color="#f463b3"/><stop offset="1" stop-color="#ee6ed6"/></linearGradient>
+          <linearGradient id="solve-g59" gradientUnits="userSpaceOnUse" x1="633.75" y1="341.25" x2="633.75" y2="438.75"><stop offset="0" stop-color="#ee6ed6"/><stop offset="1" stop-color="#e879f9"/></linearGradient>
+          <linearGradient id="solve-g60" gradientUnits="userSpaceOnUse" x1="633.75" y1="438.75" x2="731.25" y2="438.75"><stop offset="0" stop-color="#e879f9"/><stop offset="1" stop-color="#ee76c6"/></linearGradient>
+          <linearGradient id="solve-g61" gradientUnits="userSpaceOnUse" x1="731.25" y1="438.75" x2="731.25" y2="536.25"><stop offset="0" stop-color="#ee76c6"/><stop offset="1" stop-color="#f47293"/></linearGradient>
+          <linearGradient id="solve-g62" gradientUnits="userSpaceOnUse" x1="731.25" y1="536.25" x2="633.75" y2="536.25"><stop offset="0" stop-color="#f47293"/><stop offset="1" stop-color="#f96f5f"/></linearGradient>
+        </defs>
+        <rect width="780" height="780" rx="22" fill="#1E293B" stroke="#475569" stroke-width="2"/>
+        <g><rect x="3" y="3" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="100.5" y="3" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="198" y="3" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="295.5" y="3" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="393" y="3" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="490.5" y="3" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="588" y="3" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="685.5" y="3" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="3" y="100.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="100.5" y="100.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="198" y="100.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="295.5" y="100.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="393" y="100.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="490.5" y="100.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="588" y="100.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="685.5" y="100.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="3" y="198" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="100.5" y="198" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="198" y="198" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="295.5" y="198" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="393" y="198" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="490.5" y="198" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="588" y="198" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="685.5" y="198" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="3" y="295.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="100.5" y="295.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="198" y="295.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="295.5" y="295.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="393" y="295.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="490.5" y="295.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="588" y="295.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="685.5" y="295.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="3" y="393" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="100.5" y="393" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="198" y="393" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="295.5" y="393" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="393" y="393" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="490.5" y="393" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="588" y="393" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="685.5" y="393" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="3" y="490.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="100.5" y="490.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="198" y="490.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="295.5" y="490.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="393" y="490.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="490.5" y="490.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="588" y="490.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="685.5" y="490.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="3" y="588" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="100.5" y="588" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="198" y="588" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="295.5" y="588" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="393" y="588" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="490.5" y="588" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="588" y="588" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="685.5" y="588" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="3" y="685.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="100.5" y="685.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="198" y="685.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="295.5" y="685.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="393" y="685.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="490.5" y="685.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="588" y="685.5" width="91.5" height="91.5" rx="12" fill="#243044"/><rect x="685.5" y="685.5" width="91.5" height="91.5" rx="12" fill="#243044"/></g>
+        <g id="solve-ribbon">
+          <line data-seg="0" x1="536.25" y1="341.25" x2="438.75" y2="341.25" stroke="url(#solve-g0)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="1" x1="438.75" y1="341.25" x2="341.25" y2="341.25" stroke="url(#solve-g1)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="2" x1="341.25" y1="341.25" x2="341.25" y2="438.75" stroke="url(#solve-g2)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="3" x1="341.25" y1="438.75" x2="438.75" y2="438.75" stroke="url(#solve-g3)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="4" x1="438.75" y1="438.75" x2="536.25" y2="438.75" stroke="url(#solve-g4)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="5" x1="536.25" y1="438.75" x2="536.25" y2="536.25" stroke="url(#solve-g5)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="6" x1="536.25" y1="536.25" x2="536.25" y2="633.75" stroke="url(#solve-g6)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="7" x1="536.25" y1="633.75" x2="633.75" y2="633.75" stroke="url(#solve-g7)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="8" x1="633.75" y1="633.75" x2="731.25" y2="633.75" stroke="url(#solve-g8)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="9" x1="731.25" y1="633.75" x2="731.25" y2="731.25" stroke="url(#solve-g9)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="10" x1="731.25" y1="731.25" x2="633.75" y2="731.25" stroke="url(#solve-g10)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="11" x1="633.75" y1="731.25" x2="536.25" y2="731.25" stroke="url(#solve-g11)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="12" x1="536.25" y1="731.25" x2="438.75" y2="731.25" stroke="url(#solve-g12)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="13" x1="438.75" y1="731.25" x2="438.75" y2="633.75" stroke="url(#solve-g13)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="14" x1="438.75" y1="633.75" x2="438.75" y2="536.25" stroke="url(#solve-g14)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="15" x1="438.75" y1="536.25" x2="341.25" y2="536.25" stroke="url(#solve-g15)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="16" x1="341.25" y1="536.25" x2="243.75" y2="536.25" stroke="url(#solve-g16)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="17" x1="243.75" y1="536.25" x2="146.25" y2="536.25" stroke="url(#solve-g17)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="18" x1="146.25" y1="536.25" x2="146.25" y2="633.75" stroke="url(#solve-g18)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="19" x1="146.25" y1="633.75" x2="243.75" y2="633.75" stroke="url(#solve-g19)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="20" x1="243.75" y1="633.75" x2="341.25" y2="633.75" stroke="url(#solve-g20)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="21" x1="341.25" y1="633.75" x2="341.25" y2="731.25" stroke="url(#solve-g21)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="22" x1="341.25" y1="731.25" x2="243.75" y2="731.25" stroke="url(#solve-g22)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="23" x1="243.75" y1="731.25" x2="146.25" y2="731.25" stroke="url(#solve-g23)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="24" x1="146.25" y1="731.25" x2="48.75" y2="731.25" stroke="url(#solve-g24)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="25" x1="48.75" y1="731.25" x2="48.75" y2="633.75" stroke="url(#solve-g25)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="26" x1="48.75" y1="633.75" x2="48.75" y2="536.25" stroke="url(#solve-g26)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="27" x1="48.75" y1="536.25" x2="48.75" y2="438.75" stroke="url(#solve-g27)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="28" x1="48.75" y1="438.75" x2="146.25" y2="438.75" stroke="url(#solve-g28)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="29" x1="146.25" y1="438.75" x2="243.75" y2="438.75" stroke="url(#solve-g29)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="30" x1="243.75" y1="438.75" x2="243.75" y2="341.25" stroke="url(#solve-g30)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="31" x1="243.75" y1="341.25" x2="146.25" y2="341.25" stroke="url(#solve-g31)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="32" x1="146.25" y1="341.25" x2="48.75" y2="341.25" stroke="url(#solve-g32)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="33" x1="48.75" y1="341.25" x2="48.75" y2="243.75" stroke="url(#solve-g33)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="34" x1="48.75" y1="243.75" x2="146.25" y2="243.75" stroke="url(#solve-g34)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="35" x1="146.25" y1="243.75" x2="243.75" y2="243.75" stroke="url(#solve-g35)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="36" x1="243.75" y1="243.75" x2="243.75" y2="146.25" stroke="url(#solve-g36)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="37" x1="243.75" y1="146.25" x2="146.25" y2="146.25" stroke="url(#solve-g37)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="38" x1="146.25" y1="146.25" x2="48.75" y2="146.25" stroke="url(#solve-g38)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="39" x1="48.75" y1="146.25" x2="48.75" y2="48.75" stroke="url(#solve-g39)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="40" x1="48.75" y1="48.75" x2="146.25" y2="48.75" stroke="url(#solve-g40)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="41" x1="146.25" y1="48.75" x2="243.75" y2="48.75" stroke="url(#solve-g41)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="42" x1="243.75" y1="48.75" x2="341.25" y2="48.75" stroke="url(#solve-g42)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="43" x1="341.25" y1="48.75" x2="341.25" y2="146.25" stroke="url(#solve-g43)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="44" x1="341.25" y1="146.25" x2="341.25" y2="243.75" stroke="url(#solve-g44)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="45" x1="341.25" y1="243.75" x2="438.75" y2="243.75" stroke="url(#solve-g45)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="46" x1="438.75" y1="243.75" x2="536.25" y2="243.75" stroke="url(#solve-g46)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="47" x1="536.25" y1="243.75" x2="536.25" y2="146.25" stroke="url(#solve-g47)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="48" x1="536.25" y1="146.25" x2="438.75" y2="146.25" stroke="url(#solve-g48)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="49" x1="438.75" y1="146.25" x2="438.75" y2="48.75" stroke="url(#solve-g49)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="50" x1="438.75" y1="48.75" x2="536.25" y2="48.75" stroke="url(#solve-g50)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="51" x1="536.25" y1="48.75" x2="633.75" y2="48.75" stroke="url(#solve-g51)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="52" x1="633.75" y1="48.75" x2="731.25" y2="48.75" stroke="url(#solve-g52)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="53" x1="731.25" y1="48.75" x2="731.25" y2="146.25" stroke="url(#solve-g53)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="54" x1="731.25" y1="146.25" x2="633.75" y2="146.25" stroke="url(#solve-g54)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="55" x1="633.75" y1="146.25" x2="633.75" y2="243.75" stroke="url(#solve-g55)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="56" x1="633.75" y1="243.75" x2="731.25" y2="243.75" stroke="url(#solve-g56)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="57" x1="731.25" y1="243.75" x2="731.25" y2="341.25" stroke="url(#solve-g57)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="58" x1="731.25" y1="341.25" x2="633.75" y2="341.25" stroke="url(#solve-g58)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="59" x1="633.75" y1="341.25" x2="633.75" y2="438.75" stroke="url(#solve-g59)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="60" x1="633.75" y1="438.75" x2="731.25" y2="438.75" stroke="url(#solve-g60)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="61" x1="731.25" y1="438.75" x2="731.25" y2="536.25" stroke="url(#solve-g61)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+          <line data-seg="62" x1="731.25" y1="536.25" x2="633.75" y2="536.25" stroke="url(#solve-g62)" stroke-width="44.85" stroke-linecap="round" stroke-dasharray="97.5 99.5" stroke-dashoffset="97.5" opacity="0"/>
+        </g>
+        <g id="solve-tip" opacity="0">
+          <circle id="solve-tipglow" cx="536.25" cy="341.25" r="38" fill="#FF6B2C" opacity="0.55" filter="url(#solve-glow)"/>
+          <circle id="solve-tipdot" cx="536.25" cy="341.25" r="18.837" fill="#FF6B2C" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="2.5"/>
+        </g>
+        <g><line x1="585" y1="308.1" x2="585" y2="374.4" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/><line x1="487.5" y1="600.6" x2="487.5" y2="666.9" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/><line x1="97.5" y1="600.6" x2="97.5" y2="666.9" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/><line x1="292.5" y1="210.6" x2="292.5" y2="276.9" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/><line x1="585" y1="113.1" x2="585" y2="179.4" stroke="#F8FAFC" stroke-opacity="0.88" stroke-width="13" stroke-linecap="round"/></g>
+        <g id="solve-nums"><text data-num="1" data-idx="0" x="536.25" y="341.25" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">1</text><text data-num="2" data-idx="9" x="731.25" y="633.75" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">2</text><text data-num="3" data-idx="18" x="146.25" y="536.25" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">3</text><text data-num="4" data-idx="26" x="48.75" y="633.75" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">4</text><text data-num="5" data-idx="36" x="243.75" y="243.75" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">5</text><text data-num="6" data-idx="46" x="438.75" y="243.75" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">6</text><text data-num="7" data-idx="53" x="731.25" y="48.75" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">7</text><text data-num="8" data-idx="63" x="633.75" y="536.25" text-anchor="middle" dominant-baseline="central" font-family="Lexend" font-weight="800" font-size="39" fill="#FB7185" stroke="#0F172A" stroke-width="0" stroke-linejoin="round" paint-order="stroke">8</text></g>
+      </svg></div>
+      <div id="solve-flash"></div>
+      <div id="solve-ring"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const PATH = [[3,5],[3,4],[3,3],[4,3],[4,4],[4,5],[5,5],[6,5],[6,6],[6,7],[7,7],[7,6],[7,5],[7,4],[6,4],[5,4],[5,3],[5,2],[5,1],[6,1],[6,2],[6,3],[7,3],[7,2],[7,1],[7,0],[6,0],[5,0],[4,0],[4,1],[4,2],[3,2],[3,1],[3,0],[2,0],[2,1],[2,2],[1,2],[1,1],[1,0],[0,0],[0,1],[0,2],[0,3],[1,3],[2,3],[2,4],[2,5],[1,5],[1,4],[0,4],[0,5],[0,6],[0,7],[1,7],[1,6],[2,6],[2,7],[3,7],[3,6],[4,6],[4,7],[5,7],[5,6]];
+    const CELL = 97.5;
+    const STEPS = 63;
+    const SOLVE_SECONDS = 47;
+    const DRAW_START = 0.3, DRAW_DUR = 8.79, HIT = 9.09;
+    const HOOK_DY = 76, HOOK_SCALE = 0.6;
+    const segs = Array.from(document.querySelectorAll("#solve-ribbon [data-seg]"));
+    const nums = Array.from(document.querySelectorAll("#solve-nums [data-num]"));
+    const tipGlow = document.getElementById("solve-tipglow");
+    const tipDot = document.getElementById("solve-tipdot");
+    const tip = document.getElementById("solve-tip");
+    const clock = document.getElementById("solve-clock");
+    const dM = document.getElementById("solve-m");
+    const d1 = document.getElementById("solve-s1");
+    const d2 = document.getElementById("solve-s2");
+    const flash = document.getElementById("solve-flash");
+    const ring = document.getElementById("solve-ring");
+    const board = document.getElementById("solve-board");
+    const kicker = document.getElementById("solve-kicker");
+    const solved = document.getElementById("solve-solved");
+    const STOPS = [[255,107,44],[255,197,61],[255,77,109],[232,121,249]];
+    const TEAL = [45,212,191], WHITE = [248,250,252];
+    function colorAt(i) {
+      if (i <= 0) i = 0;
+      const w = (i / 4) % STOPS.length, k = Math.floor(w) % STOPS.length, f = w - Math.floor(w);
+      const a = STOPS[k], b = STOPS[(k + 1) % STOPS.length];
+      return "rgb(" + a.map((v, j) => Math.round(v + (b[j] - v) * f)).join(",") + ")";
+    }
+    const clamp = (v) => Math.max(0, Math.min(1, v));
+    const easeP = (x) => { const u = clamp(x); return 0.5 * u + 0.5 * u * u * (3 - 2 * u); };
+    const inOut3 = (x) => { const u = clamp(x); return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; };
+    const out4 = (x) => 1 - Math.pow(1 - clamp(x), 4);
+    const centre = (i) => [(PATH[i][1] + 0.5) * CELL, (PATH[i][0] + 0.5) * CELL];
+    // Everything below is a pure function of scene time t.
+    function render(t) {
+      const p = STEPS * easeP((t - DRAW_START) / DRAW_DUR);
+      for (let i = 0; i < segs.length; i++) {
+        const f = clamp(p - i);
+        segs[i].setAttribute("opacity", f > 0 ? "1" : "0");
+        segs[i].setAttribute("stroke-dashoffset", String(CELL * (1 - f)));
+      }
+      const i = Math.min(Math.floor(p), STEPS);
+      const f = p - i;
+      const a = centre(i), b = centre(Math.min(i + 1, STEPS));
+      const x = a[0] + (b[0] - a[0]) * f, y = a[1] + (b[1] - a[1]) * f;
+      const col = colorAt(p);
+      for (const el of [tipGlow, tipDot]) { el.setAttribute("cx", x); el.setAttribute("cy", y); el.setAttribute("fill", col); }
+      // tip lands on "1" as the scene opens
+      const tipIn = out4(t / 0.25);
+      tip.setAttribute("opacity", String(tipIn));
+      tip.setAttribute("transform", "translate(" + x + " " + y + ") scale(" + (0.4 + 0.6 * tipIn) + ") translate(" + -x + " " + -y + ")");
+      for (const n of nums) {
+        const on = p > 0.02 && p >= Number(n.dataset.idx) - 0.35;
+        n.setAttribute("fill", on ? "#F8FAFC" : "#FB7185");
+        n.setAttribute("stroke-width", on ? "8" : "0");
+      }
+      // The clock: seconds from solve progress, 0..47, exactly 47 when p = 63.
+      const s = Math.floor((SOLVE_SECONDS * p) / STEPS + 1e-9);
+      dM.textContent = "0";
+      d1.textContent = String(Math.floor(s / 10));
+      d2.textContent = String(s % 10);
+      // Clock rises from the hook position to hero size (0.45 -> 0.95 s).
+      const m = inOut3((t - 0.45) / 0.5);
+      const h = t - HIT; // time since the solve
+      let pop = 1;
+      if (h >= 0) pop = 1 + 0.16 * Math.exp(-7 * h) * Math.cos(15 * h);
+      const sc = (HOOK_SCALE + (1 - HOOK_SCALE) * m) * pop;
+      clock.style.transform = "translateY(" + (HOOK_DY * (1 - m)) + "px) scale(" + sc + ")";
+      const tc = h >= 0 ? 1 : 0;
+      clock.style.color = "rgb(" + WHITE.map((v, j) => Math.round(v + (TEAL[j] - v) * tc)).join(",") + ")";
+      // Solve: teal flash over the board, ring holds, board bumps.
+      flash.style.opacity = h >= 0 ? String(0.5 * Math.pow(1 - clamp(h / 0.6), 2)) : "0";
+      ring.style.opacity = h >= 0 ? String(out4(h / 0.3)) : "0";
+      const bump = h >= 0 ? 1 + 0.025 * Math.exp(-6 * h) * Math.cos(12 * h) : 1;
+      board.style.transform = "scale(" + bump + ")";
+      // Kicker: TODAY'S ZIP fades in under the rising clock, swaps to SOLVED on the hit.
+      const kin = out4((t - 0.7) / 0.2);
+      const swap = h >= 0 ? out4((h - 0.1) / 0.18) : 0;
+      kicker.style.opacity = String(kin * (1 - swap));
+      kicker.style.filter = "blur(" + (8 * (1 - kin) + 8 * swap) + "px)";
+      solved.style.opacity = String(swap);
+      solved.style.filter = "blur(" + 8 * (1 - swap) + "px)";
+    }
+    const state = { t: 0 };
+    render(0);
+    // Hook copy carried over from the hook scene, then blurs away as the clock rises.
+    tl.fromTo("#solve-text .l1", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power2.in" }, 0.45);
+    tl.fromTo("#solve-text .l2", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power2.in" }, 0.5);
+    // One linear driver over the whole scene; render(t) is a pure function of it.
+    tl.fromTo(state, { t: 0 }, { t: 10.6, duration: 10.6, ease: "none", onUpdate: () => render(state.t) }, 0);
+    window.__timelines["solve"] = tl;
+  </script>
+</template>
