@@ -59,6 +59,7 @@ LevelWorld pathWordsWorld(
   int count, {
   String theme = 'animals',
   String title = 'Animals',
+  List<int>? sizes,
 }) => LevelWorld.fromJson('path_words_$order', {
   'game': 'path_words',
   'order': order,
@@ -67,6 +68,10 @@ LevelWorld pathWordsWorld(
   'title': title,
   'levels': [
     for (var n = 1; n <= count; n++)
-      {'id': pathWordsLevelId(order, n), 'size': 3, 'targetSeconds': 30},
+      {
+        'id': pathWordsLevelId(order, n),
+        'size': sizes == null ? 3 : sizes[(n - 1) % sizes.length],
+        'targetSeconds': 30,
+      },
   ],
 });

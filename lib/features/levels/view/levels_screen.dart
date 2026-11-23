@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -238,10 +239,11 @@ class _LevelsViewState extends State<_LevelsView> {
       if (!mounted) return;
       final center = focusId == null ? null : layout.centers[focusId];
       if (center != null && _scroll.hasClients) {
-        final offset =
+        var offset =
             layout.size.height -
             center.dy -
             (viewport + layout.bottomInset) / 2;
+        offset = _clearOfDock(layout, center, offset, viewport);
         _scroll.jumpTo(offset.clamp(0.0, _scroll.position.maxScrollExtent));
       }
       if (open == null) return;
@@ -255,6 +257,32 @@ class _LevelsViewState extends State<_LevelsView> {
         _showLocked(map);
       }
     });
+  }
+
+  /// [offset], scrolled down just enough that the focused level's world
+  /// label (centred on its gate, below the level) clears the dock, while
+  /// the level itself stays well inside the view. The bottom world's label
+  /// already sits above the dock.
+  double _clearOfDock(
+    LevelMapLayout layout,
+    Offset focus,
+    double offset,
+    double viewport,
+  ) {
+    final index = layout.bands.indexWhere(
+      (band) => band.rect.top <= focus.dy && focus.dy <= band.rect.bottom,
+    );
+    if (index <= 0) return offset;
+    // About half a two-line label, plus a little air.
+    const labelHalf = 30.0;
+    const gap = 8.0;
+    final labelBottom = layout.bands[index].gateY + labelHalf;
+    final visibleBottom = layout.size.height - offset - layout.bottomInset;
+    if (labelBottom + gap <= visibleBottom) return offset;
+    final wanted = layout.size.height - labelBottom - gap - layout.bottomInset;
+    // Never so far that the level nears the top of the view.
+    final floor = layout.size.height - viewport - focus.dy + 72;
+    return math.max(wanted, math.min(floor, offset));
   }
 
   void _onTap(LevelMap map, LevelMapNode node) {
@@ -656,14 +684,13 @@ class _WorldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final world = band.world;
-    // A locked world also says how big its boards get (its first level's).
-    final first = world.world.levels.firstOrNull;
+    // A locked world also says how big its boards get.
     final title = [
       AppStrings.levelWorldTitle(
         world.world.order,
         AppStrings.levelWorldDisplayName(world.world),
       ),
-      if (!world.open && first != null) ?levelBoardSize(first),
+      if (!world.open) ?levelBoardSizeRange(world.world.levels),
     ].join(' · ');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

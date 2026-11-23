@@ -556,6 +556,39 @@ void main() {
     double dockTop(WidgetTester tester) =>
         tester.getRect(find.byKey(const Key('floating_nav_dock'))).top;
 
+    testWidgets('the current world\'s label stays clear of the dock', (
+      tester,
+    ) async {
+      await phone(tester);
+      await clear([1, 2, 3, 4]);
+      for (var n = 1; n <= 4; n++) {
+        await progress.record('zip', levelId(2, n), stars: 3, seconds: 10);
+      }
+      await pump(
+        tester,
+        LevelCatalog([levelWorld(1, 4), levelWorld(2, 12, theme: 'metro')]),
+        dock: true,
+      );
+      final label = tester.getRect(
+        find
+            .ancestor(
+              of: find.textContaining(
+                AppStrings.levelWorldTitle(
+                  2,
+                  AppStrings.levelWorldName('metro'),
+                ),
+              ),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(
+        label.bottom,
+        lessThanOrEqualTo(dockTop(tester)),
+        reason: '$label',
+      );
+    });
+
     Rect nodeRect(WidgetTester tester, int number) => tester.getRect(
       find.byWidgetPredicate(
         (w) => w is LevelNode && w.node.slot.number == number,
@@ -590,6 +623,19 @@ void main() {
       final visible = (viewport(tester).top + dockTop(tester)) / 2;
       expect(circleOf(tester, 21).dy, closeTo(visible, 1));
     });
+  });
+
+  testWidgets('a locked Path Words world says its size range', (tester) async {
+    pref = _Pref('path_words');
+    await pump(
+      tester,
+      LevelCatalog([levelWorld(1, 3)]),
+      pathWords: LevelCatalog([
+        pathWordsWorld(1, 3),
+        pathWordsWorld(2, 4, theme: 'food', title: 'Food', sizes: [3, 4, 6]),
+      ]),
+    );
+    expect(find.textContaining('3 × 3 – 6 × 6'), findsOneWidget);
   });
 
   group('the header and the switch', () {

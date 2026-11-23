@@ -18,19 +18,16 @@ void main() {
 
   for (final raw in fixture['cases'] as List) {
     final c = raw as Map<String, dynamic>;
-    test(
-      'hints=${c['usedHints']} seconds=${c['seconds']} '
-      'target=${c['targetSeconds']} -> ${c['stars']}',
-      () {
-        expect(
-          starsFor(
-            usedHints: c['usedHints'] as bool,
-            seconds: c['seconds'] as int,
-            targetSeconds: c['targetSeconds'] as int?,
-          ),
-          c['stars'],
-        );
-      },
-    );
+    test('hints=${c['usedHints']} seconds=${c['seconds']} '
+        'target=${c['targetSeconds']} -> ${c['stars']}', () {
+      expect(
+        starsFor(
+          usedHints: c['usedHints'] as bool,
+          seconds: c['seconds'] as int,
+          targetSeconds: c['targetSeconds'] as int?,
+        ),
+        c['stars'],
+      );
+    });
   }
 }

@@ -11,6 +11,7 @@ import 'package:winklo/domain/repositories/auth_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
+import 'package:winklo/domain/entities/level_world.dart';
 import 'package:winklo/features/levels/view/widgets/level_sheet.dart';
 
 import '../../../helpers/level_fixtures.dart';
@@ -170,5 +171,26 @@ void main() {
   testWidgets('large text opens without an exception', (tester) async {
     await openSheet(tester, 'zip_1_01', textScale: 2);
     expect(tester.takeException(), isNull);
+  });
+
+  group('levelBoardSizeRange', () {
+    LevelEntry entry(int? size) =>
+        LevelEntry.fromJson({'id': 'path_words_1_01', 'size': ?size});
+
+    test('one size for a world of one size', () {
+      expect(levelBoardSizeRange([entry(5), entry(5)]), '5 × 5');
+    });
+
+    test('smallest to largest for mixed sizes', () {
+      expect(
+        levelBoardSizeRange([entry(4), entry(3), entry(6)]),
+        '3 × 3 – 6 × 6',
+      );
+    });
+
+    test('nothing when no level has a size', () {
+      expect(levelBoardSizeRange([]), isNull);
+      expect(levelBoardSizeRange([entry(null)]), isNull);
+    });
   });
 }

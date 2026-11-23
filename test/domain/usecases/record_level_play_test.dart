@@ -26,7 +26,12 @@ void main() {
   setUpAll(() {
     registerFallbackValue(LevelPlayEvent.start);
     registerFallbackValue(
-      const ClientErrorReport(severity: 'error', source: 'handled', code: 'x', message: 'x'),
+      const ClientErrorReport(
+        severity: 'error',
+        source: 'handled',
+        code: 'x',
+        message: 'x',
+      ),
     );
   });
 
@@ -36,11 +41,12 @@ void main() {
     report = _MockReport();
     now = DateTime(2026, 11, 2, 9);
     remoteReady = true;
-    when(() => auth.currentUser).thenReturn(
-      const AppUser(uid: 'u1', displayName: 'Ada'),
-    );
-    when(() => stats.increment(any(), any(), any(), any()))
-        .thenAnswer((_) async {});
+    when(
+      () => auth.currentUser,
+    ).thenReturn(const AppUser(uid: 'u1', displayName: 'Ada'));
+    when(
+      () => stats.increment(any(), any(), any(), any()),
+    ).thenAnswer((_) async {});
     when(() => report(any())).thenAnswer((_) async {});
   });
 
@@ -53,14 +59,23 @@ void main() {
   );
 
   test('increments the event for the signed-in player', () async {
-    await build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
-    verify(() => stats.increment('u1', 'zip', 'zip_1_01', LevelPlayEvent.start))
-        .called(1);
+    await build()(
+      game: 'zip',
+      levelId: 'zip_1_01',
+      event: LevelPlayEvent.start,
+    );
+    verify(
+      () => stats.increment('u1', 'zip', 'zip_1_01', LevelPlayEvent.start),
+    ).called(1);
   });
 
   test('records nothing when signed out', () async {
     when(() => auth.currentUser).thenReturn(null);
-    await build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.clear);
+    await build()(
+      game: 'zip',
+      levelId: 'zip_1_01',
+      event: LevelPlayEvent.clear,
+    );
     verifyNever(() => stats.increment(any(), any(), any(), any()));
   });
 
@@ -70,49 +85,81 @@ void main() {
     verifyNever(() => stats.increment(any(), any(), any(), any()));
   });
 
-  test('a failed write is reported once per cooldown and never thrown', () async {
-    when(() => stats.increment(any(), any(), any(), any()))
-        .thenThrow(StateError('permission-denied'));
-    final record = build();
-    await record(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
-    await record(game: 'zip', levelId: 'zip_1_02', event: LevelPlayEvent.start);
-    final reports = verify(() => report(captureAny())).captured;
-    expect(reports, hasLength(1));
-    final sent = reports.single as ClientErrorReport;
-    expect(sent.code, 'level_stats_write_failed');
-    expect(sent.uid, 'u1');
+  test(
+    'a failed write is reported once per cooldown and never thrown',
+    () async {
+      when(
+        () => stats.increment(any(), any(), any(), any()),
+      ).thenThrow(StateError('permission-denied'));
+      final record = build();
+      await record(
+        game: 'zip',
+        levelId: 'zip_1_01',
+        event: LevelPlayEvent.start,
+      );
+      await record(
+        game: 'zip',
+        levelId: 'zip_1_02',
+        event: LevelPlayEvent.start,
+      );
+      final reports = verify(() => report(captureAny())).captured;
+      expect(reports, hasLength(1));
+      final sent = reports.single as ClientErrorReport;
+      expect(sent.code, 'level_stats_write_failed');
+      expect(sent.uid, 'u1');
 
-    now = now.add(const Duration(minutes: 9));
-    await record(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
-    verifyNever(() => report(any()));
+      now = now.add(const Duration(minutes: 9));
+      await record(
+        game: 'zip',
+        levelId: 'zip_1_01',
+        event: LevelPlayEvent.start,
+      );
+      verifyNever(() => report(any()));
 
-    now = now.add(const Duration(minutes: 2));
-    await record(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
-    verify(() => report(any())).called(1);
-  });
+      now = now.add(const Duration(minutes: 2));
+      await record(
+        game: 'zip',
+        levelId: 'zip_1_01',
+        event: LevelPlayEvent.start,
+      );
+      verify(() => report(any())).called(1);
+    },
+  );
 
   test('a timeout is not reported', () async {
-    when(() => stats.increment(any(), any(), any(), any()))
-        .thenThrow(TimeoutException('slow'));
-    await build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
+    when(
+      () => stats.increment(any(), any(), any(), any()),
+    ).thenThrow(TimeoutException('slow'));
+    await build()(
+      game: 'zip',
+      levelId: 'zip_1_01',
+      event: LevelPlayEvent.start,
+    );
     verifyNever(() => report(any()));
   });
 
   test('a different error inside the cooldown is reported', () async {
     final record = build();
-    when(() => stats.increment(any(), any(), any(), any()))
-        .thenThrow(StateError('a'));
+    when(
+      () => stats.increment(any(), any(), any(), any()),
+    ).thenThrow(StateError('a'));
     await record(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
-    when(() => stats.increment(any(), any(), any(), any()))
-        .thenThrow(StateError('b'));
+    when(
+      () => stats.increment(any(), any(), any(), any()),
+    ).thenThrow(StateError('b'));
     await record(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
     verify(() => report(any())).called(2);
   });
 
   test('a non-reportable Failure is not reported', () async {
-    when(() => stats.increment(any(), any(), any(), any()))
-        .thenThrow(const Failure('offline', reportable: false));
-    await build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
+    when(
+      () => stats.increment(any(), any(), any(), any()),
+    ).thenThrow(const Failure('offline', reportable: false));
+    await build()(
+      game: 'zip',
+      levelId: 'zip_1_01',
+      event: LevelPlayEvent.start,
+    );
     verifyNever(() => report(any()));
   });
 
@@ -121,15 +168,21 @@ void main() {
     when(() => auth.currentUser).thenAnswer(
       (_) => AppUser(uid: reads++ == 0 ? 'u1' : 'u2', displayName: 'x'),
     );
-    when(() => stats.increment(any(), any(), any(), any()))
-        .thenThrow(StateError('boom'));
-    await build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start);
+    when(
+      () => stats.increment(any(), any(), any(), any()),
+    ).thenThrow(StateError('boom'));
+    await build()(
+      game: 'zip',
+      levelId: 'zip_1_01',
+      event: LevelPlayEvent.start,
+    );
     verifyNever(() => report(any()));
   });
 
   test('a synchronous throw from the reporter does not escape', () async {
-    when(() => stats.increment(any(), any(), any(), any()))
-        .thenThrow(StateError('boom'));
+    when(
+      () => stats.increment(any(), any(), any(), any()),
+    ).thenThrow(StateError('boom'));
     when(() => report(any())).thenThrow(StateError('reporter'));
     await expectLater(
       build()(game: 'zip', levelId: 'zip_1_01', event: LevelPlayEvent.start),

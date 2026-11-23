@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -18,6 +20,20 @@ import '../../../auth/view/ensure_signed_in_for_play.dart';
 String? levelBoardSize(LevelEntry entry) {
   final size = entry.boardSize;
   return size > 0 ? '$size × $size' : null;
+}
+
+/// The board sizes across [levels]: "5 × 5" when they're all one size,
+/// "3 × 3 – 6 × 6" (smallest to largest) when they differ, null when no
+/// level has a size. A locked world's label shows it.
+String? levelBoardSizeRange(List<LevelEntry> levels) {
+  final sizes = [
+    for (final level in levels)
+      if (level.boardSize > 0) level.boardSize,
+  ];
+  if (sizes.isEmpty) return null;
+  final low = sizes.reduce(math.min);
+  final high = sizes.reduce(math.max);
+  return low == high ? '$low × $low' : '$low × $low – $high × $high';
 }
 
 /// Opens the sheet for a playable [node]: its world, number, best, goals,

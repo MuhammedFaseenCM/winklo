@@ -30,10 +30,7 @@ void main() {
     );
 
     await repo.save(run);
-    final loaded = await repo.load(
-      gameId: GameIds.sudoku,
-      playId: '20261003',
-    );
+    final loaded = await repo.load(gameId: GameIds.sudoku, playId: '20261003');
 
     expect(loaded, isNotNull);
     expect(loaded!.gameId, GameIds.sudoku);
@@ -63,14 +60,8 @@ void main() {
       ),
     );
 
-    expect(
-      await repo.load(gameId: GameIds.zip, playId: '20261004'),
-      isNull,
-    );
-    expect(
-      await repo.load(gameId: GameIds.sudoku, playId: '20261003'),
-      isNull,
-    );
+    expect(await repo.load(gameId: GameIds.zip, playId: '20261004'), isNull);
+    expect(await repo.load(gameId: GameIds.sudoku, playId: '20261003'), isNull);
   });
 
   test('clear removes draft', () async {
