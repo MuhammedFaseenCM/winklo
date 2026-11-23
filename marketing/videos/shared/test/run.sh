@@ -9,4 +9,5 @@ for f in zip-puzzle.json zip-puzzle-b.json zip-puzzle-c.json zip-puzzle-d.json; 
   [ "$rc" -eq 0 ] || { echo "FAIL: $f exited $rc, expected 0"; exit 1; }
 done
 node test/distinct.mjs || { echo "FAIL: puzzles not distinct"; exit 1; }
+node test/shape.mjs || { echo "FAIL: puzzle shape rule"; exit 1; }
 echo "PASS"
