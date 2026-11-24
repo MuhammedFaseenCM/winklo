@@ -147,6 +147,47 @@ void main() {
   );
 
   blocTest<LeaderboardCubit, LeaderboardState>(
+    'back from Sudoku, a Levels game returns to the Levels board',
+    build: buildCubit,
+    seed: () => const LeaderboardState(
+      gameId: GameIds.pathWords,
+      period: LeaderboardPeriod.levels,
+    ),
+    act: (cubit) => cubit
+      ..selectGame(GameIds.sudoku)
+      ..selectGame(GameIds.pathWords),
+    skip: 1,
+    expect: () => [
+      const LeaderboardState(
+        gameId: GameIds.pathWords,
+        period: LeaderboardPeriod.levels,
+        status: LeaderboardStatus.loading,
+      ),
+    ],
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
+    'a board picked on Sudoku is kept when going back',
+    build: buildCubit,
+    seed: () => const LeaderboardState(
+      gameId: GameIds.pathWords,
+      period: LeaderboardPeriod.levels,
+    ),
+    act: (cubit) => cubit
+      ..selectGame(GameIds.sudoku)
+      ..selectBoard(LeaderboardPeriod.weekly)
+      ..selectGame(GameIds.pathWords),
+    skip: 2,
+    expect: () => [
+      const LeaderboardState(
+        gameId: GameIds.pathWords,
+        period: LeaderboardPeriod.weekly,
+        status: LeaderboardStatus.loading,
+      ),
+    ],
+  );
+
+  blocTest<LeaderboardCubit, LeaderboardState>(
     'leaving Path Words on the Levels board falls back to the daily board',
     build: buildCubit,
     seed: () => const LeaderboardState(

@@ -125,7 +125,7 @@ void main() {
     await tester.pump();
 
     expect(games.last, GameIds.pathWords);
-    expect(find.text(AppStrings.pathWordsTab), findsOneWidget);
+    expect(find.text(AppStrings.pathWordsTitle), findsOneWidget);
   });
 
   Future<void> pumpLeaderboard(
@@ -281,7 +281,7 @@ void main() {
     expect(find.byIcon(AppIcons.play), findsOneWidget);
 
     // Switch game to Path Words
-    await tester.tap(find.text(AppStrings.pathWordsTab));
+    await tester.tap(find.text(AppStrings.pathWordsTitle));
     await tester.pump();
 
     boardController.add([]);
