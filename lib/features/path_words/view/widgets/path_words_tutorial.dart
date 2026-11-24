@@ -152,14 +152,27 @@ abstract final class PathWordsTutorial {
     );
   }
 
-  static Future<void> maybeShow(BuildContext context) async {
+  /// Shows the guide the first time this game is played. [onOpen] runs
+  /// just before it opens and [onClose] once it's closed (the screen pauses
+  /// the run's clock between them, so reading the guide costs no time);
+  /// neither runs when the guide was already seen.
+  static Future<void> maybeShow(
+    BuildContext context, {
+    VoidCallback? onOpen,
+    VoidCallback? onClose,
+  }) async {
     final repo = context.read<TutorialRepository>();
     if (await repo.hasSeen(GameIds.pathWords)) return;
     if (!context.mounted) return;
     final analytics = context.read<AnalyticsRepository>();
     await analytics.logTutorialShown(gameId: GameIds.pathWords);
     if (!context.mounted) return;
-    await show(context, isFirstRun: true);
+    onOpen?.call();
+    try {
+      await show(context, isFirstRun: true);
+    } finally {
+      onClose?.call();
+    }
   }
 }
 

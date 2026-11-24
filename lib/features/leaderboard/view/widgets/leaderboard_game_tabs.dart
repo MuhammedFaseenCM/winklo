@@ -23,7 +23,7 @@ class LeaderboardGameTabs extends StatelessWidget {
   ];
 
   static String _label(String gameId) => switch (gameId) {
-    GameIds.pathWords => AppStrings.pathWordsTab,
+    GameIds.pathWords => AppStrings.pathWordsTitle,
     GameIds.sudoku => AppStrings.sudokuTitle,
     _ => AppStrings.zipTitle,
   };

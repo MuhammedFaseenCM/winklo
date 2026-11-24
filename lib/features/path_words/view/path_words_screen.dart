@@ -159,6 +159,19 @@ class _PathWordsScreenState extends State<PathWordsScreen>
     });
   }
 
+  /// Reading the guide costs no time: the run's clock stops while it's open.
+  void _pauseForGuide() => _bloc.add(const PathWordsEvent.pauseRun());
+
+  void _resumeAfterGuide() {
+    if (!mounted) return;
+    // Only when the app is in front: going to the background paused the run
+    // too, and coming back resumes it.
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+    _bloc.add(const PathWordsEvent.resumeRun());
+  }
+
   void _maybeShowTutorial(PathWordsState state) {
     if (_tutorialPrompted) return;
     final canPlay =
@@ -170,7 +183,11 @@ class _PathWordsScreenState extends State<PathWordsScreen>
     _tutorialPrompted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      PathWordsTutorial.maybeShow(context);
+      PathWordsTutorial.maybeShow(
+        context,
+        onOpen: _pauseForGuide,
+        onClose: _resumeAfterGuide,
+      );
     });
   }
 
@@ -350,7 +367,10 @@ class _PathWordsScreenState extends State<PathWordsScreen>
                                       ),
                                 icon: const AppIcon(AppIcons.refresh),
                               ),
-                            const PathWordsHowToPlayButton(),
+                            PathWordsHowToPlayButton(
+                              onOpen: _pauseForGuide,
+                              onClose: _resumeAfterGuide,
+                            ),
                           ],
                         ),
                       ),

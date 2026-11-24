@@ -59,6 +59,11 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
   /// Today's board day, then the 13 before it.
   List<String> get recentDayIds => recentLeaderboardDayIds(_now());
 
+  /// Set when a game without Levels dropped the Levels board, so going
+  /// back to a Levels game shows it again; any board the player picks in
+  /// between clears it.
+  bool _levelsDropped = false;
+
   void selectGame(String gameId) {
     if (gameId == state.gameId) return;
     if (gameId != GameIds.zip &&
@@ -71,10 +76,21 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
     final dropLevels =
         state.period == LeaderboardPeriod.levels &&
         !levelGameIds.contains(gameId);
+    final restoreLevels =
+        _levelsDropped &&
+        levelGameIds.contains(gameId) &&
+        state.period == LeaderboardPeriod.daily &&
+        state.dayId == null;
+    if (dropLevels) _levelsDropped = true;
+    if (restoreLevels) _levelsDropped = false;
     emit(
       state.copyWith(
         gameId: gameId,
-        period: dropLevels ? LeaderboardPeriod.daily : state.period,
+        period: dropLevels
+            ? LeaderboardPeriod.daily
+            : restoreLevels
+            ? LeaderboardPeriod.levels
+            : state.period,
         dayId: dropLevels ? null : state.dayId,
         status: LeaderboardStatus.loading,
       ),
@@ -83,6 +99,7 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
   }
 
   void selectPeriod(LeaderboardPeriod period) {
+    _levelsDropped = false;
     if (period == state.period) return;
     if (period == LeaderboardPeriod.levels &&
         !levelGameIds.contains(state.gameId)) {
@@ -94,6 +111,7 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
 
   /// Shows the daily board of [dayId] (`yyyy-MM-dd`); today's for null.
   void selectDay(String? dayId) {
+    _levelsDropped = false;
     final today = leaderboardDayId(_now());
     final next = dayId == today ? null : dayId;
     if (next != null && !recentDayIds.contains(next)) return;
@@ -111,6 +129,7 @@ class LeaderboardCubit extends Cubit<LeaderboardState> {
   /// Shows [period]'s board in one load; for the daily board, [dayId]'s
   /// (`yyyy-MM-dd`, today's for null). Weekly and all-time clear the day.
   void selectBoard(LeaderboardPeriod period, {String? dayId}) {
+    _levelsDropped = false;
     if (period == LeaderboardPeriod.levels &&
         !levelGameIds.contains(state.gameId)) {
       return;
