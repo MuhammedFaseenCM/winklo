@@ -115,6 +115,19 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
     return true;
   }
 
+  /// Reading the guide costs no time: the run's clock stops while it's open.
+  void _pauseForGuide() => _bloc.add(const ZipEvent.pauseRun());
+
+  void _resumeAfterGuide() {
+    if (!mounted) return;
+    // Only when the app is in front: going to the background paused the run
+    // too, and coming back resumes it.
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+    _bloc.add(const ZipEvent.resumeRun());
+  }
+
   void _maybeShowTutorial(ZipState state) {
     if (_tutorialPrompted) return;
     if (state.status == ZipStatus.initial || state.status == ZipStatus.failed) {
@@ -124,7 +137,11 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
     _tutorialPrompted = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ZipTutorial.maybeShow(context);
+      ZipTutorial.maybeShow(
+        context,
+        onOpen: _pauseForGuide,
+        onClose: _resumeAfterGuide,
+      );
     });
   }
 
@@ -287,7 +304,10 @@ class _ZipScreenState extends State<ZipScreen> with WidgetsBindingObserver {
                                       },
                                 icon: const AppIcon(AppIcons.refresh),
                               ),
-                            const ZipHowToPlayButton(),
+                            ZipHowToPlayButton(
+                              onOpen: _pauseForGuide,
+                              onClose: _resumeAfterGuide,
+                            ),
                           ],
                         ),
                       ).animate().fadeIn(duration: 350.ms),

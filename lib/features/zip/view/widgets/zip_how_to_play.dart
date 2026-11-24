@@ -9,7 +9,12 @@ import '../../../../domain/repositories/analytics_repository.dart';
 import 'zip_tutorial.dart';
 
 class ZipHowToPlayButton extends StatelessWidget {
-  const ZipHowToPlayButton({super.key});
+  const ZipHowToPlayButton({super.key, this.onOpen, this.onClose});
+
+  /// Run as the guide opens and once it's closed: the screen pauses the
+  /// run's clock between them.
+  final VoidCallback? onOpen;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +29,12 @@ class ZipHowToPlayButton extends StatelessWidget {
           // Analytics may not be provided in focused widget tests.
         }
         if (!context.mounted) return;
-        await ZipTutorial.show(context);
+        onOpen?.call();
+        try {
+          await ZipTutorial.show(context);
+        } finally {
+          onClose?.call();
+        }
       },
       icon: const AppIcon(AppIcons.help),
     );
