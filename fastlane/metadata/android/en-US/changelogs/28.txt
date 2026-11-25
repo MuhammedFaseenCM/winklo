@@ -1,0 +1,7 @@
+What's new
+
+• Path Words Levels: themed word worlds on a map, starting with Animals and Food, with up to three stars on each level
+• Levels on Home: see your stars and jump back into your next level
+• A quick tour of Levels the first time you open the app
+• Every world now has its own look, and switching games on the Levels tab slides between maps
+• Reading How to play no longer costs time
