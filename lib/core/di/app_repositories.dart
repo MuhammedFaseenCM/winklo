@@ -57,6 +57,7 @@ import 'package:winklo/data/repositories/settings_repository_impl.dart';
 import 'package:winklo/data/repositories/habit_repository_impl.dart';
 import 'package:winklo/data/repositories/haptics_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/levels_game_preference_repository_impl.dart';
+import 'package:winklo/data/repositories/levels_intro_repository_impl.dart';
 import 'package:winklo/data/repositories/sfx_settings_repository_impl.dart';
 import 'package:winklo/data/repositories/streak_repository_impl.dart';
 import 'package:winklo/data/repositories/tutorial_repository_impl.dart';
@@ -91,6 +92,7 @@ import 'package:winklo/domain/repositories/score_repository.dart';
 import 'package:winklo/domain/repositories/habit_repository.dart';
 import 'package:winklo/domain/repositories/haptics_settings_repository.dart';
 import 'package:winklo/domain/repositories/levels_game_preference_repository.dart';
+import 'package:winklo/domain/repositories/levels_intro_repository.dart';
 import 'package:winklo/domain/repositories/sfx_settings_repository.dart';
 import 'package:winklo/domain/repositories/streak_repository.dart';
 import 'package:winklo/domain/repositories/tutorial_repository.dart';
@@ -162,6 +164,10 @@ List<SingleChildWidget> buildRepositoryProviders({
     RepositoryProvider<SfxSettingsRepository>(
       create: (context) =>
           SfxSettingsRepositoryImpl(context.read<SharedPreferences>()),
+    ),
+    RepositoryProvider<LevelsIntroRepository>(
+      create: (context) =>
+          LevelsIntroRepositoryImpl(context.read<SharedPreferences>()),
     ),
     RepositoryProvider<LevelsGamePreferenceRepository>(
       create: (context) =>

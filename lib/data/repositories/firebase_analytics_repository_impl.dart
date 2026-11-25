@@ -176,6 +176,16 @@ class FirebaseAnalyticsRepositoryImpl implements AnalyticsRepository {
   }
 
   @override
+  Future<void> logLevelsIntro({required String action, String? gameId}) {
+    return _safe(
+      (a) => a.logEvent(
+        name: 'levels_intro',
+        parameters: {'action': action, 'game_id': ?gameId},
+      ),
+    );
+  }
+
+  @override
   Future<void> logTutorialDismissed({required String gameId}) {
     return _safe(
       (a) => a.logEvent(
