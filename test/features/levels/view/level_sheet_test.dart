@@ -12,6 +12,7 @@ import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/features/auth/cubit/auth_cubit.dart';
 import 'package:winklo/domain/entities/level_world.dart';
+import 'package:winklo/domain/repositories/levels_intro_repository.dart';
 import 'package:winklo/features/levels/view/widgets/level_sheet.dart';
 
 import '../../../helpers/level_fixtures.dart';
@@ -21,6 +22,8 @@ class _MockAuth extends Mock implements AuthRepository {}
 class _MockSignInWithGoogle extends Mock implements SignInWithGoogle {}
 
 class _MockSignOut extends Mock implements SignOut {}
+
+class _MockIntro extends Mock implements LevelsIntroRepository {}
 
 void main() {
   final map = LevelMap.build(
@@ -34,6 +37,7 @@ void main() {
     LevelMap? from,
     double textScale = 1,
     Set<String>? boardLevelIds,
+    LevelsIntroRepository? intro,
   }) async {
     final m = from ?? map;
     final visited = <String>[];
@@ -74,23 +78,29 @@ void main() {
     const user = AppUser(uid: 'u1', displayName: 'Ada');
     when(() => auth.currentUser).thenReturn(user);
     when(() => auth.authStateChanges()).thenAnswer((_) => Stream.value(user));
-    await tester.pumpWidget(
-      BlocProvider(
-        create: (_) => AuthCubit(
-          authRepository: auth,
-          signInWithGoogle: _MockSignInWithGoogle(),
-          signOut: _MockSignOut(),
-        ),
-        child: MaterialApp.router(
-          routerConfig: router,
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
-            child: child!,
-          ),
+    final Widget app = BlocProvider(
+      create: (_) => AuthCubit(
+        authRepository: auth,
+        signInWithGoogle: _MockSignInWithGoogle(),
+        signOut: _MockSignOut(),
+      ),
+      child: MaterialApp.router(
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
         ),
       ),
+    );
+    await tester.pumpWidget(
+      intro == null
+          ? app
+          : RepositoryProvider<LevelsIntroRepository>.value(
+              value: intro,
+              child: app,
+            ),
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -125,6 +135,21 @@ void main() {
     await tester.tap(find.text('Play'));
     await tester.pumpAndSettle();
     expect(visited, ['/path-words?mode=level&level=path_words_1_01']);
+  });
+
+  testWidgets('Play remembers its game for Home\'s Levels card', (
+    tester,
+  ) async {
+    final intro = _MockIntro();
+    when(() => intro.setLastGame(any())).thenAnswer((_) async {});
+    final pathWords = LevelMap.build(
+      LevelCatalog([pathWordsWorld(1, 2)]),
+      const LevelProgress({}),
+    );
+    await openSheet(tester, 'path_words_1_01', from: pathWords, intro: intro);
+    await tester.tap(find.text('Play'));
+    await tester.pumpAndSettle();
+    verify(() => intro.setLastGame('path_words')).called(1);
   });
 
   testWidgets('the current level says Play', (tester) async {
