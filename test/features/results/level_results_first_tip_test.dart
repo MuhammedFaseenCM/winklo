@@ -55,4 +55,12 @@ void main() {
     expect(find.text(AppStrings.levelsFirstClearTip), findsNothing);
     verifyNever(() => intro.markFirstClearTipSeen());
   });
+
+  testWidgets('a level result never shows the daily\'s Levels nudge', (
+    tester,
+  ) async {
+    when(() => intro.firstClearTipSeen).thenReturn(true);
+    await pump(tester);
+    expect(find.text(AppStrings.levelsDailyNudge), findsNothing);
+  });
 }

@@ -164,6 +164,74 @@ void main() {
     );
   });
 
+  testWidgets('a daily clear points on to Levels', (tester) async {
+    final auth = _MockAuthRepository();
+    final boardController =
+        StreamController<List<LeaderboardEntry>>.broadcast();
+    addTearDown(boardController.close);
+    final watch = _MockWatchLeaderboard();
+    when(
+      () => watch(
+        gameId: any(named: 'gameId'),
+        period: any(named: 'period'),
+        dayId: any(named: 'dayId'),
+      ),
+    ).thenAnswer((_) => boardController.stream);
+    when(
+      () => auth.currentUser,
+    ).thenReturn(const AppUser(uid: 'u1', displayName: 'Tester'));
+    when(() => auth.authStateChanges()).thenAnswer(
+      (_) => Stream.value(const AppUser(uid: 'u1', displayName: 'Tester')),
+    );
+    final router = GoRouter(
+      initialLocation: '/results',
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const Text('home')),
+        GoRoute(path: '/levels', builder: (_, _) => const Text('levels')),
+        GoRoute(
+          path: '/results',
+          builder: (_, _) => const ResultsScreen(
+            args: ResultsArgs(
+              title: 'Puzzle cleared!',
+              subtitle: '',
+              timeSeconds: 12,
+              improved: false,
+              replayDaily: true,
+              gameId: GameIds.zip,
+            ),
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider<WatchLeaderboard>.value(value: watch),
+          RepositoryProvider<AuthRepository>.value(value: auth),
+          ..._actionProviders(),
+        ],
+        child: BlocProvider(
+          create: (_) => AuthCubit(
+            authRepository: auth,
+            signInWithGoogle: _MockSignInWithGoogle(),
+            signOut: _MockSignOut(),
+          ),
+          child: MaterialApp.router(
+            theme: buildAppTheme(),
+            routerConfig: router,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    boardController.add(const []);
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.levelsDailyNudge), findsOneWidget);
+    await tester.tap(find.text(AppStrings.levelsDailyNudge));
+    await tester.pumpAndSettle();
+    expect(find.text('levels'), findsOneWidget);
+  });
+
   testWidgets('Path Words clear signed-in shows celebration + mini board', (
     tester,
   ) async {
