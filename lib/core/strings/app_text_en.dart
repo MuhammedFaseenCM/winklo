@@ -1619,6 +1619,23 @@ final class AppTextEn implements AppText {
   String get levelsSoon => 'Soon';
   @override
   String get levelsSudokuSoon => 'Sudoku levels are coming soon';
+  @override
+  String levelsHomeContinue(String game, int number) =>
+      'Continue: $game Level $number';
+  @override
+  String get levelsIntroBadge => 'New';
+  @override
+  String get levelsIntroTitle => 'Levels are here';
+  @override
+  String get levelsIntroBody =>
+      'Play themed worlds on a map and earn up to three stars on each level.';
+  @override
+  String get levelsIntroLater => 'Maybe later';
+  @override
+  String get levelsFirstClearTip =>
+      'Stars add up on your map. Play the next level now, or any time from the Levels tab.';
+  @override
+  String get levelsDailyNudge => 'Done for today? Keep playing in Levels';
 
   @override
   String get levelsNeedConnection => 'Levels need a connection the first time.';

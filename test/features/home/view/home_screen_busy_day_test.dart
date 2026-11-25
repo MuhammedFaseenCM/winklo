@@ -97,6 +97,8 @@ void main() {
     Key? boundary,
   }) async {
     SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
       HomeScreen.permissionPromptedKey: true,
       for (final game in games) ...{
         'best_time_${modeKeyFor(game, today)}': clearSeconds[game]!,

@@ -6,6 +6,7 @@ import '../../../domain/entities/app_update_decision.dart';
 import '../../../domain/repositories/analytics_repository.dart';
 import '../../../domain/repositories/app_update_repository.dart';
 import '../../../domain/repositories/in_app_update_repository.dart';
+import '../../../domain/repositories/levels_intro_repository.dart';
 import '../../../domain/usecases/check_app_update.dart';
 import '../../app_update/cubit/app_update_cubit.dart';
 import '../../app_update/cubit/app_update_state.dart';
@@ -72,7 +73,7 @@ class _DashboardShellView extends StatelessWidget {
                 ),
                 bottomNavigationBar: forced
                     ? null
-                    : FloatingNavDock(
+                    : _LevelsDotDock(
                         selectedIndex: navigationShell.currentIndex,
                         onDestinationSelected: (index) {
                           if (context.read<AppUpdateCubit>().isForced) return;
@@ -91,6 +92,37 @@ class _DashboardShellView extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// The nav dock, with the Levels tab's "new" dot until that tab is first
+/// opened (when this install's intro flags say so).
+class _LevelsDotDock extends StatelessWidget {
+  const _LevelsDotDock({
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final intro = context.read<LevelsIntroRepository?>();
+    if (intro == null) {
+      return FloatingNavDock(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onDestinationSelected,
+      );
+    }
+    return StreamBuilder<void>(
+      stream: intro.changes,
+      builder: (context, _) => FloatingNavDock(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onDestinationSelected,
+        showLevelsDot: !intro.levelsTabSeen,
       ),
     );
   }

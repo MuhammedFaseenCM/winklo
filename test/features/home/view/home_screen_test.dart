@@ -83,7 +83,10 @@ void main() {
   testWidgets('reloads cleared state after returning from a daily game', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
+    });
     final prefs = await SharedPreferences.getInstance();
     final levelId = DailyPuzzleGenerator.dateId(
       DateTime.now(),
@@ -142,7 +145,10 @@ void main() {
   testWidgets('reloads cleared state when a sync restores progress', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
+    });
     final prefs = await SharedPreferences.getInstance();
     final levelId = DailyPuzzleGenerator.dateId(
       DateTime.now(),
@@ -191,7 +197,10 @@ void main() {
   testWidgets('reloads after results replaces the game and returns home', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
+    });
     final prefs = await SharedPreferences.getInstance();
     final levelId = DailyPuzzleGenerator.dateId(
       DateTime.now(),
@@ -262,7 +271,10 @@ void main() {
   testWidgets('signed-out user sees play sign-in sheet and stays on Home', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
+    });
     final prefs = await SharedPreferences.getInstance();
 
     final router = GoRouter(
@@ -305,7 +317,10 @@ void main() {
   testWidgets('signed-out Path Words tap shows play sign-in sheet', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
+    });
     final prefs = await SharedPreferences.getInstance();
 
     final router = GoRouter(
@@ -338,7 +353,10 @@ void main() {
   });
 
   testWidgets('signed-in user opens Zip without sign-in sheet', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
+    });
     final prefs = await SharedPreferences.getInstance();
 
     final router = GoRouter(
@@ -373,7 +391,10 @@ void main() {
   testWidgets('tile leaderboard button opens that game leaderboard', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
+    });
     final prefs = await SharedPreferences.getInstance();
 
     final router = GoRouter(
@@ -415,6 +436,8 @@ void main() {
       final now = DateTime.now();
       final today = dayId(now);
       SharedPreferences.setMockInitialValues({
+        // The one-time Levels card is tested in home_levels_intro_test.
+        'levels_intro_seen': true,
         'best_time_${modeKeyFor(GameIds.zip, today)}': 72,
         'best_time_${modeKeyFor(GameIds.zip, dayId(now.subtract(const Duration(days: 3))))}':
             48,
@@ -441,6 +464,8 @@ void main() {
     testWidgets('a streak shows its freeze until it is used', (tester) async {
       final today = dayId(DateTime.now());
       SharedPreferences.setMockInitialValues({
+        // The one-time Levels card is tested in home_levels_intro_test.
+        'levels_intro_seen': true,
         'best_time_${modeKeyFor(GameIds.zip, today)}': 72,
         'streak_current_zip': 3,
         'streak_longest_zip': 3,

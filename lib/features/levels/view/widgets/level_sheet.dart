@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/play_mode_route.dart';
@@ -13,6 +15,7 @@ import '../../../../core/widgets/zip_ui.dart';
 import '../../../../domain/entities/level_world.dart';
 import '../../../../domain/logic/level_map.dart';
 import '../../../../domain/play_mode.dart';
+import '../../../../domain/repositories/levels_intro_repository.dart';
 import '../../../auth/view/ensure_signed_in_for_play.dart';
 
 /// [entry]'s board size, "5 × 5", as the sheet and a locked world's label
@@ -207,6 +210,13 @@ class LevelSheet extends StatelessWidget {
                   // Dismissed while signing in or syncing: the sheet's route is
                   // on its way out, so a pop would take the page beneath it.
                   if (!context.mounted || route?.isCurrent != true) return;
+                  // Home's Levels card continues in this game.
+                  unawaited(
+                    context.read<LevelsIntroRepository?>()?.setLastGame(
+                          slot.world.game,
+                        ) ??
+                        Future<void>.value(),
+                  );
                   navigator.pop();
                   router.push(
                     PlayMode.level(

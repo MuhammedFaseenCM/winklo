@@ -1686,6 +1686,23 @@ final class AppTextMl implements AppText {
   String get levelsSoon => 'ഉടൻ';
   @override
   String get levelsSudokuSoon => 'സുഡോക്കു ലെവലുകൾ ഉടൻ വരുന്നു';
+  @override
+  String levelsHomeContinue(String game, int number) =>
+      'തുടരൂ: $game ലെവൽ $number';
+  @override
+  String get levelsIntroBadge => 'പുതിയത്';
+  @override
+  String get levelsIntroTitle => 'ലെവലുകൾ എത്തി';
+  @override
+  String get levelsIntroBody =>
+      'മാപ്പിലെ തീം ലോകങ്ങൾ കളിക്കൂ, ഓരോ ലെവലിലും മൂന്ന് നക്ഷത്രം വരെ നേടൂ.';
+  @override
+  String get levelsIntroLater => 'പിന്നീടാകട്ടെ';
+  @override
+  String get levelsFirstClearTip =>
+      'നക്ഷത്രങ്ങൾ നിങ്ങളുടെ മാപ്പിൽ കൂടും. അടുത്ത ലെവൽ ഇപ്പോൾ കളിക്കൂ, അല്ലെങ്കിൽ എപ്പോൾ വേണമെങ്കിലും ലെവൽസ് ടാബിൽ നിന്ന്.';
+  @override
+  String get levelsDailyNudge => 'ഇന്നത്തേത് കഴിഞ്ഞോ? ലെവലുകളിൽ കളി തുടരൂ';
 
   @override
   String get levelsNeedConnection =>

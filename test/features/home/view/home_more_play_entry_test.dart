@@ -21,6 +21,8 @@ void main() {
 
   Future<void> pumpHome(WidgetTester tester, {Key? boundary}) async {
     SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
       HomeScreen.permissionPromptedKey: true,
     });
     final prefs = await SharedPreferences.getInstance();

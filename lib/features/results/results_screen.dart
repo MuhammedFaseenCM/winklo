@@ -6,8 +6,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/strings/app_strings.dart';
+import '../../core/router/play_mode_route.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/zip_ui.dart';
 import '../../domain/game_ids.dart';
 import '../../domain/leaderboard_limits.dart';
@@ -337,7 +339,11 @@ class _Scoreboard extends StatelessWidget {
         final bar = signedIn
             ? ResultsActions(args: args)
             : _GuestBar(timeSeconds: args.timeSeconds, onSave: onSave!);
-        final shownBar = bar.animate().fadeIn(delay: 400.ms, duration: 350.ms);
+        final shownBar = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [bar, const _LevelsNudge()],
+        ).animate().fadeIn(delay: 400.ms, duration: 350.ms);
 
         if (height < _scrollBelow) {
           final cardHeight =
@@ -368,6 +374,48 @@ class _Scoreboard extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Under a daily's actions: done for today, Levels are always there.
+class _LevelsNudge extends StatelessWidget {
+  const _LevelsNudge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: TextButton(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          foregroundColor: ZipColors.star,
+        ),
+        onPressed: () => context.go(levelsLocation),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ExcludeSemantics(
+              child: AppIcon(AppIcons.levels, size: 16, color: ZipColors.star),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                AppStrings.levelsDailyNudge,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const AppIcon(
+              AppIcons.chevronRight,
+              size: 16,
+              color: ZipColors.star,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

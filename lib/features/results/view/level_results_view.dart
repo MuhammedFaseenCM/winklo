@@ -12,6 +12,7 @@ import '../../../core/widgets/level_goals.dart';
 import '../../../core/widgets/zip_ui.dart';
 import '../../../domain/play_mode.dart';
 import '../../../domain/repositories/analytics_repository.dart';
+import '../../../domain/repositories/levels_intro_repository.dart';
 import '../results_args.dart';
 
 /// Results of a cleared level: the stars this run earned, the time against
@@ -108,6 +109,7 @@ class LevelResultsView extends StatelessWidget {
                   .animate()
                   .fadeIn(delay: 350.ms, duration: 350.ms)
                   .slideY(begin: 0.08, end: 0),
+              const _FirstClearTip(),
               const SizedBox(height: 24),
               if (next != null)
                 ZipPrimaryButton(
@@ -513,6 +515,70 @@ class _SecondaryButton extends StatelessWidget {
       ),
       icon: AppIcon(icon, size: 18),
       label: Text(label),
+    );
+  }
+}
+
+/// The first level cleared on this phone says how Levels go on: stars add up
+/// on the map, and the next level is here or on the Levels tab. Once.
+class _FirstClearTip extends StatefulWidget {
+  const _FirstClearTip();
+
+  @override
+  State<_FirstClearTip> createState() => _FirstClearTipState();
+}
+
+class _FirstClearTipState extends State<_FirstClearTip> {
+  late final bool _show;
+
+  @override
+  void initState() {
+    super.initState();
+    final intro = context.read<LevelsIntroRepository?>();
+    _show = intro != null && !intro.firstClearTipSeen;
+    if (_show) intro!.markFirstClearTipSeen();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_show) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child:
+          Container(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                decoration: BoxDecoration(
+                  color: ZipColors.star.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: ZipColors.star.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const ExcludeSemantics(
+                      child: AppIcon(
+                        AppIcons.levels,
+                        size: 20,
+                        color: ZipColors.star,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        AppStrings.levelsFirstClearTip,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: ZipColors.onInk,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+              .animate()
+              .fadeIn(delay: 500.ms, duration: 350.ms)
+              .slideY(begin: 0.08, end: 0),
     );
   }
 }

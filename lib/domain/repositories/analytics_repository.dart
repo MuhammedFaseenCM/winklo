@@ -59,6 +59,10 @@ abstract class AnalyticsRepository {
 
   Future<void> logTutorialDismissed({required String gameId});
 
+  /// The "New: Levels" card: [action] is `shown`, `play` (with [gameId]) or
+  /// `later`.
+  Future<void> logLevelsIntro({required String action, String? gameId});
+
   Future<void> logResultsAction({
     required String gameId,
     required String action,

@@ -17,6 +17,7 @@ import 'package:winklo/domain/repositories/leaderboard_repository.dart';
 import 'package:winklo/domain/repositories/level_progress_repository.dart';
 import 'package:winklo/domain/repositories/level_world_repository.dart';
 import 'package:winklo/domain/repositories/levels_game_preference_repository.dart';
+import 'package:winklo/domain/repositories/levels_intro_repository.dart';
 import 'package:winklo/domain/usecases/sign_in_with_google.dart';
 import 'package:winklo/domain/usecases/sign_out.dart';
 import 'package:winklo/domain/usecases/submit_level_clear.dart';
@@ -67,6 +68,8 @@ class _Worlds implements LevelWorldRepository {
   }
 }
 
+class _MockIntro extends Mock implements LevelsIntroRepository {}
+
 void main() {
   late LevelProgressRepositoryImpl progress;
   late _MockAuth auth;
@@ -107,6 +110,7 @@ void main() {
     LevelCatalog? pathWords,
     Completer<void>? zipGate,
     bool settle = true,
+    LevelsIntroRepository? intro,
   }) async {
     final router = GoRouter(
       routes: [
@@ -155,6 +159,8 @@ void main() {
           RepositoryProvider<AuthRepository>.value(value: auth),
           RepositoryProvider<LeaderboardRepository>.value(value: leaderboard),
           RepositoryProvider<SubmitLevelClear>.value(value: submit),
+          if (intro != null)
+            RepositoryProvider<LevelsIntroRepository>.value(value: intro),
         ],
         child: BlocProvider(
           create: (_) => AuthCubit(
@@ -642,6 +648,14 @@ void main() {
       ]),
     );
     expect(find.textContaining('3 × 3 – 6 × 6'), findsOneWidget);
+  });
+
+  testWidgets('opening the Levels tab clears its new dot', (tester) async {
+    final intro = _MockIntro();
+    when(() => intro.markLevelsTabSeen()).thenAnswer((_) async {});
+    when(() => intro.levelsTabSeen).thenReturn(false);
+    await pump(tester, LevelCatalog([levelWorld(1, 3)]), intro: intro);
+    verify(() => intro.markLevelsTabSeen()).called(1);
   });
 
   group('the header and the switch', () {

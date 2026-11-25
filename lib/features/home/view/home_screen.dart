@@ -6,6 +6,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../domain/repositories/levels_intro_repository.dart';
+import '../../../domain/usecases/get_levels_overview.dart';
+import '../../app_update/cubit/app_update_cubit.dart';
+import '../../levels/view/widgets/levels_intro_sheet.dart';
 import '../../../core/config/static_assets_config.dart';
 import '../../../core/dev_flags.dart';
 import '../../../core/lifecycle/progress_sync_lifecycle.dart';
@@ -36,6 +40,7 @@ import '../cubit/home_state.dart';
 import '../logic/today_summary.dart';
 import 'widgets/home_freeze_badge.dart';
 import 'widgets/home_habit_cards.dart';
+import 'widgets/home_levels_entry.dart';
 import 'widgets/home_more_play_entry.dart';
 import 'widgets/home_soft_update_section.dart';
 import 'widgets/home_today_summary.dart';
@@ -88,9 +93,27 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_maybeRequestNotificationPermission());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _maybeRequestNotificationPermission();
+      await _maybeShowLevelsIntro();
     });
+  }
+
+  /// The one-time "New: Levels" card, after the notification prompt: only
+  /// while Home is the page in front (not under a game opened from a
+  /// notification or a link) and no update is forced. The card marks itself
+  /// seen as it opens.
+  Future<void> _maybeShowLevelsIntro() async {
+    if (!mounted) return;
+    final intro = context.read<LevelsIntroRepository?>();
+    if (intro == null || intro.introSeen) return;
+    // Lets a forced-update check and any opening link land first.
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    if (!mounted || intro.introSeen) return;
+    if (GoRouter.of(context).state.uri.path != '/') return;
+    if (context.read<AppUpdateCubit?>()?.isForced ?? false) return;
+    if (ModalRoute.of(context)?.isCurrent == false) return;
+    await showLevelsIntro(context);
   }
 
   Future<void> _maybeRequestNotificationPermission() async {
@@ -309,6 +332,9 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
                 .fadeIn(delay: 240.ms, duration: 450.ms)
                 .slideY(begin: 0.1, curve: Curves.easeOutCubic),
           ],
+          // Needs the Levels services (narrow widget tests may leave them out).
+          if (context.read<GetLevelsOverview?>() != null)
+            const HomeLevelsEntry(),
           const HomeMorePlayEntry(),
         ];
 

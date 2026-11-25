@@ -18,6 +18,7 @@ import '../../../domain/repositories/leaderboard_repository.dart';
 import '../../../domain/repositories/level_progress_repository.dart';
 import '../../../domain/repositories/level_world_repository.dart';
 import '../../../domain/repositories/levels_game_preference_repository.dart';
+import '../../../domain/repositories/levels_intro_repository.dart';
 import '../../../domain/usecases/submit_level_clear.dart';
 import '../cubit/level_map_cubit.dart';
 import '../logic/level_map_layout.dart';
@@ -66,6 +67,11 @@ class _LevelsScreenState extends State<LevelsScreen> {
   void initState() {
     super.initState();
     _openLevelId = widget.openLevelId;
+    // The dock's "new" dot on this tab goes once the tab has been seen.
+    final intro = context.read<LevelsIntroRepository?>();
+    if (intro != null && !intro.levelsTabSeen) {
+      unawaited(intro.markLevelsTabSeen());
+    }
     final preference = context.read<LevelsGamePreferenceRepository>();
     final opened = _gameOf(widget.openLevelId);
     _game = opened ?? preference.read();
