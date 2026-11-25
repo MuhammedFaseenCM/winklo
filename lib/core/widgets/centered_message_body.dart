@@ -57,10 +57,7 @@ class CenteredMessageBody extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
-              icon!,
-              SizedBox(height: iconSpacing),
-            ],
+            if (icon != null) ...[icon!, SizedBox(height: iconSpacing)],
             if (title != null) ...[
               Text(title!, textAlign: textAlign, style: resolvedTitleStyle),
               SizedBox(height: titleSpacing),

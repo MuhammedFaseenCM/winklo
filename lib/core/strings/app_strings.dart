@@ -667,6 +667,14 @@ abstract final class AppStrings {
   static String levelGoalMissed(String goal) => _t.levelGoalMissed(goal);
   static String get levelsSoon => _t.levelsSoon;
   static String get levelsSudokuSoon => _t.levelsSudokuSoon;
+  static String levelsHomeContinue(String game, int number) =>
+      _t.levelsHomeContinue(game, number);
+  static String get levelsIntroBadge => _t.levelsIntroBadge;
+  static String get levelsIntroTitle => _t.levelsIntroTitle;
+  static String get levelsIntroBody => _t.levelsIntroBody;
+  static String get levelsIntroLater => _t.levelsIntroLater;
+  static String get levelsFirstClearTip => _t.levelsFirstClearTip;
+  static String get levelsDailyNudge => _t.levelsDailyNudge;
   static String get levelsNeedConnection => _t.levelsNeedConnection;
   static String get levelsComingSoon => _t.levelsComingSoon;
 

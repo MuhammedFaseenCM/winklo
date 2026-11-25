@@ -25,7 +25,11 @@ void main() {
     TextScaler textScaler = const TextScaler.linear(1.6),
     Map<String, Object> prefsValues = const {},
   }) async {
-    SharedPreferences.setMockInitialValues(prefsValues);
+    SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
+      ...prefsValues,
+    });
     final prefs = await SharedPreferences.getInstance();
 
     await tester.binding.setSurfaceSize(size);

@@ -99,6 +99,7 @@ import 'package:winklo/domain/repositories/tutorial_repository.dart';
 import 'package:winklo/domain/repositories/word_list_repository.dart';
 import 'package:winklo/domain/repositories/word_match_repository.dart';
 import 'package:winklo/domain/repositories/zip_level_repository.dart';
+import 'package:winklo/domain/usecases/get_levels_overview.dart';
 import 'package:winklo/domain/usecases/check_app_update.dart';
 import 'package:winklo/domain/usecases/claim_new_achievements.dart';
 import 'package:winklo/domain/usecases/clear_notification_token.dart';
@@ -532,6 +533,12 @@ List<SingleChildWidget> buildRepositoryProviders({
         FirebaseBootstrap.isReady
             ? FirestoreLevelWorldsSource(FirebaseFirestore.instance)
             : null,
+      ),
+    ),
+    RepositoryProvider<GetLevelsOverview>(
+      create: (context) => GetLevelsOverview(
+        context.read<LevelWorldRepository>(),
+        context.read<LevelProgressRepository>(),
       ),
     ),
     RepositoryProvider<RecordLevelClear>(

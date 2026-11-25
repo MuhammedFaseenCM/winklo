@@ -178,6 +178,8 @@ void main() {
     final dayId = PlayPeriod.id(today, PlayPeriod.daily);
     final zipId = DailyPuzzleGenerator.dateId(today);
     SharedPreferences.setMockInitialValues({
+      // The one-time Levels card is tested in home_levels_intro_test.
+      'levels_intro_seen': true,
       HomeScreen.permissionPromptedKey: true,
       for (final game in [GameIds.zip, GameIds.pathWords, GameIds.sudoku])
         'tutorial_seen_$game': tutorialsSeen,

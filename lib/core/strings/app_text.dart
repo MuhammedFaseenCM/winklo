@@ -584,6 +584,13 @@ abstract interface class AppText {
   String levelGoalMissed(String goal);
   String get levelsSoon;
   String get levelsSudokuSoon;
+  String levelsHomeContinue(String game, int number);
+  String get levelsIntroBadge;
+  String get levelsIntroTitle;
+  String get levelsIntroBody;
+  String get levelsIntroLater;
+  String get levelsFirstClearTip;
+  String get levelsDailyNudge;
   String get levelsNeedConnection;
   String get levelsComingSoon;
   String levelWorldTitle(int order, String worldName);
