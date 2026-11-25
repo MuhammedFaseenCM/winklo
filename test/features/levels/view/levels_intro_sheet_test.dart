@@ -43,6 +43,8 @@ void main() {
     pref = _Pref();
     visited = [];
     when(() => intro.setLastGame(any())).thenAnswer((_) async {});
+    when(() => intro.introSeen).thenReturn(false);
+    when(() => intro.markIntroSeen()).thenAnswer((_) async {});
     when(() => pref.write(any())).thenAnswer((_) async {});
     when(
       () => analytics.logLevelsIntro(
@@ -96,6 +98,8 @@ void main() {
 
   testWidgets('offers both games at their next level', (tester) async {
     await pump(tester);
+    verify(() => intro.markIntroSeen()).called(1);
+    verify(() => analytics.logLevelsIntro(action: 'shown')).called(1);
     expect(find.text(AppStrings.levelsIntroTitle), findsOneWidget);
     expect(find.text(AppStrings.zipTitle), findsOneWidget);
     expect(find.text(AppStrings.pathWordsTitle), findsOneWidget);

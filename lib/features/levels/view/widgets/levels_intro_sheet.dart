@@ -29,6 +29,15 @@ Future<void> showLevelsIntro(BuildContext context) async {
     overview = const LevelsOverview({});
   }
   if (!context.mounted) return;
+  // Seen as it opens (not before the levels load), so a stall before then
+  // leaves it for the next visit, and closing the app under it doesn't
+  // bring it back.
+  final intro = context.read<LevelsIntroRepository>();
+  if (intro.introSeen) return;
+  unawaited(intro.markIntroSeen());
+  unawaited(
+    context.read<AnalyticsRepository>().logLevelsIntro(action: 'shown'),
+  );
   await showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,

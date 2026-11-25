@@ -101,8 +101,8 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
 
   /// The one-time "New: Levels" card, after the notification prompt: only
   /// while Home is the page in front (not under a game opened from a
-  /// notification or a link) and no update is forced. Marked seen as it
-  /// shows, so it never comes back, even if the app is closed under it.
+  /// notification or a link) and no update is forced. The card marks itself
+  /// seen as it opens.
   Future<void> _maybeShowLevelsIntro() async {
     if (!mounted) return;
     final intro = context.read<LevelsIntroRepository?>();
@@ -113,11 +113,6 @@ class _HomeViewState extends State<_HomeView> with WidgetsBindingObserver {
     if (GoRouter.of(context).state.uri.path != '/') return;
     if (context.read<AppUpdateCubit?>()?.isForced ?? false) return;
     if (ModalRoute.of(context)?.isCurrent == false) return;
-    await intro.markIntroSeen();
-    if (!mounted) return;
-    unawaited(
-      context.read<AnalyticsRepository>().logLevelsIntro(action: 'shown'),
-    );
     await showLevelsIntro(context);
   }
 
