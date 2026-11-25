@@ -120,7 +120,8 @@ void main() {
   });
 
   testWidgets('Home shows Winklo brand and daily CTAs', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    // The one-time Levels card is tested in home_levels_intro_test.
+    SharedPreferences.setMockInitialValues({'levels_intro_seen': true});
     final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(_buildTestApp(prefs));
@@ -152,6 +153,7 @@ void main() {
     if (DevFlags.zipOnlyTesting) return;
     final todayId = StreakCalculator.dateId(DateTime.now());
     SharedPreferences.setMockInitialValues({
+      'levels_intro_seen': true,
       'streak_current_${GameIds.pathWords}': 3,
       'streak_longest_${GameIds.pathWords}': 5,
       'streak_last_${GameIds.pathWords}': todayId,

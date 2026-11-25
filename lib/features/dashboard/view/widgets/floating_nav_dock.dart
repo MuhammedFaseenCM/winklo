@@ -12,10 +12,19 @@ class FloatingNavDock extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    this.showLevelsDot = false,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
+
+  /// A small "new" dot on the Levels tab, until the player first opens it.
+  final bool showLevelsDot;
+
+  static const levelsDotKey = Key('levels_tab_dot');
+
+  /// The Levels tab's place in the dock.
+  static const levelsIndex = 1;
 
   static List<_DockDestination> get _destinations => <_DockDestination>[
     _DockDestination(
@@ -154,6 +163,7 @@ class FloatingNavDock extends StatelessWidget {
                                 destination: _destinations[i],
                                 selected: selectedIndex == i,
                                 onTap: () => onDestinationSelected(i),
+                                dot: showLevelsDot && i == levelsIndex,
                               ),
                             ),
                         ],
@@ -187,11 +197,15 @@ class _DockItem extends StatelessWidget {
     required this.destination,
     required this.selected,
     required this.onTap,
+    this.dot = false,
   });
 
   final _DockDestination destination;
   final bool selected;
   final VoidCallback onTap;
+
+  /// A small ember dot on the icon: something new here.
+  final bool dot;
 
   static const _animDuration = Duration(milliseconds: 220);
   static const _minHeight = 48.0;
@@ -202,7 +216,9 @@ class _DockItem extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: destination.label,
+      label: dot
+          ? '${destination.label}, ${AppStrings.levelsIntroBadge}'
+          : destination.label,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -213,34 +229,59 @@ class _DockItem extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: FloatingNavDock._pillWidth,
-                  height: FloatingNavDock._pillHeight,
-                  child: Center(
-                    child: AnimatedSwitcher(
-                      duration: _animDuration,
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: ScaleTransition(
-                            scale: Tween<double>(
-                              begin: 0.85,
-                              end: 1,
-                            ).animate(animation),
-                            child: child,
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    SizedBox(
+                      width: FloatingNavDock._pillWidth,
+                      height: FloatingNavDock._pillHeight,
+                      child: Center(
+                        child: AnimatedSwitcher(
+                          duration: _animDuration,
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: ScaleTransition(
+                                scale: Tween<double>(
+                                  begin: 0.85,
+                                  end: 1,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: AppIcon(
+                            selected
+                                ? destination.selectedIcon
+                                : destination.icon,
+                            key: ValueKey<bool>(selected),
+                            color: color,
+                            size: 22,
                           ),
-                        );
-                      },
-                      child: AppIcon(
-                        selected ? destination.selectedIcon : destination.icon,
-                        key: ValueKey<bool>(selected),
-                        color: color,
-                        size: 22,
+                        ),
                       ),
                     ),
-                  ),
+                    if (dot)
+                      Positioned(
+                        top: 2,
+                        right: FloatingNavDock._pillWidth / 2 - 16,
+                        child: Container(
+                          key: FloatingNavDock.levelsDotKey,
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: ZipColors.ember,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: ZipColors.ink,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 AnimatedDefaultTextStyle(
